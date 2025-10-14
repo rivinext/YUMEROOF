@@ -10,7 +10,6 @@ public class OrthographicCameraController : MonoBehaviour
     public Transform cameraTarget;         // カメラの注視点（屋上の中心）
     public float rotationSpeed = 1f;       // 回転速度
     public float panSpeed = 3f;            // パン速度
-    public float zoomSpeed = 5f;           // 視野角ズーム速度
 
     [Header("Default Camera Position")]
     public float defaultDistance = 15f;    // デフォルトのカメラ距離
@@ -20,6 +19,9 @@ public class OrthographicCameraController : MonoBehaviour
 
     [Header("Distance Settings")]
     public float distanceAdjustSpeed = 5f; // 距離調整速度
+
+    [Header("Field of View Settings")]
+    public float fieldOfViewAdjustSpeed = 5f; // 視野角調整速度
 
     [Header("Angle X Limits")]
     public float minAngleX = 10f;          // X軸最小角
@@ -121,6 +123,8 @@ public class OrthographicCameraController : MonoBehaviour
         orthographicCamera.orthographic = false;
         defaultFieldOfView = Mathf.Max(defaultFieldOfView, 0.1f);
         SetFieldOfView(defaultFieldOfView);
+
+        fieldOfViewAdjustSpeed = Mathf.Max(fieldOfViewAdjustSpeed, 0f);
 
         defaultDistance = Mathf.Max(defaultDistance, 0f);
         SetDistance(defaultDistance);
@@ -354,7 +358,7 @@ public class OrthographicCameraController : MonoBehaviour
 
                 if (isCtrlHeld)
                 {
-                    float newFieldOfView = orthographicCamera.fieldOfView - scrollInput * zoomSpeed;
+                    float newFieldOfView = orthographicCamera.fieldOfView - scrollInput * fieldOfViewAdjustSpeed;
                     SetFieldOfView(newFieldOfView);
                 }
                 else
