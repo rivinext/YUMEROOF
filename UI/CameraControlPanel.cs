@@ -52,8 +52,10 @@ public class CameraControlPanel : MonoBehaviour
     private void OnEnable()
     {
         EnsurePanelAnimatorReference();
+        RegisterControllerEventHandlers();
         RegisterCallbacks();
         RegisterPanelToggle();
+        UpdateCameraControllerRanges();
         RefreshUI();
     }
 
@@ -61,6 +63,7 @@ public class CameraControlPanel : MonoBehaviour
     {
         UnregisterPanelToggle();
         UnregisterCallbacks();
+        UnregisterControllerEventHandlers();
     }
 
     private void InitializePanelAnimator()
@@ -153,6 +156,25 @@ public class CameraControlPanel : MonoBehaviour
         ConfigureSliderRange(focusDistanceSlider, focusDistanceRange);
         ConfigureSliderRange(focalLengthSlider, focalLengthRange);
         ConfigureSliderRange(apertureSlider, apertureRange);
+        UpdateCameraControllerRanges();
+    }
+
+    private void UpdateCameraControllerRanges()
+    {
+        if (cameraController == null)
+        {
+            return;
+        }
+
+        if (fovSlider != null)
+        {
+            cameraController.SetFieldOfViewRange(fovSlider.minValue, fovSlider.maxValue);
+        }
+
+        if (distanceSlider != null)
+        {
+            cameraController.SetDistanceRange(distanceSlider.minValue, distanceSlider.maxValue);
+        }
     }
 
     private void ConfigureSliderRange(Slider slider, Vector2 range)
@@ -236,6 +258,35 @@ public class CameraControlPanel : MonoBehaviour
         }
     }
 
+    private void RegisterControllerEventHandlers()
+    {
+        UnregisterControllerEventHandlers();
+
+        if (cameraController == null)
+        {
+            InitializeReferences();
+        }
+
+        if (cameraController == null)
+        {
+            return;
+        }
+
+        cameraController.FieldOfViewChanged += HandleControllerFieldOfViewChanged;
+        cameraController.DistanceChanged += HandleControllerDistanceChanged;
+    }
+
+    private void UnregisterControllerEventHandlers()
+    {
+        if (cameraController == null)
+        {
+            return;
+        }
+
+        cameraController.FieldOfViewChanged -= HandleControllerFieldOfViewChanged;
+        cameraController.DistanceChanged -= HandleControllerDistanceChanged;
+    }
+
     private void RefreshUI()
     {
         if (cameraController != null && targetCamera == null)
@@ -245,13 +296,13 @@ public class CameraControlPanel : MonoBehaviour
 
         if (fovSlider != null)
         {
-            float currentFov = targetCamera != null ? targetCamera.fieldOfView : (cameraController != null ? cameraController.CurrentFieldOfView : fovSlider.minValue);
+            float currentFov = cameraController != null ? cameraController.CurrentFieldOfView : (targetCamera != null ? targetCamera.fieldOfView : fovSlider.minValue);
             fovSlider.SetValueWithoutNotify(Mathf.Clamp(currentFov, fovSlider.minValue, fovSlider.maxValue));
         }
 
         if (distanceSlider != null && cameraController != null)
         {
-            float currentDistance = Mathf.Clamp(cameraController.defaultDistance, distanceSlider.minValue, distanceSlider.maxValue);
+            float currentDistance = Mathf.Clamp(cameraController.CurrentDistance, distanceSlider.minValue, distanceSlider.maxValue);
             distanceSlider.SetValueWithoutNotify(currentDistance);
         }
 
@@ -328,7 +379,8 @@ public class CameraControlPanel : MonoBehaviour
             targetCamera.fieldOfView = clampedValue;
         }
 
-        UpdateSliderValueText(fovValueText, fovSlider, clampedValue);
+        float appliedValue = cameraController != null ? cameraController.CurrentFieldOfView : clampedValue;
+        UpdateSliderValueText(fovValueText, fovSlider, appliedValue);
     }
 
     private void HandleDistanceChanged(float value)
@@ -340,7 +392,7 @@ public class CameraControlPanel : MonoBehaviour
 
         float clampedValue = distanceSlider != null ? Mathf.Clamp(value, distanceSlider.minValue, distanceSlider.maxValue) : Mathf.Max(value, 0f);
         cameraController.SetDistance(clampedValue, true);
-        UpdateSliderValueText(distanceValueText, distanceSlider, clampedValue);
+        UpdateSliderValueText(distanceValueText, distanceSlider, cameraController.CurrentDistance);
     }
 
     private void HandleDepthOfFieldToggled(bool isOn)
@@ -431,6 +483,30 @@ public class CameraControlPanel : MonoBehaviour
 
         bool useWholeNumbers = slider != null && slider.wholeNumbers;
         textField.text = FormatSliderValue(value, useWholeNumbers);
+    }
+
+    private void HandleControllerFieldOfViewChanged(float value)
+    {
+        if (fovSlider == null)
+        {
+            return;
+        }
+
+        float clampedValue = Mathf.Clamp(value, fovSlider.minValue, fovSlider.maxValue);
+        fovSlider.SetValueWithoutNotify(clampedValue);
+        UpdateSliderValueText(fovValueText, fovSlider, clampedValue);
+    }
+
+    private void HandleControllerDistanceChanged(float value)
+    {
+        if (distanceSlider == null)
+        {
+            return;
+        }
+
+        float clampedValue = Mathf.Clamp(value, distanceSlider.minValue, distanceSlider.maxValue);
+        distanceSlider.SetValueWithoutNotify(clampedValue);
+        UpdateSliderValueText(distanceValueText, distanceSlider, clampedValue);
     }
 
     private string FormatSliderValue(float value, bool useWholeNumbers)

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -82,6 +83,14 @@ public class OrthographicCameraController : MonoBehaviour
         }
     }
 
+    private float minFieldOfView = 0.1f;
+    private float maxFieldOfView = 179f;
+    private float minDistance = 0f;
+    private float maxDistance = float.MaxValue;
+
+    public event Action<float> FieldOfViewChanged;
+    public event Action<float> DistanceChanged;
+
     void OnEnable()
     {
         SceneManager.sceneLoaded += HandleSceneLoaded;
@@ -111,10 +120,10 @@ public class OrthographicCameraController : MonoBehaviour
         // Perspectiveカメラに設定
         orthographicCamera.orthographic = false;
         defaultFieldOfView = Mathf.Max(defaultFieldOfView, 0.1f);
-        orthographicCamera.fieldOfView = defaultFieldOfView;
+        SetFieldOfView(defaultFieldOfView);
 
         defaultDistance = Mathf.Max(defaultDistance, 0f);
-        currentDistance = defaultDistance;
+        SetDistance(defaultDistance);
 
         EnsureCameraTarget();
 
@@ -346,12 +355,12 @@ public class OrthographicCameraController : MonoBehaviour
                 if (isCtrlHeld)
                 {
                     float newFieldOfView = orthographicCamera.fieldOfView - scrollInput * zoomSpeed;
-                    orthographicCamera.fieldOfView = Mathf.Max(newFieldOfView, 0.1f);
+                    SetFieldOfView(newFieldOfView);
                 }
                 else
                 {
                     float newDistance = currentDistance - scrollInput * distanceAdjustSpeed;
-                    currentDistance = Mathf.Max(newDistance, 0f);
+                    SetDistance(newDistance);
                 }
             }
         }
@@ -583,6 +592,7 @@ public class OrthographicCameraController : MonoBehaviour
 
         targetOffset = endOffset;
         orthographicCamera.fieldOfView = endFieldOfView;
+        FieldOfViewChanged?.Invoke(orthographicCamera.fieldOfView);
         isFocusing = true;
     }
 
@@ -621,7 +631,7 @@ public class OrthographicCameraController : MonoBehaviour
         }
 
         targetOffset = Vector3.zero;
-        orthographicCamera.fieldOfView = defaultFieldOfView;
+        SetFieldOfView(defaultFieldOfView);
         currentRotationX = defaultAngleX;
         currentRotationY = defaultAngleY;
         focusTarget = null;
@@ -632,12 +642,15 @@ public class OrthographicCameraController : MonoBehaviour
     public void SetDistance(float distance, bool updateDefault = false)
     {
         distance = Mathf.Max(distance, 0f);
-        currentDistance = distance;
+        float clampedDistance = Mathf.Clamp(distance, minDistance, maxDistance);
+        currentDistance = clampedDistance;
 
         if (updateDefault)
         {
-            defaultDistance = distance;
+            defaultDistance = clampedDistance;
         }
+
+        DistanceChanged?.Invoke(currentDistance);
     }
 
     public void SetFieldOfView(float fieldOfView, bool updateDefault = false)
@@ -651,13 +664,16 @@ public class OrthographicCameraController : MonoBehaviour
             }
         }
 
-        fieldOfView = Mathf.Max(fieldOfView, 0.1f);
-        orthographicCamera.fieldOfView = fieldOfView;
+        float clampedFieldOfView = Mathf.Clamp(fieldOfView, minFieldOfView, maxFieldOfView);
+        clampedFieldOfView = Mathf.Max(clampedFieldOfView, 0.1f);
+        orthographicCamera.fieldOfView = clampedFieldOfView;
 
         if (updateDefault)
         {
-            defaultFieldOfView = fieldOfView;
+            defaultFieldOfView = clampedFieldOfView;
         }
+
+        FieldOfViewChanged?.Invoke(orthographicCamera.fieldOfView);
     }
 
     public void ResetCamera()
@@ -665,13 +681,39 @@ public class OrthographicCameraController : MonoBehaviour
         targetOffset = Vector3.zero;
         currentRotationY = defaultAngleY;
         currentRotationX = Mathf.Clamp(defaultAngleX, minAngleX, maxAngleX);
-        orthographicCamera.fieldOfView = defaultFieldOfView;
-        currentDistance = defaultDistance;
+        SetFieldOfView(defaultFieldOfView);
+        SetDistance(defaultDistance);
 
         // 操作フラグもリセット
         isRotating = false;
         isPanning = false;
         startedOutsideUI = false;
+    }
+
+    public void SetDistanceRange(float min, float max)
+    {
+        float lower = Mathf.Max(0f, Mathf.Min(min, max));
+        float upper = Mathf.Max(lower, Mathf.Max(min, max));
+
+        minDistance = lower;
+        maxDistance = upper;
+
+        defaultDistance = Mathf.Clamp(defaultDistance, minDistance, maxDistance);
+        SetDistance(Mathf.Clamp(currentDistance, minDistance, maxDistance));
+    }
+
+    public void SetFieldOfViewRange(float min, float max)
+    {
+        float lower = Mathf.Min(min, max);
+        float upper = Mathf.Max(min, max);
+
+        lower = Mathf.Max(lower, 0.1f);
+
+        minFieldOfView = lower;
+        maxFieldOfView = Mathf.Max(lower, upper);
+
+        defaultFieldOfView = Mathf.Clamp(defaultFieldOfView, minFieldOfView, maxFieldOfView);
+        SetFieldOfView(Mathf.Clamp(CurrentFieldOfView, minFieldOfView, maxFieldOfView));
     }
 
     // X軸角の範囲を動的に変更
