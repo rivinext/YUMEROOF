@@ -67,6 +67,20 @@ public class OrthographicCameraController : MonoBehaviour
 
     // カメラの現在の回転を公開（PlayerControllerで使用）
     public float CurrentCameraRotationY => currentRotationY;
+    public float CurrentDistance => currentDistance;
+    public float CurrentFieldOfView
+    {
+        get
+        {
+            if (orthographicCamera != null)
+            {
+                return orthographicCamera.fieldOfView;
+            }
+
+            var cameraComponent = GetComponent<Camera>();
+            return cameraComponent != null ? cameraComponent.fieldOfView : defaultFieldOfView;
+        }
+    }
 
     void OnEnable()
     {
@@ -615,6 +629,37 @@ public class OrthographicCameraController : MonoBehaviour
     }
 
     // カメラをデフォルト位置にリセット
+    public void SetDistance(float distance, bool updateDefault = false)
+    {
+        distance = Mathf.Max(distance, 0f);
+        currentDistance = distance;
+
+        if (updateDefault)
+        {
+            defaultDistance = distance;
+        }
+    }
+
+    public void SetFieldOfView(float fieldOfView, bool updateDefault = false)
+    {
+        if (orthographicCamera == null)
+        {
+            orthographicCamera = GetComponent<Camera>();
+            if (orthographicCamera == null)
+            {
+                return;
+            }
+        }
+
+        fieldOfView = Mathf.Max(fieldOfView, 0.1f);
+        orthographicCamera.fieldOfView = fieldOfView;
+
+        if (updateDefault)
+        {
+            defaultFieldOfView = fieldOfView;
+        }
+    }
+
     public void ResetCamera()
     {
         targetOffset = Vector3.zero;
