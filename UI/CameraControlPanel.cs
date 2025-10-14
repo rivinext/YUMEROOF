@@ -18,6 +18,11 @@ public class CameraControlPanel : MonoBehaviour
     [SerializeField] private Slider focalLengthSlider;
     [SerializeField] private Slider apertureSlider;
 
+    [Header("Panel Controls")]
+    [SerializeField] private Button toggleButton;
+    [SerializeField] private CameraControlPanelAnimator panelAnimator;
+    [SerializeField] private bool startOpen = false;
+
     [Header("Slider Ranges")]
     [SerializeField] private Vector2 fovRange = new Vector2(10f, 120f);
     [SerializeField] private Vector2 distanceRange = new Vector2(5f, 50f);
@@ -32,17 +37,68 @@ public class CameraControlPanel : MonoBehaviour
         InitializeReferences();
         ConfigureSliders();
         CacheDepthOfField();
+        InitializePanelAnimator();
     }
 
     private void OnEnable()
     {
+        EnsurePanelAnimatorReference();
         RegisterCallbacks();
+        RegisterPanelToggle();
         RefreshUI();
     }
 
     private void OnDisable()
     {
+        UnregisterPanelToggle();
         UnregisterCallbacks();
+    }
+
+    private void InitializePanelAnimator()
+    {
+        EnsurePanelAnimatorReference();
+
+        if (panelAnimator == null)
+        {
+            return;
+        }
+
+        if (startOpen)
+        {
+            panelAnimator.SnapOpen();
+        }
+        else
+        {
+            panelAnimator.SnapClosed();
+        }
+    }
+
+    private void EnsurePanelAnimatorReference()
+    {
+        if (panelAnimator == null)
+        {
+            panelAnimator = GetComponent<CameraControlPanelAnimator>();
+        }
+    }
+
+    private void RegisterPanelToggle()
+    {
+        if (toggleButton == null || panelAnimator == null)
+        {
+            return;
+        }
+
+        toggleButton.onClick.AddListener(panelAnimator.TogglePanel);
+    }
+
+    private void UnregisterPanelToggle()
+    {
+        if (toggleButton == null || panelAnimator == null)
+        {
+            return;
+        }
+
+        toggleButton.onClick.RemoveListener(panelAnimator.TogglePanel);
     }
 
     private void InitializeReferences()
