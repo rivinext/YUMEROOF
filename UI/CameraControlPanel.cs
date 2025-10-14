@@ -1,3 +1,5 @@
+using System.Globalization;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
@@ -18,6 +20,13 @@ public class CameraControlPanel : MonoBehaviour
     [SerializeField] private Slider focalLengthSlider;
     [SerializeField] private Slider apertureSlider;
 
+    [Header("Value Labels")]
+    [SerializeField] private TextMeshProUGUI fovValueText;
+    [SerializeField] private TextMeshProUGUI distanceValueText;
+    [SerializeField] private TextMeshProUGUI focusDistanceValueText;
+    [SerializeField] private TextMeshProUGUI focalLengthValueText;
+    [SerializeField] private TextMeshProUGUI apertureValueText;
+
     [Header("Panel Controls")]
     [SerializeField] private Button toggleButton;
     [SerializeField] private CameraControlPanelAnimator panelAnimator;
@@ -36,6 +45,7 @@ public class CameraControlPanel : MonoBehaviour
     {
         InitializeReferences();
         ConfigureSliders();
+        ApplyCameraControllerLimits();
         CacheDepthOfField();
         InitializePanelAnimator();
     }
@@ -44,12 +54,14 @@ public class CameraControlPanel : MonoBehaviour
     {
         EnsurePanelAnimatorReference();
         RegisterCallbacks();
+        RegisterCameraControllerEvents();
         RegisterPanelToggle();
         RefreshUI();
     }
 
     private void OnDisable()
     {
+        UnregisterCameraControllerEvents();
         UnregisterPanelToggle();
         UnregisterCallbacks();
     }
@@ -146,6 +158,24 @@ public class CameraControlPanel : MonoBehaviour
         ConfigureSliderRange(apertureSlider, apertureRange);
     }
 
+    private void ApplyCameraControllerLimits()
+    {
+        if (cameraController == null)
+        {
+            return;
+        }
+
+        if (fovSlider != null)
+        {
+            cameraController.SetFieldOfViewLimits(fovSlider.minValue, fovSlider.maxValue);
+        }
+
+        if (distanceSlider != null)
+        {
+            cameraController.SetDistanceLimits(distanceSlider.minValue, distanceSlider.maxValue);
+        }
+    }
+
     private void ConfigureSliderRange(Slider slider, Vector2 range)
     {
         if (slider == null)
@@ -227,6 +257,32 @@ public class CameraControlPanel : MonoBehaviour
         }
     }
 
+    private void RegisterCameraControllerEvents()
+    {
+        UnregisterCameraControllerEvents();
+
+        if (cameraController == null)
+        {
+            return;
+        }
+
+        cameraController.FieldOfViewChanged += HandleCameraControllerFieldOfViewChanged;
+        cameraController.DistanceChanged += HandleCameraControllerDistanceChanged;
+
+        ApplyCameraControllerLimits();
+    }
+
+    private void UnregisterCameraControllerEvents()
+    {
+        if (cameraController == null)
+        {
+            return;
+        }
+
+        cameraController.FieldOfViewChanged -= HandleCameraControllerFieldOfViewChanged;
+        cameraController.DistanceChanged -= HandleCameraControllerDistanceChanged;
+    }
+
     private void RefreshUI()
     {
         if (cameraController != null && targetCamera == null)
@@ -258,6 +314,7 @@ public class CameraControlPanel : MonoBehaviour
 
         UpdateDepthOfFieldSliders();
         SetDepthOfFieldSliderInteractable(hasDepthOfField && isDepthOfFieldActive);
+        RefreshSliderValueTexts();
     }
 
     private void UpdateDepthOfFieldSliders()
@@ -271,6 +328,9 @@ public class CameraControlPanel : MonoBehaviour
         SetSliderValueWithoutNotify(focusDistanceSlider, depthOfField.focusDistance.value);
         SetSliderValueWithoutNotify(focalLengthSlider, depthOfField.focalLength.value);
         SetSliderValueWithoutNotify(apertureSlider, depthOfField.aperture.value);
+        UpdateSliderValueText(focusDistanceValueText, focusDistanceSlider);
+        UpdateSliderValueText(focalLengthValueText, focalLengthSlider);
+        UpdateSliderValueText(apertureValueText, apertureSlider);
     }
 
     private void SetSliderValueWithoutNotify(Slider slider, float value)
@@ -314,6 +374,8 @@ public class CameraControlPanel : MonoBehaviour
         {
             targetCamera.fieldOfView = clampedValue;
         }
+
+        UpdateSliderValueText(fovValueText, fovSlider, clampedValue);
     }
 
     private void HandleDistanceChanged(float value)
@@ -325,6 +387,7 @@ public class CameraControlPanel : MonoBehaviour
 
         float clampedValue = distanceSlider != null ? Mathf.Clamp(value, distanceSlider.minValue, distanceSlider.maxValue) : Mathf.Max(value, 0f);
         cameraController.SetDistance(clampedValue, true);
+        UpdateSliderValueText(distanceValueText, distanceSlider, clampedValue);
     }
 
     private void HandleDepthOfFieldToggled(bool isOn)
@@ -338,6 +401,7 @@ public class CameraControlPanel : MonoBehaviour
         }
 
         SetDepthOfFieldSliderInteractable(isOn && depthOfField != null);
+        RefreshSliderValueTexts();
     }
 
     private void HandleFocusDistanceChanged(float value)
@@ -349,6 +413,7 @@ public class CameraControlPanel : MonoBehaviour
 
         float clampedValue = focusDistanceSlider != null ? Mathf.Clamp(value, focusDistanceSlider.minValue, focusDistanceSlider.maxValue) : value;
         depthOfField.focusDistance.value = clampedValue;
+        UpdateSliderValueText(focusDistanceValueText, focusDistanceSlider, clampedValue);
     }
 
     private void HandleFocalLengthChanged(float value)
@@ -360,6 +425,7 @@ public class CameraControlPanel : MonoBehaviour
 
         float clampedValue = focalLengthSlider != null ? Mathf.Clamp(value, focalLengthSlider.minValue, focalLengthSlider.maxValue) : value;
         depthOfField.focalLength.value = clampedValue;
+        UpdateSliderValueText(focalLengthValueText, focalLengthSlider, clampedValue);
     }
 
     private void HandleApertureChanged(float value)
@@ -371,6 +437,7 @@ public class CameraControlPanel : MonoBehaviour
 
         float clampedValue = apertureSlider != null ? Mathf.Clamp(value, apertureSlider.minValue, apertureSlider.maxValue) : value;
         depthOfField.aperture.value = clampedValue;
+        UpdateSliderValueText(apertureValueText, apertureSlider, clampedValue);
     }
 
     private bool EnsureDepthOfFieldReference()
@@ -381,5 +448,69 @@ public class CameraControlPanel : MonoBehaviour
         }
 
         return depthOfField != null;
+    }
+
+    private void RefreshSliderValueTexts()
+    {
+        UpdateSliderValueText(fovValueText, fovSlider);
+        UpdateSliderValueText(distanceValueText, distanceSlider);
+        UpdateSliderValueText(focusDistanceValueText, focusDistanceSlider);
+        UpdateSliderValueText(focalLengthValueText, focalLengthSlider);
+        UpdateSliderValueText(apertureValueText, apertureSlider);
+    }
+
+    private void HandleCameraControllerFieldOfViewChanged(float value)
+    {
+        if (fovSlider == null)
+        {
+            return;
+        }
+
+        float clampedValue = Mathf.Clamp(value, fovSlider.minValue, fovSlider.maxValue);
+        fovSlider.SetValueWithoutNotify(clampedValue);
+        UpdateSliderValueText(fovValueText, fovSlider, clampedValue);
+    }
+
+    private void HandleCameraControllerDistanceChanged(float value)
+    {
+        if (distanceSlider == null)
+        {
+            return;
+        }
+
+        float clampedValue = Mathf.Clamp(value, distanceSlider.minValue, distanceSlider.maxValue);
+        distanceSlider.SetValueWithoutNotify(clampedValue);
+        UpdateSliderValueText(distanceValueText, distanceSlider, clampedValue);
+    }
+
+    private void UpdateSliderValueText(TextMeshProUGUI textField, Slider slider)
+    {
+        if (textField == null || slider == null)
+        {
+            return;
+        }
+
+        UpdateSliderValueText(textField, slider, slider.value);
+    }
+
+    private void UpdateSliderValueText(TextMeshProUGUI textField, Slider slider, float value)
+    {
+        if (textField == null)
+        {
+            return;
+        }
+
+        bool useWholeNumbers = slider != null && slider.wholeNumbers;
+        textField.text = FormatSliderValue(value, useWholeNumbers);
+    }
+
+    private string FormatSliderValue(float value, bool useWholeNumbers)
+    {
+        if (useWholeNumbers)
+        {
+            return Mathf.RoundToInt(value).ToString(CultureInfo.InvariantCulture);
+        }
+
+        return value.ToString("F2", CultureInfo.InvariantCulture);
     }
 }

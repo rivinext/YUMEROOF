@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -81,6 +82,14 @@ public class OrthographicCameraController : MonoBehaviour
             return cameraComponent != null ? cameraComponent.fieldOfView : defaultFieldOfView;
         }
     }
+
+    private float distanceMinLimit = 0f;
+    private float distanceMaxLimit = float.PositiveInfinity;
+    private float fieldOfViewMinLimit = 0.1f;
+    private float fieldOfViewMaxLimit = float.PositiveInfinity;
+
+    public event Action<float> DistanceChanged;
+    public event Action<float> FieldOfViewChanged;
 
     void OnEnable()
     {
@@ -345,13 +354,13 @@ public class OrthographicCameraController : MonoBehaviour
 
                 if (isCtrlHeld)
                 {
-                    float newFieldOfView = orthographicCamera.fieldOfView - scrollInput * zoomSpeed;
-                    orthographicCamera.fieldOfView = Mathf.Max(newFieldOfView, 0.1f);
+                    float newFieldOfView = CurrentFieldOfView - scrollInput * zoomSpeed;
+                    SetFieldOfView(newFieldOfView, false);
                 }
                 else
                 {
                     float newDistance = currentDistance - scrollInput * distanceAdjustSpeed;
-                    currentDistance = Mathf.Max(newDistance, 0f);
+                    SetDistance(newDistance, false);
                 }
             }
         }
@@ -631,33 +640,61 @@ public class OrthographicCameraController : MonoBehaviour
     // カメラをデフォルト位置にリセット
     public void SetDistance(float distance, bool updateDefault = false)
     {
-        distance = Mathf.Max(distance, 0f);
-        currentDistance = distance;
+        float clampedDistance = Mathf.Clamp(distance, distanceMinLimit, distanceMaxLimit);
+        currentDistance = clampedDistance;
 
         if (updateDefault)
         {
-            defaultDistance = distance;
+            defaultDistance = clampedDistance;
         }
+
+        DistanceChanged?.Invoke(clampedDistance);
     }
 
     public void SetFieldOfView(float fieldOfView, bool updateDefault = false)
     {
-        if (orthographicCamera == null)
+        if (!EnsureCameraComponent())
         {
-            orthographicCamera = GetComponent<Camera>();
-            if (orthographicCamera == null)
-            {
-                return;
-            }
+            return;
         }
 
-        fieldOfView = Mathf.Max(fieldOfView, 0.1f);
-        orthographicCamera.fieldOfView = fieldOfView;
+        float clampedFieldOfView = Mathf.Clamp(fieldOfView, fieldOfViewMinLimit, fieldOfViewMaxLimit);
+        orthographicCamera.fieldOfView = clampedFieldOfView;
 
         if (updateDefault)
         {
-            defaultFieldOfView = fieldOfView;
+            defaultFieldOfView = clampedFieldOfView;
         }
+
+        FieldOfViewChanged?.Invoke(clampedFieldOfView);
+    }
+
+    public void SetDistanceLimits(float min, float max)
+    {
+        distanceMinLimit = Mathf.Min(min, max);
+        distanceMaxLimit = Mathf.Max(min, max);
+
+        currentDistance = Mathf.Clamp(currentDistance, distanceMinLimit, distanceMaxLimit);
+        defaultDistance = Mathf.Clamp(defaultDistance, distanceMinLimit, distanceMaxLimit);
+
+        DistanceChanged?.Invoke(currentDistance);
+    }
+
+    public void SetFieldOfViewLimits(float min, float max)
+    {
+        fieldOfViewMinLimit = Mathf.Max(0.1f, Mathf.Min(min, max));
+        fieldOfViewMaxLimit = Mathf.Max(fieldOfViewMinLimit, Mathf.Max(min, max));
+
+        if (!EnsureCameraComponent())
+        {
+            return;
+        }
+
+        float currentFov = Mathf.Clamp(orthographicCamera.fieldOfView, fieldOfViewMinLimit, fieldOfViewMaxLimit);
+        orthographicCamera.fieldOfView = currentFov;
+        defaultFieldOfView = Mathf.Clamp(defaultFieldOfView, fieldOfViewMinLimit, fieldOfViewMaxLimit);
+
+        FieldOfViewChanged?.Invoke(currentFov);
     }
 
     public void ResetCamera()
@@ -740,6 +777,16 @@ public class OrthographicCameraController : MonoBehaviour
             isPanning = false;
             startedOutsideUI = false;
         }
+    }
+
+    private bool EnsureCameraComponent()
+    {
+        if (orthographicCamera == null)
+        {
+            orthographicCamera = GetComponent<Camera>();
+        }
+
+        return orthographicCamera != null;
     }
 
     void EnsureCameraTarget()
