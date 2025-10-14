@@ -10,7 +10,6 @@ public class OrthographicCameraController : MonoBehaviour
     public Transform cameraTarget;         // カメラの注視点（屋上の中心）
     public float rotationSpeed = 1f;       // 回転速度
     public float panSpeed = 3f;            // パン速度
-    public float zoomSpeed = 5f;           // 視野角ズーム速度
 
     [Header("Default Camera Position")]
     public float defaultDistance = 15f;    // デフォルトのカメラ距離
@@ -20,6 +19,10 @@ public class OrthographicCameraController : MonoBehaviour
 
     [Header("Distance Settings")]
     public float distanceAdjustSpeed = 5f; // 距離調整速度
+
+    [Header("Field of View Settings")]
+    public float fieldOfViewAdjustSpeed = 5f; // 視野角調整速度
+    public float fieldOfViewSmoothTime = 0.1f; // 視野角補間時間
 
     [Header("Angle X Limits")]
     public float minAngleX = 10f;          // X軸最小角
@@ -85,6 +88,8 @@ public class OrthographicCameraController : MonoBehaviour
 
     private float minFieldOfView = 0.1f;
     private float maxFieldOfView = 179f;
+    private float targetFieldOfView;
+    private float fieldOfViewVelocity;
     private float minDistance = 0f;
     private float maxDistance = float.MaxValue;
 
@@ -122,8 +127,14 @@ public class OrthographicCameraController : MonoBehaviour
         defaultFieldOfView = Mathf.Max(defaultFieldOfView, 0.1f);
         SetFieldOfView(defaultFieldOfView);
 
+        fieldOfViewAdjustSpeed = Mathf.Max(fieldOfViewAdjustSpeed, 0f);
+        fieldOfViewSmoothTime = Mathf.Max(fieldOfViewSmoothTime, 0f);
+
         defaultDistance = Mathf.Max(defaultDistance, 0f);
         SetDistance(defaultDistance);
+
+        targetFieldOfView = orthographicCamera.fieldOfView;
+        fieldOfViewVelocity = 0f;
 
         EnsureCameraTarget();
 
@@ -169,6 +180,7 @@ public class OrthographicCameraController : MonoBehaviour
 
         if (isFocusing)
         {
+            SyncTargetFieldOfViewToCurrent();
             return;
         }
 
@@ -240,6 +252,8 @@ public class OrthographicCameraController : MonoBehaviour
                 HandlePan();
             }
         }
+
+        UpdateFieldOfViewSmoothing();
 
     }
 
@@ -354,8 +368,8 @@ public class OrthographicCameraController : MonoBehaviour
 
                 if (isCtrlHeld)
                 {
-                    float newFieldOfView = orthographicCamera.fieldOfView - scrollInput * zoomSpeed;
-                    SetFieldOfView(newFieldOfView);
+                    float newFieldOfView = orthographicCamera.fieldOfView - scrollInput * fieldOfViewAdjustSpeed;
+                    SetTargetFieldOfView(newFieldOfView);
                 }
                 else
                 {
@@ -364,6 +378,100 @@ public class OrthographicCameraController : MonoBehaviour
                 }
             }
         }
+    }
+
+    void SetTargetFieldOfView(float fieldOfView)
+    {
+        if (orthographicCamera == null)
+        {
+            orthographicCamera = GetComponent<Camera>();
+            if (orthographicCamera == null)
+            {
+                return;
+            }
+        }
+
+        float clampedFieldOfView = Mathf.Clamp(fieldOfView, minFieldOfView, maxFieldOfView);
+        clampedFieldOfView = Mathf.Max(clampedFieldOfView, 0.1f);
+
+        targetFieldOfView = clampedFieldOfView;
+
+        if (fieldOfViewSmoothTime <= 0f && orthographicCamera != null)
+        {
+            float previousFieldOfView = orthographicCamera.fieldOfView;
+            orthographicCamera.fieldOfView = targetFieldOfView;
+
+            if (!Mathf.Approximately(previousFieldOfView, orthographicCamera.fieldOfView))
+            {
+                FieldOfViewChanged?.Invoke(orthographicCamera.fieldOfView);
+            }
+        }
+    }
+
+    void UpdateFieldOfViewSmoothing()
+    {
+        if (orthographicCamera == null)
+        {
+            return;
+        }
+
+        targetFieldOfView = Mathf.Clamp(targetFieldOfView, minFieldOfView, maxFieldOfView);
+        targetFieldOfView = Mathf.Max(targetFieldOfView, 0.1f);
+
+        float currentFieldOfView = orthographicCamera.fieldOfView;
+
+        if (Mathf.Approximately(currentFieldOfView, targetFieldOfView))
+        {
+            return;
+        }
+
+        if (fieldOfViewSmoothTime <= 0f)
+        {
+            orthographicCamera.fieldOfView = targetFieldOfView;
+
+            FieldOfViewChanged?.Invoke(orthographicCamera.fieldOfView);
+            return;
+        }
+
+        float newFieldOfView = Mathf.SmoothDamp(
+            currentFieldOfView,
+            targetFieldOfView,
+            ref fieldOfViewVelocity,
+            fieldOfViewSmoothTime);
+
+        newFieldOfView = Mathf.Clamp(newFieldOfView, minFieldOfView, maxFieldOfView);
+        newFieldOfView = Mathf.Max(newFieldOfView, 0.1f);
+
+        if (!Mathf.Approximately(currentFieldOfView, newFieldOfView))
+        {
+            orthographicCamera.fieldOfView = newFieldOfView;
+            FieldOfViewChanged?.Invoke(orthographicCamera.fieldOfView);
+        }
+
+        if (Mathf.Abs(orthographicCamera.fieldOfView - targetFieldOfView) <= 0.001f)
+        {
+            float previousFieldOfView = orthographicCamera.fieldOfView;
+            orthographicCamera.fieldOfView = targetFieldOfView;
+
+            if (!Mathf.Approximately(previousFieldOfView, orthographicCamera.fieldOfView))
+            {
+                FieldOfViewChanged?.Invoke(orthographicCamera.fieldOfView);
+            }
+
+            fieldOfViewVelocity = 0f;
+        }
+    }
+
+    void SyncTargetFieldOfViewToCurrent()
+    {
+        if (orthographicCamera == null)
+        {
+            return;
+        }
+
+        targetFieldOfView = Mathf.Clamp(orthographicCamera.fieldOfView, minFieldOfView, maxFieldOfView);
+        targetFieldOfView = Mathf.Max(targetFieldOfView, 0.1f);
+        fieldOfViewVelocity = 0f;
     }
 
     // パン処理（中ボタンドラッグ）- 改良版
@@ -667,6 +775,8 @@ public class OrthographicCameraController : MonoBehaviour
         float clampedFieldOfView = Mathf.Clamp(fieldOfView, minFieldOfView, maxFieldOfView);
         clampedFieldOfView = Mathf.Max(clampedFieldOfView, 0.1f);
         orthographicCamera.fieldOfView = clampedFieldOfView;
+        targetFieldOfView = clampedFieldOfView;
+        fieldOfViewVelocity = 0f;
 
         if (updateDefault)
         {
