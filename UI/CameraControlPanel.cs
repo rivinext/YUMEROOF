@@ -32,6 +32,14 @@ public class CameraControlPanel : MonoBehaviour
     [SerializeField] private CameraControlPanelAnimator panelAnimator;
     [SerializeField] private bool startOpen = false;
 
+    [Header("Preset Buttons")]
+    [SerializeField] private Button orthographicPresetButton;
+    [SerializeField] private Button perspectivePresetButton;
+    [SerializeField] private float orthographicPresetFieldOfView = 20f;
+    [SerializeField] private float orthographicPresetDistance = 25f;
+    [SerializeField] private float perspectivePresetFieldOfView = 60f;
+    [SerializeField] private float perspectivePresetDistance = 15f;
+
     [Header("Slider Ranges")]
     [SerializeField] private Vector2 fovRange = new Vector2(10f, 120f);
     [SerializeField] private Vector2 distanceRange = new Vector2(5f, 50f);
@@ -55,6 +63,7 @@ public class CameraControlPanel : MonoBehaviour
         RegisterControllerEventHandlers();
         RegisterCallbacks();
         RegisterPanelToggle();
+        RegisterPresetButtons();
         UpdateCameraControllerRanges();
         RefreshUI();
     }
@@ -64,6 +73,7 @@ public class CameraControlPanel : MonoBehaviour
         UnregisterPanelToggle();
         UnregisterCallbacks();
         UnregisterControllerEventHandlers();
+        UnregisterPresetButtons();
     }
 
     private void InitializePanelAnimator()
@@ -111,6 +121,32 @@ public class CameraControlPanel : MonoBehaviour
         }
 
         toggleButton.onClick.RemoveListener(panelAnimator.TogglePanel);
+    }
+
+    private void RegisterPresetButtons()
+    {
+        if (orthographicPresetButton != null)
+        {
+            orthographicPresetButton.onClick.AddListener(HandleOrthographicPresetClicked);
+        }
+
+        if (perspectivePresetButton != null)
+        {
+            perspectivePresetButton.onClick.AddListener(HandlePerspectivePresetClicked);
+        }
+    }
+
+    private void UnregisterPresetButtons()
+    {
+        if (orthographicPresetButton != null)
+        {
+            orthographicPresetButton.onClick.RemoveListener(HandleOrthographicPresetClicked);
+        }
+
+        if (perspectivePresetButton != null)
+        {
+            perspectivePresetButton.onClick.RemoveListener(HandlePerspectivePresetClicked);
+        }
     }
 
     private void InitializeReferences()
@@ -393,6 +429,47 @@ public class CameraControlPanel : MonoBehaviour
         float clampedValue = distanceSlider != null ? Mathf.Clamp(value, distanceSlider.minValue, distanceSlider.maxValue) : Mathf.Max(value, 0f);
         cameraController.SetDistance(clampedValue, true);
         UpdateSliderValueText(distanceValueText, distanceSlider, cameraController.CurrentDistance);
+    }
+
+    private void HandleOrthographicPresetClicked()
+    {
+        ApplyCameraPreset(orthographicPresetFieldOfView, orthographicPresetDistance);
+    }
+
+    private void HandlePerspectivePresetClicked()
+    {
+        ApplyCameraPreset(perspectivePresetFieldOfView, perspectivePresetDistance);
+    }
+
+    private void ApplyCameraPreset(float fieldOfView, float distance)
+    {
+        if (fovSlider != null)
+        {
+            float clampedFieldOfView = Mathf.Clamp(fieldOfView, fovSlider.minValue, fovSlider.maxValue);
+            fovSlider.SetValueWithoutNotify(clampedFieldOfView);
+            HandleFieldOfViewChanged(clampedFieldOfView);
+        }
+        else if (cameraController != null)
+        {
+            cameraController.SetFieldOfView(fieldOfView, true);
+        }
+        else if (targetCamera != null)
+        {
+            targetCamera.fieldOfView = fieldOfView;
+        }
+
+        if (distanceSlider != null)
+        {
+            float clampedDistance = Mathf.Clamp(distance, distanceSlider.minValue, distanceSlider.maxValue);
+            distanceSlider.SetValueWithoutNotify(clampedDistance);
+            HandleDistanceChanged(clampedDistance);
+        }
+        else if (cameraController != null)
+        {
+            cameraController.SetDistance(distance, true);
+        }
+
+        RefreshSliderValueTexts();
     }
 
     private void HandleDepthOfFieldToggled(bool isOn)
