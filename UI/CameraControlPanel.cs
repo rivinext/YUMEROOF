@@ -20,6 +20,9 @@ public class CameraControlPanel : MonoBehaviour
     [SerializeField] private Slider focalLengthSlider;
     [SerializeField] private Slider apertureSlider;
 
+    [Header("Screenshot")]
+    [SerializeField] private ScreenshotButton screenshotButton;
+
     [Header("Value Labels")]
     [SerializeField] private TextMeshProUGUI fovValueText;
     [SerializeField] private TextMeshProUGUI distanceValueText;
@@ -55,6 +58,7 @@ public class CameraControlPanel : MonoBehaviour
         ConfigureSliders();
         CacheDepthOfField();
         InitializePanelAnimator();
+        InitializeScreenshotButton();
     }
 
     private void OnEnable()
@@ -74,6 +78,21 @@ public class CameraControlPanel : MonoBehaviour
         UnregisterCallbacks();
         UnregisterControllerEventHandlers();
         UnregisterPresetButtons();
+    }
+
+    private void InitializeScreenshotButton()
+    {
+        if (screenshotButton != null)
+        {
+            return;
+        }
+
+        screenshotButton = GetComponentInChildren<ScreenshotButton>(true);
+
+        if (screenshotButton == null)
+        {
+            Debug.LogWarning("ScreenshotButton reference not assigned on CameraControlPanel.");
+        }
     }
 
     private void InitializePanelAnimator()
