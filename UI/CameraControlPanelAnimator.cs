@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(RectTransform))]
 public class CameraControlPanelAnimator : MonoBehaviour
@@ -12,6 +13,9 @@ public class CameraControlPanelAnimator : MonoBehaviour
     [SerializeField] private AnimationCurve slideOutXCurve = AnimationCurve.Linear(0f, 0f, 0.25f, 1f);
 
     [SerializeField, HideInInspector] private bool isAnchoredYInitialized = false;
+
+    [Header("UI")]
+    [SerializeField] private Button toggleButton;
 
     private RectTransform rectTransform;
     private Coroutine animationCoroutine;
@@ -46,15 +50,22 @@ public class CameraControlPanelAnimator : MonoBehaviour
     private void OnEnable()
     {
         SnapToTarget();
+        RegisterButtonCallbacks();
     }
 
     private void OnDisable()
     {
+        UnregisterButtonCallbacks();
         if (animationCoroutine != null)
         {
             StopCoroutine(animationCoroutine);
             animationCoroutine = null;
         }
+    }
+
+    private void OnDestroy()
+    {
+        UnregisterButtonCallbacks();
     }
 
     public void TogglePanel()
@@ -66,6 +77,22 @@ public class CameraControlPanelAnimator : MonoBehaviour
         else
         {
             OpenPanel();
+        }
+    }
+
+    private void RegisterButtonCallbacks()
+    {
+        if (toggleButton != null)
+        {
+            toggleButton.onClick.AddListener(TogglePanel);
+        }
+    }
+
+    private void UnregisterButtonCallbacks()
+    {
+        if (toggleButton != null)
+        {
+            toggleButton.onClick.RemoveListener(TogglePanel);
         }
     }
 
