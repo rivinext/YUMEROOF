@@ -17,18 +17,12 @@ public class OrthographicCameraController : MonoBehaviour
     public float defaultAngleY = 45f;      // デフォルトのY軸角度（水平回転）
     public float defaultFieldOfView = 60f;      // デフォルトの視野角
 
-    [Header("Distance Limits")]
-    public float minDistance = 5f;         // 最小距離
-    public float maxDistance = 30f;        // 最大距離
+    [Header("Distance Settings")]
     public float distanceAdjustSpeed = 5f; // 距離調整速度
 
     [Header("Angle X Limits")]
     public float minAngleX = 10f;          // X軸最小角
     public float maxAngleX = 66f;          // X軸最大角
-
-    [Header("Zoom Limits")]
-    public float minFieldOfView = 30f;      // 最小視野角（近い）
-    public float maxFieldOfView = 80f;      // 最大視野角（遠い）
 
     [Header("Pan Limits")]
     public float panLimitX = 5;            // X軸の移動制限
@@ -102,10 +96,10 @@ public class OrthographicCameraController : MonoBehaviour
 
         // Perspectiveカメラに設定
         orthographicCamera.orthographic = false;
-        defaultFieldOfView = Mathf.Clamp(defaultFieldOfView, minFieldOfView, maxFieldOfView);
+        defaultFieldOfView = Mathf.Max(defaultFieldOfView, 0.1f);
         orthographicCamera.fieldOfView = defaultFieldOfView;
 
-        defaultDistance = Mathf.Clamp(defaultDistance, minDistance, maxDistance);
+        defaultDistance = Mathf.Max(defaultDistance, 0f);
         currentDistance = defaultDistance;
 
         EnsureCameraTarget();
@@ -338,12 +332,12 @@ public class OrthographicCameraController : MonoBehaviour
                 if (isCtrlHeld)
                 {
                     float newFieldOfView = orthographicCamera.fieldOfView - scrollInput * zoomSpeed;
-                    orthographicCamera.fieldOfView = Mathf.Clamp(newFieldOfView, minFieldOfView, maxFieldOfView);
+                    orthographicCamera.fieldOfView = Mathf.Max(newFieldOfView, 0.1f);
                 }
                 else
                 {
                     float newDistance = currentDistance - scrollInput * distanceAdjustSpeed;
-                    currentDistance = Mathf.Clamp(newDistance, minDistance, maxDistance);
+                    currentDistance = Mathf.Max(newDistance, 0f);
                 }
             }
         }
@@ -540,7 +534,7 @@ public class OrthographicCameraController : MonoBehaviour
         }
 
         focusTarget = target;
-        focusFieldOfView = Mathf.Clamp(fieldOfView, minFieldOfView, maxFieldOfView);
+        focusFieldOfView = Mathf.Max(fieldOfView, 0.1f);
         focusDuration = duration;
         focusAngleX = currentRotationX;
         focusAngleY = currentRotationY;
