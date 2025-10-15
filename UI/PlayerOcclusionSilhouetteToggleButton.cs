@@ -5,37 +5,41 @@ using UnityEngine.UI;
 public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private Button toggleButton;
+    [SerializeField] private Toggle toggle;
     [SerializeField] private PlayerOcclusionSilhouette occlusionSilhouette;
 
     [Header("Settings")]
-    [SerializeField] private bool startEnabled = true;
+    [SerializeField] private Material silhouetteMaterial;
 
     private bool isSilhouetteEnabled;
+    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalMaterials;
+    private System.Collections.Generic.Dictionary<Renderer, Material[]> materialsWithoutSilhouette;
 
     private void Awake()
     {
-        CacheButtonReference();
+        CacheToggleReference();
         CacheSilhouetteReference();
+        FindSilhouetteMaterials();
         InitializeState();
     }
 
     private void OnEnable()
     {
-        RegisterButtonCallback();
+        RegisterToggleCallback();
+        UpdateToggleValue();
         ApplyState();
     }
 
     private void OnDisable()
     {
-        UnregisterButtonCallback();
+        UnregisterToggleCallback();
     }
 
-    private void CacheButtonReference()
+    private void CacheToggleReference()
     {
-        if (toggleButton == null)
+        if (toggle == null)
         {
-            toggleButton = GetComponent<Button>();
+            toggle = GetComponent<Toggle>();
         }
     }
 
@@ -47,52 +51,153 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         }
     }
 
+    private void FindSilhouetteMaterials()
+    {
+        originalMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+        materialsWithoutSilhouette = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+
+        if (silhouetteMaterial == null)
+        {
+            Debug.LogWarning("Silhouette material is not assigned!");
+            return;
+        }
+
+        // 通常のシーンオブジェクトとDontDestroyOnLoad内のオブジェクトの両方を取得
+        var allRenderers = new System.Collections.Generic.List<Renderer>();
+
+        // 通常のシーンオブジェクト
+        allRenderers.AddRange(FindObjectsOfType<Renderer>(true));
+
+        // DontDestroyOnLoad内のオブジェクトを明示的に検索
+        foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+        {
+            if (go.scene.name == "DontDestroyOnLoad" || go.hideFlags == HideFlags.None)
+            {
+                var renderer = go.GetComponent<Renderer>();
+                if (renderer != null && !allRenderers.Contains(renderer))
+                {
+                    allRenderers.Add(renderer);
+                }
+            }
+        }
+
+        foreach (var renderer in allRenderers)
+        {
+            if (renderer == null) continue;
+
+            var materials = renderer.sharedMaterials;
+            var hasSilhouette = false;
+            var nonSilhouetteMats = new System.Collections.Generic.List<Material>();
+
+            foreach (var mat in materials)
+            {
+                if (mat == silhouetteMaterial)
+                {
+                    hasSilhouette = true;
+                }
+                else
+                {
+                    nonSilhouetteMats.Add(mat);
+                }
+            }
+
+            if (hasSilhouette)
+            {
+                originalMaterials[renderer] = materials;
+                materialsWithoutSilhouette[renderer] = nonSilhouetteMats.ToArray();
+            }
+        }
+
+        Debug.Log($"Found {originalMaterials.Count} renderers with Silhouette material");
+    }
+
     private void InitializeState()
     {
-        isSilhouetteEnabled = occlusionSilhouette == null ? startEnabled : occlusionSilhouette.enabled;
-        if (!startEnabled && occlusionSilhouette != null)
+        // ToggleのIsOnの状態を取得
+        if (toggle != null)
+        {
+            isSilhouetteEnabled = toggle.isOn;
+        }
+        else
         {
             isSilhouetteEnabled = false;
-            occlusionSilhouette.enabled = false;
         }
     }
 
-    private void RegisterButtonCallback()
+    private void RegisterToggleCallback()
     {
-        if (toggleButton != null)
+        if (toggle != null)
         {
-            toggleButton.onClick.AddListener(HandleToggleButtonClicked);
+            toggle.onValueChanged.AddListener(HandleToggleValueChanged);
         }
     }
 
-    private void UnregisterButtonCallback()
+    private void UnregisterToggleCallback()
     {
-        if (toggleButton != null)
+        if (toggle != null)
         {
-            toggleButton.onClick.RemoveListener(HandleToggleButtonClicked);
+            toggle.onValueChanged.RemoveListener(HandleToggleValueChanged);
         }
     }
 
-    private void HandleToggleButtonClicked()
+    private void HandleToggleValueChanged(bool value)
     {
-        isSilhouetteEnabled = !isSilhouetteEnabled;
+        isSilhouetteEnabled = value;
         ApplyState();
+    }
+
+    private void UpdateToggleValue()
+    {
+        if (toggle != null)
+        {
+            toggle.SetIsOnWithoutNotify(isSilhouetteEnabled);
+        }
     }
 
     private void ApplyState()
     {
-        if (occlusionSilhouette == null)
+        // トグルがONの時はシルエットをON、OFFの時はシルエットをOFF
+        if (occlusionSilhouette != null)
         {
-            return;
+            occlusionSilhouette.forceSilhouette = false;
+            occlusionSilhouette.enabled = isSilhouetteEnabled;
         }
 
-        occlusionSilhouette.forceSilhouette = false;
-        occlusionSilhouette.enabled = isSilhouetteEnabled;
+        // Silhouetteマテリアルの有効/無効を切り替え
+        SetSilhouetteMaterialsEnabled(isSilhouetteEnabled);
+    }
+
+    private void SetSilhouetteMaterialsEnabled(bool enabled)
+    {
+        if (originalMaterials == null) return;
+
+        int appliedCount = 0;
+        foreach (var kvp in originalMaterials)
+        {
+            var renderer = kvp.Key;
+            if (renderer != null)
+            {
+                if (enabled)
+                {
+                    // 有効時：元のマテリアル配列（Silhouetteを含む）を復元
+                    renderer.sharedMaterials = kvp.Value;
+                }
+                else
+                {
+                    // 無効時：Silhouetteを除外したマテリアル配列を設定
+                    renderer.sharedMaterials = materialsWithoutSilhouette[renderer];
+                }
+                appliedCount++;
+            }
+        }
+
+        Debug.Log($"Applied silhouette state ({enabled}) to {appliedCount} renderers");
     }
 
     public void SetSilhouetteEnabled(bool enabled)
     {
         isSilhouetteEnabled = enabled;
+        UpdateToggleValue();
         ApplyState();
     }
 }
