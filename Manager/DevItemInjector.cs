@@ -28,7 +28,20 @@ public class DevItemInjector : MonoBehaviour
 
     public void Inject()
     {
-        if (!enableInjection || _hasInjected) return;
+        InjectInternal(false);
+    }
+
+    /// <summary>
+    /// Forces an injection even if it has already been performed. This can be bound to a UI button.
+    /// </summary>
+    public void InjectFromButton()
+    {
+        InjectInternal(true);
+    }
+
+    private void InjectInternal(bool force)
+    {
+        if (!enableInjection || (!force && _hasInjected)) return;
 
         if (InventoryManager.Instance == null) return;
 
