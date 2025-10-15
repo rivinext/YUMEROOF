@@ -138,6 +138,11 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
             }
         }
 
+        if (originalMaterials.Count == 0)
+        {
+            CacheSilhouetteMaterialsFromOcclusion();
+        }
+
         Debug.Log($"Found {originalMaterials.Count} renderers with Silhouette material");
     }
 
@@ -198,5 +203,36 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         isSilhouetteEnabled = enabled;
         if (toggle != null) toggle.SetIsOnWithoutNotify(isSilhouetteEnabled);
         ApplyState();
+    }
+
+    private void CacheSilhouetteMaterialsFromOcclusion()
+    {
+        if (occlusionSilhouette == null) return;
+
+        if (silhouetteMaterial == null)
+        {
+            silhouetteMaterial = occlusionSilhouette.silhouetteMaterial;
+        }
+
+        if (silhouetteMaterial == null) return;
+
+        if (occlusionSilhouette.targetRenderers == null) return;
+
+        foreach (var renderer in occlusionSilhouette.targetRenderers)
+        {
+            if (renderer == null) continue;
+
+            var baseMaterials = renderer.sharedMaterials;
+            if (baseMaterials == null || baseMaterials.Length == 0) continue;
+
+            var baseCopy = new Material[baseMaterials.Length];
+            baseMaterials.CopyTo(baseCopy, 0);
+
+            var combined = occlusionSilhouette.CreateCombinedMaterialsFor(renderer);
+            if (combined == null || combined.Length == 0) continue;
+
+            originalMaterials[renderer] = combined;
+            materialsWithoutSilhouette[renderer] = baseCopy;
+        }
     }
 }
