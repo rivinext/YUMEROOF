@@ -199,13 +199,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void SetSilhouetteMaterialsEnabled(bool enabled)
     {
-        if (enabled && (originalMaterials == null || originalMaterials.Count == 0))
-        {
-            // シーン遷移直後などでキャッシュが失われた場合に備えて再取得する
-            FindSilhouetteMaterials();
-        }
-
-        if (originalMaterials == null || originalMaterials.Count == 0) return;
+        if (originalMaterials == null) return;
 
         int appliedCount = 0;
         foreach (var kvp in originalMaterials)
@@ -221,10 +215,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
                 else
                 {
                     // 無効時：Silhouetteを除外したマテリアル配列を設定
-                    if (materialsWithoutSilhouette.TryGetValue(renderer, out var withoutSilhouette))
-                    {
-                        renderer.sharedMaterials = withoutSilhouette;
-                    }
+                    renderer.sharedMaterials = materialsWithoutSilhouette[renderer];
                 }
                 appliedCount++;
             }
