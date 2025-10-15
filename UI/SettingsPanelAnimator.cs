@@ -92,6 +92,7 @@ public class SettingsPanelAnimator : MonoBehaviour
             return;
         }
 
+        ExclusivePanelCoordinator.Instance?.NotifyPanelOpened(ExclusivePanelCoordinator.PanelType.Settings);
         PlayAnimation(slideInXCurve, openPositionX, true);
     }
 
@@ -108,6 +109,7 @@ public class SettingsPanelAnimator : MonoBehaviour
         }
 
         PlayAnimation(slideOutXCurve, closedPositionX, false);
+        ExclusivePanelCoordinator.Instance?.NotifyPanelClosed(ExclusivePanelCoordinator.PanelType.Settings);
     }
 
     public void SnapOpen()
