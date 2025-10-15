@@ -132,6 +132,32 @@ namespace Player
             return materialInstance;
         }
 
+        public Material[] CreateCombinedMaterialsFor(Renderer renderer)
+        {
+            if (renderer == null)
+            {
+                return null;
+            }
+
+            Material[] baseMaterials = renderer.sharedMaterials;
+            if (baseMaterials == null || baseMaterials.Length == 0)
+            {
+                return null;
+            }
+
+            Material[] silhouetteArray = new Material[baseMaterials.Length];
+            for (int i = 0; i < baseMaterials.Length; i++)
+            {
+                silhouetteArray[i] = CreateSilhouetteMaterialInstance(baseMaterials[i]);
+            }
+
+            Material[] combinedMaterials = new Material[baseMaterials.Length + silhouetteArray.Length];
+            baseMaterials.CopyTo(combinedMaterials, 0);
+            silhouetteArray.CopyTo(combinedMaterials, baseMaterials.Length);
+
+            return combinedMaterials;
+        }
+
         private void LateUpdate()
         {
             if (targetCamera == null || playerCollider == null)
