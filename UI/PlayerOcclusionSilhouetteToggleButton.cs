@@ -1,5 +1,6 @@
 using Player;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
@@ -18,20 +19,21 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     private void Awake()
     {
         CacheToggleReference();
-        CacheSilhouetteReference();
-        FindSilhouetteMaterials();
+        RefreshSilhouetteState();
         InitializeState();
     }
 
     private void OnEnable()
     {
         RegisterToggleCallback();
+        SceneManager.sceneLoaded += HandleSceneLoaded;
         UpdateToggleValue();
         ApplyState();
     }
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
         UnregisterToggleCallback();
     }
 
@@ -49,6 +51,23 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         {
             occlusionSilhouette = FindObjectOfType<PlayerOcclusionSilhouette>();
         }
+
+        if (occlusionSilhouette == null)
+        {
+            Debug.LogWarning("PlayerOcclusionSilhouette component was not found in the active scene.");
+        }
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        RefreshSilhouetteState();
+        ApplyState();
+    }
+
+    private void RefreshSilhouetteState()
+    {
+        CacheSilhouetteReference();
+        FindSilhouetteMaterials();
     }
 
     private void FindSilhouetteMaterials()
@@ -157,6 +176,11 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     private void ApplyState()
     {
         // トグルがONの時はシルエットをON、OFFの時はシルエットをOFF
+        if (occlusionSilhouette == null)
+        {
+            CacheSilhouetteReference();
+        }
+
         if (occlusionSilhouette != null)
         {
             occlusionSilhouette.forceSilhouette = false;
