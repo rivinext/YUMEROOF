@@ -110,7 +110,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
             foreach (var mat in materials)
             {
-                if (mat == silhouetteMaterial)
+                if (IsSilhouetteMaterial(mat))
                 {
                     hasSilhouette = true;
                 }
@@ -128,6 +128,26 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         }
 
         Debug.Log($"Found {originalMaterials.Count} renderers with Silhouette material");
+    }
+
+    private bool IsSilhouetteMaterial(Material material)
+    {
+        if (material == null || silhouetteMaterial == null)
+        {
+            return false;
+        }
+
+        if (material == silhouetteMaterial)
+        {
+            return true;
+        }
+
+        if (material.shader == silhouetteMaterial.shader && material.name.StartsWith(silhouetteMaterial.name))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private void InitializeState()
