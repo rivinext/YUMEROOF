@@ -37,6 +37,14 @@ namespace Player
 
         private void Awake()
         {
+            RebuildSilhouetteSetup();
+        }
+
+        /// <summary>
+        /// PlayerOcclusionSilhouette が参照しているカメラやマテリアルのキャッシュを再構築します。
+        /// </summary>
+        public void RebuildSilhouetteSetup()
+        {
             playerCollider = GetComponent<Collider>();
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
 
@@ -45,11 +53,12 @@ namespace Player
                 targetRenderers = GetComponentsInChildren<Renderer>();
             }
 
+            DisposeCreatedSilhouetteMaterials();
+
             originalMaterials.Clear();
             silhouetteMaterials.Clear();
             propertyBlocks.Clear();
             occludedMaterials.Clear();
-            createdSilhouetteMaterials.Clear();
 
             if (targetRenderers == null)
             {
@@ -69,6 +78,15 @@ namespace Player
                 }
 
                 Material[] runtimeMaterials = renderer.materials;
+                if (runtimeMaterials == null)
+                {
+                    originalMaterials.Add(null);
+                    silhouetteMaterials.Add(null);
+                    occludedMaterials.Add(null);
+                    propertyBlocks.Add(null);
+                    continue;
+                }
+
                 Material[] runtimeMaterialsCopy = new Material[runtimeMaterials.Length];
                 for (int m = 0; m < runtimeMaterials.Length; m++)
                 {
@@ -95,6 +113,14 @@ namespace Player
                 MaterialPropertyBlock block = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(block);
                 propertyBlocks.Add(block);
+            }
+
+            nextCheckTime = 0f;
+
+            if (isActiveAndEnabled)
+            {
+                bool shouldShowSilhouette = forceSilhouette || isOccluded;
+                ApplyMaterials(shouldShowSilhouette);
             }
         }
 
@@ -270,6 +296,11 @@ namespace Player
 
         private void OnDestroy()
         {
+            DisposeCreatedSilhouetteMaterials();
+        }
+
+        private void DisposeCreatedSilhouetteMaterials()
+        {
             for (int i = 0; i < createdSilhouetteMaterials.Count; i++)
             {
                 Material material = createdSilhouetteMaterials[i];
@@ -278,7 +309,49 @@ namespace Player
                     Destroy(material);
                 }
             }
+
             createdSilhouetteMaterials.Clear();
+        }
+
+        public bool TryGetMaterialSets(Renderer renderer, out Material[] withSilhouette, out Material[] withoutSilhouette)
+        {
+            withSilhouette = null;
+            withoutSilhouette = null;
+
+            if (renderer == null || targetRenderers == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < targetRenderers.Length; i++)
+            {
+                if (targetRenderers[i] != renderer)
+                {
+                    continue;
+                }
+
+                if (i < occludedMaterials.Count)
+                {
+                    Material[] occluded = occludedMaterials[i];
+                    if (occluded != null)
+                    {
+                        withSilhouette = (Material[])occluded.Clone();
+                    }
+                }
+
+                if (i < originalMaterials.Count)
+                {
+                    Material[] originals = originalMaterials[i];
+                    if (originals != null)
+                    {
+                        withoutSilhouette = (Material[])originals.Clone();
+                    }
+                }
+
+                return withSilhouette != null && withoutSilhouette != null;
+            }
+
+            return false;
         }
     }
 }

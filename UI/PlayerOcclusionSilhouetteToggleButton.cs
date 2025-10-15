@@ -1,5 +1,6 @@
 using Player;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
@@ -15,16 +16,25 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     private System.Collections.Generic.Dictionary<Renderer, Material[]> originalMaterials;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> materialsWithoutSilhouette;
 
+    private Material EffectiveSilhouetteMaterial => silhouetteMaterial != null
+        ? silhouetteMaterial
+        : occlusionSilhouette != null
+            ? occlusionSilhouette.silhouetteMaterial
+            : null;
+
     private void Awake()
     {
         CacheToggleReference();
         CacheSilhouetteReference();
-        FindSilhouetteMaterials();
+        RefreshSilhouetteMaterialCache();
         InitializeState();
     }
 
     private void OnEnable()
     {
+        CacheSilhouetteReference();
+        RefreshSilhouetteMaterialCache();
+        SceneManager.sceneLoaded += HandleSceneLoaded;
         RegisterToggleCallback();
         UpdateToggleValue();
         ApplyState();
@@ -32,6 +42,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
         UnregisterToggleCallback();
     }
 
@@ -51,12 +62,33 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         }
     }
 
+    private void RefreshSilhouetteMaterialCache()
+    {
+        CacheSilhouetteReference();
+
+        if (occlusionSilhouette != null)
+        {
+            occlusionSilhouette.RebuildSilhouetteSetup();
+        }
+
+        FindSilhouetteMaterials();
+    }
+
     private void FindSilhouetteMaterials()
     {
         originalMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
         materialsWithoutSilhouette = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
 
-        if (silhouetteMaterial == null)
+        bool cachedFromOcclusion = TryCacheFromOcclusionSilhouette();
+
+        if (cachedFromOcclusion)
+        {
+            Debug.Log($"Found {originalMaterials.Count} renderers with Silhouette material via PlayerOcclusionSilhouette");
+            return;
+        }
+
+        var targetSilhouetteMaterial = EffectiveSilhouetteMaterial;
+        if (targetSilhouetteMaterial == null)
         {
             Debug.LogWarning("Silhouette material is not assigned!");
             return;
@@ -91,7 +123,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
             foreach (var mat in materials)
             {
-                if (mat == silhouetteMaterial)
+                if (mat == targetSilhouetteMaterial)
                 {
                     hasSilhouette = true;
                 }
@@ -156,6 +188,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void ApplyState()
     {
+        CacheSilhouetteReference();
         // トグルがONの時はシルエットをON、OFFの時はシルエットをOFF
         if (occlusionSilhouette != null)
         {
@@ -165,6 +198,40 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
         // Silhouetteマテリアルの有効/無効を切り替え
         SetSilhouetteMaterialsEnabled(isSilhouetteEnabled);
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        RefreshSilhouetteMaterialCache();
+        ApplyState();
+    }
+
+    private bool TryCacheFromOcclusionSilhouette()
+    {
+        if (occlusionSilhouette == null || occlusionSilhouette.targetRenderers == null)
+        {
+            return false;
+        }
+
+        int cachedCount = 0;
+        foreach (var renderer in occlusionSilhouette.targetRenderers)
+        {
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            if (!occlusionSilhouette.TryGetMaterialSets(renderer, out var withSilhouette, out var withoutSilhouette))
+            {
+                continue;
+            }
+
+            originalMaterials[renderer] = withSilhouette;
+            materialsWithoutSilhouette[renderer] = withoutSilhouette;
+            cachedCount++;
+        }
+
+        return cachedCount > 0;
     }
 
     private void SetSilhouetteMaterialsEnabled(bool enabled)
@@ -185,7 +252,10 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
                 else
                 {
                     // 無効時：Silhouetteを除外したマテリアル配列を設定
-                    renderer.sharedMaterials = materialsWithoutSilhouette[renderer];
+                    if (materialsWithoutSilhouette.TryGetValue(renderer, out var withoutSilhouette))
+                    {
+                        renderer.sharedMaterials = withoutSilhouette;
+                    }
                 }
                 appliedCount++;
             }
