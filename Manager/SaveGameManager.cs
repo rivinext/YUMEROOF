@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -16,6 +17,9 @@ public class SaveGameManager : MonoBehaviour
     private string currentSlot;
     public string CurrentSlotKey => currentSlot;
     private Coroutine autoSaveCoroutine;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private Coroutine pendingDevInjection;
+#endif
     public static SaveGameManager Instance
     {
         get
@@ -80,6 +84,14 @@ public class SaveGameManager : MonoBehaviour
 
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         SceneManager.sceneLoaded -= OnSceneLoaded;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (pendingDevInjection != null)
+        {
+            StopCoroutine(pendingDevInjection);
+            pendingDevInjection = null;
+        }
+#endif
 
         if (autoSaveCoroutine != null)
         {
@@ -204,6 +216,7 @@ public class SaveGameManager : MonoBehaviour
                 var emptyData = new StorySaveData();
                 ApplyManagers(emptyData);
             }
+            InjectDevItemsAfterLoad();
             return;
         }
 
@@ -218,7 +231,48 @@ public class SaveGameManager : MonoBehaviour
             var data = StorySaveData.FromJson(json);
             ApplyManagers(data);
         }
+        InjectDevItemsAfterLoad();
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void InjectDevItemsAfterLoad()
+    {
+        if (!isActiveAndEnabled)
+        {
+            return;
+        }
+
+        if (pendingDevInjection != null)
+        {
+            StopCoroutine(pendingDevInjection);
+        }
+
+        pendingDevInjection = StartCoroutine(InjectDevItemsWhenReady());
+    }
+
+    private IEnumerator InjectDevItemsWhenReady()
+    {
+        while (true)
+        {
+            var injector = FindObjectOfType<DevItemInjector>(true);
+            var inventory = InventoryManager.Instance;
+
+            if (injector != null && inventory != null)
+            {
+                injector.Inject();
+                inventory.ForceInventoryUpdate();
+                pendingDevInjection = null;
+                yield break;
+            }
+
+            yield return null;
+        }
+    }
+#else
+    private void InjectDevItemsAfterLoad()
+    {
+    }
+#endif
 
     public void Delete(string slotKey)
     {
