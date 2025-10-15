@@ -1,5 +1,6 @@
 using Player;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
@@ -25,6 +26,8 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void OnEnable()
     {
+        CacheSilhouetteReference();
+        SceneManager.sceneLoaded += HandleSceneLoaded;
         RegisterToggleCallback();
         UpdateToggleValue();
         ApplyState();
@@ -32,6 +35,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
         UnregisterToggleCallback();
     }
 
@@ -156,6 +160,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void ApplyState()
     {
+        CacheSilhouetteReference();
         // トグルがONの時はシルエットをON、OFFの時はシルエットをOFF
         if (occlusionSilhouette != null)
         {
@@ -165,6 +170,13 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
         // Silhouetteマテリアルの有効/無効を切り替え
         SetSilhouetteMaterialsEnabled(isSilhouetteEnabled);
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        CacheSilhouetteReference();
+        FindSilhouetteMaterials();
+        ApplyState();
     }
 
     private void SetSilhouetteMaterialsEnabled(bool enabled)
