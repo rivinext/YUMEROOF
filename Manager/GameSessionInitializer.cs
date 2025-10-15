@@ -23,6 +23,11 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject hintSystemPrefab;
     [SerializeField] private GameObject sceneTransitionManagerPrefab;
     [SerializeField] private GameObject slideTransitionManagerPrefab;
+    [Header("Player Spawning")]
+    [Tooltip("Prefab used to create a player when none exists in a gameplay scene.")]
+    [SerializeField] private GameObject playerPrefab;
+    [Tooltip("Optional Resources path used to load the player prefab when the field above is empty.")]
+    [SerializeField] private string playerPrefabResourcePath = "Player";
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private DevItemInjector devItemInjectorPrefab;
 #endif
@@ -174,6 +179,8 @@ public class GameSessionInitializer : MonoBehaviour
         EnsureManager(ref furnitureDropManagerPrefab, () => FindObjectOfType<FurnitureDropManager>(), "FurnitureDropManager");
         EnsureManager(ref hintSystemPrefab, () => FindObjectOfType<HintSystem>(), "HintSystem");
 
+        EnsurePlayerInstance();
+
         var sceneTransition = EnsureManager(ref sceneTransitionManagerPrefab, () => FindObjectOfType<SceneTransitionManager>(), "SceneTransitionManager");
         if (sceneTransition != null)
         {
@@ -189,6 +196,49 @@ public class GameSessionInitializer : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         EnsureDevItemInjector();
 #endif
+    }
+
+    private void EnsurePlayerInstance()
+    {
+        var activeScene = SceneManager.GetActiveScene();
+        if (activeScene.name == "MainMenu")
+        {
+            return;
+        }
+
+        if (FindObjectOfType<PlayerManager>() != null)
+        {
+            return;
+        }
+
+        var prefabToUse = ResolvePlayerPrefab();
+        if (prefabToUse == null)
+        {
+            Debug.LogError("Player prefab is not assigned and could not be loaded. Please assign it on GameSessionInitializer.");
+            return;
+        }
+
+        var playerInstance = Instantiate(prefabToUse);
+
+        if (playerInstance.scene != activeScene)
+        {
+            SceneManager.MoveGameObjectToScene(playerInstance, activeScene);
+        }
+    }
+
+    private GameObject ResolvePlayerPrefab()
+    {
+        if (playerPrefab != null)
+        {
+            return playerPrefab;
+        }
+
+        if (!string.IsNullOrEmpty(playerPrefabResourcePath))
+        {
+            playerPrefab = Resources.Load<GameObject>(playerPrefabResourcePath);
+        }
+
+        return playerPrefab;
     }
 
     private T EnsureManager<T>(ref GameObject prefabField, Func<T> instanceGetter, string resourcePath)
