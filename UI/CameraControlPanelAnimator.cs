@@ -81,6 +81,7 @@ public class CameraControlPanelAnimator : MonoBehaviour
             return;
         }
 
+        ExclusivePanelCoordinator.Instance?.NotifyPanelOpened(ExclusivePanelCoordinator.PanelType.CameraControl);
         PlayAnimation(slideInXCurve, openPositionX, true);
     }
 
@@ -97,6 +98,7 @@ public class CameraControlPanelAnimator : MonoBehaviour
         }
 
         PlayAnimation(slideOutXCurve, closedPositionX, false);
+        ExclusivePanelCoordinator.Instance?.NotifyPanelClosed(ExclusivePanelCoordinator.PanelType.CameraControl);
     }
 
     public void SnapOpen()

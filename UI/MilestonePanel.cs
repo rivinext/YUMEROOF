@@ -76,6 +76,8 @@ public class MilestonePanel : MonoBehaviour
     private int currentProgressIndex = 0;
     private bool tooltipActive;
 
+    public bool IsOpen => isOpen;
+
     void Awake()
     {
         CacheTooltipReferences();
@@ -164,16 +166,51 @@ public class MilestonePanel : MonoBehaviour
 
     void TogglePanel()
     {
-        isOpen = !isOpen;
         if (isOpen)
         {
-            ClearMilestoneNotification();
+            ClosePanel();
         }
+        else
+        {
+            OpenPanel();
+        }
+    }
+
+    public void OpenPanel()
+    {
+        if (isOpen)
+        {
+            return;
+        }
+
+        isOpen = true;
+        ClearMilestoneNotification();
+
         if (slideCoroutine != null)
         {
             StopCoroutine(slideCoroutine);
         }
-        slideCoroutine = StartCoroutine(SlidePanel(isOpen));
+
+        ExclusivePanelCoordinator.Instance?.NotifyPanelOpened(ExclusivePanelCoordinator.PanelType.Milestone);
+        slideCoroutine = StartCoroutine(SlidePanel(true));
+    }
+
+    public void ClosePanel()
+    {
+        if (!isOpen)
+        {
+            return;
+        }
+
+        isOpen = false;
+
+        if (slideCoroutine != null)
+        {
+            StopCoroutine(slideCoroutine);
+        }
+
+        slideCoroutine = StartCoroutine(SlidePanel(false));
+        ExclusivePanelCoordinator.Instance?.NotifyPanelClosed(ExclusivePanelCoordinator.PanelType.Milestone);
     }
 
     IEnumerator SlidePanel(bool open)

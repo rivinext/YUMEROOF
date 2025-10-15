@@ -574,6 +574,7 @@ public class InventoryUI : MonoBehaviour
             tabContainer.SetActive(true);
         }
 
+        ExclusivePanelCoordinator.Instance?.NotifyPanelOpened(ExclusivePanelCoordinator.PanelType.Inventory);
         animator?.PlayOpen();
         RefreshInventoryDisplay();
 
@@ -591,6 +592,7 @@ public class InventoryUI : MonoBehaviour
         isOpen = false;
 
         animator?.PlayClose();
+        ExclusivePanelCoordinator.Instance?.NotifyPanelClosed(ExclusivePanelCoordinator.PanelType.Inventory);
         DisablePlayerControl(false);
         NotifyCameraController(false);
 
