@@ -21,6 +21,7 @@ public class SlideTransitionManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        EnsurePanelAssigned();
     }
 
     /// <summary>
@@ -89,6 +90,29 @@ public class SlideTransitionManager : MonoBehaviour
         else
         {
             yield return RunSlideOut();
+        }
+    }
+
+    /// <summary>
+    /// Ensures the slide panel reference is populated so transitions can animate.
+    /// </summary>
+    public void EnsurePanelAssigned()
+    {
+        if (slidePanel != null) return;
+
+        slidePanel = FindObjectOfType<UISlidePanel>();
+        if (slidePanel == null)
+        {
+            var panels = Resources.FindObjectsOfTypeAll<UISlidePanel>();
+            if (panels != null && panels.Length > 0)
+            {
+                slidePanel = panels[0];
+            }
+        }
+
+        if (slidePanel == null)
+        {
+            Debug.LogWarning("[SlideTransitionManager] UISlidePanel not found. Slide transitions will run without animation.");
         }
     }
 }
