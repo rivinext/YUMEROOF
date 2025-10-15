@@ -235,6 +235,7 @@ public class GameSessionInitializer : MonoBehaviour
         var existing = FindObjectOfType<DevItemInjector>(true);
         if (existing != null)
         {
+            DontDestroyOnLoad(existing.gameObject);
             existing.gameObject.SetActive(true);
             return;
         }
@@ -258,6 +259,7 @@ public class GameSessionInitializer : MonoBehaviour
             injector = new GameObject("DevItemInjector").AddComponent<DevItemInjector>();
         }
 
+        DontDestroyOnLoad(injector.gameObject);
         injector.gameObject.SetActive(true);
     }
 #endif
