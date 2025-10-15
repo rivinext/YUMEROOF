@@ -154,10 +154,6 @@ public class GameSessionInitializer : MonoBehaviour
         }
 
         SaveGameManager.Instance.Load(slotKey);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        FindObjectOfType<DevItemInjector>(true)?.Inject();
-        InventoryManager.Instance.ForceInventoryUpdate();
-#endif
         initialized = true;
         slotKey = null;
     }

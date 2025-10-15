@@ -204,6 +204,7 @@ public class SaveGameManager : MonoBehaviour
                 var emptyData = new StorySaveData();
                 ApplyManagers(emptyData);
             }
+            InjectDevItemsAfterLoad();
             return;
         }
 
@@ -218,7 +219,31 @@ public class SaveGameManager : MonoBehaviour
             var data = StorySaveData.FromJson(json);
             ApplyManagers(data);
         }
+        InjectDevItemsAfterLoad();
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void InjectDevItemsAfterLoad()
+    {
+        var injector = FindObjectOfType<DevItemInjector>(true);
+        if (injector == null)
+        {
+            return;
+        }
+
+        injector.Inject();
+
+        var inventory = InventoryManager.Instance;
+        if (inventory != null)
+        {
+            inventory.ForceInventoryUpdate();
+        }
+    }
+#else
+    private void InjectDevItemsAfterLoad()
+    {
+    }
+#endif
 
     public void Delete(string slotKey)
     {
