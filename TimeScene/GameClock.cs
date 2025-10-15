@@ -20,6 +20,8 @@ public class GameClock : MonoBehaviour
     // Currently applied scale (0 for pause)
     float currentScale = 1f;
 
+    bool scaleInitialized;
+
     public event Action<float> OnTimeScaleChanged;
 
     public event Action<int> OnDayChanged;
@@ -40,7 +42,21 @@ public class GameClock : MonoBehaviour
             return;
         }
         Instance = this;
+        InitializeDefaultScale();
         DontDestroyOnLoad(gameObject);
+    }
+
+    void InitializeDefaultScale()
+    {
+        if (scaleInitialized)
+            return;
+
+        if (timeScales != null && timeScales.Length > 0)
+            currentScale = timeScales[0];
+        else
+            currentScale = 1f;
+
+        scaleInitialized = true;
     }
 
     void OnEnable()

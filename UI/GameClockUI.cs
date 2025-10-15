@@ -19,7 +19,6 @@ public class GameClockUI : MonoBehaviour
     private Button _activeButton;
     private GameClock _currentClock;
     private bool _buttonsInitialized;
-    private bool _timeScaleInitialized;
 
     void SetActiveButton(Button activeButton)
     {
@@ -153,17 +152,6 @@ public class GameClockUI : MonoBehaviour
 
         UpdateDayText(_currentClock.currentDay);
         _currentClock.OnDayChanged += UpdateDayText;
-
-        if (!_timeScaleInitialized)
-        {
-            _currentClock.SetTimeScale(_currentClock.timeScales[0]);
-            SetActiveButton(scale1Button);
-            _timeScaleInitialized = true;
-        }
-        else if (_activeButton != null)
-        {
-            SetActiveButton(_activeButton);
-        }
 
         HandleTimeScaleChanged(_currentClock.CurrentScale);
     }
