@@ -204,7 +204,6 @@ public class SaveGameManager : MonoBehaviour
                 var emptyData = new StorySaveData();
                 ApplyManagers(emptyData);
             }
-            InjectDevItemsAfterLoad();
             return;
         }
 
@@ -219,7 +218,6 @@ public class SaveGameManager : MonoBehaviour
             var data = StorySaveData.FromJson(json);
             ApplyManagers(data);
         }
-        InjectDevItemsAfterLoad();
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -399,6 +397,8 @@ public class SaveGameManager : MonoBehaviour
         {
             milestone.RequestProgressUpdate();
         }
+
+        InjectDevItemsAfterLoad();
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -430,6 +430,8 @@ public class SaveGameManager : MonoBehaviour
         {
             milestone.RequestProgressUpdate();
         }
+
+        InjectDevItemsAfterLoad();
     }
 
     void ApplyInventory(List<string> items)
