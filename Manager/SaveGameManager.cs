@@ -438,10 +438,6 @@ public class SaveGameManager : MonoBehaviour
             }
         }
         inv.ForceInventoryUpdate();
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        var injector = FindObjectOfType<DevItemInjector>(true);
-        injector?.Inject();
-#endif
     }
 
     void ApplyFurniture(List<SaveSystem.PlacedFurniture> list)
