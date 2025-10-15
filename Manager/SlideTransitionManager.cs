@@ -10,7 +10,6 @@ public class SlideTransitionManager : MonoBehaviour
     public static SlideTransitionManager Instance { get; private set; }
 
     [SerializeField] private UISlidePanel slidePanel;
-    [SerializeField] private string baseSceneName = "TimeScene";
 
     private void Awake()
     {
@@ -70,38 +69,10 @@ public class SlideTransitionManager : MonoBehaviour
         GameSessionInitializer.CreateIfNeeded(slotKey);
         UIMenuManager.ClearSelectedSlot();
 
-        Scene previousScene = SceneManager.GetActiveScene();
-
-        Scene baseScene = SceneManager.GetSceneByName(baseSceneName);
-        if (!string.IsNullOrEmpty(baseSceneName) && (!baseScene.IsValid() || !baseScene.isLoaded))
+        AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
+        while (!op.isDone)
         {
-            AsyncOperation baseOp = SceneManager.LoadSceneAsync(baseSceneName, LoadSceneMode.Additive);
-            while (baseOp != null && !baseOp.isDone)
-            {
-                yield return null;
-            }
-            baseScene = SceneManager.GetSceneByName(baseSceneName);
-        }
-
-        Scene targetScene = SceneManager.GetSceneByName(sceneName);
-        if (!targetScene.IsValid() || !targetScene.isLoaded)
-        {
-            AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
-            while (!op.isDone)
-            {
-                yield return null;
-            }
-            targetScene = SceneManager.GetSceneByName(sceneName);
-        }
-
-        if (targetScene.IsValid())
-        {
-            SceneManager.SetActiveScene(targetScene);
-        }
-
-        if (previousScene.IsValid() && previousScene.name != sceneName && previousScene.name != baseSceneName)
-        {
-            SceneManager.UnloadSceneAsync(previousScene);
+            yield return null;
         }
 
         if (SceneManager.GetActiveScene().name != "MainMenu" &&
