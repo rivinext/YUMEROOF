@@ -2,6 +2,7 @@ using Player;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 {
@@ -13,106 +14,81 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     [SerializeField] private Material silhouetteMaterial;
 
     private bool isSilhouetteEnabled;
-    private System.Collections.Generic.Dictionary<Renderer, Material[]> originalMaterials;
-    private System.Collections.Generic.Dictionary<Renderer, Material[]> materialsWithoutSilhouette;
+    private Dictionary<Renderer, Material[]> originalMaterials;
+    private Dictionary<Renderer, Material[]> materialsWithoutSilhouette;
 
     private void Awake()
     {
-        CacheToggleReference();
+        if (toggle == null) toggle = GetComponent<Toggle>();
         RefreshSilhouetteState();
-        InitializeState();
+        isSilhouetteEnabled = toggle != null ? toggle.isOn : false;
     }
 
     private void OnEnable()
     {
-        RegisterToggleCallback();
+        if (toggle != null)
+        {
+            toggle.onValueChanged.AddListener(HandleToggleValueChanged);
+            toggle.SetIsOnWithoutNotify(isSilhouetteEnabled);
+        }
         SceneManager.sceneLoaded += HandleSceneLoaded;
-        UpdateToggleValue();
         ApplyState();
     }
 
     private void OnDisable()
     {
+        if (toggle != null) toggle.onValueChanged.RemoveListener(HandleToggleValueChanged);
         SceneManager.sceneLoaded -= HandleSceneLoaded;
-        UnregisterToggleCallback();
-    }
-
-    private void CacheToggleReference()
-    {
-        if (toggle == null)
-        {
-            toggle = GetComponent<Toggle>();
-        }
-    }
-
-    private void CacheSilhouetteReference()
-    {
-        if (occlusionSilhouette != null)
-        {
-            return;
-        }
-
-        occlusionSilhouette = FindObjectOfType<PlayerOcclusionSilhouette>();
-        if (occlusionSilhouette != null)
-        {
-            return;
-        }
-
-        var allSilhouettes = Resources.FindObjectsOfTypeAll<PlayerOcclusionSilhouette>();
-        var activeScene = SceneManager.GetActiveScene();
-        foreach (var silhouette in allSilhouettes)
-        {
-            if (silhouette == null)
-            {
-                continue;
-            }
-
-            var go = silhouette.gameObject;
-            if (go == null)
-            {
-                continue;
-            }
-
-            if (go.hideFlags != HideFlags.None)
-            {
-                continue;
-            }
-
-            var scene = go.scene;
-            if (!scene.IsValid())
-            {
-                continue;
-            }
-
-            if (scene == activeScene || scene.name == "DontDestroyOnLoad")
-            {
-                occlusionSilhouette = silhouette;
-                break;
-            }
-        }
-
-        if (occlusionSilhouette == null)
-        {
-            Debug.LogWarning("PlayerOcclusionSilhouette component was not found in the active scene.");
-        }
     }
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        StartCoroutine(RefreshAfterSceneLoad());
+    }
+
+    private System.Collections.IEnumerator RefreshAfterSceneLoad()
+    {
+        yield return null;
         RefreshSilhouetteState();
         ApplyState();
     }
 
     private void RefreshSilhouetteState()
     {
-        CacheSilhouetteReference();
+        FindOrCacheSilhouetteReference();
         FindSilhouetteMaterials();
+    }
+
+    private void FindOrCacheSilhouetteReference()
+    {
+        if (occlusionSilhouette != null) return;
+
+        occlusionSilhouette = FindObjectOfType<PlayerOcclusionSilhouette>();
+        if (occlusionSilhouette != null) return;
+
+        var allSilhouettes = Resources.FindObjectsOfTypeAll<PlayerOcclusionSilhouette>();
+        var activeScene = SceneManager.GetActiveScene();
+
+        foreach (var silhouette in allSilhouettes)
+        {
+            if (silhouette == null || silhouette.gameObject == null) continue;
+            if (silhouette.gameObject.hideFlags != HideFlags.None) continue;
+
+            var scene = silhouette.gameObject.scene;
+            if (scene.IsValid() && (scene == activeScene || scene.name == "DontDestroyOnLoad"))
+            {
+                occlusionSilhouette = silhouette;
+                return;
+            }
+        }
+
+        Debug.LogWarning("PlayerOcclusionSilhouette component was not found.");
     }
 
     private void FindSilhouetteMaterials()
     {
-        originalMaterials = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
-        materialsWithoutSilhouette = new System.Collections.Generic.Dictionary<Renderer, Material[]>();
+        originalMaterials = new Dictionary<Renderer, Material[]>();
+        materialsWithoutSilhouette = new Dictionary<Renderer, Material[]>();
 
         if (silhouetteMaterial == null)
         {
@@ -120,16 +96,12 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
             return;
         }
 
-        // 通常のシーンオブジェクトとDontDestroyOnLoad内のオブジェクトの両方を取得
-        var allRenderers = new System.Collections.Generic.List<Renderer>();
+        var allRenderers = new List<Renderer>(FindObjectsOfType<Renderer>(true));
 
-        // 通常のシーンオブジェクト
-        allRenderers.AddRange(FindObjectsOfType<Renderer>(true));
-
-        // DontDestroyOnLoad内のオブジェクトを明示的に検索
+        // DontDestroyOnLoad内のオブジェクトを追加
         foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
         {
-            if (go.scene.name == "DontDestroyOnLoad" || go.hideFlags == HideFlags.None)
+            if ((go.scene.name == "DontDestroyOnLoad" || go.hideFlags == HideFlags.None))
             {
                 var renderer = go.GetComponent<Renderer>();
                 if (renderer != null && !allRenderers.Contains(renderer))
@@ -144,8 +116,8 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
             if (renderer == null) continue;
 
             var materials = renderer.sharedMaterials;
-            var hasSilhouette = false;
-            var nonSilhouetteMats = new System.Collections.Generic.List<Material>();
+            var nonSilhouetteMats = new List<Material>();
+            bool hasSilhouette = false;
 
             foreach (var mat in materials)
             {
@@ -171,74 +143,25 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private bool IsSilhouetteMaterial(Material material)
     {
-        if (material == null || silhouetteMaterial == null)
-        {
-            return false;
-        }
-
-        if (material == silhouetteMaterial)
-        {
-            return true;
-        }
-
-        if (material.shader == silhouetteMaterial.shader && material.name.StartsWith(silhouetteMaterial.name))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    private void InitializeState()
-    {
-        // ToggleのIsOnの状態を取得
-        if (toggle != null)
-        {
-            isSilhouetteEnabled = toggle.isOn;
-        }
-        else
-        {
-            isSilhouetteEnabled = false;
-        }
-    }
-
-    private void RegisterToggleCallback()
-    {
-        if (toggle != null)
-        {
-            toggle.onValueChanged.AddListener(HandleToggleValueChanged);
-        }
-    }
-
-    private void UnregisterToggleCallback()
-    {
-        if (toggle != null)
-        {
-            toggle.onValueChanged.RemoveListener(HandleToggleValueChanged);
-        }
+        if (material == null || silhouetteMaterial == null) return false;
+        if (material == silhouetteMaterial) return true;
+        return material.shader == silhouetteMaterial.shader &&
+               material.name.StartsWith(silhouetteMaterial.name);
     }
 
     private void HandleToggleValueChanged(bool value)
     {
         isSilhouetteEnabled = value;
-        ApplyState();
-    }
-
-    private void UpdateToggleValue()
-    {
-        if (toggle != null)
+        if (originalMaterials == null || originalMaterials.Count == 0)
         {
-            toggle.SetIsOnWithoutNotify(isSilhouetteEnabled);
+            FindSilhouetteMaterials();
         }
+        ApplyState();
     }
 
     private void ApplyState()
     {
-        // トグルがONの時はシルエットをON、OFFの時はシルエットをOFF
-        if (occlusionSilhouette == null)
-        {
-            CacheSilhouetteReference();
-        }
+        if (occlusionSilhouette == null) FindOrCacheSilhouetteReference();
 
         if (occlusionSilhouette != null)
         {
@@ -246,30 +169,23 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
             occlusionSilhouette.enabled = isSilhouetteEnabled;
         }
 
-        // Silhouetteマテリアルの有効/無効を切り替え
         SetSilhouetteMaterialsEnabled(isSilhouetteEnabled);
     }
 
     private void SetSilhouetteMaterialsEnabled(bool enabled)
     {
-        if (originalMaterials == null) return;
+        if (originalMaterials == null || originalMaterials.Count == 0)
+        {
+            FindSilhouetteMaterials();
+            if (originalMaterials == null || originalMaterials.Count == 0) return;
+        }
 
         int appliedCount = 0;
         foreach (var kvp in originalMaterials)
         {
-            var renderer = kvp.Key;
-            if (renderer != null)
+            if (kvp.Key != null)
             {
-                if (enabled)
-                {
-                    // 有効時：元のマテリアル配列（Silhouetteを含む）を復元
-                    renderer.sharedMaterials = kvp.Value;
-                }
-                else
-                {
-                    // 無効時：Silhouetteを除外したマテリアル配列を設定
-                    renderer.sharedMaterials = materialsWithoutSilhouette[renderer];
-                }
+                kvp.Key.sharedMaterials = enabled ? kvp.Value : materialsWithoutSilhouette[kvp.Key];
                 appliedCount++;
             }
         }
@@ -280,7 +196,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     public void SetSilhouetteEnabled(bool enabled)
     {
         isSilhouetteEnabled = enabled;
-        UpdateToggleValue();
+        if (toggle != null) toggle.SetIsOnWithoutNotify(isSilhouetteEnabled);
         ApplyState();
     }
 }
