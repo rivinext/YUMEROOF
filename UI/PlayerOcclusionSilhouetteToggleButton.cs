@@ -47,9 +47,48 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void CacheSilhouetteReference()
     {
-        if (occlusionSilhouette == null)
+        if (occlusionSilhouette != null)
         {
-            occlusionSilhouette = FindObjectOfType<PlayerOcclusionSilhouette>();
+            return;
+        }
+
+        occlusionSilhouette = FindObjectOfType<PlayerOcclusionSilhouette>();
+        if (occlusionSilhouette != null)
+        {
+            return;
+        }
+
+        var allSilhouettes = Resources.FindObjectsOfTypeAll<PlayerOcclusionSilhouette>();
+        var activeScene = SceneManager.GetActiveScene();
+        foreach (var silhouette in allSilhouettes)
+        {
+            if (silhouette == null)
+            {
+                continue;
+            }
+
+            var go = silhouette.gameObject;
+            if (go == null)
+            {
+                continue;
+            }
+
+            if (go.hideFlags != HideFlags.None)
+            {
+                continue;
+            }
+
+            var scene = go.scene;
+            if (!scene.IsValid())
+            {
+                continue;
+            }
+
+            if (scene == activeScene || scene.name == "DontDestroyOnLoad")
+            {
+                occlusionSilhouette = silhouette;
+                break;
+            }
         }
 
         if (occlusionSilhouette == null)
@@ -110,7 +149,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
             foreach (var mat in materials)
             {
-                if (mat == silhouetteMaterial)
+                if (IsSilhouetteMaterial(mat))
                 {
                     hasSilhouette = true;
                 }
@@ -128,6 +167,26 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         }
 
         Debug.Log($"Found {originalMaterials.Count} renderers with Silhouette material");
+    }
+
+    private bool IsSilhouetteMaterial(Material material)
+    {
+        if (material == null || silhouetteMaterial == null)
+        {
+            return false;
+        }
+
+        if (material == silhouetteMaterial)
+        {
+            return true;
+        }
+
+        if (material.shader == silhouetteMaterial.shader && material.name.StartsWith(silhouetteMaterial.name))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private void InitializeState()
