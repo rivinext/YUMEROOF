@@ -23,9 +23,6 @@ public class SceneTransitionManager : MonoBehaviour
         }
     }
 
-    [Header("Scene Settings")]
-    [SerializeField] private string baseSceneName = "TimeScene";
-
     [Header("Fade Settings")]
     public float fadeDuration = 1f;
     public Color fadeColor = Color.black;
@@ -33,10 +30,6 @@ public class SceneTransitionManager : MonoBehaviour
     [Header("Audio Settings")]
     public AudioClip doorOpenSound;
     public AudioClip transitionSound;
-
-    [Header("Player Settings")]
-    [SerializeField] private GameObject playerPrefab;
-    [SerializeField] private string playerPrefabResourcePath = string.Empty;
 
     private Canvas fadeCanvas;
     private Image fadeImage;
@@ -146,48 +139,17 @@ public class SceneTransitionManager : MonoBehaviour
         // フェードアウト
         yield return StartCoroutine(Fade(1f));
 
-        // ベースシーン読み込み確認
-        Scene baseScene = SceneManager.GetSceneByName(baseSceneName);
-        if (!string.IsNullOrEmpty(baseSceneName) && (!baseScene.IsValid() || !baseScene.isLoaded))
-        {
-            AsyncOperation baseLoad = SceneManager.LoadSceneAsync(baseSceneName, LoadSceneMode.Additive);
-            while (baseLoad != null && !baseLoad.isDone)
-            {
-                yield return null;
-            }
-            baseScene = SceneManager.GetSceneByName(baseSceneName);
-        }
-
         // シーン読み込み
         var slotKey = SaveGameManager.Instance?.CurrentSlotKey;
         GameSessionInitializer.CreateIfNeeded(slotKey);
-        Scene newScene = SceneManager.GetSceneByName(sceneName);
-        if (!newScene.IsValid() || !newScene.isLoaded)
+        AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
+        while (!asyncLoad.isDone)
         {
-            AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
-            while (!asyncLoad.isDone)
-            {
-                yield return null;
-            }
-            newScene = SceneManager.GetSceneByName(sceneName);
-        }
-
-        if (newScene.IsValid())
-        {
-            SceneManager.SetActiveScene(newScene);
+            yield return null;
         }
 
         // スポーン位置に移動
         MovePlayerToSpawnPoint(spawnPointName);
-
-        if (!string.IsNullOrEmpty(lastSceneName) && lastSceneName != baseSceneName && lastSceneName != sceneName)
-        {
-            AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(lastSceneName);
-            while (unloadOp != null && !unloadOp.isDone)
-            {
-                yield return null;
-            }
-        }
 
         // 少し待機
         yield return new WaitForSeconds(0.1f);
@@ -227,9 +189,12 @@ public class SceneTransitionManager : MonoBehaviour
 
     void MovePlayerToSpawnPoint(string spawnPointName)
     {
-        GameObject player = EnsurePlayerExists();
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player == null)
+        {
+            Debug.LogWarning("Player not found!");
             return;
+        }
 
         // スポーンポイントを探す
         PlayerSpawnPoint[] spawnPoints = FindObjectsOfType<PlayerSpawnPoint>();
@@ -253,35 +218,6 @@ public class SceneTransitionManager : MonoBehaviour
         }
 
         Debug.LogWarning($"Spawn point '{spawnPointName}' not found!");
-    }
-
-    GameObject EnsurePlayerExists()
-    {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-        {
-            return player;
-        }
-
-        GameObject prefabToSpawn = playerPrefab;
-        if (prefabToSpawn == null && !string.IsNullOrEmpty(playerPrefabResourcePath))
-        {
-            prefabToSpawn = Resources.Load<GameObject>(playerPrefabResourcePath);
-        }
-
-        if (prefabToSpawn != null)
-        {
-            player = Instantiate(prefabToSpawn);
-            Scene baseScene = SceneManager.GetSceneByName(baseSceneName);
-            if (!string.IsNullOrEmpty(baseSceneName) && baseScene.IsValid() && baseScene.isLoaded)
-            {
-                SceneManager.MoveGameObjectToScene(player, baseScene);
-            }
-            return player;
-        }
-
-        Debug.LogWarning("Player not found and no prefab assigned for fallback instantiation.");
-        return null;
     }
 
     void DisablePlayerControl(bool disable)
