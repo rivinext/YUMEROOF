@@ -6,6 +6,11 @@ public class DevItemInjector : MonoBehaviour
 {
     private static bool _hasInjected = false;
 
+    private void Awake()
+    {
+        DontDestroyOnLoad(gameObject);
+    }
+
     [Serializable]
     public class DevEntry
     {
