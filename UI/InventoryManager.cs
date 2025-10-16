@@ -74,14 +74,6 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    void OnDestroy()
-    {
-        if (instance == this)
-        {
-            instance = null;
-        }
-    }
-
     // ========== Context Menu Actions（Inspector右クリックメニュー） ==========
 
 
