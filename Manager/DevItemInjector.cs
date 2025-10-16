@@ -11,6 +11,16 @@ public class DevItemInjector : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private void OnEnable()
+    {
+        SaveGameManager.SaveApplied += OnSaveApplied;
+    }
+
+    private void OnDisable()
+    {
+        SaveGameManager.SaveApplied -= OnSaveApplied;
+    }
+
     [Serializable]
     public class DevEntry
     {
@@ -39,6 +49,11 @@ public class DevItemInjector : MonoBehaviour
         InjectInternal(true);
     }
 
+    private void OnSaveApplied()
+    {
+        InjectInternal(false);
+    }
+
     private void InjectInternal(bool force)
     {
         if (!enableInjection || (!force && _hasInjected)) return;
@@ -60,6 +75,8 @@ public class DevItemInjector : MonoBehaviour
                 InventoryManager.Instance.AddMaterial(entry.id, entry.quantity);
             }
         }
+
+        InventoryManager.Instance.ForceInventoryUpdate();
 
         _hasInjected = true;
     }
