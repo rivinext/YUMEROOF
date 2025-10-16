@@ -44,7 +44,7 @@ public class HintSystem : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-        gameClock = FindObjectOfType<GameClock>();
+        gameClock = FindFirstObjectByType<GameClock>();
     }
 
     void LoadHints()
