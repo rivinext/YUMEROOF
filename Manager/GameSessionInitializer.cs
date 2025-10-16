@@ -23,9 +23,6 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject hintSystemPrefab;
     [SerializeField] private GameObject sceneTransitionManagerPrefab;
     [SerializeField] private GameObject slideTransitionManagerPrefab;
-    [SerializeField] private DevItemInjector devItemInjectorPrefab;
-    [SerializeField] private DevItemInjectorSettings devItemInjectorSettings;
-    private bool devItemInjectorSettingsWarningLogged;
 
     void Awake()
     {
@@ -90,7 +87,6 @@ public class GameSessionInitializer : MonoBehaviour
     {
         if (scene.name == "MainMenu")
         {
-            CleanupInitializerSpawnedDevInjector();
             DevItemInjector.ResetInjected();
             Destroy(gameObject);
             return;
@@ -182,8 +178,6 @@ public class GameSessionInitializer : MonoBehaviour
         {
             slideTransition.EnsurePanelAssigned();
         }
-
-        EnsureDevItemInjector();
     }
 
     private T EnsureManager<T>(ref GameObject prefabField, Func<T> instanceGetter, string resourcePath)
@@ -224,153 +218,4 @@ public class GameSessionInitializer : MonoBehaviour
         return component;
     }
 
-    private void EnsureDevItemInjector()
-    {
-        var injectors = Resources.FindObjectsOfTypeAll<DevItemInjector>();
-        DevItemInjector fallback = null;
-
-        foreach (var injector in injectors)
-        {
-            if (injector == null)
-            {
-                continue;
-            }
-
-            if (!injector.gameObject.scene.IsValid())
-            {
-                continue;
-            }
-
-            if (injector.SpawnedByInitializer)
-            {
-                if (fallback == null)
-                {
-                    fallback = injector;
-                }
-
-                continue;
-            }
-
-            ApplyDevItemInjectorSettings(injector);
-            ActivateDevItemInjector(injector);
-
-            if (fallback != null && fallback != injector)
-            {
-                Destroy(fallback.gameObject);
-            }
-
-            return;
-        }
-
-        var configured = InstantiateConfiguredDevItemInjector();
-        if (configured != null)
-        {
-            configured.SpawnedByInitializer = true;
-            ApplyDevItemInjectorSettings(configured);
-            ActivateDevItemInjector(configured);
-
-            if (fallback != null && fallback != configured)
-            {
-                Destroy(fallback.gameObject);
-            }
-
-            return;
-        }
-
-        if (fallback != null)
-        {
-            fallback.SpawnedByInitializer = true;
-            ApplyDevItemInjectorSettings(fallback);
-            ActivateDevItemInjector(fallback);
-            return;
-        }
-
-        var createdFallback = new GameObject("DevItemInjector").AddComponent<DevItemInjector>();
-        createdFallback.SpawnedByInitializer = true;
-        ApplyDevItemInjectorSettings(createdFallback);
-        ActivateDevItemInjector(createdFallback);
-    }
-
-    private DevItemInjector InstantiateConfiguredDevItemInjector()
-    {
-        var template = devItemInjectorPrefab;
-        if (template == null)
-        {
-            template = Resources.Load<DevItemInjector>("DevItemInjector");
-        }
-
-        if (template == null)
-        {
-            return null;
-        }
-
-        return Instantiate(template);
-    }
-
-    private void ApplyDevItemInjectorSettings(DevItemInjector injector)
-    {
-        if (injector == null)
-        {
-            return;
-        }
-
-        var settings = ResolveDevItemInjectorSettings();
-        if (settings == null)
-        {
-            if (!devItemInjectorSettingsWarningLogged)
-            {
-                Debug.LogWarning("[GameSessionInitializer] DevItemInjectorSettings component is not assigned or found. Using DevItemInjector defaults.");
-                devItemInjectorSettingsWarningLogged = true;
-            }
-
-            return;
-        }
-
-        injector.ConfigureFromSettings(settings);
-    }
-
-    private DevItemInjectorSettings ResolveDevItemInjectorSettings()
-    {
-        if (devItemInjectorSettings != null)
-        {
-            return devItemInjectorSettings;
-        }
-
-        if (TryGetComponent(out DevItemInjectorSettings attached))
-        {
-            devItemInjectorSettings = attached;
-            return devItemInjectorSettings;
-        }
-
-        var found = FindObjectOfType<DevItemInjectorSettings>();
-        if (found != null)
-        {
-            devItemInjectorSettings = found;
-        }
-
-        return devItemInjectorSettings;
-    }
-
-    private static void ActivateDevItemInjector(DevItemInjector injector)
-    {
-        if (injector == null)
-        {
-            return;
-        }
-
-        DontDestroyOnLoad(injector.gameObject);
-        injector.gameObject.SetActive(true);
-    }
-
-    private void CleanupInitializerSpawnedDevInjector()
-    {
-        var injectors = Resources.FindObjectsOfTypeAll<DevItemInjector>();
-        foreach (var injector in injectors)
-        {
-            if (injector != null && injector.SpawnedByInitializer)
-            {
-                Destroy(injector.gameObject);
-            }
-        }
-    }
 }

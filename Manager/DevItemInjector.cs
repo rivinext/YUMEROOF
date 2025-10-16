@@ -5,197 +5,88 @@ using UnityEngine;
 
 public class DevItemInjector : MonoBehaviour
 {
-    private static bool _hasInjected = false;
-    private Coroutine _inventoryWaitCoroutine;
-    private bool _pendingForce;
-
-    [NonSerialized]
-    private bool _spawnedByInitializer;
-
-    public bool SpawnedByInitializer
+    [Serializable]
+    public class DevEntry
     {
-        get => _spawnedByInitializer;
-        internal set => _spawnedByInitializer = value;
+        public string id;
+        public int quantity = 1;
     }
 
-    private void Awake()
-    {
-        DontDestroyOnLoad(gameObject);
-    }
+    [SerializeField] private bool enableInjection = true;
+    [SerializeField] private List<DevEntry> furnitureItems = new List<DevEntry>();
+    [SerializeField] private List<DevEntry> materialItems = new List<DevEntry>();
+
+    private static bool _hasInjected;
+    private Coroutine _waitCoroutine;
+    private bool _saveApplied;
 
     private void OnEnable()
     {
         SaveGameManager.SaveApplied += OnSaveApplied;
-        LogVerbose("Subscribed to SaveApplied event.");
+        _saveApplied = SaveGameManager.Instance == null;
+        RequestInjection();
     }
 
     private void OnDisable()
     {
         SaveGameManager.SaveApplied -= OnSaveApplied;
-        LogVerbose("Unsubscribed from SaveApplied event.");
-        StopInventoryWaitCoroutine();
+        StopWaiting();
     }
 
     private void OnDestroy()
     {
-        StopInventoryWaitCoroutine();
+        StopWaiting();
     }
 
-    [Serializable]
-    public class DevEntry
+    public static void ResetInjected()
     {
-        public string id;
-        public int quantity;
-    }
-
-    [SerializeField] private bool enableInjection = true;
-    [SerializeField] private bool verboseLogging = true;
-    private const string LogPrefix = "[DevItemInjector]";
-
-    private void Log(string message)
-    {
-        Debug.Log($"{LogPrefix} {message}");
-    }
-
-    private void LogWarning(string message)
-    {
-        Debug.LogWarning($"{LogPrefix} {message}");
-    }
-
-    private void LogVerbose(string message)
-    {
-        if (verboseLogging)
-        {
-            Log(message);
-        }
-    }
-
-    private void LogVerboseWarning(string message)
-    {
-        if (verboseLogging)
-        {
-            LogWarning(message);
-        }
-    }
-
-    [SerializeField] private List<DevEntry> furnitureItems;
-    [SerializeField] private List<DevEntry> materialItems;
-
-    public void ConfigureFromSettings(DevItemInjectorSettings settings)
-    {
-        if (settings == null)
-        {
-            return;
-        }
-
-        enableInjection = settings.EnableInjection;
-        verboseLogging = settings.VerboseLogging;
-        furnitureItems = CloneEntries(settings.FurnitureItems);
-        materialItems = CloneEntries(settings.MaterialItems);
-
-        LogVerbose($"Configured from settings asset '{settings.name}'. enableInjection={enableInjection}, verboseLogging={verboseLogging}.");
-    }
-
-    private static List<DevEntry> CloneEntries(IReadOnlyList<DevEntry> source)
-    {
-        if (source == null || source.Count == 0)
-        {
-            return new List<DevEntry>();
-        }
-
-        var result = new List<DevEntry>(source.Count);
-        foreach (var entry in source)
-        {
-            if (entry == null)
-            {
-                continue;
-            }
-
-            result.Add(new DevEntry
-            {
-                id = entry.id,
-                quantity = entry.quantity
-            });
-        }
-
-        return result;
-    }
-
-    public void Inject()
-    {
-        InjectInternal(false);
-    }
-
-    /// <summary>
-    /// Forces an injection even if it has already been performed. This can be bound to a UI button.
-    /// </summary>
-    public void InjectFromButton()
-    {
-        InjectInternal(true);
+        _hasInjected = false;
     }
 
     private void OnSaveApplied()
     {
-        LogVerbose("SaveApplied event received.");
-        InjectInternal(false);
+        _saveApplied = true;
+        RequestInjection();
     }
 
-    private void InjectInternal(bool force)
+    private void RequestInjection()
     {
-        Log($"InjectInternal invoked. force={force}, enableInjection={enableInjection}, hasInjected={_hasInjected}, inventoryReady={InventoryManager.Instance != null}");
-        if (!enableInjection)
+        if (!enableInjection || _hasInjected || _waitCoroutine != null)
         {
-            LogVerboseWarning("Injection skipped: enableInjection is disabled.");
             return;
         }
 
-        if (!force && _hasInjected)
+        _waitCoroutine = StartCoroutine(WaitAndInject());
+    }
+
+    private IEnumerator WaitAndInject()
+    {
+        while (!_saveApplied || InventoryManager.Instance == null)
         {
-            LogVerboseWarning("Injection skipped: items have already been injected.");
+            yield return null;
+        }
+
+        InjectItems();
+        _waitCoroutine = null;
+    }
+
+    private void InjectItems()
+    {
+        if (!enableInjection || _hasInjected)
+        {
             return;
         }
-
-        if (InventoryManager.Instance == null)
-        {
-            LogWarning("InventoryManager instance is null. Queueing injection and waiting.");
-            LogVerboseWarning("InventoryManager unavailable. Waiting before injection.");
-
-            _pendingForce |= force;
-
-            if (_inventoryWaitCoroutine == null)
-            {
-                _inventoryWaitCoroutine = StartCoroutine(WaitForInventoryAndInject());
-            }
-
-            return;
-        }
-
-        if (verboseLogging)
-        {
-            Log($"Injection starting{(force ? " (forced)" : string.Empty)}.");
-        }
-        else
-        {
-            Log($"Injection starting{(force ? " (forced)" : string.Empty)} with furniture count {furnitureItems?.Count ?? 0} and material count {materialItems?.Count ?? 0}.");
-        }
-
-        int furnitureInjected = 0;
-        int materialInjected = 0;
 
         if (furnitureItems != null)
         {
             foreach (var entry in furnitureItems)
             {
-                if (verboseLogging)
+                if (entry == null || string.IsNullOrEmpty(entry.id) || entry.quantity <= 0)
                 {
-                    Log($"Adding furniture '{entry.id}' x{entry.quantity}.");
+                    continue;
                 }
-                else
-                {
-                    Log($"Adding furniture '{entry.id}' x{entry.quantity} (non-verbose).");
-                }
+
                 InventoryManager.Instance.AddFurniture(entry.id, entry.quantity);
-                furnitureInjected++;
             }
         }
 
@@ -203,57 +94,27 @@ public class DevItemInjector : MonoBehaviour
         {
             foreach (var entry in materialItems)
             {
-                if (verboseLogging)
+                if (entry == null || string.IsNullOrEmpty(entry.id) || entry.quantity <= 0)
                 {
-                    Log($"Adding material '{entry.id}' x{entry.quantity}.");
+                    continue;
                 }
-                else
-                {
-                    Log($"Adding material '{entry.id}' x{entry.quantity} (non-verbose).");
-                }
+
                 InventoryManager.Instance.AddMaterial(entry.id, entry.quantity);
-                materialInjected++;
             }
         }
 
         InventoryManager.Instance.ForceInventoryUpdate();
-
-        Log($"ForceInventoryUpdate called. furnitureInjected={furnitureInjected}, materialInjected={materialInjected}.");
-        LogVerbose($"Injection complete. Furniture entries: {furnitureInjected}, Material entries: {materialInjected}.");
-
         _hasInjected = true;
     }
 
-    private IEnumerator WaitForInventoryAndInject()
+    private void StopWaiting()
     {
-        LogVerbose("Waiting for InventoryManager to become available before injecting.");
-
-        while (InventoryManager.Instance == null)
+        if (_waitCoroutine == null)
         {
-            yield return null;
+            return;
         }
 
-        LogVerbose("InventoryManager available. Resuming injection.");
-
-        var force = _pendingForce;
-        _pendingForce = false;
-        _inventoryWaitCoroutine = null;
-        InjectInternal(force);
-    }
-
-    private void StopInventoryWaitCoroutine()
-    {
-        if (_inventoryWaitCoroutine != null)
-        {
-            StopCoroutine(_inventoryWaitCoroutine);
-            _inventoryWaitCoroutine = null;
-            _pendingForce = false;
-            LogVerbose("Stopped waiting for InventoryManager.");
-        }
-    }
-
-    public static void ResetInjected()
-    {
-        _hasInjected = false;
+        StopCoroutine(_waitCoroutine);
+        _waitCoroutine = null;
     }
 }
