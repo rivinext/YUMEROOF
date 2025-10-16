@@ -79,6 +79,7 @@ public class MilestonePanel : MonoBehaviour
     void Awake()
     {
         CacheTooltipReferences();
+        UIPanelExclusionManager.Instance?.Register(this);
     }
 
     void Start()
@@ -162,18 +163,54 @@ public class MilestonePanel : MonoBehaviour
         }
     }
 
-    void TogglePanel()
+    public bool IsOpen => isOpen;
+
+    public void OpenPanel()
     {
-        isOpen = !isOpen;
         if (isOpen)
         {
-            ClearMilestoneNotification();
+            return;
         }
+
+        UIPanelExclusionManager.Instance?.NotifyOpened(this);
+        isOpen = true;
+        ClearMilestoneNotification();
+
         if (slideCoroutine != null)
         {
             StopCoroutine(slideCoroutine);
         }
-        slideCoroutine = StartCoroutine(SlidePanel(isOpen));
+
+        slideCoroutine = StartCoroutine(SlidePanel(true));
+    }
+
+    public void ClosePanel()
+    {
+        if (!isOpen)
+        {
+            return;
+        }
+
+        isOpen = false;
+
+        if (slideCoroutine != null)
+        {
+            StopCoroutine(slideCoroutine);
+        }
+
+        slideCoroutine = StartCoroutine(SlidePanel(false));
+    }
+
+    void TogglePanel()
+    {
+        if (isOpen)
+        {
+            ClosePanel();
+        }
+        else
+        {
+            OpenPanel();
+        }
     }
 
     IEnumerator SlidePanel(bool open)

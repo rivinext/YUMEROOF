@@ -46,6 +46,8 @@ public class SettingsPanelAnimator : MonoBehaviour
             isAnchoredYInitialized = true;
         }
 
+        UIPanelExclusionManager.Instance?.Register(this);
+
         if (startOpen)
         {
             SnapOpen();
@@ -80,6 +82,8 @@ public class SettingsPanelAnimator : MonoBehaviour
         }
     }
 
+    public bool IsOpen => isOpen;
+
     public void OpenPanel()
     {
         if (rectTransform == null)
@@ -92,6 +96,7 @@ public class SettingsPanelAnimator : MonoBehaviour
             return;
         }
 
+        UIPanelExclusionManager.Instance?.NotifyOpened(this);
         PlayAnimation(slideInXCurve, openPositionX, true);
     }
 
