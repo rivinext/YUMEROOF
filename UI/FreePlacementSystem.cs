@@ -68,6 +68,15 @@ public class FreePlacementSystem : MonoBehaviour
     {
         RefreshOutlineLayerMask();
 
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogWarning("FreePlacementSystem: Main camera not found in Awake.");
+            }
+        }
+
         if (playerControl == null)
         {
             playerControl = FindObjectOfType<PlacementPlayerControl>();
@@ -94,6 +103,15 @@ public class FreePlacementSystem : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogWarning($"FreePlacementSystem: Main camera not found after loading scene {scene.name}.");
+            }
+        }
+
         playerControl = FindObjectOfType<PlacementPlayerControl>();
         if (playerControl == null)
         {
@@ -377,6 +395,16 @@ public class FreePlacementSystem : MonoBehaviour
 
     void SelectFurniture()
     {
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogWarning("FreePlacementSystem: Cannot select furniture because the main camera is missing.");
+                return;
+            }
+        }
+
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
@@ -483,6 +511,16 @@ public class FreePlacementSystem : MonoBehaviour
     void UpdateFurniturePosition()
     {
         if (previewObject == null) return;
+
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogWarning("FreePlacementSystem: Cannot update furniture position because the main camera is missing.");
+                return;
+            }
+        }
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
