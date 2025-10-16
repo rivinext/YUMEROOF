@@ -14,6 +14,8 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject inventoryManagerPrefab;
     [SerializeField] private GameObject furnitureDataManagerPrefab;
     [SerializeField] private GameObject furnitureSaveManagerPrefab;
+    [SerializeField] private GameObject dropMaterialSaveManagerPrefab;
+    [SerializeField] private GameObject furnitureDropManagerPrefab;
     [SerializeField] private GameObject milestoneManagerPrefab;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private DevItemInjector devItemInjectorPrefab;
@@ -104,6 +106,10 @@ public class GameSessionInitializer : MonoBehaviour
             furnitureDataManagerPrefab = Resources.Load<GameObject>("FurnitureDataManager");
         if (furnitureSaveManagerPrefab == null)
             furnitureSaveManagerPrefab = Resources.Load<GameObject>("FurnitureSaveManager");
+        if (dropMaterialSaveManagerPrefab == null)
+            dropMaterialSaveManagerPrefab = Resources.Load<GameObject>("DropMaterialSaveManager");
+        if (furnitureDropManagerPrefab == null)
+            furnitureDropManagerPrefab = Resources.Load<GameObject>("FurnitureDropManager");
 
         bool createdManager = false;
         if (FurnitureDataManager.Instance == null)
@@ -128,6 +134,22 @@ public class GameSessionInitializer : MonoBehaviour
                 Instantiate(inventoryManagerPrefab);
             else
                 new GameObject("InventoryManager").AddComponent<InventoryManager>();
+            createdManager = true;
+        }
+        if (DropMaterialSaveManager.Instance == null)
+        {
+            if (dropMaterialSaveManagerPrefab != null)
+                Instantiate(dropMaterialSaveManagerPrefab);
+            else
+                new GameObject("DropMaterialSaveManager").AddComponent<DropMaterialSaveManager>();
+            createdManager = true;
+        }
+        if (FurnitureDropManager.Instance == null)
+        {
+            if (furnitureDropManagerPrefab != null)
+                Instantiate(furnitureDropManagerPrefab);
+            else
+                new GameObject("FurnitureDropManager").AddComponent<FurnitureDropManager>();
             createdManager = true;
         }
 
