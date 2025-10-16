@@ -59,35 +59,28 @@ public class UIMenuManager : MonoBehaviour
         if (confirmPopup == null)
             confirmPopup = FindFirstObjectByType<ConfirmationPopup>(FindObjectsInactive.Include);
 
-        // Post ProcessingのDepth of Fieldを取得
+        // ✅ Post Processingを使わない設定
         if (postProcessVolume != null && postProcessVolume.profile != null)
         {
             postProcessVolume.profile.TryGet(out depthOfField);
-
             if (depthOfField != null)
             {
-                // 初期状態ではブラーをオフに
                 depthOfField.active = false;
                 depthOfField.focusDistance.value = maxBlurDistance;
             }
         }
         else
         {
-            Debug.LogWarning("Post Process Volume or Depth of Field not found!");
+            // Volumeが未設定でも警告を出さない
+            depthOfField = null;
         }
 
-        // ボタンのイベント設定
         SetupButtonEvents();
-
-        // パネルのコールバック設定
         SetupPanelCallbacks();
-
-        // セーブスロットの初期化
         InitializeSlots();
-
-        // 初期状態ですべてのパネルを閉じる
         CloseAllPanelsImmediate();
     }
+
 
     /// <summary>
     /// ボタンイベントの設定
