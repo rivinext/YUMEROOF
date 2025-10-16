@@ -17,9 +17,6 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject dropMaterialSaveManagerPrefab;
     [SerializeField] private GameObject furnitureDropManagerPrefab;
     [SerializeField] private GameObject milestoneManagerPrefab;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    [SerializeField] private DevItemInjector devItemInjectorPrefab;
-#endif
 
     void Awake()
     {
@@ -67,20 +64,6 @@ public class GameSessionInitializer : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        var injector = FindObjectOfType<DevItemInjector>(true);
-        if (injector == null)
-        {
-            var prefab = devItemInjectorPrefab != null ? devItemInjectorPrefab : Resources.Load<DevItemInjector>("DevItemInjector");
-            if (prefab != null)
-                injector = Instantiate(prefab);
-        }
-        else
-        {
-            injector.gameObject.SetActive(true);
-        }
-#endif
 
         MilestoneManager.CreateIfNeeded(milestoneManagerPrefab);
 
