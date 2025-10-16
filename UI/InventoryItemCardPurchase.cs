@@ -14,7 +14,7 @@ public class InventoryItemCardPurchase : InventoryItemCard
     /// Assign item data and update purchase price display.
     /// </summary>
     /// <param name="item">Inventory item to represent.</param>
-    public new void SetItem(InventoryItem item)
+    public void SetItem(InventoryItem item)
     {
         base.SetItem(item, false);
         UpdatePurchasePrice();
