@@ -58,7 +58,7 @@ public class GameSessionInitializer : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainMenu")
+        if (scene.name == "MainMenu" && scene == SceneManager.GetActiveScene())
         {
             DevItemInjector.ResetInjected();
             Destroy(gameObject);
@@ -75,12 +75,18 @@ public class GameSessionInitializer : MonoBehaviour
 
     private System.Collections.IEnumerator DelayedLoad()
     {
+        Debug.Log("[GameSessionInitializer] Beginning delayed load sequence.");
         yield return null;
 
         var clock = FindObjectOfType<GameClock>();
         if (clock == null)
         {
             clock = new GameObject("GameClock").AddComponent<GameClock>();
+            Debug.Log("[GameSessionInitializer] Created new GameClock instance.");
+        }
+        else
+        {
+            Debug.Log("[GameSessionInitializer] Found existing GameClock instance.");
         }
 
         if (inventoryManagerPrefab == null)
@@ -101,6 +107,7 @@ public class GameSessionInitializer : MonoBehaviour
                 Instantiate(furnitureDataManagerPrefab);
             else
                 new GameObject("FurnitureDataManager").AddComponent<FurnitureDataManager>();
+            Debug.Log("[GameSessionInitializer] Ensured FurnitureDataManager exists.");
             createdManager = true;
         }
         if (FurnitureSaveManager.Instance == null)
@@ -109,6 +116,7 @@ public class GameSessionInitializer : MonoBehaviour
                 Instantiate(furnitureSaveManagerPrefab);
             else
                 new GameObject("FurnitureSaveManager").AddComponent<FurnitureSaveManager>();
+            Debug.Log("[GameSessionInitializer] Ensured FurnitureSaveManager exists.");
             createdManager = true;
         }
         if (InventoryManager.Instance == null)
@@ -117,6 +125,7 @@ public class GameSessionInitializer : MonoBehaviour
                 Instantiate(inventoryManagerPrefab);
             else
                 new GameObject("InventoryManager").AddComponent<InventoryManager>();
+            Debug.Log("[GameSessionInitializer] Ensured InventoryManager exists.");
             createdManager = true;
         }
         if (DropMaterialSaveManager.Instance == null)
@@ -125,6 +134,7 @@ public class GameSessionInitializer : MonoBehaviour
                 Instantiate(dropMaterialSaveManagerPrefab);
             else
                 new GameObject("DropMaterialSaveManager").AddComponent<DropMaterialSaveManager>();
+            Debug.Log("[GameSessionInitializer] Ensured DropMaterialSaveManager exists.");
             createdManager = true;
         }
         if (FurnitureDropManager.Instance == null)
@@ -133,15 +143,18 @@ public class GameSessionInitializer : MonoBehaviour
                 Instantiate(furnitureDropManagerPrefab);
             else
                 new GameObject("FurnitureDropManager").AddComponent<FurnitureDropManager>();
+            Debug.Log("[GameSessionInitializer] Ensured FurnitureDropManager exists.");
             createdManager = true;
         }
 
         if (createdManager)
         {
             // Wait a frame to ensure managers initialize before loading
+            Debug.Log("[GameSessionInitializer] Newly created managers detected. Waiting a frame before loading save.");
             yield return null;
         }
 
+        Debug.Log($"[GameSessionInitializer] Loading save data for slot {slotKey}.");
         SaveGameManager.Instance.Load(slotKey);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         FindObjectOfType<DevItemInjector>(true)?.Inject();
@@ -149,5 +162,6 @@ public class GameSessionInitializer : MonoBehaviour
 #endif
         initialized = true;
         slotKey = null;
+        Debug.Log("[GameSessionInitializer] Delayed load sequence complete.");
     }
 }

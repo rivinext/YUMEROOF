@@ -16,7 +16,7 @@ public class PlayerPersistence : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainMenu")
+        if (scene.name == "MainMenu" && scene == SceneManager.GetActiveScene())
         {
             Destroy(gameObject);
         }

@@ -101,7 +101,7 @@ public class SaveGameManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainMenu")
+        if (scene.name == "MainMenu" && scene == SceneManager.GetActiveScene())
         {
             if (instance == this) instance = null;
             Destroy(gameObject);

@@ -47,6 +47,14 @@ public class DropMaterialSaveManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         SceneManager.sceneLoaded += HandleSceneLoaded;
         dropPrefab = Resources.Load<GameObject>(dropPrefabPath);
+        if (dropPrefab != null)
+        {
+            Debug.Log($"[DropMaterialSaveManager] Loaded drop prefab from Resources/{dropPrefabPath}.");
+        }
+        else
+        {
+            Debug.LogWarning($"[DropMaterialSaveManager] Failed to load drop prefab at Resources/{dropPrefabPath}.");
+        }
         LoadFromPrefs();
     }
 
@@ -66,7 +74,7 @@ public class DropMaterialSaveManager : MonoBehaviour
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainMenu")
+        if (scene.name == "MainMenu" && scene == SceneManager.GetActiveScene())
         {
             if (Instance == this) Instance = null;
             SceneManager.sceneLoaded -= HandleSceneLoaded;
@@ -91,6 +99,7 @@ public class DropMaterialSaveManager : MonoBehaviour
         {
             list = new List<DropMaterialSaveData>();
             dropsByScene[sceneName] = list;
+            Debug.Log($"[DropMaterialSaveManager] Created drop list for scene {sceneName}.");
         }
 
         if (list.Exists(d => d.materialID == materialID &&
@@ -98,19 +107,25 @@ public class DropMaterialSaveManager : MonoBehaviour
                                   ? d.anchorID == anchorID
                                   : (d.position - position).sqrMagnitude < 0.01f)))
         {
+            Debug.Log($"[DropMaterialSaveManager] Drop already registered for scene {sceneName} (material {materialID}). Skipping.");
             return;
         }
 
         list.Add(new DropMaterialSaveData { materialID = materialID, position = position, anchorID = anchorID });
+        Debug.Log($"[DropMaterialSaveManager] Registered drop {materialID} at {position} (anchor: {anchorID}) for scene {sceneName}.");
     }
 
     public void RemoveDrop(string sceneName, string materialID, Vector3 position, string anchorID = null)
     {
         if (!dropsByScene.TryGetValue(sceneName, out var list)) return;
-        list.RemoveAll(d => d.materialID == materialID &&
+        int removed = list.RemoveAll(d => d.materialID == materialID &&
                               (!string.IsNullOrEmpty(anchorID)
                                   ? d.anchorID == anchorID
                                   : (d.position - position).sqrMagnitude < 0.01f));
+        if (removed > 0)
+        {
+            Debug.Log($"[DropMaterialSaveManager] Removed {removed} drop(s) of {materialID} from scene {sceneName}.");
+        }
     }
 
     /// <summary>
@@ -127,6 +142,12 @@ public class DropMaterialSaveManager : MonoBehaviour
         }
 
         // Remove all saved drop information
+        int totalDrops = 0;
+        foreach (var kvp in dropsByScene)
+        {
+            totalDrops += kvp.Value.Count;
+        }
+        Debug.Log($"[DropMaterialSaveManager] Clearing all drops. Removing {totalDrops} recorded entries across {dropsByScene.Count} scene(s).");
         dropsByScene.Clear();
 
         // Persist the cleared state so nothing respawns until new drops are generated
@@ -135,8 +156,16 @@ public class DropMaterialSaveManager : MonoBehaviour
 
     private void SpawnDropsForScene(string sceneName)
     {
-        if (dropPrefab == null) return;
-        if (!dropsByScene.TryGetValue(sceneName, out var list)) return;
+        if (dropPrefab == null)
+        {
+            Debug.LogWarning("[DropMaterialSaveManager] Cannot spawn drops because drop prefab is missing.");
+            return;
+        }
+        if (!dropsByScene.TryGetValue(sceneName, out var list))
+        {
+            Debug.Log($"[DropMaterialSaveManager] No drops registered for scene {sceneName}. Nothing to spawn.");
+            return;
+        }
 
         foreach (var data in list)
         {
@@ -147,6 +176,7 @@ public class DropMaterialSaveManager : MonoBehaviour
                 comp.MaterialID = data.materialID;
                 comp.AnchorID = data.anchorID;
             }
+            Debug.Log($"[DropMaterialSaveManager] Spawned drop {data.materialID} at {data.position} in scene {sceneName}.");
         }
     }
 
@@ -164,17 +194,23 @@ public class DropMaterialSaveManager : MonoBehaviour
         string json = JsonUtility.ToJson(wrapper);
         PlayerPrefs.SetString(PREF_KEY, json);
         PlayerPrefs.Save();
+        Debug.Log($"[DropMaterialSaveManager] Saved {wrapper.scenes.Count} scene(s) of drop data to PlayerPrefs.");
     }
 
     private void LoadFromPrefs()
     {
         string json = PlayerPrefs.GetString(PREF_KEY, "");
-        if (string.IsNullOrEmpty(json)) return;
+        if (string.IsNullOrEmpty(json))
+        {
+            Debug.Log("[DropMaterialSaveManager] No saved drop data found in PlayerPrefs.");
+            return;
+        }
         SaveWrapper wrapper = JsonUtility.FromJson<SaveWrapper>(json);
         dropsByScene.Clear();
         foreach (var sceneData in wrapper.scenes)
         {
             dropsByScene[sceneData.sceneName] = sceneData.drops;
         }
+        Debug.Log($"[DropMaterialSaveManager] Loaded drop data for {wrapper.scenes.Count} scene(s) from PlayerPrefs.");
     }
 }

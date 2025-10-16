@@ -67,7 +67,7 @@ public class InventoryManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainMenu")
+        if (scene.name == "MainMenu" && scene == SceneManager.GetActiveScene())
         {
             instance = null;
             Destroy(gameObject);

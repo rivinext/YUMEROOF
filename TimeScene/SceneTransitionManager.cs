@@ -235,7 +235,7 @@ public class SceneTransitionManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainMenu")
+        if (scene.name == "MainMenu" && scene == SceneManager.GetActiveScene())
         {
             var player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)

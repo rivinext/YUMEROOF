@@ -118,7 +118,7 @@ public class FurnitureSaveManager : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "MainMenu")
+        if (scene.name == "MainMenu" && scene == SceneManager.GetActiveScene())
         {
             DestroyLoadedFurniture();
             instance = null;
