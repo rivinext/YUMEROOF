@@ -122,6 +122,11 @@ public class InventoryUI : MonoBehaviour
     }
     // === 追加ここまで ===
 
+    void Awake()
+    {
+        UIPanelExclusionManager.Instance?.Register(this);
+    }
+
     void Start()
     {
         if (debugMode) Debug.Log("=== InventoryUI Starting ===");
@@ -563,6 +568,7 @@ public class InventoryUI : MonoBehaviour
         var animator = EnsurePanelAnimator();
 
         isOpen = true;
+        UIPanelExclusionManager.Instance?.NotifyOpened(this);
 
         if (inventoryPanel != null && !inventoryPanel.activeSelf)
         {

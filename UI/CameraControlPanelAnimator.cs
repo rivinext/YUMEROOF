@@ -40,6 +40,7 @@ public class CameraControlPanelAnimator : MonoBehaviour
             isAnchoredYInitialized = true;
         }
 
+        UIPanelExclusionManager.Instance?.Register(this);
         SnapToTarget();
     }
 
@@ -81,6 +82,7 @@ public class CameraControlPanelAnimator : MonoBehaviour
             return;
         }
 
+        UIPanelExclusionManager.Instance?.NotifyOpened(this);
         PlayAnimation(slideInXCurve, openPositionX, true);
     }
 
