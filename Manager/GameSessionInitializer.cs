@@ -67,7 +67,7 @@ public class GameSessionInitializer : MonoBehaviour
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        var injector = FindObjectOfType<DevItemInjector>(true);
+        var injector = FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include);
         if (injector == null)
         {
             var prefab = devItemInjectorPrefab != null ? devItemInjectorPrefab : Resources.Load<DevItemInjector>("DevItemInjector");
@@ -92,7 +92,7 @@ public class GameSessionInitializer : MonoBehaviour
     {
         yield return null;
 
-        var clock = FindObjectOfType<GameClock>();
+        var clock = FindFirstObjectByType<GameClock>();
         if (clock == null)
         {
             clock = new GameObject("GameClock").AddComponent<GameClock>();
@@ -139,7 +139,7 @@ public class GameSessionInitializer : MonoBehaviour
 
         SaveGameManager.Instance.Load(slotKey);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        FindObjectOfType<DevItemInjector>(true)?.Inject();
+        FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include)?.Inject();
         InventoryManager.Instance.ForceInventoryUpdate();
 #endif
         initialized = true;

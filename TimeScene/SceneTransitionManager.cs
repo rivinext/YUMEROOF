@@ -12,7 +12,7 @@ public class SceneTransitionManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<SceneTransitionManager>();
+                instance = FindFirstObjectByType<SceneTransitionManager>();
                 if (instance == null)
                 {
                     GameObject go = new GameObject("SceneTransitionManager");
@@ -206,7 +206,7 @@ public class SceneTransitionManager : MonoBehaviour
                 player.transform.rotation = point.transform.rotation;
 
                 // カメラの位置もリセット（必要に応じて）
-                var cameraController = FindObjectOfType<OrthographicCameraController>();
+                var cameraController = FindFirstObjectByType<OrthographicCameraController>();
                 if (cameraController != null)
                 {
                     cameraController.ResetCamera();
@@ -226,7 +226,7 @@ public class SceneTransitionManager : MonoBehaviour
         PlayerController.SetGlobalInputEnabled(!disable);
 
         // カメラコントローラーの制御
-        var cameraController = FindObjectOfType<OrthographicCameraController>();
+        var cameraController = FindFirstObjectByType<OrthographicCameraController>();
         if (cameraController != null)
         {
             cameraController.SetCameraControlEnabled(!disable);
@@ -251,7 +251,7 @@ public class SceneTransitionManager : MonoBehaviour
         else
         {
             // If we're not in the MainMenu and no GameClock exists, create one.
-            if (FindObjectOfType<GameClock>() == null)
+            if (FindFirstObjectByType<GameClock>() == null)
             {
                 new GameObject("GameClock").AddComponent<GameClock>();
             }

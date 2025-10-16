@@ -94,7 +94,7 @@ public class FreePlacementSystem : MonoBehaviour
     {
         if (playerControl == null)
         {
-            playerControl = FindObjectOfType<PlacementPlayerControl>();
+            playerControl = FindFirstObjectByType<PlacementPlayerControl>();
             if (playerControl == null && logWarning)
             {
                 string message = "FreePlacementSystem: PlacementPlayerControl not found";
@@ -266,7 +266,7 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         // インベントリを開く
-        var inventoryUI = FindObjectOfType<InventoryUI>();
+        var inventoryUI = FindFirstObjectByType<InventoryUI>();
         if (inventoryUI != null)
         {
             inventoryUI.OpenInventory();
@@ -376,7 +376,7 @@ public class FreePlacementSystem : MonoBehaviour
 
         Debug.Log($"Furniture {furnitureID} returned to inventory");
 
-        var inventoryUI = FindObjectOfType<InventoryUI>();
+        var inventoryUI = FindFirstObjectByType<InventoryUI>();
         if (inventoryUI != null && inventoryUI.IsOpen)
         {
             //inventoryUI.OpenInventory();

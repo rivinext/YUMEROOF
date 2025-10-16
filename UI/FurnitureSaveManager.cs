@@ -16,7 +16,7 @@ public class FurnitureSaveManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<FurnitureSaveManager>();
+                instance = FindFirstObjectByType<FurnitureSaveManager>();
                 if (instance == null)
                 {
                     if (isQuitting) return null;
@@ -300,7 +300,7 @@ public class FurnitureSaveManager : MonoBehaviour
     void LoadFurnitureForScene(string sceneName)
     {
         // シーンに配置システムがあるか確認
-        FreePlacementSystem placementSystem = FindObjectOfType<FreePlacementSystem>();
+        FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
         if (placementSystem == null)
         {
             if (debugMode)

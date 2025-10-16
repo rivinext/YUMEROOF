@@ -43,7 +43,7 @@ public class UIInteractionManager : MonoBehaviour
     {
         // 参照を取得
         mainCamera = Camera.main;
-        cameraController = FindObjectOfType<OrthographicCameraController>();
+        cameraController = FindFirstObjectByType<OrthographicCameraController>();
 
         // Canvas取得（UIのルート）
         if (backgroundImage != null)

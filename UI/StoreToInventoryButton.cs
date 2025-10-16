@@ -28,7 +28,7 @@ public class StoreToInventoryButton : MonoBehaviour
         mainCamera = Camera.main;
 
         // UIキャンバスを取得または作成
-        uiCanvas = FindObjectOfType<Canvas>();
+        uiCanvas = FindFirstObjectByType<Canvas>();
         if (uiCanvas == null)
         {
             CreateUICanvas();

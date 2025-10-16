@@ -200,7 +200,7 @@ public class FurnitureDescriptionPanel : MonoBehaviour
         currentItem.canCraft = allMaterialsSufficient;
 
         // InventoryItemCardの更新をトリガー
-        var inventoryUI = FindObjectOfType<InventoryUI>();
+        var inventoryUI = FindFirstObjectByType<InventoryUI>();
         if (inventoryUI != null)
         {
             var cardManager = inventoryUI.GetComponent<InventoryCardManager>();
@@ -457,7 +457,7 @@ public class FurnitureDescriptionPanel : MonoBehaviour
             }
 
             // インベントリ表示を更新
-            var inventoryUI = FindObjectOfType<InventoryUI>();
+            var inventoryUI = FindFirstObjectByType<InventoryUI>();
             if (inventoryUI != null)
             {
                 inventoryUI.RefreshInventoryDisplay();

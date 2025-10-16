@@ -70,7 +70,7 @@ public class SleepTransitionUIManager : MonoBehaviour
         if (cardContainer != null)
             cardContainer.gameObject.SetActive(false);
         if (inventoryUI == null)
-            inventoryUI = FindObjectOfType<InventoryUI>();
+            inventoryUI = FindFirstObjectByType<InventoryUI>();
 
         SetInitialPanelPositions();
     }

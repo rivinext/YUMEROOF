@@ -66,7 +66,7 @@ public class ShopUIManager : MonoBehaviour
         {
             Instance = this;
         }
-        clock = FindObjectOfType<GameClock>();
+        clock = FindFirstObjectByType<GameClock>();
         if (clock != null)
         {
             clock.OnDayChanged += OnDayChanged;
@@ -644,7 +644,7 @@ public class ShopUIManager : MonoBehaviour
 
         if (descPanel == null)
         {
-            descPanel = FindObjectOfType<FurnitureDescriptionPanel>();
+            descPanel = FindFirstObjectByType<FurnitureDescriptionPanel>();
         }
 
         return descPanel;
@@ -665,7 +665,7 @@ public class ShopUIManager : MonoBehaviour
 
         if (descPanel == null)
         {
-            descPanel = FindObjectOfType<MaterialDescriptionPanel>();
+            descPanel = FindFirstObjectByType<MaterialDescriptionPanel>();
         }
 
         return descPanel;

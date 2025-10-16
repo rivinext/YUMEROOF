@@ -12,7 +12,7 @@ public class InventoryPlacementBridge : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<InventoryPlacementBridge>();
+                instance = FindFirstObjectByType<InventoryPlacementBridge>();
                 if (instance == null)
                 {
                     GameObject go = new GameObject("InventoryPlacementBridge");
@@ -99,8 +99,8 @@ public class InventoryPlacementBridge : MonoBehaviour
         }
 
         // 現在のシーンから参照を取得
-        InventoryUI inventoryUI = FindObjectOfType<InventoryUI>();
-        FreePlacementSystem placementSystem = FindObjectOfType<FreePlacementSystem>();
+        InventoryUI inventoryUI = FindFirstObjectByType<InventoryUI>();
+        FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
 
         if (debugMode)
         {
@@ -240,7 +240,7 @@ public class InventoryPlacementBridge : MonoBehaviour
     private void ClearPlacementCallbacks()
     {
         // 現在のシーンから配置システムを取得
-        FreePlacementSystem placementSystem = FindObjectOfType<FreePlacementSystem>();
+        FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
         if (placementSystem != null)
         {
             placementSystem.OnPlacementCompleted = null;
@@ -252,7 +252,7 @@ public class InventoryPlacementBridge : MonoBehaviour
     private void RestoreInventory()
     {
         // 現在のシーンからInventoryUIを取得
-        InventoryUI inventoryUI = FindObjectOfType<InventoryUI>();
+        InventoryUI inventoryUI = FindFirstObjectByType<InventoryUI>();
 
         if (inventoryUI != null)
         {
@@ -304,10 +304,10 @@ public class InventoryPlacementBridge : MonoBehaviour
         Debug.Log($"Is Placing: {isPlacingFromInventory}");
         Debug.Log($"Placing Item ID: {placingItemID}");
 
-        InventoryUI inventoryUI = FindObjectOfType<InventoryUI>();
+        InventoryUI inventoryUI = FindFirstObjectByType<InventoryUI>();
         Debug.Log($"Current InventoryUI: {(inventoryUI != null ? "Found" : "Not Found")}");
 
-        FreePlacementSystem placementSystem = FindObjectOfType<FreePlacementSystem>();
+        FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
         Debug.Log($"Current FreePlacementSystem: {(placementSystem != null ? "Found" : "Not Found")}");
 
         Debug.Log("=====================================");

@@ -163,7 +163,7 @@ public class InventoryCardManager : MonoBehaviour
     // 説明パネルを更新
     void UpdateDescriptionPanel(InventoryItem item)
     {
-        var descPanel = FindObjectOfType<FurnitureDescriptionPanel>();
+        var descPanel = FindFirstObjectByType<FurnitureDescriptionPanel>();
         if (descPanel != null)
         {
             if (item != null)

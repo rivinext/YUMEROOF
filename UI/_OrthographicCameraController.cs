@@ -161,14 +161,14 @@ public class OrthographicCameraController : MonoBehaviour
 
     void FindInventoryUI()
     {
-        inventoryUI = FindObjectOfType<InventoryUI>();
+        inventoryUI = FindFirstObjectByType<InventoryUI>();
         if (inventoryUI != null)
         {
             Debug.Log("[CameraController] Found InventoryUI");
         }
 
         // FreePlacementSystemを探す
-        placementSystem = FindObjectOfType<FreePlacementSystem>();
+        placementSystem = FindFirstObjectByType<FreePlacementSystem>();
         if (placementSystem != null)
         {
             Debug.Log("[CameraController] Found FreePlacementSystem");
@@ -882,7 +882,7 @@ public class OrthographicCameraController : MonoBehaviour
             return;
         }
 
-        PlayerController playerController = FindObjectOfType<PlayerController>();
+        PlayerController playerController = FindFirstObjectByType<PlayerController>();
         if (playerController != null)
         {
             cameraTarget = playerController.transform;

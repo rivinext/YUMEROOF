@@ -183,7 +183,7 @@ public class GameClockUI : MonoBehaviour
 
         while (clock == null)
         {
-            clock = GameClock.Instance ?? FindObjectOfType<GameClock>(true);
+            clock = GameClock.Instance ?? FindFirstObjectByType<GameClock>(FindObjectsInactive.Include);
             if (clock == null)
                 yield return null;
         }
