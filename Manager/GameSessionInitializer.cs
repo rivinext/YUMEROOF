@@ -24,6 +24,8 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject sceneTransitionManagerPrefab;
     [SerializeField] private GameObject slideTransitionManagerPrefab;
     [SerializeField] private DevItemInjector devItemInjectorPrefab;
+    [SerializeField] private DevItemInjectorSettings devItemInjectorSettings;
+    private bool devItemInjectorSettingsWarningLogged;
 
     void Awake()
     {
@@ -249,6 +251,7 @@ public class GameSessionInitializer : MonoBehaviour
                 continue;
             }
 
+            ApplyDevItemInjectorSettings(injector);
             ActivateDevItemInjector(injector);
 
             if (fallback != null && fallback != injector)
@@ -262,6 +265,8 @@ public class GameSessionInitializer : MonoBehaviour
         var configured = InstantiateConfiguredDevItemInjector();
         if (configured != null)
         {
+            configured.SpawnedByInitializer = true;
+            ApplyDevItemInjectorSettings(configured);
             ActivateDevItemInjector(configured);
 
             if (fallback != null && fallback != configured)
@@ -275,12 +280,14 @@ public class GameSessionInitializer : MonoBehaviour
         if (fallback != null)
         {
             fallback.SpawnedByInitializer = true;
+            ApplyDevItemInjectorSettings(fallback);
             ActivateDevItemInjector(fallback);
             return;
         }
 
         var createdFallback = new GameObject("DevItemInjector").AddComponent<DevItemInjector>();
         createdFallback.SpawnedByInitializer = true;
+        ApplyDevItemInjectorSettings(createdFallback);
         ActivateDevItemInjector(createdFallback);
     }
 
@@ -298,6 +305,44 @@ public class GameSessionInitializer : MonoBehaviour
         }
 
         return Instantiate(template);
+    }
+
+    private void ApplyDevItemInjectorSettings(DevItemInjector injector)
+    {
+        if (injector == null)
+        {
+            return;
+        }
+
+        var settings = ResolveDevItemInjectorSettings();
+        if (settings == null)
+        {
+            if (!devItemInjectorSettingsWarningLogged)
+            {
+                Debug.LogWarning("[GameSessionInitializer] DevItemInjectorSettings asset is not assigned or found. Using DevItemInjector defaults.");
+                devItemInjectorSettingsWarningLogged = true;
+            }
+
+            return;
+        }
+
+        injector.ConfigureFromSettings(settings);
+    }
+
+    private DevItemInjectorSettings ResolveDevItemInjectorSettings()
+    {
+        if (devItemInjectorSettings != null)
+        {
+            return devItemInjectorSettings;
+        }
+
+        var loaded = Resources.Load<DevItemInjectorSettings>("DevItemInjectorSettings");
+        if (loaded != null)
+        {
+            devItemInjectorSettings = loaded;
+        }
+
+        return devItemInjectorSettings;
     }
 
     private static void ActivateDevItemInjector(DevItemInjector injector)

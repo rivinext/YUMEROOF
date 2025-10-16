@@ -48,7 +48,7 @@ public class DevItemInjector : MonoBehaviour
         public int quantity;
     }
 
-    [SerializeField] private bool enableInjection;
+    [SerializeField] private bool enableInjection = true;
     [SerializeField] private bool verboseLogging = true;
     private const string LogPrefix = "[DevItemInjector]";
 
@@ -80,6 +80,46 @@ public class DevItemInjector : MonoBehaviour
 
     [SerializeField] private List<DevEntry> furnitureItems;
     [SerializeField] private List<DevEntry> materialItems;
+
+    public void ConfigureFromSettings(DevItemInjectorSettings settings)
+    {
+        if (settings == null)
+        {
+            return;
+        }
+
+        enableInjection = settings.EnableInjection;
+        verboseLogging = settings.VerboseLogging;
+        furnitureItems = CloneEntries(settings.FurnitureItems);
+        materialItems = CloneEntries(settings.MaterialItems);
+
+        LogVerbose($"Configured from settings asset '{settings.name}'. enableInjection={enableInjection}, verboseLogging={verboseLogging}.");
+    }
+
+    private static List<DevEntry> CloneEntries(IReadOnlyList<DevEntry> source)
+    {
+        if (source == null || source.Count == 0)
+        {
+            return new List<DevEntry>();
+        }
+
+        var result = new List<DevEntry>(source.Count);
+        foreach (var entry in source)
+        {
+            if (entry == null)
+            {
+                continue;
+            }
+
+            result.Add(new DevEntry
+            {
+                id = entry.id,
+                quantity = entry.quantity
+            });
+        }
+
+        return result;
+    }
 
     public void Inject()
     {
