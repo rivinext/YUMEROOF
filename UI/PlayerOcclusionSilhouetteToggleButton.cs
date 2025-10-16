@@ -1,5 +1,6 @@
 using Player;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
@@ -11,6 +12,8 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private Material silhouetteMaterial;
 
+    private const string PlayerPrefsKey = "player_occlusion_silhouette_enabled";
+
     private bool isSilhouetteEnabled;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> originalMaterials;
     private System.Collections.Generic.Dictionary<Renderer, Material[]> materialsWithoutSilhouette;
@@ -18,13 +21,15 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     private void Awake()
     {
         CacheToggleReference();
+        LoadState();
         CacheSilhouetteReference();
         FindSilhouetteMaterials();
-        InitializeState();
     }
 
     private void OnEnable()
     {
+        CacheSilhouetteReference();
+        SceneManager.sceneLoaded += HandleSceneLoaded;
         RegisterToggleCallback();
         UpdateToggleValue();
         ApplyState();
@@ -32,7 +37,14 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
         UnregisterToggleCallback();
+        SaveState();
+    }
+
+    private void OnApplicationQuit()
+    {
+        SaveState();
     }
 
     private void CacheToggleReference()
@@ -111,19 +123,6 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         Debug.Log($"Found {originalMaterials.Count} renderers with Silhouette material");
     }
 
-    private void InitializeState()
-    {
-        // ToggleのIsOnの状態を取得
-        if (toggle != null)
-        {
-            isSilhouetteEnabled = toggle.isOn;
-        }
-        else
-        {
-            isSilhouetteEnabled = false;
-        }
-    }
-
     private void RegisterToggleCallback()
     {
         if (toggle != null)
@@ -144,6 +143,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     {
         isSilhouetteEnabled = value;
         ApplyState();
+        SaveState();
     }
 
     private void UpdateToggleValue()
@@ -154,8 +154,31 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         }
     }
 
+    private void LoadState()
+    {
+        if (PlayerPrefs.HasKey(PlayerPrefsKey))
+        {
+            isSilhouetteEnabled = PlayerPrefs.GetInt(PlayerPrefsKey) == 1;
+        }
+        else if (toggle != null)
+        {
+            isSilhouetteEnabled = toggle.isOn;
+        }
+        else
+        {
+            isSilhouetteEnabled = false;
+        }
+    }
+
+    private void SaveState()
+    {
+        PlayerPrefs.SetInt(PlayerPrefsKey, isSilhouetteEnabled ? 1 : 0);
+        PlayerPrefs.Save();
+    }
+
     private void ApplyState()
     {
+        CacheSilhouetteReference();
         // トグルがONの時はシルエットをON、OFFの時はシルエットをOFF
         if (occlusionSilhouette != null)
         {
@@ -165,6 +188,13 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
 
         // Silhouetteマテリアルの有効/無効を切り替え
         SetSilhouetteMaterialsEnabled(isSilhouetteEnabled);
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        CacheSilhouetteReference();
+        FindSilhouetteMaterials();
+        ApplyState();
     }
 
     private void SetSilhouetteMaterialsEnabled(bool enabled)
