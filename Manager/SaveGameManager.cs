@@ -16,6 +16,7 @@ public class SaveGameManager : MonoBehaviour
     private string currentSlot;
     public string CurrentSlotKey => currentSlot;
     private Coroutine autoSaveCoroutine;
+    public static event Action SaveApplied;
     public static SaveGameManager Instance
     {
         get
@@ -220,28 +221,10 @@ public class SaveGameManager : MonoBehaviour
         }
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    private void InjectDevItemsAfterLoad()
+    private static void NotifySaveApplied()
     {
-        var injector = FindObjectOfType<DevItemInjector>(true);
-        if (injector == null)
-        {
-            return;
-        }
-
-        injector.Inject();
-
-        var inventory = InventoryManager.Instance;
-        if (inventory != null)
-        {
-            inventory.ForceInventoryUpdate();
-        }
+        SaveApplied?.Invoke();
     }
-#else
-    private void InjectDevItemsAfterLoad()
-    {
-    }
-#endif
 
     public void Delete(string slotKey)
     {
@@ -398,7 +381,7 @@ public class SaveGameManager : MonoBehaviour
             milestone.RequestProgressUpdate();
         }
 
-        InjectDevItemsAfterLoad();
+        NotifySaveApplied();
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -431,7 +414,7 @@ public class SaveGameManager : MonoBehaviour
             milestone.RequestProgressUpdate();
         }
 
-        InjectDevItemsAfterLoad();
+        NotifySaveApplied();
     }
 
     void ApplyInventory(List<string> items)
