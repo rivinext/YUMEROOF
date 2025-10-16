@@ -10,12 +10,12 @@ public class ResolutionDropdown : MonoBehaviour
     void Start()
     {
         Resolution[] allResolutions = Screen.resolutions;
-        int currentRefreshRate = Screen.currentResolution.refreshRate;
+        var currentRefreshRate = Screen.currentResolution.refreshRateRatio;
 
         List<Resolution> filtered = new List<Resolution>();
         foreach (var res in allResolutions)
         {
-            if (res.refreshRate == currentRefreshRate)
+            if (res.refreshRateRatio.Equals(currentRefreshRate))
             {
                 filtered.Add(res);
             }
