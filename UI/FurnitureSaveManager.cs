@@ -420,10 +420,20 @@ public class FurnitureSaveManager : MonoBehaviour
     // レイヤーを再帰的に設定
     void SetLayerRecursively(GameObject obj, int layer)
     {
-        obj.layer = layer;
+        int anchorLayer = LayerMask.NameToLayer("Anchor");
+        SetLayerRecursively(obj, layer, anchorLayer);
+    }
+
+    void SetLayerRecursively(GameObject obj, int targetLayer, int anchorLayer)
+    {
+        bool isAnchorNode = (anchorLayer >= 0 && (obj.layer == anchorLayer || obj.GetComponent<AnchorPoint>() != null));
+
+        int appliedLayer = isAnchorNode ? anchorLayer : targetLayer;
+        obj.layer = appliedLayer;
+
         foreach (Transform child in obj.transform)
         {
-            SetLayerRecursively(child.gameObject, layer);
+            SetLayerRecursively(child.gameObject, appliedLayer, anchorLayer);
         }
     }
 
