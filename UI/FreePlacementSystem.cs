@@ -239,6 +239,27 @@ public class FreePlacementSystem : MonoBehaviour
         return false;
     }
 
+    private bool TryEnsurePlayerControl()
+    {
+        if (playerControl == null)
+        {
+            playerControl = FindObjectOfType<PlacementPlayerControl>();
+        }
+
+        if (playerControl == null)
+        {
+            return false;
+        }
+
+        if (!playerControl)
+        {
+            playerControl = null;
+            return false;
+        }
+
+        return true;
+    }
+
     // 新規配置をキャンセルしてインベントリを開く
     void CancelNewPlacementAndOpenInventory()
     {
@@ -251,7 +272,10 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
 
-        playerControl?.EnableControl();
+        if (TryEnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         // インベントリを開く
         var inventoryUI = FindObjectOfType<InventoryUI>();
@@ -301,7 +325,10 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
 
-        playerControl?.EnableControl();
+        if (TryEnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         ghostManager?.DestroyGhost();
         snappedAnchor = null;
@@ -354,7 +381,10 @@ public class FreePlacementSystem : MonoBehaviour
         selectedFurniture = null;
         currentFurnitureData = null;
 
-        playerControl?.EnableControl();
+        if (TryEnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         Debug.Log($"Furniture {furnitureID} returned to inventory");
 
@@ -439,7 +469,10 @@ public class FreePlacementSystem : MonoBehaviour
         isMovingFurniture = true;
         isFromInventory = false;
 
-        playerControl?.DisableControl();
+        if (TryEnsurePlayerControl())
+        {
+            playerControl.DisableControl();
+        }
 
         previewObject = furniture.gameObject;
         currentFurnitureData = furniture.furnitureData;
@@ -477,7 +510,10 @@ public class FreePlacementSystem : MonoBehaviour
         CreateCornerMarkers(placedComp);
         placedComp.SetSelected(true);
 
-        playerControl?.DisableControl();
+        if (TryEnsurePlayerControl())
+        {
+            playerControl.DisableControl();
+        }
     }
 
     void UpdateFurniturePosition()
@@ -812,7 +848,10 @@ public class FreePlacementSystem : MonoBehaviour
             previewObject = null;
             currentFurnitureData = null;
 
-            playerControl?.EnableControl();
+            if (TryEnsurePlayerControl())
+            {
+                playerControl.EnableControl();
+            }
             originalParentFurniture = null;
         }
         // 家具配置データを保存
@@ -880,7 +919,10 @@ public class FreePlacementSystem : MonoBehaviour
         currentFurnitureData = null;
         originalParentFurniture = null;
 
-        playerControl?.EnableControl();
+        if (TryEnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         ghostManager?.DestroyGhost();
         snappedAnchor = null;
