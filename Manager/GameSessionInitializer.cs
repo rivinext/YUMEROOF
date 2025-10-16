@@ -25,18 +25,39 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject slideTransitionManagerPrefab;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private DevItemInjector devItemInjectorPrefab;
+    [SerializeField] private bool debugLogging = true;
 #endif
+
+    private const string LogPrefix = "[GameSessionInitializer]";
 
     void Awake()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} Awake. ExistingInstance={(Instance != null && Instance != this)}");
+        }
+#endif
         if (Instance != null && Instance != this)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.LogWarning($"{LogPrefix} Duplicate initializer detected. Destroying this instance.");
+            }
+#endif
             Destroy(gameObject);
             return;
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
         SceneManager.sceneLoaded += OnSceneLoaded;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} Instance registered and marked DontDestroyOnLoad.");
+        }
+#endif
         EnsurePersistentManagers();
     }
 
@@ -46,6 +67,12 @@ public class GameSessionInitializer : MonoBehaviour
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             Instance = null;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} OnDestroy. Static instance cleared and sceneLoaded unsubscribed.");
+            }
+#endif
         }
     }
 
@@ -88,9 +115,21 @@ public class GameSessionInitializer : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} OnSceneLoaded => {scene.name} (mode={mode}). initialized={initialized}, slotKey={slotKey}.");
+        }
+#endif
         if (scene.name == "MainMenu")
         {
             DevItemInjector.ResetInjected();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Returned to MainMenu. Destroying initializer and resetting injector state.");
+            }
+#endif
             Destroy(gameObject);
             return;
         }
@@ -106,13 +145,31 @@ public class GameSessionInitializer : MonoBehaviour
 
     private System.Collections.IEnumerator DelayedLoad()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} DelayedLoad started. Awaiting one frame before initialization.");
+        }
+#endif
         yield return null;
 
         var clock = FindObjectOfType<GameClock>();
         if (clock == null)
         {
             clock = new GameObject("GameClock").AddComponent<GameClock>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Created GameClock as it was missing.");
+            }
+#endif
         }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        else if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} Found existing GameClock on '{clock.gameObject.name}'.");
+        }
+#endif
 
         if (inventoryManagerPrefab == null)
             inventoryManagerPrefab = Resources.Load<GameObject>("InventoryManager");
@@ -125,41 +182,107 @@ public class GameSessionInitializer : MonoBehaviour
         if (FurnitureDataManager.Instance == null)
         {
             if (furnitureDataManagerPrefab != null)
+            {
                 Instantiate(furnitureDataManagerPrefab);
+            }
             else
+            {
                 new GameObject("FurnitureDataManager").AddComponent<FurnitureDataManager>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (debugLogging)
+                {
+                    Debug.LogWarning($"{LogPrefix} FurnitureDataManager prefab missing. Created new GameObject instance.");
+                }
+#endif
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} FurnitureDataManager instantiated during DelayedLoad.");
+            }
+#endif
             createdManager = true;
         }
         if (FurnitureSaveManager.Instance == null)
         {
             if (furnitureSaveManagerPrefab != null)
+            {
                 Instantiate(furnitureSaveManagerPrefab);
+            }
             else
+            {
                 new GameObject("FurnitureSaveManager").AddComponent<FurnitureSaveManager>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (debugLogging)
+                {
+                    Debug.LogWarning($"{LogPrefix} FurnitureSaveManager prefab missing. Created new GameObject instance.");
+                }
+#endif
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} FurnitureSaveManager instantiated during DelayedLoad.");
+            }
+#endif
             createdManager = true;
         }
         if (InventoryManager.Instance == null)
         {
             if (inventoryManagerPrefab != null)
+            {
                 Instantiate(inventoryManagerPrefab);
+            }
             else
+            {
                 new GameObject("InventoryManager").AddComponent<InventoryManager>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (debugLogging)
+                {
+                    Debug.LogWarning($"{LogPrefix} InventoryManager prefab missing. Created new GameObject instance.");
+                }
+#endif
+            }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} InventoryManager instantiated during DelayedLoad.");
+            }
+#endif
             createdManager = true;
         }
 
         if (createdManager)
         {
             // Wait a frame to ensure managers initialize before loading
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Managers were instantiated during DelayedLoad. Waiting an extra frame before loading save.");
+            }
+#endif
             yield return null;
         }
 
         SaveGameManager.Instance.Load(slotKey);
         initialized = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} Save loaded for slot '{slotKey}'. Initialization complete.");
+        }
+#endif
         slotKey = null;
     }
 
     private void EnsurePersistentManagers()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} Ensuring persistent managers.");
+        }
+#endif
         EnsureManager(ref inventoryManagerPrefab, () => FindObjectOfType<InventoryManager>(), "InventoryManager");
         EnsureManager(ref furnitureDataManagerPrefab, () => FindObjectOfType<FurnitureDataManager>(), "FurnitureDataManager");
         EnsureManager(ref furnitureSaveManagerPrefab, () => FindObjectOfType<FurnitureSaveManager>(), "FurnitureSaveManager");
@@ -193,6 +316,12 @@ public class GameSessionInitializer : MonoBehaviour
         var current = instanceGetter();
         if (current != null)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Found existing manager {typeof(T).Name} on '{current.gameObject.name}'.");
+            }
+#endif
             return current;
         }
 
@@ -203,6 +332,12 @@ public class GameSessionInitializer : MonoBehaviour
             if (source != null)
             {
                 prefabField = source;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (debugLogging)
+                {
+                    Debug.Log($"{LogPrefix} Loaded prefab for {typeof(T).Name} from Resources '{resourcePath}'.");
+                }
+#endif
             }
         }
 
@@ -210,16 +345,34 @@ public class GameSessionInitializer : MonoBehaviour
         if (source != null)
         {
             instance = Instantiate(source);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Instantiated manager {typeof(T).Name} from prefab '{source.name}'.");
+            }
+#endif
         }
         else
         {
             instance = new GameObject(typeof(T).Name);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.LogWarning($"{LogPrefix} No prefab/resource for {typeof(T).Name}. Created empty GameObject.");
+            }
+#endif
         }
 
         var component = instance.GetComponent<T>();
         if (component == null)
         {
             component = instance.AddComponent<T>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Added missing component {typeof(T).Name} to '{instance.name}'.");
+            }
+#endif
         }
 
         return component;
@@ -229,10 +382,22 @@ public class GameSessionInitializer : MonoBehaviour
     private void EnsureDevItemInjector()
     {
         var existing = FindObjectOfType<DevItemInjector>(true);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} EnsureDevItemInjector. Existing={(existing != null ? existing.name : "none")}, prefab={(devItemInjectorPrefab != null ? devItemInjectorPrefab.name : "null")}.");
+        }
+#endif
         if (existing != null)
         {
             DontDestroyOnLoad(existing.gameObject);
             existing.gameObject.SetActive(true);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Reusing existing DevItemInjector '{existing.name}'.");
+            }
+#endif
             return;
         }
 
@@ -240,6 +405,12 @@ public class GameSessionInitializer : MonoBehaviour
         if (devItemInjectorPrefab != null)
         {
             injector = Instantiate(devItemInjectorPrefab);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.Log($"{LogPrefix} Instantiated DevItemInjector from prefab '{devItemInjectorPrefab.name}'.");
+            }
+#endif
         }
         else
         {
@@ -247,16 +418,34 @@ public class GameSessionInitializer : MonoBehaviour
             if (loaded != null)
             {
                 injector = Instantiate(loaded);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (debugLogging)
+                {
+                    Debug.Log($"{LogPrefix} Instantiated DevItemInjector from Resources '{loaded.name}'.");
+                }
+#endif
             }
         }
 
         if (injector == null)
         {
             injector = new GameObject("DevItemInjector").AddComponent<DevItemInjector>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogging)
+            {
+                Debug.LogWarning($"{LogPrefix} No prefab or resource found. Created fallback DevItemInjector.");
+            }
+#endif
         }
 
         DontDestroyOnLoad(injector.gameObject);
         injector.gameObject.SetActive(true);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (debugLogging)
+        {
+            Debug.Log($"{LogPrefix} DevItemInjector '{injector.name}' marked DontDestroyOnLoad and activated.");
+        }
+#endif
     }
 #endif
 }
