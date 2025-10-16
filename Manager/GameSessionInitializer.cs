@@ -319,7 +319,7 @@ public class GameSessionInitializer : MonoBehaviour
         {
             if (!devItemInjectorSettingsWarningLogged)
             {
-                Debug.LogWarning("[GameSessionInitializer] DevItemInjectorSettings asset is not assigned or found. Using DevItemInjector defaults.");
+                Debug.LogWarning("[GameSessionInitializer] DevItemInjectorSettings component is not assigned or found. Using DevItemInjector defaults.");
                 devItemInjectorSettingsWarningLogged = true;
             }
 
@@ -336,10 +336,16 @@ public class GameSessionInitializer : MonoBehaviour
             return devItemInjectorSettings;
         }
 
-        var loaded = Resources.Load<DevItemInjectorSettings>("DevItemInjectorSettings");
-        if (loaded != null)
+        if (TryGetComponent(out DevItemInjectorSettings attached))
         {
-            devItemInjectorSettings = loaded;
+            devItemInjectorSettings = attached;
+            return devItemInjectorSettings;
+        }
+
+        var found = FindObjectOfType<DevItemInjectorSettings>();
+        if (found != null)
+        {
+            devItemInjectorSettings = found;
         }
 
         return devItemInjectorSettings;

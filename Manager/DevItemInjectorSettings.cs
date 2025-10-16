@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "DevItemInjectorSettings", menuName = "Game/Dev Item Injector Settings")]
-public class DevItemInjectorSettings : ScriptableObject
+[AddComponentMenu("Game/Dev Item Injector Settings")]
+public class DevItemInjectorSettings : MonoBehaviour
 {
     [SerializeField] private bool enableInjection = true;
     [SerializeField] private bool verboseLogging = true;
