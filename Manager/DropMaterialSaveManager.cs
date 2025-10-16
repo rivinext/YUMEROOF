@@ -54,6 +54,10 @@ public class DropMaterialSaveManager : MonoBehaviour
     {
         if (Instance == this)
         {
+            // Persist drop information before tearing down the singleton so the
+            // next session (or scene reload) can restore any remaining drops.
+            SaveToPrefs();
+
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             Instance = null;
         }
@@ -68,8 +72,14 @@ public class DropMaterialSaveManager : MonoBehaviour
     {
         if (scene.name == "MainMenu")
         {
-            if (Instance == this) Instance = null;
-            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            if (Instance == this)
+            {
+                // Persist any registered drops so that returning to the game
+                // scene can restore them, then tear down the singleton.
+                SaveToPrefs();
+                SceneManager.sceneLoaded -= HandleSceneLoaded;
+                Instance = null;
+            }
             Destroy(gameObject);
             return;
         }
