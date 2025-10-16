@@ -68,14 +68,7 @@ public class FreePlacementSystem : MonoBehaviour
     {
         RefreshOutlineLayerMask();
 
-        if (playerControl == null)
-        {
-            playerControl = FindObjectOfType<PlacementPlayerControl>();
-            if (playerControl == null)
-            {
-                Debug.LogWarning("FreePlacementSystem: PlacementPlayerControl not found in Awake.");
-            }
-        }
+        EnsurePlayerControl(true, "during Awake");
 
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
@@ -94,11 +87,27 @@ public class FreePlacementSystem : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        playerControl = FindObjectOfType<PlacementPlayerControl>();
+        EnsurePlayerControl(true, $"after scene load: {scene.name}");
+    }
+
+    private bool EnsurePlayerControl(bool logWarning = false, string context = null)
+    {
         if (playerControl == null)
         {
-            Debug.LogWarning($"FreePlacementSystem: PlacementPlayerControl not found in scene {scene.name}.");
+            playerControl = FindObjectOfType<PlacementPlayerControl>();
+            if (playerControl == null && logWarning)
+            {
+                string message = "FreePlacementSystem: PlacementPlayerControl not found";
+                if (!string.IsNullOrEmpty(context))
+                {
+                    message += $" ({context})";
+                }
+
+                Debug.LogWarning(message);
+            }
         }
+
+        return playerControl != null;
     }
 
     private void RefreshOutlineLayerMask()
@@ -251,7 +260,10 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
 
-        playerControl?.EnableControl();
+        if (EnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         // インベントリを開く
         var inventoryUI = FindObjectOfType<InventoryUI>();
@@ -301,7 +313,10 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
 
-        playerControl?.EnableControl();
+        if (EnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         ghostManager?.DestroyGhost();
         snappedAnchor = null;
@@ -354,7 +369,10 @@ public class FreePlacementSystem : MonoBehaviour
         selectedFurniture = null;
         currentFurnitureData = null;
 
-        playerControl?.EnableControl();
+        if (EnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         Debug.Log($"Furniture {furnitureID} returned to inventory");
 
@@ -439,7 +457,10 @@ public class FreePlacementSystem : MonoBehaviour
         isMovingFurniture = true;
         isFromInventory = false;
 
-        playerControl?.DisableControl();
+        if (EnsurePlayerControl())
+        {
+            playerControl.DisableControl();
+        }
 
         previewObject = furniture.gameObject;
         currentFurnitureData = furniture.furnitureData;
@@ -477,7 +498,10 @@ public class FreePlacementSystem : MonoBehaviour
         CreateCornerMarkers(placedComp);
         placedComp.SetSelected(true);
 
-        playerControl?.DisableControl();
+        if (EnsurePlayerControl())
+        {
+            playerControl.DisableControl();
+        }
     }
 
     void UpdateFurniturePosition()
@@ -812,7 +836,10 @@ public class FreePlacementSystem : MonoBehaviour
             previewObject = null;
             currentFurnitureData = null;
 
-            playerControl?.EnableControl();
+            if (EnsurePlayerControl())
+            {
+                playerControl.EnableControl();
+            }
             originalParentFurniture = null;
         }
         // 家具配置データを保存
@@ -880,7 +907,10 @@ public class FreePlacementSystem : MonoBehaviour
         currentFurnitureData = null;
         originalParentFurniture = null;
 
-        playerControl?.EnableControl();
+        if (EnsurePlayerControl())
+        {
+            playerControl.EnableControl();
+        }
 
         ghostManager?.DestroyGhost();
         snappedAnchor = null;
