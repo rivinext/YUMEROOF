@@ -101,7 +101,7 @@ public class UIPanelExclusionManager : MonoBehaviour
         CloseOtherPanels(panel);
     }
 
-    private void CloseOtherPanels(object openedPanel)
+    private void CloseOtherPanels(UnityEngine.Object openedPanel)
     {
         if (settingsPanel != null && openedPanel != settingsPanel && settingsPanel.IsOpen)
         {
