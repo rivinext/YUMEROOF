@@ -44,14 +44,6 @@ public class EnvironmentStatsManager : MonoBehaviour
         }
     }
 
-    void OnDestroy()
-    {
-        if (Instance == this)
-        {
-            Instance = null;
-        }
-    }
-
     public void SetValues(int cozy, int nature)
     {
         cozyTotal = cozy;
