@@ -42,14 +42,6 @@ public class MoneyManager : MonoBehaviour
         }
     }
 
-    void OnDestroy()
-    {
-        if (Instance == this)
-        {
-            Instance = null;
-        }
-    }
-
     public void AddMoney(int amount)
     {
         currentMoney += amount;
