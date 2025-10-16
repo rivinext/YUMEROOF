@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
@@ -16,6 +17,10 @@ public class SaveGameManager : MonoBehaviour
     private string currentSlot;
     public string CurrentSlotKey => currentSlot;
     private Coroutine autoSaveCoroutine;
+    private Coroutine reSubscribeCoroutine;
+    private FurnitureSaveManager subscribedFurnitureManager;
+    private InventoryManager subscribedInventoryManager;
+    private EnvironmentStatsManager subscribedEnvironmentManager;
     public static event Action SaveApplied;
     public static SaveGameManager Instance
     {
@@ -49,36 +54,15 @@ public class SaveGameManager : MonoBehaviour
 
     void OnEnable()
     {
-        var furnitureMgr = FurnitureSaveManager.Instance;
-        if (furnitureMgr != null)
-            furnitureMgr.OnFurnitureChanged += TriggerSave;
-
-        var inventoryMgr = InventoryManager.Instance;
-        if (inventoryMgr != null)
-            inventoryMgr.OnInventoryChanged += TriggerSave;
-
-        var environmentMgr = EnvironmentStatsManager.Instance;
-        if (environmentMgr != null)
-            environmentMgr.OnStatsChanged += TriggerSave;
-
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
         SceneManager.sceneLoaded += OnSceneLoaded;
+        TrySubscribeToManagers();
+        ScheduleResubscribe();
     }
 
     void OnDisable()
     {
-        var furnitureMgr = FurnitureSaveManager.Instance;
-        if (furnitureMgr != null)
-            furnitureMgr.OnFurnitureChanged -= TriggerSave;
-
-        var inventoryMgr = InventoryManager.Instance;
-        if (inventoryMgr != null)
-            inventoryMgr.OnInventoryChanged -= TriggerSave;
-
-        var environmentMgr = EnvironmentStatsManager.Instance;
-        if (environmentMgr != null)
-            environmentMgr.OnStatsChanged -= TriggerSave;
-
+        UnsubscribeFromManagers();
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         SceneManager.sceneLoaded -= OnSceneLoaded;
 
@@ -86,6 +70,12 @@ public class SaveGameManager : MonoBehaviour
         {
             StopCoroutine(autoSaveCoroutine);
             autoSaveCoroutine = null;
+        }
+
+        if (reSubscribeCoroutine != null)
+        {
+            StopCoroutine(reSubscribeCoroutine);
+            reSubscribeCoroutine = null;
         }
     }
 
@@ -106,7 +96,11 @@ public class SaveGameManager : MonoBehaviour
         {
             if (instance == this) instance = null;
             Destroy(gameObject);
+            return;
         }
+
+        TrySubscribeToManagers();
+        ScheduleResubscribe();
     }
 
     void TriggerSave()
@@ -118,6 +112,145 @@ public class SaveGameManager : MonoBehaviour
     void TriggerSave(int cozy, int nature) => TriggerSave();
 
     public void SaveCurrentSlot() => TriggerSave();
+
+    void OnDestroy()
+    {
+        if (instance == this)
+        {
+            instance = null;
+        }
+    }
+
+    void TrySubscribeToManagers()
+    {
+        SubscribeToFurnitureManager();
+        SubscribeToInventoryManager();
+        SubscribeToEnvironmentManager();
+    }
+
+    void UnsubscribeFromManagers()
+    {
+        if (subscribedFurnitureManager != null)
+        {
+            subscribedFurnitureManager.OnFurnitureChanged -= TriggerSave;
+            subscribedFurnitureManager = null;
+        }
+
+        if (subscribedInventoryManager != null)
+        {
+            subscribedInventoryManager.OnInventoryChanged -= TriggerSave;
+            subscribedInventoryManager = null;
+        }
+
+        if (subscribedEnvironmentManager != null)
+        {
+            subscribedEnvironmentManager.OnStatsChanged -= TriggerSave;
+            subscribedEnvironmentManager = null;
+        }
+    }
+
+    void SubscribeToFurnitureManager()
+    {
+        var manager = FurnitureSaveManager.Instance;
+        if (manager == null)
+        {
+            if (subscribedFurnitureManager != null)
+            {
+                subscribedFurnitureManager.OnFurnitureChanged -= TriggerSave;
+                subscribedFurnitureManager = null;
+            }
+            return;
+        }
+
+        if (manager == subscribedFurnitureManager)
+        {
+            return;
+        }
+
+        if (subscribedFurnitureManager != null)
+        {
+            subscribedFurnitureManager.OnFurnitureChanged -= TriggerSave;
+        }
+
+        subscribedFurnitureManager = manager;
+        subscribedFurnitureManager.OnFurnitureChanged += TriggerSave;
+    }
+
+    void SubscribeToInventoryManager()
+    {
+        var manager = InventoryManager.Instance;
+        if (manager == null)
+        {
+            if (subscribedInventoryManager != null)
+            {
+                subscribedInventoryManager.OnInventoryChanged -= TriggerSave;
+                subscribedInventoryManager = null;
+            }
+            return;
+        }
+
+        if (manager == subscribedInventoryManager)
+        {
+            return;
+        }
+
+        if (subscribedInventoryManager != null)
+        {
+            subscribedInventoryManager.OnInventoryChanged -= TriggerSave;
+        }
+
+        subscribedInventoryManager = manager;
+        subscribedInventoryManager.OnInventoryChanged += TriggerSave;
+    }
+
+    void SubscribeToEnvironmentManager()
+    {
+        var manager = EnvironmentStatsManager.Instance;
+        if (manager == null)
+        {
+            if (subscribedEnvironmentManager != null)
+            {
+                subscribedEnvironmentManager.OnStatsChanged -= TriggerSave;
+                subscribedEnvironmentManager = null;
+            }
+            return;
+        }
+
+        if (manager == subscribedEnvironmentManager)
+        {
+            return;
+        }
+
+        if (subscribedEnvironmentManager != null)
+        {
+            subscribedEnvironmentManager.OnStatsChanged -= TriggerSave;
+        }
+
+        subscribedEnvironmentManager = manager;
+        subscribedEnvironmentManager.OnStatsChanged += TriggerSave;
+    }
+
+    void ScheduleResubscribe()
+    {
+        if (!isActiveAndEnabled)
+        {
+            return;
+        }
+
+        if (reSubscribeCoroutine != null)
+        {
+            StopCoroutine(reSubscribeCoroutine);
+        }
+
+        reSubscribeCoroutine = StartCoroutine(ResubscribeNextFrame());
+    }
+
+    IEnumerator ResubscribeNextFrame()
+    {
+        yield return null;
+        TrySubscribeToManagers();
+        reSubscribeCoroutine = null;
+    }
 
     void EnsureAutoSave()
     {
