@@ -57,7 +57,6 @@ public class MilestonePanel : MonoBehaviour
     [Header("Notifications")]
     [SerializeField] private GameObject milestoneNotificationIndicator;
     private int lastKnownMilestoneIndex = 0;
-    private bool hasPendingMilestoneNotification = false;
     private bool hasProcessedInitialProgressUpdate;
 
     [Header("Animation")]
@@ -151,7 +150,6 @@ public class MilestonePanel : MonoBehaviour
         CreateMilestones(MilestoneManager.Instance != null ? MilestoneManager.Instance.MilestoneCount : 0);
         SetProgress(initialMilestoneIndex);
         SetNotificationVisible(false);
-        hasPendingMilestoneNotification = false;
         MilestoneManager.Instance?.RequestProgressUpdate();
     }
 
@@ -670,13 +668,11 @@ public class MilestonePanel : MonoBehaviour
 
     private void ShowMilestoneNotification()
     {
-        hasPendingMilestoneNotification = true;
         SetNotificationVisible(true);
     }
 
     private void ClearMilestoneNotification()
     {
-        hasPendingMilestoneNotification = false;
         SetNotificationVisible(false);
     }
 
