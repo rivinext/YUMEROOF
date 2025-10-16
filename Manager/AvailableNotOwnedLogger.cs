@@ -21,7 +21,7 @@ public class AvailableNotOwnedLogger : MonoBehaviour
 
         if (furnitureTabLogger == null)
         {
-            furnitureTabLogger = FindObjectOfType<FurnitureTabLogger>(true);
+            furnitureTabLogger = FindFirstObjectByType<FurnitureTabLogger>(FindObjectsInactive.Include);
             if (furnitureTabLogger == null)
             {
                 Debug.LogWarning("FurnitureTabLogger dependency could not be found.");
@@ -30,7 +30,7 @@ public class AvailableNotOwnedLogger : MonoBehaviour
 
         if (unlockItemConsole == null)
         {
-            unlockItemConsole = FindObjectOfType<UnlockItemConsole>(true);
+            unlockItemConsole = FindFirstObjectByType<UnlockItemConsole>(FindObjectsInactive.Include);
             if (unlockItemConsole == null)
             {
                 Debug.LogWarning("UnlockItemConsole dependency could not be found.");
