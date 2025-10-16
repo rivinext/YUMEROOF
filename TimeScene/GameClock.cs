@@ -141,13 +141,16 @@ public class GameClock : MonoBehaviour
     /// <param name="minutes">Minutes to set as the new current time.</param>
     public void SetTimeAndAdvanceDay(int minutes)
     {
+        int previousDay = currentDay;
         currentMinutes = minutes;
         currentDay++;
+        Debug.Log($"[GameClock] Day advanced from {previousDay} to {currentDay} at minute {minutes}.");
         OnDayChanged?.Invoke(currentDay);
     }
 
     public void TriggerSleepAdvancedDay()
     {
+        Debug.Log($"[GameClock] TriggerSleepAdvancedDay invoked for day {currentDay}.");
         OnSleepAdvancedDay?.Invoke(currentDay);
     }
 

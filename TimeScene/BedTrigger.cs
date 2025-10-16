@@ -162,6 +162,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
     void StartSleep()
     {
         if (clock == null) return;
+        Debug.Log("[BedTrigger] Sleep button pressed. Starting sleep routine.");
         StartCoroutine(SleepRoutine());
     }
 
@@ -169,16 +170,18 @@ public class BedTrigger : MonoBehaviour, IInteractable
     {
         if (!CanSleep())
         {
-            Debug.Log("It's not time to sleep yet.");
+            Debug.Log("[BedTrigger] Sleep denied. Outside of allowed time window.");
             yield break;
         }
 
         // Pause the game clock while the player sleeps
+        Debug.Log("[BedTrigger] Pausing GameClock for sleep.");
         clock.SetTimeScale(0f);
 
         // Remove any dropped materials that were not collected.
         // MaterialSpawnManager listens for sleep-based day advancement to spawn
         // new drops after this cleanup.
+        Debug.Log("[BedTrigger] Clearing all previously dropped materials before advancing day.");
         DropMaterialSaveManager.Instance?.ClearAllDrops();
 
         ClosePanel();
@@ -187,6 +190,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
             void OnDayShownHandler()
             {
                 // Advance the day and notify sleep-specific listeners.
+                Debug.Log("[BedTrigger] Transition UI completed. Advancing day.");
                 clock.SetTimeAndAdvanceDay(sleepEndMinutes);
                 clock.TriggerSleepAdvancedDay();
                 AcquireRecipes();
@@ -199,6 +203,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
         else
         {
             // Advance the day and notify sleep-specific listeners.
+            Debug.Log("[BedTrigger] No transition UI. Advancing day immediately.");
             clock.SetTimeAndAdvanceDay(sleepEndMinutes);
             clock.TriggerSleepAdvancedDay();
             AcquireRecipes();
@@ -212,6 +217,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
             yield return new WaitUntil(() => !transitionUI.IsTransitionRunning);
 
         // Resume the game clock before re-enabling player input
+        Debug.Log("[BedTrigger] Resuming GameClock after sleep.");
         float resumeScale = 1f;
         if (clock.timeScales != null && clock.timeScales.Length > 0)
             resumeScale = clock.timeScales[0];
