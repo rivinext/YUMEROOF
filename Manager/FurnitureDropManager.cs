@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -15,6 +16,7 @@ public class FurnitureDropManager : MonoBehaviour
 
     private GameObject dropPrefab;
     private GameClock clock;
+    private Coroutine clockRetryCoroutine;
     private int lastProcessedDay = -1;
 
     void Awake()
@@ -57,6 +59,7 @@ public class FurnitureDropManager : MonoBehaviour
         }
 
         SceneManager.sceneLoaded -= HandleSceneLoaded;
+        StopClockRetryCoroutine();
         UnsubscribeFromClock();
     }
 
@@ -216,6 +219,7 @@ public class FurnitureDropManager : MonoBehaviour
         if (Instance == this)
         {
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+            StopClockRetryCoroutine();
             UnsubscribeFromClock();
             Instance = null;
         }
@@ -223,7 +227,7 @@ public class FurnitureDropManager : MonoBehaviour
 
     private void FindClockAndSubscribe()
     {
-        GameClock newClock = FindObjectOfType<GameClock>();
+        GameClock newClock = GameClock.Instance ?? FindObjectOfType<GameClock>();
         if (newClock == clock) return;
 
         if (clock != null)
@@ -233,12 +237,14 @@ public class FurnitureDropManager : MonoBehaviour
         clock = newClock;
         if (clock != null)
         {
-            Debug.Log("[FurnitureDropManager] GameClock found. Subscribing to OnSleepAdvancedDay.");
+            Debug.Log($"[FurnitureDropManager] GameClock found (source: {(GameClock.Instance != null ? "Instance" : "FindObjectOfType")}). Subscribing to OnSleepAdvancedDay.");
             clock.OnSleepAdvancedDay += HandleSleepAdvancedDay;
+            StopClockRetryCoroutine();
         }
         else
         {
-            Debug.LogWarning("[FurnitureDropManager] GameClock not found.");
+            Debug.LogWarning("[FurnitureDropManager] GameClock not found. Waiting for GameClock.Instance to become available.");
+            StartClockRetryCoroutine();
         }
     }
 
@@ -250,5 +256,44 @@ public class FurnitureDropManager : MonoBehaviour
             clock = null;
             Debug.Log("[FurnitureDropManager] Unsubscribed from GameClock.OnSleepAdvancedDay.");
         }
+    }
+
+    private void StartClockRetryCoroutine()
+    {
+        if (!isActiveAndEnabled || clockRetryCoroutine != null)
+        {
+            return;
+        }
+
+        clockRetryCoroutine = StartCoroutine(WaitForClockAndSubscribe());
+    }
+
+    private void StopClockRetryCoroutine()
+    {
+        if (clockRetryCoroutine != null)
+        {
+            StopCoroutine(clockRetryCoroutine);
+            clockRetryCoroutine = null;
+        }
+    }
+
+    private IEnumerator WaitForClockAndSubscribe()
+    {
+        while (clock == null && isActiveAndEnabled)
+        {
+            GameClock newClock = GameClock.Instance ?? FindObjectOfType<GameClock>();
+            if (newClock != null)
+            {
+                clock = newClock;
+                Debug.Log($"[FurnitureDropManager] GameClock found during retry (source: {(GameClock.Instance != null ? "Instance" : "FindObjectOfType")}). Subscribing to OnSleepAdvancedDay.");
+                clock.OnSleepAdvancedDay += HandleSleepAdvancedDay;
+                clockRetryCoroutine = null;
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        clockRetryCoroutine = null;
     }
 }
