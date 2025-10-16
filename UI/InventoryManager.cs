@@ -18,7 +18,7 @@ public class InventoryManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<InventoryManager>();
+                instance = FindFirstObjectByType<InventoryManager>();
             }
             return instance;
         }

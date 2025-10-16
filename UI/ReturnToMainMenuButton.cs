@@ -19,7 +19,7 @@ public class ReturnToMainMenuButton : MonoBehaviour
 
         if (confirmationPopup == null)
         {
-            confirmationPopup = FindObjectOfType<ConfirmationPopup>(true);
+            confirmationPopup = FindFirstObjectByType<ConfirmationPopup>(FindObjectsInactive.Include);
             if (confirmationPopup == null)
             {
                 Debug.LogError("ConfirmationPopup reference is not assigned. Falling back to immediate transition.", this);

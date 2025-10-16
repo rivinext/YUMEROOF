@@ -463,7 +463,7 @@ public class InventoryUI : MonoBehaviour
 
         if (descPanel == null)
         {
-            descPanel = FindObjectOfType<FurnitureDescriptionPanel>();
+            descPanel = FindFirstObjectByType<FurnitureDescriptionPanel>();
         }
 
         return descPanel;
@@ -620,7 +620,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (cachedSelectionManager == null)
         {
-            cachedSelectionManager = FindObjectOfType<SelectionManager>();
+            cachedSelectionManager = FindFirstObjectByType<SelectionManager>();
             if (cachedSelectionManager != null)
             {
                 selectionManagerWasEnabled = cachedSelectionManager.enabled;
@@ -630,7 +630,7 @@ public class InventoryUI : MonoBehaviour
 
         if (cachedObjectManipulator == null)
         {
-            cachedObjectManipulator = FindObjectOfType<ObjectManipulator>();
+            cachedObjectManipulator = FindFirstObjectByType<ObjectManipulator>();
             if (cachedObjectManipulator != null)
             {
                 objectManipulatorWasEnabled = cachedObjectManipulator.enabled;
@@ -676,7 +676,7 @@ public class InventoryUI : MonoBehaviour
 
     void NotifyCameraController(bool inventoryOpen)
     {
-        var cameraController = FindObjectOfType<OrthographicCameraController>();
+        var cameraController = FindFirstObjectByType<OrthographicCameraController>();
         if (cameraController != null)
         {
             cameraController.NotifyInventoryStateChanged(inventoryOpen);

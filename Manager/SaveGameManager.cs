@@ -22,7 +22,7 @@ public class SaveGameManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<SaveGameManager>();
+                instance = FindFirstObjectByType<SaveGameManager>();
                 if (instance == null)
                 {
                     var go = new GameObject("SaveGameManager");
@@ -234,7 +234,7 @@ public class SaveGameManager : MonoBehaviour
         data.saveDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         data.playTime = Time.time;
         data.location = SceneManager.GetActiveScene().name;
-        var milestone = FindObjectOfType<MilestoneManager>();
+        var milestone = FindFirstObjectByType<MilestoneManager>();
         data.chapterName = milestone != null ? milestone.CurrentMilestoneID : "";
 
         data.screenshotFilename = currentSlot + "_screenshot.png";
@@ -252,7 +252,7 @@ public class SaveGameManager : MonoBehaviour
     void SaveManagers(StorySaveData data)
     {
         // Include the player's transform by asking PlayerManager for its save data
-        var player = FindObjectOfType<PlayerManager>();
+        var player = FindFirstObjectByType<PlayerManager>();
         if (player != null)
             data.player = player.GetSaveData();
 
@@ -280,7 +280,7 @@ public class SaveGameManager : MonoBehaviour
     void SaveManagers(CreativeSaveData data)
     {
         // Include the player's transform by asking PlayerManager for its save data
-        var player = FindObjectOfType<PlayerManager>();
+        var player = FindFirstObjectByType<PlayerManager>();
         if (player != null)
             data.player = player.GetSaveData();
 
@@ -348,7 +348,7 @@ public class SaveGameManager : MonoBehaviour
     void ApplyManagers(StorySaveData data)
     {
         // Restore player position and rotation through PlayerManager
-        var player = FindObjectOfType<PlayerManager>();
+        var player = FindFirstObjectByType<PlayerManager>();
         if (player != null)
             player.ApplySaveData(data.player);
 
@@ -379,7 +379,7 @@ public class SaveGameManager : MonoBehaviour
     void ApplyManagers(CreativeSaveData data)
     {
         // Restore player position and rotation through PlayerManager
-        var player = FindObjectOfType<PlayerManager>();
+        var player = FindFirstObjectByType<PlayerManager>();
         if (player != null)
             player.ApplySaveData(data.player);
 
@@ -464,7 +464,7 @@ public class SaveGameManager : MonoBehaviour
 
     void ApplyTime(GameClock.ClockData savedData)
     {
-        var clock = FindObjectOfType<GameClock>();
+        var clock = FindFirstObjectByType<GameClock>();
         if (clock != null)
             clock.ApplySaveData(savedData);
     }

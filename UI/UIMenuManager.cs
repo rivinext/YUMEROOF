@@ -57,7 +57,7 @@ public class UIMenuManager : MonoBehaviour
         ClearSelectedSlot();
 
         if (confirmPopup == null)
-            confirmPopup = FindObjectOfType<ConfirmationPopup>(true);
+            confirmPopup = FindFirstObjectByType<ConfirmationPopup>(FindObjectsInactive.Include);
 
         // Post ProcessingのDepth of Fieldを取得
         if (postProcessVolume != null && postProcessVolume.profile != null)

@@ -227,7 +227,7 @@ public class FurnitureDropManager : MonoBehaviour
 
     private void FindClockAndSubscribe()
     {
-        GameClock newClock = GameClock.Instance ?? FindObjectOfType<GameClock>();
+        GameClock newClock = GameClock.Instance ?? FindFirstObjectByType<GameClock>();
         if (newClock == clock) return;
 
         if (clock != null)
@@ -237,7 +237,7 @@ public class FurnitureDropManager : MonoBehaviour
         clock = newClock;
         if (clock != null)
         {
-            Debug.Log($"[FurnitureDropManager] GameClock found (source: {(GameClock.Instance != null ? "Instance" : "FindObjectOfType")}). Subscribing to OnSleepAdvancedDay.");
+            Debug.Log($"[FurnitureDropManager] GameClock found (source: {(GameClock.Instance != null ? "Instance" : "FindFirstObjectByType")}). Subscribing to OnSleepAdvancedDay.");
             clock.OnSleepAdvancedDay += HandleSleepAdvancedDay;
             StopClockRetryCoroutine();
         }
@@ -281,11 +281,11 @@ public class FurnitureDropManager : MonoBehaviour
     {
         while (clock == null && isActiveAndEnabled)
         {
-            GameClock newClock = GameClock.Instance ?? FindObjectOfType<GameClock>();
+            GameClock newClock = GameClock.Instance ?? FindFirstObjectByType<GameClock>();
             if (newClock != null)
             {
                 clock = newClock;
-                Debug.Log($"[FurnitureDropManager] GameClock found during retry (source: {(GameClock.Instance != null ? "Instance" : "FindObjectOfType")}). Subscribing to OnSleepAdvancedDay.");
+                Debug.Log($"[FurnitureDropManager] GameClock found during retry (source: {(GameClock.Instance != null ? "Instance" : "FindFirstObjectByType")}). Subscribing to OnSleepAdvancedDay.");
                 clock.OnSleepAdvancedDay += HandleSleepAdvancedDay;
                 clockRetryCoroutine = null;
                 yield break;

@@ -18,7 +18,7 @@ public class ScreenshotButton : MonoBehaviour
 
         if (screenshotCapture == null)
         {
-            screenshotCapture = FindObjectOfType<ScreenshotCapture>();
+            screenshotCapture = FindFirstObjectByType<ScreenshotCapture>();
         }
 
         if (screenshotCapture != null)

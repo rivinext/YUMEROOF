@@ -13,7 +13,7 @@ public class ShopTrigger : MonoBehaviour, IInteractable
     {
         if (shopUIManager == null)
         {
-            shopUIManager = FindObjectOfType<ShopUIManager>();
+            shopUIManager = FindFirstObjectByType<ShopUIManager>();
         }
 
         if (pressEHint != null)

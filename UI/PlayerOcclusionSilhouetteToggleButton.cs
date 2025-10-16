@@ -59,7 +59,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
     {
         if (occlusionSilhouette == null)
         {
-            occlusionSilhouette = FindObjectOfType<PlayerOcclusionSilhouette>();
+            occlusionSilhouette = FindFirstObjectByType<PlayerOcclusionSilhouette>();
         }
     }
 

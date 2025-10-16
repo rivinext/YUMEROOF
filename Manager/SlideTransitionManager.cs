@@ -76,7 +76,7 @@ public class SlideTransitionManager : MonoBehaviour
         }
 
         if (SceneManager.GetActiveScene().name != "MainMenu" &&
-            FindObjectOfType<GameClock>() == null)
+            FindFirstObjectByType<GameClock>() == null)
         {
             new GameObject("GameClock").AddComponent<GameClock>();
         }

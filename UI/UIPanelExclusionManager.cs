@@ -14,7 +14,7 @@ public class UIPanelExclusionManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<UIPanelExclusionManager>();
+                instance = FindFirstObjectByType<UIPanelExclusionManager>();
             }
 
             return instance;

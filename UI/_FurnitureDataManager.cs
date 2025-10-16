@@ -12,7 +12,7 @@ public class FurnitureDataManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<FurnitureDataManager>();
+                instance = FindFirstObjectByType<FurnitureDataManager>();
             }
             return instance;
         }

@@ -184,13 +184,13 @@ public class CameraControlPanel : MonoBehaviour
 
             if (cameraController == null)
             {
-                cameraController = FindObjectOfType<OrthographicCameraController>();
+                cameraController = FindFirstObjectByType<OrthographicCameraController>();
             }
         }
 
         if (globalVolume == null)
         {
-            globalVolume = FindObjectOfType<Volume>();
+            globalVolume = FindFirstObjectByType<Volume>();
         }
     }
 

@@ -31,9 +31,9 @@ public class PlayerRayInteractor : MonoBehaviour
         highlighter = GetComponent<RayOutlineHighlighter>();
         playerController = GetComponentInParent<PlayerController>();
         if (playerController == null)
-            playerController = FindObjectOfType<PlayerController>();
+            playerController = FindFirstObjectByType<PlayerController>();
         if (speechBubbleController == null)
-            speechBubbleController = FindObjectOfType<SpeechBubbleController>(true);
+            speechBubbleController = FindFirstObjectByType<SpeechBubbleController>(FindObjectsInactive.Include);
     }
 
 #if UNITY_EDITOR

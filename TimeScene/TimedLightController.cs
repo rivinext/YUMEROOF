@@ -20,7 +20,7 @@ public class TimedLightController : MonoBehaviour
         {
             defaultIntensity = targetLight.intensity;
         }
-        clock = FindObjectOfType<GameClock>();
+        clock = FindFirstObjectByType<GameClock>();
     }
 
     void Update()
