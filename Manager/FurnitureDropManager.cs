@@ -45,6 +45,7 @@ public class FurnitureDropManager : MonoBehaviour
             return;
         }
 
+        Debug.Log("[FurnitureDropManager] OnEnable called. Subscribing to sceneLoaded event.");
         SceneManager.sceneLoaded += HandleSceneLoaded;
         FindClockAndSubscribe();
     }
@@ -56,6 +57,7 @@ public class FurnitureDropManager : MonoBehaviour
             return;
         }
 
+        Debug.Log("[FurnitureDropManager] OnDisable called. Unsubscribing from sceneLoaded event.");
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         UnsubscribeFromClock();
     }
@@ -199,6 +201,7 @@ public class FurnitureDropManager : MonoBehaviour
             materialID,
             position,
             null);
+        Debug.Log($"[FurnitureDropManager] Spawned drop immediately for material {materialID} at {position}.");
     }
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -209,6 +212,7 @@ public class FurnitureDropManager : MonoBehaviour
             return;
         }
         FindClockAndSubscribe();
+        Debug.Log($"[FurnitureDropManager] Scene loaded: {scene.name}. Attempting to subscribe to GameClock.");
     }
 
     void OnDestroy()
