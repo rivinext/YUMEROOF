@@ -48,7 +48,6 @@ public class FreePlacementSystem : MonoBehaviour
     private GameObject previewObject;
     private FurnitureData currentFurnitureData;
     private Vector3 moveOffset;
-    private bool isFromInventory = false;
 
     // 元の位置を記憶（既存配置物の移動用）
     private Vector3 originalPosition;
@@ -455,7 +454,6 @@ public class FreePlacementSystem : MonoBehaviour
         snappedAnchor = null;
 
         isMovingFurniture = true;
-        isFromInventory = false;
 
         if (EnsurePlayerControl())
         {
@@ -486,7 +484,6 @@ public class FreePlacementSystem : MonoBehaviour
         CancelCurrentAction();
 
         isPlacingNewFurniture = true;
-        isFromInventory = true;
         currentFurnitureData = data;
 
         previewObject = Instantiate(furniturePrefab);
@@ -832,7 +829,6 @@ public class FreePlacementSystem : MonoBehaviour
 
             isMovingFurniture = false;
             isPlacingNewFurniture = false;
-            isFromInventory = false;
             previewObject = null;
             currentFurnitureData = null;
 
@@ -902,7 +898,6 @@ public class FreePlacementSystem : MonoBehaviour
 
         isMovingFurniture = false;
         isPlacingNewFurniture = false;
-        isFromInventory = false;
         previewObject = null;
         currentFurnitureData = null;
         originalParentFurniture = null;
