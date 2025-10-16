@@ -35,7 +35,7 @@ public class AnchorMaterialSpawner : MonoBehaviour
 
     void OnEnable()
     {
-        clock = FindObjectOfType<GameClock>();
+        clock = FindFirstObjectByType<GameClock>();
         if (clock != null)
         {
             clock.OnSleepAdvancedDay += HandleSleepAdvancedDay;

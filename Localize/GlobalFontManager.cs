@@ -17,7 +17,7 @@ public class GlobalFontManager : MonoBehaviour
         {
             if (instance == null)
             {
-                instance = FindObjectOfType<GlobalFontManager>();
+                instance = FindFirstObjectByType<GlobalFontManager>();
                 if (instance == null)
                 {
                     GameObject go = new GameObject("GlobalFontManager");
