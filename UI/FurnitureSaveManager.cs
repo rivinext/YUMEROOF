@@ -314,16 +314,51 @@ public class FurnitureSaveManager : MonoBehaviour
         // このシーンの家具データを取得
         var sceneFurniture = allFurnitureData.furnitureList
             .Where(f => f.sceneName == sceneName)
-            .OrderBy(f => string.IsNullOrEmpty(f.parentFurnitureID) ? 0 : 1) // 親家具を先に配置
             .ToList();
 
         if (debugMode)
             Debug.Log($"[FurnitureSave] Loading {sceneFurniture.Count} furniture items for {sceneName}");
 
-        // 各家具を配置
-        foreach (var data in sceneFurniture)
+        // 親子関係を考慮しながら家具を配置
+        var pending = new List<FurnitureSaveData>(sceneFurniture);
+        int iterations = 0;
+        int maxIterations = pending.Count * 4;
+
+        while (pending.Count > 0 && (maxIterations <= 0 || iterations < maxIterations))
         {
-            LoadSingleFurniture(data, placementSystem);
+            int processedThisPass = 0;
+
+            for (int i = pending.Count - 1; i >= 0; i--)
+            {
+                var data = pending[i];
+                bool parentLoaded = string.IsNullOrEmpty(data.parentFurnitureID) ||
+                    loadedFurnitureObjects.ContainsKey(data.parentFurnitureID);
+
+                if (!parentLoaded)
+                    continue;
+
+                LoadSingleFurniture(data, placementSystem);
+                pending.RemoveAt(i);
+                processedThisPass++;
+            }
+
+            if (processedThisPass == 0)
+                break;
+
+            iterations++;
+        }
+
+        if (pending.Count > 0)
+        {
+            if (debugMode)
+            {
+                Debug.LogWarning($"[FurnitureSave] Unable to resolve parents for {pending.Count} furniture items in {sceneName}. Loading without parent constraints.");
+            }
+
+            foreach (var data in pending)
+            {
+                LoadSingleFurniture(data, placementSystem);
+            }
         }
 
         if (sceneFurniture.Count > 0 && debugMode)
