@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Player
 {
@@ -38,7 +39,7 @@ namespace Player
         private void Awake()
         {
             playerCollider = GetComponent<Collider>();
-            targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
+            RefreshTargetCamera();
 
             if (targetRenderers == null || targetRenderers.Length == 0)
             {
@@ -132,8 +133,19 @@ namespace Player
             return materialInstance;
         }
 
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+            RefreshTargetCamera();
+        }
+
         private void LateUpdate()
         {
+            if (targetCamera == null)
+            {
+                RefreshTargetCamera();
+            }
+
             if (targetCamera == null || playerCollider == null)
             {
                 return;
@@ -261,6 +273,8 @@ namespace Player
 
         private void OnDisable()
         {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+
             if (isOccluded)
             {
                 ApplyMaterials(false);
@@ -270,6 +284,8 @@ namespace Player
 
         private void OnDestroy()
         {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+
             for (int i = 0; i < createdSilhouetteMaterials.Count; i++)
             {
                 Material material = createdSilhouetteMaterials[i];
@@ -279,6 +295,36 @@ namespace Player
                 }
             }
             createdSilhouetteMaterials.Clear();
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            RefreshTargetCamera();
+        }
+
+        private void RefreshTargetCamera()
+        {
+            Camera cameraToUse = overrideCamera != null ? overrideCamera : Camera.main;
+
+            if (cameraToUse == null && Camera.allCamerasCount > 0)
+            {
+                Camera[] cameras = Camera.allCameras;
+                if (cameras != null && cameras.Length > 0)
+                {
+                    cameraToUse = cameras[0];
+                }
+            }
+
+            if (cameraToUse != null)
+            {
+                overrideCamera = overrideCamera == null ? cameraToUse : overrideCamera;
+            }
+
+            if (targetCamera != cameraToUse)
+            {
+                targetCamera = cameraToUse;
+                nextCheckTime = 0f;
+            }
         }
     }
 }
