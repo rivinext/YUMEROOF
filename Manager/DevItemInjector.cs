@@ -26,23 +26,19 @@ public class DevItemInjector : MonoBehaviour
     private void OnEnable()
     {
         SaveGameManager.SaveApplied += OnSaveApplied;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} Subscribed to SaveApplied event.");
         }
-#endif
     }
 
     private void OnDisable()
     {
         SaveGameManager.SaveApplied -= OnSaveApplied;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} Unsubscribed from SaveApplied event.");
         }
-#endif
         StopInventoryWaitCoroutine();
     }
 
@@ -58,13 +54,9 @@ public class DevItemInjector : MonoBehaviour
         public int quantity;
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private bool enableInjection;
     [SerializeField] private bool verboseLogging = true;
     private const string LogPrefix = "[DevItemInjector]";
-#else
-    private const bool enableInjection = false;
-#endif
     [SerializeField] private List<DevEntry> furnitureItems;
     [SerializeField] private List<DevEntry> materialItems;
 
@@ -83,47 +75,41 @@ public class DevItemInjector : MonoBehaviour
 
     private void OnSaveApplied()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} SaveApplied event received.");
         }
-#endif
         InjectInternal(false);
     }
 
     private void InjectInternal(bool force)
     {
+        Debug.Log($"{LogPrefix} InjectInternal invoked. force={force}, enableInjection={enableInjection}, hasInjected={_hasInjected}, inventoryReady={InventoryManager.Instance != null}");
         if (!enableInjection)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (verboseLogging)
             {
                 Debug.LogWarning($"{LogPrefix} Injection skipped: enableInjection is disabled.");
             }
-#endif
             return;
         }
 
         if (!force && _hasInjected)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (verboseLogging)
             {
                 Debug.LogWarning($"{LogPrefix} Injection skipped: items have already been injected.");
             }
-#endif
             return;
         }
 
         if (InventoryManager.Instance == null)
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning($"{LogPrefix} InventoryManager instance is null. Queueing injection and waiting.");
             if (verboseLogging)
             {
                 Debug.LogWarning($"{LogPrefix} InventoryManager unavailable. Waiting before injection.");
             }
-#endif
 
             _pendingForce |= force;
 
@@ -135,12 +121,14 @@ public class DevItemInjector : MonoBehaviour
             return;
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} Injection starting{(force ? " (forced)" : string.Empty)}.");
         }
-#endif
+        else
+        {
+            Debug.Log($"{LogPrefix} Injection starting{(force ? " (forced)" : string.Empty)} with furniture count {furnitureItems?.Count ?? 0} and material count {materialItems?.Count ?? 0}.");
+        }
 
         int furnitureInjected = 0;
         int materialInjected = 0;
@@ -149,12 +137,14 @@ public class DevItemInjector : MonoBehaviour
         {
             foreach (var entry in furnitureItems)
             {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if (verboseLogging)
                 {
                     Debug.Log($"{LogPrefix} Adding furniture '{entry.id}' x{entry.quantity}.");
                 }
-#endif
+                else
+                {
+                    Debug.Log($"{LogPrefix} Adding furniture '{entry.id}' x{entry.quantity} (non-verbose).");
+                }
                 InventoryManager.Instance.AddFurniture(entry.id, entry.quantity);
                 furnitureInjected++;
             }
@@ -164,12 +154,14 @@ public class DevItemInjector : MonoBehaviour
         {
             foreach (var entry in materialItems)
             {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if (verboseLogging)
                 {
                     Debug.Log($"{LogPrefix} Adding material '{entry.id}' x{entry.quantity}.");
                 }
-#endif
+                else
+                {
+                    Debug.Log($"{LogPrefix} Adding material '{entry.id}' x{entry.quantity} (non-verbose).");
+                }
                 InventoryManager.Instance.AddMaterial(entry.id, entry.quantity);
                 materialInjected++;
             }
@@ -177,36 +169,31 @@ public class DevItemInjector : MonoBehaviour
 
         InventoryManager.Instance.ForceInventoryUpdate();
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"{LogPrefix} ForceInventoryUpdate called. furnitureInjected={furnitureInjected}, materialInjected={materialInjected}.");
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} Injection complete. Furniture entries: {furnitureInjected}, Material entries: {materialInjected}.");
         }
-#endif
 
         _hasInjected = true;
     }
 
     private IEnumerator WaitForInventoryAndInject()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} Waiting for InventoryManager to become available before injecting.");
         }
-#endif
 
         while (InventoryManager.Instance == null)
         {
             yield return null;
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} InventoryManager available. Resuming injection.");
         }
-#endif
 
         var force = _pendingForce;
         _pendingForce = false;
@@ -221,12 +208,10 @@ public class DevItemInjector : MonoBehaviour
             StopCoroutine(_inventoryWaitCoroutine);
             _inventoryWaitCoroutine = null;
             _pendingForce = false;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (verboseLogging)
             {
                 Debug.Log($"{LogPrefix} Stopped waiting for InventoryManager.");
             }
-#endif
         }
     }
 
