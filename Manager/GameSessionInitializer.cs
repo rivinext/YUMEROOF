@@ -90,6 +90,9 @@ public class GameSessionInitializer : MonoBehaviour
     {
         if (scene.name == "MainMenu")
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            CleanupInitializerSpawnedDevInjector();
+#endif
             DevItemInjector.ResetInjected();
             Destroy(gameObject);
             return;
@@ -228,35 +231,103 @@ public class GameSessionInitializer : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void EnsureDevItemInjector()
     {
-        var existing = FindObjectOfType<DevItemInjector>(true);
-        if (existing != null)
+        var injectors = Resources.FindObjectsOfTypeAll<DevItemInjector>();
+        DevItemInjector fallback = null;
+
+        foreach (var injector in injectors)
         {
-            DontDestroyOnLoad(existing.gameObject);
-            existing.gameObject.SetActive(true);
+            if (injector == null)
+            {
+                continue;
+            }
+
+            if (!injector.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            if (injector.SpawnedByInitializer)
+            {
+                if (fallback == null)
+                {
+                    fallback = injector;
+                }
+
+                continue;
+            }
+
+            ActivateDevItemInjector(injector);
+
+            if (fallback != null && fallback != injector)
+            {
+                Destroy(fallback.gameObject);
+            }
+
             return;
         }
 
-        DevItemInjector injector = null;
-        if (devItemInjectorPrefab != null)
+        var configured = InstantiateConfiguredDevItemInjector();
+        if (configured != null)
         {
-            injector = Instantiate(devItemInjectorPrefab);
-        }
-        else
-        {
-            var loaded = Resources.Load<DevItemInjector>("DevItemInjector");
-            if (loaded != null)
+            ActivateDevItemInjector(configured);
+
+            if (fallback != null && fallback != configured)
             {
-                injector = Instantiate(loaded);
+                Destroy(fallback.gameObject);
             }
+
+            return;
         }
 
+        if (fallback != null)
+        {
+            fallback.SpawnedByInitializer = true;
+            ActivateDevItemInjector(fallback);
+            return;
+        }
+
+        var createdFallback = new GameObject("DevItemInjector").AddComponent<DevItemInjector>();
+        createdFallback.SpawnedByInitializer = true;
+        ActivateDevItemInjector(createdFallback);
+    }
+
+    private DevItemInjector InstantiateConfiguredDevItemInjector()
+    {
+        var template = devItemInjectorPrefab;
+        if (template == null)
+        {
+            template = Resources.Load<DevItemInjector>("DevItemInjector");
+        }
+
+        if (template == null)
+        {
+            return null;
+        }
+
+        return Instantiate(template);
+    }
+
+    private static void ActivateDevItemInjector(DevItemInjector injector)
+    {
         if (injector == null)
         {
-            injector = new GameObject("DevItemInjector").AddComponent<DevItemInjector>();
+            return;
         }
 
         DontDestroyOnLoad(injector.gameObject);
         injector.gameObject.SetActive(true);
+    }
+
+    private void CleanupInitializerSpawnedDevInjector()
+    {
+        var injectors = Resources.FindObjectsOfTypeAll<DevItemInjector>();
+        foreach (var injector in injectors)
+        {
+            if (injector != null && injector.SpawnedByInitializer)
+            {
+                Destroy(injector.gameObject);
+            }
+        }
     }
 #endif
 }
