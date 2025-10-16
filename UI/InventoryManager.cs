@@ -39,7 +39,7 @@ public class InventoryManager : MonoBehaviour
     public event Action OnInventoryChanged;
 
     [Header("CSV File Paths")]
-    public string materialsCSVPath = "Data/YUME_ROOF_Materials";
+    public string materialsCSVPath = "Data/YUME_ROOF - Materials";
 
     void Awake()
     {
