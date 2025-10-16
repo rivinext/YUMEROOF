@@ -9,6 +9,15 @@ public class DevItemInjector : MonoBehaviour
     private Coroutine _inventoryWaitCoroutine;
     private bool _pendingForce;
 
+    [NonSerialized]
+    private bool _spawnedByInitializer;
+
+    public bool SpawnedByInitializer
+    {
+        get => _spawnedByInitializer;
+        internal set => _spawnedByInitializer = value;
+    }
+
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
