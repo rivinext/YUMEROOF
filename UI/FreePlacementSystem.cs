@@ -455,12 +455,45 @@ public class FreePlacementSystem : MonoBehaviour
 
     void StartMovingFurniture(PlacedFurniture furniture, Vector3 referencePoint)
     {
+        if (furniture == null)
+        {
+            return;
+        }
+
         AnchorPoint parentAnchor = furniture.transform.parent?.GetComponent<AnchorPoint>();
+        PlacedFurniture previousParentFurniture = furniture.parentFurniture;
+
+        currentFurnitureData = furniture.furnitureData;
+
+        if (currentFurnitureData == null)
+        {
+            var dataManager = FurnitureDataManager.Instance;
+            if (dataManager != null && !string.IsNullOrEmpty(furniture.itemID))
+            {
+                currentFurnitureData = dataManager.GetFurnitureData(furniture.itemID);
+            }
+
+        }
+
+        if (currentFurnitureData == null)
+        {
+            Debug.LogWarning($"FreePlacementSystem: Unable to resolve FurnitureData for {furniture.name}. Cancelling move.");
+            furniture.SetSelected(false);
+            if (selectedFurniture == furniture)
+            {
+                selectedFurniture = null;
+            }
+            playerControl?.EnableControl();
+            return;
+        }
+
+        previewObject = furniture.gameObject;
+
         if (parentAnchor != null)
         {
             parentAnchor.SetOccupied(false);
         }
-        originalParentFurniture = furniture.parentFurniture;
+        originalParentFurniture = previousParentFurniture;
         furniture.SetParentFurniture(null);
         snappedAnchor = null;
 
@@ -468,9 +501,6 @@ public class FreePlacementSystem : MonoBehaviour
         isFromInventory = false;
 
         playerControl?.DisableControl();
-
-        previewObject = furniture.gameObject;
-        currentFurnitureData = furniture.furnitureData;
 
         // 元の位置を保存（Escキーで戻すため）
         originalPosition = furniture.transform.position;
@@ -491,6 +521,13 @@ public class FreePlacementSystem : MonoBehaviour
     public void StartPlacingNewFurniture(GameObject furniturePrefab, FurnitureData data)
     {
         CancelCurrentAction();
+
+        if (data == null)
+        {
+            Debug.LogWarning("FreePlacementSystem: Cannot start placement without FurnitureData.");
+            OnPlacementCancelled?.Invoke();
+            return;
+        }
 
         isPlacingNewFurniture = true;
         isFromInventory = true;
@@ -518,6 +555,42 @@ public class FreePlacementSystem : MonoBehaviour
             if (mainCamera == null)
             {
                 Debug.LogWarning("FreePlacementSystem: Cannot update furniture position because the main camera is missing.");
+                return;
+            }
+        }
+
+        if (currentFurnitureData == null)
+        {
+            var previewFurniture = previewObject.GetComponent<PlacedFurniture>();
+            if (previewFurniture != null)
+            {
+                currentFurnitureData = previewFurniture.furnitureData;
+
+                if (currentFurnitureData == null && !string.IsNullOrEmpty(previewFurniture.itemID))
+                {
+                    var dataManager = FurnitureDataManager.Instance;
+                    if (dataManager != null)
+                    {
+                        currentFurnitureData = dataManager.GetFurnitureData(previewFurniture.itemID);
+                    }
+                }
+            }
+
+            if (currentFurnitureData == null)
+            {
+                Debug.LogWarning("FreePlacementSystem: Missing FurnitureData while updating placement. Aborting update for this frame.");
+                if (isPlacingNewFurniture)
+                {
+                    CancelNewPlacementAndOpenInventory();
+                }
+                else if (isMovingFurniture)
+                {
+                    CancelMovementAndRestore();
+                }
+                else
+                {
+                    CancelCurrentAction();
+                }
                 return;
             }
         }
