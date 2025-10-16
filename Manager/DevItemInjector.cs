@@ -1,10 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class DevItemInjector : MonoBehaviour
 {
     private static bool _hasInjected = false;
+    private Coroutine _inventoryWaitCoroutine;
+    private bool _pendingForce;
 
     private void Awake()
     {
@@ -31,6 +34,12 @@ public class DevItemInjector : MonoBehaviour
             Debug.Log($"{LogPrefix} Unsubscribed from SaveApplied event.");
         }
 #endif
+        StopInventoryWaitCoroutine();
+    }
+
+    private void OnDestroy()
+    {
+        StopInventoryWaitCoroutine();
     }
 
     [Serializable]
@@ -103,9 +112,17 @@ public class DevItemInjector : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (verboseLogging)
             {
-                Debug.LogWarning($"{LogPrefix} Injection aborted: InventoryManager instance is unavailable.");
+                Debug.LogWarning($"{LogPrefix} InventoryManager unavailable. Waiting before injection.");
             }
 #endif
+
+            _pendingForce |= force;
+
+            if (_inventoryWaitCoroutine == null)
+            {
+                _inventoryWaitCoroutine = StartCoroutine(WaitForInventoryAndInject());
+            }
+
             return;
         }
 
@@ -159,6 +176,49 @@ public class DevItemInjector : MonoBehaviour
 #endif
 
         _hasInjected = true;
+    }
+
+    private IEnumerator WaitForInventoryAndInject()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (verboseLogging)
+        {
+            Debug.Log($"{LogPrefix} Waiting for InventoryManager to become available before injecting.");
+        }
+#endif
+
+        while (InventoryManager.Instance == null)
+        {
+            yield return null;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (verboseLogging)
+        {
+            Debug.Log($"{LogPrefix} InventoryManager available. Resuming injection.");
+        }
+#endif
+
+        var force = _pendingForce;
+        _pendingForce = false;
+        _inventoryWaitCoroutine = null;
+        InjectInternal(force);
+    }
+
+    private void StopInventoryWaitCoroutine()
+    {
+        if (_inventoryWaitCoroutine != null)
+        {
+            StopCoroutine(_inventoryWaitCoroutine);
+            _inventoryWaitCoroutine = null;
+            _pendingForce = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (verboseLogging)
+            {
+                Debug.Log($"{LogPrefix} Stopped waiting for InventoryManager.");
+            }
+#endif
+        }
     }
 
     public static void ResetInjected()
