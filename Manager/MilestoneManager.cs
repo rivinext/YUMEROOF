@@ -29,7 +29,7 @@ public class MilestoneManager : MonoBehaviour
 
     public event Action<Milestone, int, int, int> OnMilestoneProgress;
 
-    [SerializeField] private string milestoneCSVPath = "Data/YUME_ROOF_Milestone";
+    [SerializeField] private string milestoneCSVPath = "Data/YUME_ROOF - Milestone";
 
     private readonly List<Milestone> milestones = new List<Milestone>();
     private int currentMilestoneIndex = 0;
