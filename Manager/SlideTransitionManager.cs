@@ -24,36 +24,6 @@ public class SlideTransitionManager : MonoBehaviour
         EnsurePanelAssigned();
     }
 
-    private void OnEnable()
-    {
-        if (Instance != this)
-        {
-            return;
-        }
-
-        SceneManager.sceneLoaded += HandleSceneLoaded;
-        EnsurePanelAssigned();
-    }
-
-    private void OnDisable()
-    {
-        if (Instance != this)
-        {
-            return;
-        }
-
-        SceneManager.sceneLoaded -= HandleSceneLoaded;
-    }
-
-    private void OnDestroy()
-    {
-        if (Instance == this)
-        {
-            SceneManager.sceneLoaded -= HandleSceneLoaded;
-            Instance = null;
-        }
-    }
-
     /// <summary>
     /// Loads a scene with a slide in/out transition.
     /// </summary>
@@ -144,29 +114,5 @@ public class SlideTransitionManager : MonoBehaviour
         {
             Debug.LogWarning("[SlideTransitionManager] UISlidePanel not found. Slide transitions will run without animation.");
         }
-    }
-
-    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        if (scene.name == "MainMenu")
-        {
-            if (Instance == this)
-            {
-                Instance = null;
-            }
-            Destroy(gameObject);
-            return;
-        }
-
-        if (Instance == this && isActiveAndEnabled)
-        {
-            StartCoroutine(ReassignPanelNextFrame());
-        }
-    }
-
-    private IEnumerator ReassignPanelNextFrame()
-    {
-        yield return null;
-        EnsurePanelAssigned();
     }
 }
