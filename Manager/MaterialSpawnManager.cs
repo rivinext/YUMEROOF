@@ -33,7 +33,7 @@ public class MaterialSpawnManager : MonoBehaviour
 
     void OnEnable()
     {
-        clock = FindFirstObjectByType<GameClock>();
+        clock = FindObjectOfType<GameClock>();
         if (clock != null)
         {
             clock.OnSleepAdvancedDay += HandleSleepAdvancedDay;
