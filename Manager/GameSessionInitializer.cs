@@ -23,9 +23,7 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject hintSystemPrefab;
     [SerializeField] private GameObject sceneTransitionManagerPrefab;
     [SerializeField] private GameObject slideTransitionManagerPrefab;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private DevItemInjector devItemInjectorPrefab;
-#endif
 
     void Awake()
     {
@@ -90,9 +88,7 @@ public class GameSessionInitializer : MonoBehaviour
     {
         if (scene.name == "MainMenu")
         {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
             CleanupInitializerSpawnedDevInjector();
-#endif
             DevItemInjector.ResetInjected();
             Destroy(gameObject);
             return;
@@ -185,9 +181,7 @@ public class GameSessionInitializer : MonoBehaviour
             slideTransition.EnsurePanelAssigned();
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         EnsureDevItemInjector();
-#endif
     }
 
     private T EnsureManager<T>(ref GameObject prefabField, Func<T> instanceGetter, string resourcePath)
@@ -228,7 +222,6 @@ public class GameSessionInitializer : MonoBehaviour
         return component;
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void EnsureDevItemInjector()
     {
         var injectors = Resources.FindObjectsOfTypeAll<DevItemInjector>();
@@ -329,5 +322,4 @@ public class GameSessionInitializer : MonoBehaviour
             }
         }
     }
-#endif
 }
