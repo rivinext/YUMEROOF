@@ -94,6 +94,9 @@ public class DevItemInjector : MonoBehaviour
 
     private void InjectInternal(bool force)
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"{LogPrefix} InjectInternal invoked. force={force}, enableInjection={enableInjection}, hasInjected={_hasInjected}, inventoryReady={InventoryManager.Instance != null}");
+#endif
         if (!enableInjection)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -119,6 +122,7 @@ public class DevItemInjector : MonoBehaviour
         if (InventoryManager.Instance == null)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning($"{LogPrefix} InventoryManager instance is null. Queueing injection and waiting.");
             if (verboseLogging)
             {
                 Debug.LogWarning($"{LogPrefix} InventoryManager unavailable. Waiting before injection.");
@@ -140,6 +144,10 @@ public class DevItemInjector : MonoBehaviour
         {
             Debug.Log($"{LogPrefix} Injection starting{(force ? " (forced)" : string.Empty)}.");
         }
+        else
+        {
+            Debug.Log($"{LogPrefix} Injection starting{(force ? " (forced)" : string.Empty)} with furniture count {furnitureItems?.Count ?? 0} and material count {materialItems?.Count ?? 0}.");
+        }
 #endif
 
         int furnitureInjected = 0;
@@ -153,6 +161,10 @@ public class DevItemInjector : MonoBehaviour
                 if (verboseLogging)
                 {
                     Debug.Log($"{LogPrefix} Adding furniture '{entry.id}' x{entry.quantity}.");
+                }
+                else
+                {
+                    Debug.Log($"{LogPrefix} Adding furniture '{entry.id}' x{entry.quantity} (non-verbose).");
                 }
 #endif
                 InventoryManager.Instance.AddFurniture(entry.id, entry.quantity);
@@ -169,6 +181,10 @@ public class DevItemInjector : MonoBehaviour
                 {
                     Debug.Log($"{LogPrefix} Adding material '{entry.id}' x{entry.quantity}.");
                 }
+                else
+                {
+                    Debug.Log($"{LogPrefix} Adding material '{entry.id}' x{entry.quantity} (non-verbose).");
+                }
 #endif
                 InventoryManager.Instance.AddMaterial(entry.id, entry.quantity);
                 materialInjected++;
@@ -178,6 +194,7 @@ public class DevItemInjector : MonoBehaviour
         InventoryManager.Instance.ForceInventoryUpdate();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"{LogPrefix} ForceInventoryUpdate called. furnitureInjected={furnitureInjected}, materialInjected={materialInjected}.");
         if (verboseLogging)
         {
             Debug.Log($"{LogPrefix} Injection complete. Furniture entries: {furnitureInjected}, Material entries: {materialInjected}.");
