@@ -17,6 +17,10 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private Slider saturationSlider;
     [SerializeField] private Slider valueSlider;
 
+    private Texture originalMainTexture;
+    private Texture2D baseTexture;
+    private Texture2D runtimeTexture;
+
     private void Start()
     {
         if (targetMaterial == null)
@@ -30,6 +34,18 @@ public class MaterialHueController : MonoBehaviour
         targetMaterial.color = Color.HSVToRGB(0f, 0f, value);
         hue = 0f;
         saturation = 0f;
+
+        originalMainTexture = targetMaterial.mainTexture;
+
+        var originalTexture = originalMainTexture as Texture2D;
+        if (originalTexture != null)
+        {
+            baseTexture = Instantiate(originalTexture);
+            baseTexture.name = originalTexture.name + "_Base";
+            runtimeTexture = Instantiate(baseTexture);
+            runtimeTexture.name = originalTexture.name + "_Runtime";
+            targetMaterial.mainTexture = runtimeTexture;
+        }
 
         if (hueSlider != null)
         {
@@ -46,6 +62,8 @@ public class MaterialHueController : MonoBehaviour
             valueSlider.value = value;
             valueSlider.onValueChanged.AddListener(UpdateValue);
         }
+
+        ApplyColor();
     }
 
     public void UpdateHue(float newHue)
@@ -73,11 +91,49 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
+        if (baseTexture != null && runtimeTexture != null)
+        {
+            var pixels = baseTexture.GetPixels();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                Color.RGBToHSV(pixels[i], out var pixelHue, out var pixelSaturation, out var pixelValue);
+                pixelHue = hue;
+                pixelSaturation = saturation;
+                pixelValue = value;
+                pixels[i] = Color.HSVToRGB(pixelHue, pixelSaturation, pixelValue);
+            }
+
+            runtimeTexture.SetPixels(pixels);
+            runtimeTexture.Apply();
+            targetMaterial.mainTexture = runtimeTexture;
+        }
+
         targetMaterial.color = Color.HSVToRGB(hue, saturation, value);
     }
 
     private void OnValidate()
     {
         ApplyColor();
+    }
+
+    private void OnDestroy()
+    {
+        if (targetMaterial != null && originalMainTexture != null)
+        {
+            targetMaterial.mainTexture = originalMainTexture;
+        }
+
+        if (runtimeTexture != null)
+        {
+            Destroy(runtimeTexture);
+            runtimeTexture = null;
+        }
+
+        if (baseTexture != null)
+        {
+            Destroy(baseTexture);
+            baseTexture = null;
+        }
+        originalMainTexture = null;
     }
 }
