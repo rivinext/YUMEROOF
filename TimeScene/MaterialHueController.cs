@@ -9,7 +9,7 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private float hue;
 
     [Range(0f, 1f)]
-    [SerializeField] private float saturation;
+    [SerializeField] private float saturation = 0.5f;
 
     [Range(0f,1f)] [SerializeField] private float value;
 
@@ -26,10 +26,10 @@ public class MaterialHueController : MonoBehaviour
 
         Color.RGBToHSV(targetMaterial.color, out var h, out var s, out value);
         h = 0f;
-        s = 0f;
-        targetMaterial.color = Color.HSVToRGB(0f, 0f, value);
-        hue = 0f;
-        saturation = 0f;
+        s = 0.5f;
+        targetMaterial.color = Color.HSVToRGB(h, s, value);
+        hue = h;
+        saturation = s;
 
         if (hueSlider != null)
         {
