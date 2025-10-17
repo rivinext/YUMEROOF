@@ -9,10 +9,9 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private float hue;
 
     [Range(0f, 1f)]
-    [SerializeField] private float saturation = 0.5f;
+    [SerializeField] private float saturation;
 
-    [Range(0f, 1f)]
-    [SerializeField] private float value = 0.5f;
+    [Range(0f,1f)] [SerializeField] private float value;
 
     [SerializeField] private Slider hueSlider;
     [SerializeField] private Slider saturationSlider;
@@ -25,15 +24,12 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
-        const float defaultHue = 0f;
-        const float defaultSaturation = 0.5f;
-        const float defaultValue = 0.5f;
-
-        hue = defaultHue;
-        saturation = defaultSaturation;
-        value = defaultValue;
-
-        targetMaterial.color = Color.HSVToRGB(hue, saturation, value);
+        Color.RGBToHSV(targetMaterial.color, out var h, out var s, out value);
+        h = 0f;
+        s = 0f;
+        targetMaterial.color = Color.HSVToRGB(0f, 0f, value);
+        hue = 0f;
+        saturation = 0f;
 
         if (hueSlider != null)
         {
