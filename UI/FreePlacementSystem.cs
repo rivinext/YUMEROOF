@@ -40,6 +40,9 @@ public class FreePlacementSystem : MonoBehaviour
     [Header("Player Control")]
     public PlacementPlayerControl playerControl;
     public ParticleSystem placementEffect;
+    [Header("Placement Audio")]
+    [SerializeField] private AudioSource placementAudioSource;
+    [SerializeField] private AudioClip placementClip;
 
     // 現在の状態
     private PlacedFurniture selectedFurniture;
@@ -68,6 +71,13 @@ public class FreePlacementSystem : MonoBehaviour
         RefreshOutlineLayerMask();
 
         EnsurePlayerControl(true, "during Awake");
+
+        if (placementAudioSource != null)
+        {
+            placementAudioSource.playOnAwake = false;
+            placementAudioSource.spatialBlend = 1f;
+            placementAudioSource.maxDistance = Mathf.Max(placementAudioSource.maxDistance, 15f);
+        }
 
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
@@ -873,6 +883,16 @@ public class FreePlacementSystem : MonoBehaviour
         if (placementEffect == null) return;
         placementEffect.transform.position = position;
         placementEffect.Play();
+
+        if (placementAudioSource != null)
+        {
+            placementAudioSource.transform.position = position;
+
+            if (placementClip != null)
+            {
+                placementAudioSource.PlayOneShot(placementClip);
+            }
+        }
     }
 
     void RotateFurniture(float angle)
