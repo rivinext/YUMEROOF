@@ -27,6 +27,7 @@ public class BgmRouter : MonoBehaviour
     private SceneBinding[] bindings;
 
     private readonly Dictionary<string, AudioSource> sceneToSource = new Dictionary<string, AudioSource>();
+    private readonly Dictionary<AudioSource, float> sourceBaseVolumes = new Dictionary<AudioSource, float>();
     private AudioSource currentSource;
     private Coroutine transitionRoutine;
 
@@ -52,6 +53,11 @@ public class BgmRouter : MonoBehaviour
             if (!sceneToSource.ContainsKey(entry.sceneName))
             {
                 sceneToSource.Add(entry.sceneName, entry.audioSource);
+            }
+
+            if (!sourceBaseVolumes.ContainsKey(entry.audioSource))
+            {
+                sourceBaseVolumes.Add(entry.audioSource, Mathf.Max(entry.audioSource.volume, 0f));
             }
 
             entry.audioSource.playOnAwake = false;
@@ -81,8 +87,12 @@ public class BgmRouter : MonoBehaviour
         {
             if (currentSource != null)
             {
-                StopCurrent();
-                currentSource = null;
+                if (transitionRoutine != null)
+                {
+                    StopCoroutine(transitionRoutine);
+                }
+
+                transitionRoutine = StartCoroutine(FadeOutAndStopCurrent());
             }
 
             return;
@@ -115,15 +125,33 @@ public class BgmRouter : MonoBehaviour
         {
             yield return FadeVolume(previous, 0f);
             previous.Stop();
+            previous.volume = GetBaseVolume(previous);
         }
 
         if (!next.isPlaying)
         {
+            next.volume = 0f;
             next.Play();
         }
 
-        next.volume = Mathf.Max(next.volume, 0.0001f);
-        yield return FadeVolume(next, 1f);
+        yield return FadeVolume(next, GetBaseVolume(next));
+
+        transitionRoutine = null;
+    }
+
+    private IEnumerator FadeOutAndStopCurrent()
+    {
+        var source = currentSource;
+        currentSource = null;
+
+        if (source != null && source.isPlaying)
+        {
+            yield return FadeVolume(source, 0f);
+            source.Stop();
+            source.volume = GetBaseVolume(source);
+        }
+
+        transitionRoutine = null;
     }
 
     private IEnumerator FadeVolume(AudioSource source, float target)
@@ -131,6 +159,12 @@ public class BgmRouter : MonoBehaviour
         float start = source.volume;
         float elapsed = 0f;
         float duration = Mathf.Max(fadeSeconds, 0.001f);
+
+        if (Mathf.Approximately(start, target))
+        {
+            source.volume = target;
+            yield break;
+        }
 
         while (elapsed < duration)
         {
@@ -141,6 +175,21 @@ public class BgmRouter : MonoBehaviour
         }
 
         source.volume = target;
+    }
+
+    private float GetBaseVolume(AudioSource source)
+    {
+        if (source == null)
+        {
+            return 0f;
+        }
+
+        if (sourceBaseVolumes.TryGetValue(source, out var baseVolume))
+        {
+            return baseVolume;
+        }
+
+        return source.volume;
     }
 
     private void StopCurrent()
@@ -157,6 +206,7 @@ public class BgmRouter : MonoBehaviour
         }
 
         currentSource.Stop();
+        currentSource.volume = GetBaseVolume(currentSource);
     }
 
     public void PauseCurrent(bool pause)
