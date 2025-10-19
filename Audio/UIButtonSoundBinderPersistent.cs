@@ -149,7 +149,6 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
         submitEntry.callback.AddListener(_ =>
         {
             if (!btn.interactable) return;
-            if (!IsValidSubmitInput()) return;
             MarkClickCandidate(submitClickCandidates, btn.GetInstanceID());
         });
         trigger.triggers.Add(submitEntry);
@@ -172,58 +171,6 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
     {
         if (!candidates.Add(id)) return;
         StartCoroutine(ClearCandidateNextFrame(candidates, id));
-    }
-
-    bool IsValidSubmitInput()
-    {
-        var eventSystem = EventSystem.current;
-        if (eventSystem == null)
-            return false;
-
-#if ENABLE_INPUT_SYSTEM
-        if (eventSystem.currentInputModule is UnityEngine.InputSystem.UI.InputSystemUIInputModule inputSystemModule)
-        {
-            var control = inputSystemModule.submit.action?.activeControl;
-            if (control == null)
-                return false;
-
-            if (control is UnityEngine.InputSystem.Controls.KeyControl keyControl)
-            {
-                switch (keyControl.keyCode)
-                {
-                    case UnityEngine.InputSystem.Key.Enter:
-                    case UnityEngine.InputSystem.Key.NumpadEnter:
-                    case UnityEngine.InputSystem.Key.Space:
-                        return true;
-                }
-                return false;
-            }
-
-            if (control is UnityEngine.InputSystem.Controls.MouseButtonControl mouseButton)
-            {
-                return mouseButton.name == "leftButton";
-            }
-
-            if (control is UnityEngine.InputSystem.Controls.ButtonControl buttonControl)
-            {
-                // Allow the typical "submit" controls for gamepads.
-                return buttonControl.name == "buttonSouth";
-            }
-
-            return false;
-        }
-#endif
-
-        if (eventSystem.currentInputModule is StandaloneInputModule standaloneModule)
-        {
-            var submitButton = standaloneModule.submitButton;
-            if (string.IsNullOrEmpty(submitButton))
-                return false;
-
-            return standaloneModule.input.GetButtonDown(submitButton);
-        }
-
-        return true;
     }
 
     System.Collections.IEnumerator ClearCandidateNextFrame(HashSet<int> candidates, int id)
