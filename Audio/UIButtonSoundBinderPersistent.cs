@@ -27,6 +27,10 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
     // すでにバインドしたボタンを記録（重複登録を防ぐ）
     readonly HashSet<int> bound = new HashSet<int>();
 
+    // クリックサウンドを再生して良い入力元かどうかを判定するための一時記録
+    readonly HashSet<int> pointerClickCandidates = new HashSet<int>();
+    readonly HashSet<int> submitClickCandidates = new HashSet<int>();
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -124,13 +128,54 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
 
     void AddClickSound(Button btn)
     {
+        var trigger = btn.gameObject.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = btn.gameObject.AddComponent<EventTrigger>();
+
+        // マウス/タップによるクリックのみ記録
+        var pointerEntry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+        pointerEntry.callback.AddListener(eventData =>
+        {
+            if (!btn.interactable) return;
+            if (eventData is PointerEventData pointerEvent)
+            {
+                if (pointerEvent.button != PointerEventData.InputButton.Left && pointerEvent.pointerId < 0) return;
+            }
+            MarkClickCandidate(pointerClickCandidates, btn.GetInstanceID());
+        });
+        trigger.triggers.Add(pointerEntry);
+
+        // Submit（Enterキーなど）による決定操作も記録
+        var submitEntry = new EventTrigger.Entry { eventID = EventTriggerType.Submit };
+        submitEntry.callback.AddListener(_ =>
+        {
+            if (!btn.interactable) return;
+            MarkClickCandidate(submitClickCandidates, btn.GetInstanceID());
+        });
+        trigger.triggers.Add(submitEntry);
+
         btn.onClick.AddListener(() =>
         {
             if (clickClip == null || sfxSource == null) return;
-            // 無効ボタンはonClick自体が呼ばれないが、念のためチェック
             if (!btn.interactable) return;
+
+            int id = btn.GetInstanceID();
+            bool triggeredByPointer = pointerClickCandidates.Remove(id);
+            bool triggeredBySubmit = submitClickCandidates.Remove(id);
+            if (!triggeredByPointer && !triggeredBySubmit) return;
 
             sfxSource.PlayOneShot(clickClip, clickVolume);
         });
+    }
+
+    void MarkClickCandidate(HashSet<int> candidates, int id)
+    {
+        if (!candidates.Add(id)) return;
+        StartCoroutine(ClearCandidateNextFrame(candidates, id));
+    }
+
+    System.Collections.IEnumerator ClearCandidateNextFrame(HashSet<int> candidates, int id)
+    {
+        yield return null;
+        candidates.Remove(id);
     }
 }
