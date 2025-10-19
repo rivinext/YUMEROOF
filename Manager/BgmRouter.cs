@@ -114,7 +114,6 @@ public class BgmRouter : MonoBehaviour
     private IEnumerator SwitchSource(AudioSource next)
     {
         var previous = currentSource;
-        currentSource = next;
 
         if (previous != null && previous.isPlaying)
         {
@@ -122,6 +121,8 @@ public class BgmRouter : MonoBehaviour
             previous.Stop();
             ResetVolume(previous);
         }
+
+        currentSource = next;
 
         if (!next.isPlaying)
         {
