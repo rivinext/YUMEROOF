@@ -49,6 +49,9 @@ public class SlideTransitionManager : MonoBehaviour
 
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
+        bool isLeavingMainMenu = SceneManager.GetActiveScene().name == "MainMenu";
+        SceneTransitionManager transitionManager = isLeavingMainMenu ? SceneTransitionManager.Instance : null;
+
         if (slidePanel != null)
         {
             bool inComplete = false;
@@ -57,6 +60,11 @@ public class SlideTransitionManager : MonoBehaviour
             slidePanel.SlideIn();
             yield return new WaitUntil(() => inComplete);
             slidePanel.OnSlideInComplete -= onIn;
+        }
+
+        if (isLeavingMainMenu && transitionManager != null)
+        {
+            yield return transitionManager.FadeRoutine(1f);
         }
 
         SaveGameManager.Instance.SaveCurrentSlot();
@@ -81,6 +89,12 @@ public class SlideTransitionManager : MonoBehaviour
             new GameObject("GameClock").AddComponent<GameClock>();
         }
 
+        Coroutine fadeInCoroutine = null;
+        if (isLeavingMainMenu && transitionManager != null)
+        {
+            fadeInCoroutine = StartCoroutine(transitionManager.FadeRoutine(0f));
+        }
+
         var mgr = SlideTransitionManager.Instance;
         if (mgr != null && mgr != this)
         {
@@ -89,6 +103,11 @@ public class SlideTransitionManager : MonoBehaviour
         else
         {
             yield return RunSlideOut();
+        }
+
+        if (fadeInCoroutine != null)
+        {
+            yield return fadeInCoroutine;
         }
     }
 }
