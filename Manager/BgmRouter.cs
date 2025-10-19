@@ -27,6 +27,7 @@ public class BgmRouter : MonoBehaviour
     private SceneBinding[] bindings;
 
     private readonly Dictionary<string, AudioSource> sceneToSource = new Dictionary<string, AudioSource>();
+    private readonly Dictionary<AudioSource, float> sourceBaseVolumes = new Dictionary<AudioSource, float>();
     private AudioSource currentSource;
     private Coroutine transitionRoutine;
 
@@ -52,6 +53,11 @@ public class BgmRouter : MonoBehaviour
             if (!sceneToSource.ContainsKey(entry.sceneName))
             {
                 sceneToSource.Add(entry.sceneName, entry.audioSource);
+            }
+
+            if (!sourceBaseVolumes.ContainsKey(entry.audioSource))
+            {
+                sourceBaseVolumes.Add(entry.audioSource, Mathf.Max(entry.audioSource.volume, 0f));
             }
 
             entry.audioSource.playOnAwake = false;
@@ -115,15 +121,19 @@ public class BgmRouter : MonoBehaviour
         {
             yield return FadeVolume(previous, 0f);
             previous.Stop();
+            ResetVolume(previous);
         }
 
         if (!next.isPlaying)
         {
+            next.volume = 0f;
             next.Play();
         }
 
-        next.volume = Mathf.Max(next.volume, 0.0001f);
-        yield return FadeVolume(next, 1f);
+        float targetVolume = GetTargetVolume(next);
+        yield return FadeVolume(next, targetVolume);
+
+        transitionRoutine = null;
     }
 
     private IEnumerator FadeVolume(AudioSource source, float target)
@@ -143,6 +153,34 @@ public class BgmRouter : MonoBehaviour
         source.volume = target;
     }
 
+    private float GetTargetVolume(AudioSource source)
+    {
+        if (source == null)
+        {
+            return 0f;
+        }
+
+        if (sourceBaseVolumes.TryGetValue(source, out float stored))
+        {
+            return stored;
+        }
+
+        return Mathf.Max(source.volume, 0f);
+    }
+
+    private void ResetVolume(AudioSource source)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        if (sourceBaseVolumes.TryGetValue(source, out float stored))
+        {
+            source.volume = stored;
+        }
+    }
+
     private void StopCurrent()
     {
         if (currentSource == null)
@@ -157,6 +195,7 @@ public class BgmRouter : MonoBehaviour
         }
 
         currentSource.Stop();
+        ResetVolume(currentSource);
     }
 
     public void PauseCurrent(bool pause)
