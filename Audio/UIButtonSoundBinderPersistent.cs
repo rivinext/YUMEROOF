@@ -119,11 +119,20 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             if (!btn.interactable) return;
             if (hoverClip == null || sfxSource == null) return;
             if (Time.unscaledTime - lastHoverTime < hoverCooldown) return;
+            if (IsMovementKeyHeld()) return;
 
             sfxSource.PlayOneShot(hoverClip, hoverVolume);
             lastHoverTime = Time.unscaledTime;
         });
         trigger.triggers.Add(entry);
+    }
+
+    bool IsMovementKeyHeld()
+    {
+        return Input.GetKey(KeyCode.W)
+            || Input.GetKey(KeyCode.A)
+            || Input.GetKey(KeyCode.S)
+            || Input.GetKey(KeyCode.D);
     }
 
     void AddClickSound(Button btn)
