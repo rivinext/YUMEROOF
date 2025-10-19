@@ -81,8 +81,12 @@ public class BgmRouter : MonoBehaviour
         {
             if (currentSource != null)
             {
-                StopCurrent();
-                currentSource = null;
+                if (transitionRoutine != null)
+                {
+                    StopCoroutine(transitionRoutine);
+                }
+
+                transitionRoutine = StartCoroutine(FadeOutAndStopCurrent());
             }
 
             return;
@@ -124,6 +128,22 @@ public class BgmRouter : MonoBehaviour
 
         next.volume = Mathf.Max(next.volume, 0.0001f);
         yield return FadeVolume(next, 1f);
+
+        transitionRoutine = null;
+    }
+
+    private IEnumerator FadeOutAndStopCurrent()
+    {
+        var source = currentSource;
+        currentSource = null;
+
+        if (source != null && source.isPlaying)
+        {
+            yield return FadeVolume(source, 0f);
+            source.Stop();
+        }
+
+        transitionRoutine = null;
     }
 
     private IEnumerator FadeVolume(AudioSource source, float target)
