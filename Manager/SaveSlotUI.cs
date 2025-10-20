@@ -20,6 +20,7 @@ public class SaveSlotUI : MonoBehaviour
     [SerializeField] private Image screenshotImage;
     [SerializeField] private Button selectButton;
     [SerializeField] private Button deleteButton;
+    [SerializeField] private TMP_Text selectButtonLabel;
 
     public event Action<string> OnSelected;
     public event Action<string> OnDeleteRequested;
@@ -56,6 +57,10 @@ public class SaveSlotUI : MonoBehaviour
         var data = SaveGameManager.Instance.LoadMetadata(slotKey);
         if (data != null)
         {
+            if (selectButtonLabel != null)
+                selectButtonLabel.text = "Load";
+            if (deleteButton != null)
+                deleteButton.interactable = true;
             if (lastSaveText != null)
             {
                 if (DateTime.TryParse(data.saveDate, out DateTime saveDate))
@@ -100,8 +105,12 @@ public class SaveSlotUI : MonoBehaviour
         }
         else
         {
+            if (selectButtonLabel != null)
+                selectButtonLabel.text = "Start";
+            if (deleteButton != null)
+                deleteButton.interactable = false;
             if (lastSaveText != null)
-                lastSaveText.text = "Empty";
+                lastSaveText.text = string.Empty;
             if (chapterText != null)
                 chapterText.text = string.Empty;
             if (locationText != null)
