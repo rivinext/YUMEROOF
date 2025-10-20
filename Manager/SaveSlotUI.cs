@@ -57,7 +57,12 @@ public class SaveSlotUI : MonoBehaviour
         if (data != null)
         {
             if (lastSaveText != null)
-                lastSaveText.text = data.saveDate;
+            {
+                if (DateTime.TryParse(data.saveDate, out DateTime saveDate))
+                    lastSaveText.text = saveDate.ToString("yyyy/MM/dd HH:mm");
+                else
+                    lastSaveText.text = data.saveDate; // 変換できない場合は元の文字列を表示
+            }
             if (chapterText != null)
             {
                 if (data is StorySaveData story)
