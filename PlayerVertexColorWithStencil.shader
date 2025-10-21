@@ -6,6 +6,7 @@ Shader "Player/VertexColorWithStencil_URP"
         _MainTex ("Texture", 2D) = "white" {}
         _AmbientStrength ("Ambient Strength", Range(0, 1)) = 0.6
         _LightingStrength ("Lighting Strength", Range(0, 1)) = 0.5
+        _ShadowStrength ("Shadow Strength", Range(0, 1)) = 0.75
     }
 
     SubShader
@@ -66,6 +67,7 @@ Shader "Player/VertexColorWithStencil_URP"
                 float4 _Color;
                 float _AmbientStrength;
                 float _LightingStrength;
+                float _ShadowStrength;
             CBUFFER_END
 
             Varyings vert(Attributes input)
@@ -94,8 +96,8 @@ Shader "Player/VertexColorWithStencil_URP"
                 // ライティングの影響を調整（暗くなりすぎないように）
                 half lightingFactor = lerp(1.0, NdotL, _LightingStrength);
 
-                // 影の影響を柔らかく
-                half shadowFactor = lerp(1.0, mainLight.shadowAttenuation, 0.5);
+                // 影の影響を調整（_ShadowStrength が高いほど影が濃くなる）
+                half shadowFactor = lerp(1.0, mainLight.shadowAttenuation, saturate(_ShadowStrength));
 
                 half3 lighting = mainLight.color * lightingFactor * shadowFactor;
                 lighting += half3(_AmbientStrength, _AmbientStrength, _AmbientStrength); // 環境光を増加
