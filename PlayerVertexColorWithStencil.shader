@@ -38,9 +38,11 @@ Shader "Player/VertexColorWithStencil_URP"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Fog.hlsl"
 
             struct Attributes
             {
@@ -57,6 +59,7 @@ Shader "Player/VertexColorWithStencil_URP"
                 float4 color : COLOR;
                 float3 positionWS : TEXCOORD1;
                 float3 normalWS : TEXCOORD2;
+                half fogFactor : TEXCOORD3;
             };
 
             TEXTURE2D(_MainTex);
@@ -78,6 +81,7 @@ Shader "Player/VertexColorWithStencil_URP"
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.color = input.color;
+                output.fogFactor = (half)ComputeFogFactor(output.positionCS.z);
                 return output;
             }
 
@@ -103,6 +107,7 @@ Shader "Player/VertexColorWithStencil_URP"
                 lighting += half3(_AmbientStrength, _AmbientStrength, _AmbientStrength); // 環境光を増加
 
                 col.rgb *= lighting;
+                col.rgb = MixFog(col.rgb, input.fogFactor);
                 return col;
             }
             ENDHLSL
