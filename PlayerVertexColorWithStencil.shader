@@ -125,8 +125,12 @@ Shader "Player/VertexColorWithStencil_URP"
             Cull Back
 
             HLSLPROGRAM
+            #pragma target 2.0
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -134,11 +138,14 @@ Shader "Player/VertexColorWithStencil_URP"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             float3 _LightDirection;
@@ -149,13 +156,15 @@ Shader "Player/VertexColorWithStencil_URP"
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
 
+                float3 lightDirectionWS;
                 #if _CASTING_PUNCTUAL_LIGHT_SHADOW
-                    float3 lightDirectionWS = normalize(_LightPosition - positionWS);
+                    lightDirectionWS = normalize(_LightPosition - positionWS);
                 #else
-                    float3 lightDirectionWS = _LightDirection;
+                    lightDirectionWS = _LightDirection;
                 #endif
 
-                float4 positionCS = TransformWorldToHClip(positionWS);
+                float3 biasedPositionWS = ApplyShadowBias(positionWS, normalWS, lightDirectionWS);
+                float4 positionCS = TransformWorldToHClip(biasedPositionWS);
 
                 #if UNITY_REVERSED_Z
                     positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
@@ -169,12 +178,17 @@ Shader "Player/VertexColorWithStencil_URP"
             Varyings ShadowPassVertex(Attributes input)
             {
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 output.positionCS = GetShadowPositionHClip(input);
                 return output;
             }
 
             half4 ShadowPassFragment(Varyings input) : SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 return 0;
             }
             ENDHLSL
@@ -187,33 +201,45 @@ Shader "Player/VertexColorWithStencil_URP"
             Tags { "LightMode"="DepthOnly" }
 
             ZWrite On
-            ColorMask 0
+            ColorMask R
+            Cull Back
 
             HLSLPROGRAM
+            #pragma target 2.0
             #pragma vertex DepthOnlyVertex
             #pragma fragment DepthOnlyFragment
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
             Varyings DepthOnlyVertex(Attributes input)
             {
                 Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 return output;
             }
 
             half4 DepthOnlyFragment(Varyings input) : SV_Target
             {
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 return 0;
             }
             ENDHLSL
