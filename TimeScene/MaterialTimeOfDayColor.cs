@@ -10,25 +10,40 @@ public class MaterialTimeOfDayColor : MonoBehaviour
     [SerializeField] private string colorPropertyName = "_BaseColor";
 
     private Color? originalColor;
+    private GameClock clock;
 
     private void OnEnable()
     {
         CacheOriginalColor();
-        UpdateMaterialColor();
+        TrySubscribeToClock();
+
+        if (clock != null)
+        {
+            UpdateMaterialColor(clock.NormalizedTime);
+        }
     }
 
     private void Update()
     {
-        UpdateMaterialColor();
+        if (clock == null)
+        {
+            TrySubscribeToClock();
+            if (clock != null)
+            {
+                UpdateMaterialColor(clock.NormalizedTime);
+            }
+        }
     }
 
     private void OnDisable()
     {
+        UnsubscribeFromClock();
         RestoreOriginalColor();
     }
 
     private void OnDestroy()
     {
+        UnsubscribeFromClock();
         RestoreOriginalColor();
     }
 
@@ -66,21 +81,39 @@ public class MaterialTimeOfDayColor : MonoBehaviour
         }
     }
 
-    private void UpdateMaterialColor()
+    private void TrySubscribeToClock()
+    {
+        if (clock != null)
+        {
+            return;
+        }
+
+        clock = GameClock.Instance;
+        if (clock == null)
+        {
+            return;
+        }
+
+        clock.OnTimeUpdated += UpdateMaterialColor;
+    }
+
+    private void UnsubscribeFromClock()
+    {
+        if (clock != null)
+        {
+            clock.OnTimeUpdated -= UpdateMaterialColor;
+            clock = null;
+        }
+    }
+
+    private void UpdateMaterialColor(float normalizedTime)
     {
         if (targetMaterial == null)
         {
             return;
         }
 
-        var clock = GameClock.Instance;
-        if (clock == null)
-        {
-            return;
-        }
-
-        float time = clock.NormalizedTime;
-        Color targetColor = colorOverDay.Evaluate(time);
+        Color targetColor = colorOverDay.Evaluate(normalizedTime);
 
         if (targetMaterial.HasProperty(colorPropertyName))
         {

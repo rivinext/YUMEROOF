@@ -12,13 +12,20 @@ public class TimedLightController : MonoBehaviour
     private Light targetLight;
     private GameClock clock;
     private float defaultIntensity;
+    private DayNightLighting dayNightLighting;
+    private bool controlsIntensity = true;
 
     void Awake()
     {
         targetLight = GetComponent<Light>();
+        dayNightLighting = GetComponent<DayNightLighting>();
+        controlsIntensity = dayNightLighting == null;
         if (targetLight != null)
         {
-            defaultIntensity = targetLight.intensity;
+            if (controlsIntensity)
+            {
+                defaultIntensity = targetLight.intensity;
+            }
         }
         clock = FindFirstObjectByType<GameClock>();
     }
@@ -44,7 +51,10 @@ public class TimedLightController : MonoBehaviour
         }
 
         targetLight.enabled = shouldEnable;
-        targetLight.intensity = shouldEnable ? defaultIntensity : 0f;
+        if (controlsIntensity)
+        {
+            targetLight.intensity = shouldEnable ? defaultIntensity : 0f;
+        }
     }
 
     public string TurnOnTime

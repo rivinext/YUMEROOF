@@ -25,6 +25,12 @@ public class GameClock : MonoBehaviour
     public event Action<int> OnDayChanged;
     public event Action<int> OnSleepAdvancedDay;
 
+    /// <summary>
+    /// Raised whenever the normalized time value for the current day is updated.
+    /// The float argument represents <see cref="NormalizedTime"/>.
+    /// </summary>
+    public event Action<float> OnTimeUpdated;
+
 #if UNITY_EDITOR
     [Header("Developer Mode")]
     [SerializeField] private bool developerMode = false;
@@ -90,6 +96,8 @@ public class GameClock : MonoBehaviour
             currentDay++;
             OnDayChanged?.Invoke(currentDay);
         }
+
+        NotifyTimeUpdated();
     }
 
     /// <summary>
@@ -108,6 +116,7 @@ public class GameClock : MonoBehaviour
     public void SetTime(int minutes)
     {
         currentMinutes = Mathf.Clamp(minutes, 0, 1440);
+        NotifyTimeUpdated();
     }
 
     /// <summary>
@@ -144,6 +153,7 @@ public class GameClock : MonoBehaviour
         currentMinutes = minutes;
         currentDay++;
         OnDayChanged?.Invoke(currentDay);
+        NotifyTimeUpdated();
     }
 
     public void TriggerSleepAdvancedDay()
@@ -171,5 +181,16 @@ public class GameClock : MonoBehaviour
         currentMinutes = data.currentMinutes;
         currentDay = data.currentDay;
         OnDayChanged?.Invoke(currentDay);
+        NotifyTimeUpdated();
+    }
+
+    void Start()
+    {
+        NotifyTimeUpdated();
+    }
+
+    private void NotifyTimeUpdated()
+    {
+        OnTimeUpdated?.Invoke(NormalizedTime);
     }
 }

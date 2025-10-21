@@ -15,17 +15,72 @@ public class DayNightLighting : MonoBehaviour
     [SerializeField] private AnimationCurve yAxisRotationOverDay;
 
     private Light targetLight;
+    private GameClock clock;
 
     void Awake()
     {
         targetLight = GetComponent<Light>();
     }
 
+    void OnEnable()
+    {
+        TrySubscribeToClock();
+
+        if (clock != null)
+        {
+            UpdateLighting(clock.NormalizedTime);
+        }
+    }
+
+    void OnDisable()
+    {
+        UnsubscribeFromClock();
+    }
+
     void Update()
     {
-        var clock = GameClock.Instance;
-        if (clock == null || targetLight == null) return;
-        float t = clock.NormalizedTime;
+        if (clock == null)
+        {
+            TrySubscribeToClock();
+            if (clock != null)
+            {
+                UpdateLighting(clock.NormalizedTime);
+            }
+        }
+    }
+
+    private void TrySubscribeToClock()
+    {
+        if (clock != null)
+        {
+            return;
+        }
+
+        clock = GameClock.Instance;
+        if (clock == null)
+        {
+            return;
+        }
+
+        clock.OnTimeUpdated += UpdateLighting;
+    }
+
+    private void UnsubscribeFromClock()
+    {
+        if (clock != null)
+        {
+            clock.OnTimeUpdated -= UpdateLighting;
+            clock = null;
+        }
+    }
+
+    private void UpdateLighting(float t)
+    {
+        if (targetLight == null)
+        {
+            return;
+        }
+
         targetLight.color = colorOverDay.Evaluate(t);
         targetLight.intensity = intensityOverDay.Evaluate(t);
         float xRotation = xAxisRotationOverDay.Evaluate(t);
