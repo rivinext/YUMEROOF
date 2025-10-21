@@ -80,8 +80,8 @@ Shader "Player/VertexColorWithStencil_URP"
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.color = input.color;
-                float3 positionVS = TransformWorldToView(output.positionWS);
-                output.fogFactor = ComputeFogFactor(positionVS.z);
+                float fogDistance = distance(output.positionWS, _WorldSpaceCameraPos);
+                output.fogFactor = ComputeFogFactor(fogDistance);
                 return output;
             }
 
