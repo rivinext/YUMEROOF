@@ -22,6 +22,13 @@ Shader "Custom/LitVertexColor"
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
 
+            Stencil
+            {
+                Ref 1
+                Comp Always
+                Pass Replace
+            }
+
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
