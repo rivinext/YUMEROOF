@@ -817,6 +817,7 @@ public class FreePlacementSystem : MonoBehaviour
                     placedComp.furnitureData.nature);
             }
 
+            AnimatePlacementScale(placedComp);
             PlayPlacementEffect(placedComp.transform.position);
 
             if (anchorUsed)
@@ -847,6 +848,28 @@ public class FreePlacementSystem : MonoBehaviour
 
         ghostManager?.DestroyGhost();
         snappedParentFurniture = null;
+    }
+
+    private void AnimatePlacementScale(PlacedFurniture placed)
+    {
+        if (placed == null)
+        {
+            return;
+        }
+
+        Transform targetTransform = placed.transform;
+        if (targetTransform == null)
+        {
+            return;
+        }
+
+        PlacementScaleAnimator animator = targetTransform.GetComponent<PlacementScaleAnimator>();
+        if (animator == null)
+        {
+            animator = targetTransform.gameObject.AddComponent<PlacementScaleAnimator>();
+        }
+
+        animator.Play();
     }
 
     void HandleStackPlacement(PlacedFurniture furniture)
