@@ -11,6 +11,7 @@ public class SkyboxTimeOfDayController : MonoBehaviour
     [SerializeField] private AnimationCurve exposureCurve = CreateDefaultExposureCurve();
 
     private Material skyboxInstance;
+    private GameClock clock;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void EnsureInstance()
@@ -37,14 +38,66 @@ public class SkyboxTimeOfDayController : MonoBehaviour
         RenderSettings.skybox = skyboxInstance;
     }
 
+    private void OnEnable()
+    {
+        TrySubscribeToClock();
+
+        if (clock != null)
+        {
+            UpdateSkybox(clock.NormalizedTime);
+        }
+    }
+
+    private void OnDisable()
+    {
+        UnsubscribeFromClock();
+    }
+
     private void Update()
     {
-        if (skyboxInstance == null || GameClock.Instance == null)
+        if (clock == null)
+        {
+            TrySubscribeToClock();
+            if (clock != null)
+            {
+                UpdateSkybox(clock.NormalizedTime);
+            }
+        }
+    }
+
+    private void TrySubscribeToClock()
+    {
+        if (clock != null)
         {
             return;
         }
 
-        float normalizedTime = Mathf.Repeat(GameClock.Instance.NormalizedTime, 1f);
+        clock = GameClock.Instance;
+        if (clock == null)
+        {
+            return;
+        }
+
+        clock.OnTimeUpdated += UpdateSkybox;
+    }
+
+    private void UnsubscribeFromClock()
+    {
+        if (clock != null)
+        {
+            clock.OnTimeUpdated -= UpdateSkybox;
+            clock = null;
+        }
+    }
+
+    private void UpdateSkybox(float normalizedTime)
+    {
+        if (skyboxInstance == null)
+        {
+            return;
+        }
+
+        normalizedTime = Mathf.Repeat(normalizedTime, 1f);
 
         if (!string.IsNullOrEmpty(transitionPropertyName))
         {
