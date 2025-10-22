@@ -271,6 +271,8 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
 
+        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+
         if (EnsurePlayerControl())
         {
             playerControl.EnableControl();
@@ -323,6 +325,8 @@ public class FreePlacementSystem : MonoBehaviour
         isMovingFurniture = false;
         previewObject = null;
         currentFurnitureData = null;
+
+        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
 
         if (EnsurePlayerControl())
         {
@@ -379,6 +383,8 @@ public class FreePlacementSystem : MonoBehaviour
         isMovingFurniture = false;
         selectedFurniture = null;
         currentFurnitureData = null;
+
+        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
 
         if (EnsurePlayerControl())
         {
@@ -472,6 +478,8 @@ public class FreePlacementSystem : MonoBehaviour
             playerControl.DisableControl();
         }
 
+        UIButtonSoundBinderPersistent.Instance?.SetMuted(true);
+
         previewObject = furniture.gameObject;
         currentFurnitureData = furniture.furnitureData;
 
@@ -497,6 +505,8 @@ public class FreePlacementSystem : MonoBehaviour
 
         isPlacingNewFurniture = true;
         currentFurnitureData = data;
+
+        UIButtonSoundBinderPersistent.Instance?.SetMuted(true);
 
         previewObject = Instantiate(furniturePrefab);
         previewObject.name = "Preview_" + data.nameID;
@@ -845,6 +855,8 @@ public class FreePlacementSystem : MonoBehaviour
             previewObject = null;
             currentFurnitureData = null;
 
+            UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+
             if (EnsurePlayerControl())
             {
                 playerControl.EnableControl();
@@ -970,6 +982,8 @@ public class FreePlacementSystem : MonoBehaviour
         currentFurnitureData = null;
         originalParentFurniture = null;
 
+        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+
         if (EnsurePlayerControl())
         {
             playerControl.EnableControl();
@@ -989,6 +1003,8 @@ public class FreePlacementSystem : MonoBehaviour
                 pf.SetParentFurniture(originalParentFurniture);
             originalParentFurniture = null;
         }
+
+        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
     }
 
     public void CreateCornerMarkers(PlacedFurniture furniture)

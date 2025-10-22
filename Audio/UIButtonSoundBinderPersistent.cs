@@ -23,6 +23,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
 
     AudioSource sfxSource;
     float lastHoverTime;
+    bool isMuted;
 
     // すでにバインドしたボタンを記録（重複登録を防ぐ）
     readonly HashSet<int> bound = new HashSet<int>();
@@ -111,6 +112,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             if (!btn.interactable) return;
             if (hoverClip == null || sfxSource == null) return;
             if (Time.unscaledTime - lastHoverTime < hoverCooldown) return;
+            if (isMuted) return;
 
             sfxSource.PlayOneShot(hoverClip, hoverVolume);
             lastHoverTime = Time.unscaledTime;
@@ -131,6 +133,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             if (hoverClip == null || sfxSource == null) return;
             if (Time.unscaledTime - lastHoverTime < hoverCooldown) return;
             if (IsMovementKeyHeld()) return;
+            if (isMuted) return;
 
             sfxSource.PlayOneShot(hoverClip, hoverVolume);
             lastHoverTime = Time.unscaledTime;
@@ -182,6 +185,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             bool triggeredByPointer = pointerClickCandidates.Remove(id);
             bool triggeredBySubmit = submitClickCandidates.Remove(id);
             if (!triggeredByPointer && !triggeredBySubmit) return;
+            if (isMuted) return;
 
             sfxSource.PlayOneShot(clickClip, clickVolume);
         });
@@ -205,5 +209,10 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
         {
             sfxSource.volume = Mathf.Clamp01(value);
         }
+    }
+
+    public void SetMuted(bool muted)
+    {
+        isMuted = muted;
     }
 }
