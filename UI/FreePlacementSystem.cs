@@ -953,7 +953,41 @@ public class FreePlacementSystem : MonoBehaviour
                 targetFurniture.furnitureData.canStackOn &&
                 !targetFurniture.isOnSurface)
             {
-                position.y = targetFurniture.GetSurfaceHeight();
+                float surfaceHeight = targetFurniture.GetSurfaceHeight();
+                float bottomOffsetY = 0f;
+
+                if (previewObject != null)
+                {
+                    PlacedFurniture movingFurniture = previewObject.GetComponent<PlacedFurniture>();
+                    if (movingFurniture != null)
+                    {
+                        bottomOffsetY = movingFurniture.GetBottomOffset().y;
+                    }
+                    else
+                    {
+                        Renderer[] renderers = previewObject.GetComponentsInChildren<Renderer>();
+                        if (renderers != null && renderers.Length > 0)
+                        {
+                            float minY = float.MaxValue;
+                            foreach (Renderer renderer in renderers)
+                            {
+                                if (renderer == null) continue;
+                                Bounds bounds = renderer.bounds;
+                                if (bounds.min.y < minY)
+                                {
+                                    minY = bounds.min.y;
+                                }
+                            }
+
+                            if (minY < float.MaxValue)
+                            {
+                                bottomOffsetY = previewObject.transform.position.y - minY;
+                            }
+                        }
+                    }
+                }
+
+                position.y = surfaceHeight + bottomOffsetY;
                 snappedParentFurniture = targetFurniture;
                 Debug.Log($"CheckStackPlacement: Snapped to {targetFurniture.name}");
             }
