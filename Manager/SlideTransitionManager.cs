@@ -11,8 +11,6 @@ public class SlideTransitionManager : MonoBehaviour
 
     [SerializeField] private UISlidePanel slidePanel;
 
-    public bool IsTransitioning { get; private set; }
-
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -51,74 +49,46 @@ public class SlideTransitionManager : MonoBehaviour
 
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
-        IsTransitioning = true;
-
-        bool isLeavingMainMenu = SceneManager.GetActiveScene().name == "MainMenu";
-        SceneTransitionManager transitionManager = isLeavingMainMenu ? SceneTransitionManager.Instance : null;
-
-        try
+        if (slidePanel != null)
         {
-            if (slidePanel != null)
-            {
-                bool inComplete = false;
-                System.Action onIn = () => inComplete = true;
-                slidePanel.OnSlideInComplete += onIn;
-                slidePanel.SlideIn();
-                yield return new WaitUntil(() => inComplete);
-                slidePanel.OnSlideInComplete -= onIn;
-            }
-
-            if (isLeavingMainMenu && transitionManager != null)
-            {
-                yield return transitionManager.FadeRoutine(1f);
-            }
-
-            SaveGameManager.Instance.SaveCurrentSlot();
-
-            string slotKey = UIMenuManager.SelectedSlotKey;
-            if (string.IsNullOrEmpty(slotKey))
-            {
-                slotKey = SaveGameManager.Instance?.CurrentSlotKey;
-            }
-            GameSessionInitializer.CreateIfNeeded(slotKey);
-            UIMenuManager.ClearSelectedSlot();
-
-            AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
-            while (!op.isDone)
-            {
-                yield return null;
-            }
-
-            if (SceneManager.GetActiveScene().name != "MainMenu" &&
-                FindFirstObjectByType<GameClock>() == null)
-            {
-                new GameObject("GameClock").AddComponent<GameClock>();
-            }
-
-            Coroutine fadeInCoroutine = null;
-            if (isLeavingMainMenu && transitionManager != null)
-            {
-                fadeInCoroutine = StartCoroutine(transitionManager.FadeRoutine(0f));
-            }
-
-            var mgr = SlideTransitionManager.Instance;
-            if (mgr != null && mgr != this)
-            {
-                yield return mgr.RunSlideOut();
-            }
-            else
-            {
-                yield return RunSlideOut();
-            }
-
-            if (fadeInCoroutine != null)
-            {
-                yield return fadeInCoroutine;
-            }
+            bool inComplete = false;
+            System.Action onIn = () => inComplete = true;
+            slidePanel.OnSlideInComplete += onIn;
+            slidePanel.SlideIn();
+            yield return new WaitUntil(() => inComplete);
+            slidePanel.OnSlideInComplete -= onIn;
         }
-        finally
+
+        SaveGameManager.Instance.SaveCurrentSlot();
+
+        string slotKey = UIMenuManager.SelectedSlotKey;
+        if (string.IsNullOrEmpty(slotKey))
         {
-            IsTransitioning = false;
+            slotKey = SaveGameManager.Instance?.CurrentSlotKey;
+        }
+        GameSessionInitializer.CreateIfNeeded(slotKey);
+        UIMenuManager.ClearSelectedSlot();
+
+        AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
+        while (!op.isDone)
+        {
+            yield return null;
+        }
+
+        if (SceneManager.GetActiveScene().name != "MainMenu" &&
+            FindFirstObjectByType<GameClock>() == null)
+        {
+            new GameObject("GameClock").AddComponent<GameClock>();
+        }
+
+        var mgr = SlideTransitionManager.Instance;
+        if (mgr != null && mgr != this)
+        {
+            yield return mgr.RunSlideOut();
+        }
+        else
+        {
+            yield return RunSlideOut();
         }
     }
 }
