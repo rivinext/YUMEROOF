@@ -3,11 +3,11 @@ using UnityEngine;
 public class ObjectManipulator : MonoBehaviour
 {
     private Transform selectedObjectTransform;
-    public LayerMask groundLayer;
     public float rotationSpeed = 5f;
 
     private bool isMoving = false;
     private Vector3 originalPosition; // 新規追加: 元の位置を保存する変数
+    private float selectedObjectHeight; // オブジェクトの高さを保持
 
     // 移動を開始するメソッド
     public void StartMoving(Transform objTransform)
@@ -15,6 +15,7 @@ public class ObjectManipulator : MonoBehaviour
         selectedObjectTransform = objTransform;
         isMoving = true;
         originalPosition = selectedObjectTransform.position; // 移動開始時に元の位置を保存
+        selectedObjectHeight = selectedObjectTransform.position.y; // 移動開始時の高さを保持
     }
 
     // 選択を解除するメソッド
@@ -30,11 +31,13 @@ public class ObjectManipulator : MonoBehaviour
         {
             // オブジェクトの移動
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
+            Plane movementPlane = new Plane(Vector3.up, new Vector3(0f, selectedObjectHeight, 0f));
+            float distance;
 
-            if (Physics.Raycast(ray, out hit, Mathf.Infinity, groundLayer))
+            if (movementPlane.Raycast(ray, out distance))
             {
-                selectedObjectTransform.position = new Vector3(hit.point.x, selectedObjectTransform.position.y, hit.point.z);
+                Vector3 targetPoint = ray.GetPoint(distance);
+                selectedObjectTransform.position = new Vector3(targetPoint.x, selectedObjectHeight, targetPoint.z);
             }
 
             // オブジェクトの回転
