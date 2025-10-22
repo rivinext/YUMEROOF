@@ -573,26 +573,18 @@ public class FreePlacementSystem : MonoBehaviour
             targetLayer = floorLayer | wallLayer;
         }
 
-        Vector3 targetPosition = Vector3.zero;
-        bool hasTargetPosition = false;
+        Vector3 targetPosition;
         bool hasSurfaceHit = false;
         RaycastHit surfaceHit = default;
 
-        if (isMovingFurniture && useDragPlane)
+        if (isMovingFurniture && useDragPlane && dragPlane.Raycast(ray, out float enter))
         {
-            float enter;
-            if (dragPlane.Raycast(ray, out enter))
-            {
-                Vector3 planePoint = ray.GetPoint(enter);
-                targetPosition = planePoint + moveOffset;
-                hasTargetPosition = true;
-            }
+            Vector3 planePoint = ray.GetPoint(enter);
+            targetPosition = planePoint + moveOffset;
         }
-
-        if (!hasTargetPosition && Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
+        else if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
         {
             targetPosition = hit.point;
-            hasTargetPosition = true;
             hasSurfaceHit = true;
             surfaceHit = hit;
 
@@ -601,8 +593,7 @@ public class FreePlacementSystem : MonoBehaviour
                 targetPosition += moveOffset;
             }
         }
-
-        if (!hasTargetPosition)
+        else
         {
             return;
         }
