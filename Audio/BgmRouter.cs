@@ -30,6 +30,7 @@ public class BgmRouter : MonoBehaviour
     private readonly Dictionary<AudioSource, float> sourceVolumes = new Dictionary<AudioSource, float>();
     private AudioSource currentSource;
     private Coroutine transitionRoutine;
+    private float volumeMultiplier = 1f;
 
     private void Awake()
     {
@@ -66,6 +67,8 @@ public class BgmRouter : MonoBehaviour
         }
 
         SceneManager.sceneLoaded += HandleSceneLoaded;
+        AudioVolumeManager.OnBgmVolumeChanged += HandleBgmVolumeChanged;
+        HandleBgmVolumeChanged(AudioVolumeManager.BgmVolume);
     }
 
     private void OnDestroy()
@@ -73,6 +76,7 @@ public class BgmRouter : MonoBehaviour
         if (Instance == this)
         {
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+            AudioVolumeManager.OnBgmVolumeChanged -= HandleBgmVolumeChanged;
         }
     }
 
@@ -166,11 +170,12 @@ public class BgmRouter : MonoBehaviour
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-            source.volume = Mathf.Lerp(start, target, t);
+            float dynamicTarget = target <= 0f ? 0f : GetTargetVolume(source);
+            source.volume = Mathf.Lerp(start, dynamicTarget, t);
             yield return null;
         }
 
-        source.volume = target;
+        source.volume = target <= 0f ? 0f : GetTargetVolume(source);
     }
 
     private float GetTargetVolume(AudioSource source)
@@ -182,10 +187,10 @@ public class BgmRouter : MonoBehaviour
 
         if (sourceVolumes.TryGetValue(source, out var volume))
         {
-            return volume;
+            return volume * volumeMultiplier;
         }
 
-        return source.volume;
+        return source.volume * volumeMultiplier;
     }
 
     private void RestoreVolume(AudioSource source)
@@ -230,6 +235,24 @@ public class BgmRouter : MonoBehaviour
         else
         {
             currentSource.UnPause();
+        }
+    }
+
+    private void HandleBgmVolumeChanged(float value)
+    {
+        volumeMultiplier = Mathf.Clamp01(value);
+
+        foreach (var source in sceneToSource.Values)
+        {
+            if (source == null)
+            {
+                continue;
+            }
+
+            if (source == currentSource || !source.isPlaying)
+            {
+                source.volume = GetTargetVolume(source);
+            }
         }
     }
 }
