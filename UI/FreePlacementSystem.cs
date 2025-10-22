@@ -42,7 +42,6 @@ public class FreePlacementSystem : MonoBehaviour
     public ParticleSystem placementEffect;
 
     [Header("Audio Settings")]
-    [SerializeField] private bool enablePlacementSound = false;
     [SerializeField] private AudioClip placementSound;
     [SerializeField, Range(0f, 1f)] private float placementSoundVolume = 1f;
     [SerializeField] private AudioSource placementAudioSource;
@@ -910,11 +909,6 @@ public class FreePlacementSystem : MonoBehaviour
         {
             placementEffect.transform.position = position;
             placementEffect.Play();
-        }
-
-        if (!enablePlacementSound)
-        {
-            return;
         }
 
         if (placementSound != null && placementAudioSource != null)
