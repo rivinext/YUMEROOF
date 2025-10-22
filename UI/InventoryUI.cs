@@ -109,6 +109,7 @@ public class InventoryUI : MonoBehaviour
     private string searchQuery = "";
     private InventoryItem selectedFurnitureItem;
     private bool autoReopenEnabled = false;
+    private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -136,6 +137,7 @@ public class InventoryUI : MonoBehaviour
     void Awake()
     {
         UIPanelExclusionManager.Instance?.Register(this);
+        LoadAutoReopenPreference();
     }
 
     void Start()
@@ -363,6 +365,7 @@ public class InventoryUI : MonoBehaviour
     {
         autoReopenEnabled = !autoReopenEnabled;
         UpdateAutoReopenVisual();
+        SaveAutoReopenPreference();
     }
 
     void UpdateAutoReopenVisual()
@@ -392,6 +395,17 @@ public class InventoryUI : MonoBehaviour
                 buttonImage.color = autoReopenEnabled ? autoReopenOnColor : autoReopenOffColor;
             }
         }
+    }
+
+    void LoadAutoReopenPreference()
+    {
+        autoReopenEnabled = PlayerPrefs.GetInt(AutoReopenPrefKey, autoReopenEnabled ? 1 : 0) == 1;
+    }
+
+    void SaveAutoReopenPreference()
+    {
+        PlayerPrefs.SetInt(AutoReopenPrefKey, autoReopenEnabled ? 1 : 0);
+        PlayerPrefs.Save();
     }
 
     void RegisterEvents()
