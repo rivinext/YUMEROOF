@@ -5,9 +5,6 @@ using UnityEngine.UI;
 public class ReturnToMainMenuButton : MonoBehaviour
 {
     [SerializeField] private string mainMenuScene;
-    [SerializeField] private ConfirmationPopup confirmationPopup;
-    [SerializeField, TextArea] private string confirmationMessage = "メインメニューに戻りますか？";
-
     private void Start()
     {
         var button = GetComponent<Button>();
@@ -17,31 +14,12 @@ public class ReturnToMainMenuButton : MonoBehaviour
             return;
         }
 
-        if (confirmationPopup == null)
-        {
-            confirmationPopup = FindFirstObjectByType<ConfirmationPopup>(FindObjectsInactive.Include);
-            if (confirmationPopup == null)
-            {
-                Debug.LogError("ConfirmationPopup reference is not assigned. Falling back to immediate transition.", this);
-            }
-        }
-
         button.onClick.AddListener(HandleClick);
     }
 
     private void HandleClick()
     {
-        if (confirmationPopup == null)
-        {
-            OnConfirm();
-            return;
-        }
-
-        var message = string.IsNullOrWhiteSpace(confirmationMessage)
-            ? "メインメニューに戻りますか？"
-            : confirmationMessage;
-
-        confirmationPopup.Open(message, OnConfirm);
+        OnConfirm();
     }
 
     private void OnConfirm()
