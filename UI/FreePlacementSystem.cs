@@ -670,16 +670,16 @@ public class FreePlacementSystem : MonoBehaviour
     }
 
     // 残りのメソッドは同じ...
-    Vector3 CalculateWallSnapPosition(GameObject preview, Vector3 targetPosition, Vector3 hitPoint, Vector3 wallNormal)
+    Vector3 CalculateWallSnapPosition(GameObject preview, Vector3 baseTargetPosition, Vector3 hitPoint, Vector3 wallNormal)
     {
         if (preview == null)
         {
-            return targetPosition;
+            return baseTargetPosition;
         }
 
         if (wallNormal.sqrMagnitude < Mathf.Epsilon)
         {
-            return targetPosition;
+            return baseTargetPosition;
         }
 
         Transform previewTransform = preview.transform;
@@ -687,7 +687,7 @@ public class FreePlacementSystem : MonoBehaviour
         Renderer[] renderers = preview.GetComponentsInChildren<Renderer>(true);
         if (renderers == null || renderers.Length == 0)
         {
-            return targetPosition + normalizedNormal * wallSnapDistance;
+            return baseTargetPosition + normalizedNormal * wallSnapDistance;
         }
 
         PlacedFurniture previewPlacedFurniture = preview.GetComponent<PlacedFurniture>();
@@ -705,7 +705,7 @@ public class FreePlacementSystem : MonoBehaviour
 
             if (filteredRenderers.Count == 0)
             {
-                return targetPosition + normalizedNormal * wallSnapDistance;
+                return baseTargetPosition + normalizedNormal * wallSnapDistance;
             }
 
             renderers = filteredRenderers.ToArray();
@@ -748,15 +748,15 @@ public class FreePlacementSystem : MonoBehaviour
 
         if (!foundPoint)
         {
-            return targetPosition + normalizedNormal * wallSnapDistance;
+            return baseTargetPosition + normalizedNormal * wallSnapDistance;
         }
 
         Vector3 offset = previewTransform.TransformPoint(minLocalPoint) - previewTransform.position;
         Vector3 planePoint = hitPoint + normalizedNormal * wallSnapDistance;
-        Vector3 worldPointAtTarget = targetPosition + offset;
+        Vector3 worldPointAtTarget = baseTargetPosition + offset;
         float distanceToPlane = Vector3.Dot(normalizedNormal, worldPointAtTarget - planePoint);
 
-        return targetPosition - normalizedNormal * distanceToPlane;
+        return baseTargetPosition - normalizedNormal * distanceToPlane;
     }
 
     void CheckStackPlacement(ref Vector3 position)
