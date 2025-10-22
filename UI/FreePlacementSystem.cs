@@ -917,11 +917,6 @@ public class FreePlacementSystem : MonoBehaviour
 
     private void PlayPlacementEffect(Vector3 position)
     {
-        if (IsPlacementAudioSuppressed())
-        {
-            return;
-        }
-
         if (placementEffect != null)
         {
             placementEffect.transform.position = position;
@@ -937,21 +932,6 @@ public class FreePlacementSystem : MonoBehaviour
                 placementAudioSource.PlayOneShot(placementSound, volume);
             }
         }
-    }
-
-    bool IsPlacementAudioSuppressed()
-    {
-        if (SceneTransitionManager.Instance != null && SceneTransitionManager.Instance.IsTransitioning)
-        {
-            return true;
-        }
-
-        if (SlideTransitionManager.Instance != null && SlideTransitionManager.Instance.IsTransitioning)
-        {
-            return true;
-        }
-
-        return false;
     }
 
     private void SetupPlacementAudioSource()
