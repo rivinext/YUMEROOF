@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.SceneManagement;
@@ -65,9 +66,24 @@ public class FurnitureSaveManager : MonoBehaviour
 
     private AllFurnitureData allFurnitureData = new AllFurnitureData();
     private Dictionary<string, GameObject> loadedFurnitureObjects = new Dictionary<string, GameObject>();
+    [Header("Loading Settings")]
+    [SerializeField, Min(1)] private int maxFurniturePerFrame = 8;
+
     private bool isLoadingScene = false; // シーンロード中フラグ
+    private Coroutine activeLoadRoutine;
+    private string currentLoadingScene = string.Empty;
+    private int totalFurnitureToLoad = 0;
+    private int loadedFurnitureCount = 0;
+    private float currentLoadProgress = 0f;
 
     public event Action OnFurnitureChanged;
+    public event Action OnFurnitureLoadStarted;
+    public event Action<float> OnFurnitureLoadProgress;
+    public event Action OnFurnitureLoadCompleted;
+
+    public bool IsFurnitureLoading => isLoadingScene;
+    public float CurrentLoadProgress => currentLoadProgress;
+    public string CurrentLoadingScene => currentLoadingScene;
 
     void Awake()
     {
@@ -150,9 +166,7 @@ public class FurnitureSaveManager : MonoBehaviour
         // 1フレーム待機（シーンの初期化完了を待つ）
         yield return null;
 
-        isLoadingScene = true;
-        LoadFurnitureForScene(sceneName);
-        isLoadingScene = false;
+        yield return StartFurnitureLoad(sceneName);
     }
 
     // 家具を保存（配置/移動時に呼ばれる）
@@ -296,8 +310,37 @@ public class FurnitureSaveManager : MonoBehaviour
         OnFurnitureChanged?.Invoke();
     }
 
+    public Coroutine LoadFurnitureForSceneAsync(string sceneName)
+    {
+        if (!isActiveAndEnabled)
+        {
+            if (debugMode)
+                Debug.LogWarning("[FurnitureSave] Tried to load furniture while manager is disabled.");
+            return null;
+        }
+
+        if (activeLoadRoutine != null)
+        {
+            StopCoroutine(activeLoadRoutine);
+            ResetLoadingState();
+            activeLoadRoutine = null;
+        }
+
+        activeLoadRoutine = StartCoroutine(LoadFurnitureForSceneRoutine(sceneName));
+        return activeLoadRoutine;
+    }
+
+    IEnumerator StartFurnitureLoad(string sceneName)
+    {
+        var routine = LoadFurnitureForSceneAsync(sceneName);
+        if (routine != null)
+        {
+            yield return routine;
+        }
+    }
+
     // 特定のシーンの家具を読み込んで配置
-    void LoadFurnitureForScene(string sceneName)
+    IEnumerator LoadFurnitureForSceneRoutine(string sceneName)
     {
         // シーンに配置システムがあるか確認
         FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
@@ -305,7 +348,9 @@ public class FurnitureSaveManager : MonoBehaviour
         {
             if (debugMode)
                 Debug.Log($"[FurnitureSave] No FreePlacementSystem in {sceneName}, skip loading furniture");
-            return;
+            BeginLoadingState(sceneName, 0);
+            CompleteLoadingState();
+            yield break;
         }
 
         // 既存の読み込み済みオブジェクトを破棄してクリア
@@ -316,6 +361,14 @@ public class FurnitureSaveManager : MonoBehaviour
             .Where(f => f.sceneName == sceneName)
             .ToList();
 
+        BeginLoadingState(sceneName, sceneFurniture.Count);
+
+        if (totalFurnitureToLoad == 0)
+        {
+            CompleteLoadingState();
+            yield break;
+        }
+
         if (debugMode)
             Debug.Log($"[FurnitureSave] Loading {sceneFurniture.Count} furniture items for {sceneName}");
 
@@ -323,6 +376,7 @@ public class FurnitureSaveManager : MonoBehaviour
         var pending = new List<FurnitureSaveData>(sceneFurniture);
         int iterations = 0;
         int maxIterations = pending.Count * 4;
+        int processedThisFrame = 0;
 
         while (pending.Count > 0 && (maxIterations <= 0 || iterations < maxIterations))
         {
@@ -340,12 +394,22 @@ public class FurnitureSaveManager : MonoBehaviour
                 LoadSingleFurniture(data, placementSystem);
                 pending.RemoveAt(i);
                 processedThisPass++;
+                processedThisFrame++;
+                loadedFurnitureCount++;
+                UpdateLoadProgress();
+
+                if (processedThisFrame >= maxFurniturePerFrame)
+                {
+                    processedThisFrame = 0;
+                    yield return null;
+                }
             }
 
             if (processedThisPass == 0)
                 break;
 
             iterations++;
+            yield return null;
         }
 
         if (pending.Count > 0)
@@ -358,11 +422,22 @@ public class FurnitureSaveManager : MonoBehaviour
             foreach (var data in pending)
             {
                 LoadSingleFurniture(data, placementSystem);
+                loadedFurnitureCount++;
+                UpdateLoadProgress();
+
+                processedThisFrame++;
+                if (processedThisFrame >= maxFurniturePerFrame)
+                {
+                    processedThisFrame = 0;
+                    yield return null;
+                }
             }
         }
 
         if (sceneFurniture.Count > 0 && debugMode)
             Debug.Log($"[FurnitureSave] Successfully loaded {loadedFurnitureObjects.Count} furniture objects");
+
+        CompleteLoadingState();
     }
 
     // 単一の家具を読み込んで配置
@@ -546,6 +621,50 @@ public class FurnitureSaveManager : MonoBehaviour
     public void LoadCurrentSceneFurniture()
     {
         string currentScene = SceneManager.GetActiveScene().name;
-        LoadFurnitureForScene(currentScene);
+        LoadFurnitureForSceneAsync(currentScene);
+    }
+
+    void BeginLoadingState(string sceneName, int totalCount)
+    {
+        isLoadingScene = true;
+        currentLoadingScene = sceneName;
+        totalFurnitureToLoad = totalCount;
+        loadedFurnitureCount = 0;
+        UpdateLoadProgressInternal(0f);
+        OnFurnitureLoadStarted?.Invoke();
+    }
+
+    void UpdateLoadProgress()
+    {
+        if (totalFurnitureToLoad <= 0)
+        {
+            UpdateLoadProgressInternal(1f);
+            return;
+        }
+
+        float progress = Mathf.Clamp01((float)loadedFurnitureCount / totalFurnitureToLoad);
+        UpdateLoadProgressInternal(progress);
+    }
+
+    void UpdateLoadProgressInternal(float value)
+    {
+        currentLoadProgress = value;
+        OnFurnitureLoadProgress?.Invoke(currentLoadProgress);
+    }
+
+    void CompleteLoadingState()
+    {
+        UpdateLoadProgressInternal(1f);
+        OnFurnitureLoadCompleted?.Invoke();
+        ResetLoadingState();
+    }
+
+    void ResetLoadingState()
+    {
+        isLoadingScene = false;
+        currentLoadingScene = string.Empty;
+        totalFurnitureToLoad = 0;
+        loadedFurnitureCount = 0;
+        activeLoadRoutine = null;
     }
 }

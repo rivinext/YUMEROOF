@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -454,12 +453,8 @@ public class SaveGameManager : MonoBehaviour
         }
         string json = JsonUtility.ToJson(allData);
         mgr.LoadFromData(json);
-        var method = typeof(FurnitureSaveManager).GetMethod("LoadFurnitureForScene", BindingFlags.NonPublic | BindingFlags.Instance);
-        if (method != null)
-        {
-            var sceneName = SceneManager.GetActiveScene().name;
-            method.Invoke(mgr, new object[] { sceneName });
-        }
+        var sceneName = SceneManager.GetActiveScene().name;
+        mgr.LoadFurnitureForSceneAsync(sceneName);
     }
 
     void ApplyTime(GameClock.ClockData savedData)
