@@ -253,20 +253,24 @@ public class InventoryPlacementBridge : MonoBehaviour
     {
         // 現在のシーンからInventoryUIを取得
         InventoryUI inventoryUI = FindFirstObjectByType<InventoryUI>();
+        bool autoReopenEnabled = inventoryUI != null && inventoryUI.AutoReopenEnabled;
 
         if (inventoryUI != null)
         {
             // 配置中フラグを解除
             inventoryUI.SetPlacingItem(false);
 
-            // インベントリを開く
-            inventoryUI.OpenInventory();
+            if (autoReopenEnabled)
+            {
+                // インベントリを開く
+                inventoryUI.OpenInventory();
 
-            // Furnitureタブに切り替え
-            inventoryUI.SwitchTab(false);  // false = Furnitureタブ
+                // Furnitureタブに切り替え
+                inventoryUI.SwitchTab(false);  // false = Furnitureタブ
 
-            if (debugMode)
-                Debug.Log("[InventoryPlacementBridge] Inventory restored");
+                if (debugMode)
+                    Debug.Log("[InventoryPlacementBridge] Inventory restored");
+            }
         }
         else
         {
