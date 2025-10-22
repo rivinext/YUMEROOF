@@ -67,6 +67,14 @@ public class InventoryUI : MonoBehaviour
     public Button craftButton;
 
 
+    [Header("Auto Reopen")]
+    public Toggle autoReopenToggle;
+    public Button autoReopenButton;
+    public Text autoReopenStatusLabel;
+    [SerializeField] private Color autoReopenOnColor = new Color(0.278f, 0.749f, 0.392f);
+    [SerializeField] private Color autoReopenOffColor = new Color(0.725f, 0.278f, 0.278f);
+
+
     [Header("Panel Animation")]
     [SerializeField] private float closedPositionX = 0f;
     [SerializeField] private float openPositionX = 0f;
@@ -100,6 +108,7 @@ public class InventoryUI : MonoBehaviour
     private bool isPlacingItem = false;
     private string searchQuery = "";
     private InventoryItem selectedFurnitureItem;
+    private bool autoReopenEnabled = false;
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -120,6 +129,8 @@ public class InventoryUI : MonoBehaviour
     {
     get { return isOpen && inventoryPanel != null && inventoryPanel.activeInHierarchy; }
     }
+
+    public bool AutoReopenEnabled => autoReopenEnabled;
     // === 追加ここまで ===
 
     void Awake()
@@ -138,12 +149,14 @@ public class InventoryUI : MonoBehaviour
         SetupSearchFields();
         SetupFilters();
         SetupCraftButton();
+        SetupAutoReopenControl();
         RegisterEvents();
         SwitchTab(true);
 
         // 初期状態のタブボタン画像を設定
         UpdateTabButtonVisuals(true);
         CacheSceneInteractionComponents();
+        UpdateAutoReopenVisual();
     }
 
     void InitializeManagers()
@@ -327,6 +340,57 @@ public class InventoryUI : MonoBehaviour
             craftButton.interactable = false;
 
             if (debugMode) Debug.Log("Craft button setup complete");
+        }
+    }
+
+    void SetupAutoReopenControl()
+    {
+        if (autoReopenToggle != null)
+        {
+            autoReopenToggle.onValueChanged.RemoveAllListeners();
+            autoReopenToggle.SetIsOnWithoutNotify(autoReopenEnabled);
+            autoReopenToggle.onValueChanged.AddListener(_ => ToggleAutoReopen());
+        }
+
+        if (autoReopenButton != null)
+        {
+            autoReopenButton.onClick.RemoveAllListeners();
+            autoReopenButton.onClick.AddListener(ToggleAutoReopen);
+        }
+    }
+
+    public void ToggleAutoReopen()
+    {
+        autoReopenEnabled = !autoReopenEnabled;
+        UpdateAutoReopenVisual();
+    }
+
+    void UpdateAutoReopenVisual()
+    {
+        if (autoReopenToggle != null)
+        {
+            autoReopenToggle.SetIsOnWithoutNotify(autoReopenEnabled);
+        }
+
+        if (autoReopenStatusLabel != null)
+        {
+            autoReopenStatusLabel.text = autoReopenEnabled ? "Auto Reopen: ON" : "Auto Reopen: OFF";
+            autoReopenStatusLabel.color = autoReopenEnabled ? autoReopenOnColor : autoReopenOffColor;
+        }
+
+        if (autoReopenButton != null)
+        {
+            var buttonLabel = autoReopenButton.GetComponentInChildren<Text>();
+            if (buttonLabel != null)
+            {
+                buttonLabel.text = autoReopenEnabled ? "Disable Auto Reopen" : "Enable Auto Reopen";
+            }
+
+            var buttonImage = autoReopenButton.GetComponent<Image>();
+            if (buttonImage != null)
+            {
+                buttonImage.color = autoReopenEnabled ? autoReopenOnColor : autoReopenOffColor;
+            }
         }
     }
 
