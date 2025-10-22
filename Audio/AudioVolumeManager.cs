@@ -9,8 +9,8 @@ public static class AudioVolumeManager
     public static event Action<float> OnBgmVolumeChanged;
     public static event Action<float> OnSfxVolumeChanged;
 
-    private static float bgmVolume = 1f;
-    private static float sfxVolume = 1f;
+    private static float bgmVolume = 0.7f;
+    private static float sfxVolume = 0.7f;
 
     /// <summary>
     /// 0-1の正規化値で表現されたBGM音量。
