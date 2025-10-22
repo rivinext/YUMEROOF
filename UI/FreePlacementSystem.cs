@@ -573,7 +573,7 @@ public class FreePlacementSystem : MonoBehaviour
             targetLayer = floorLayer | wallLayer;
         }
 
-        Vector3 targetPosition;
+        Vector3 targetPosition = Vector3.zero;
         bool hasTargetPosition = false;
         bool hasSurfaceHit = false;
         RaycastHit surfaceHit = default;
