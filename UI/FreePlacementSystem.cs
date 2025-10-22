@@ -48,6 +48,8 @@ public class FreePlacementSystem : MonoBehaviour
     private GameObject previewObject;
     private FurnitureData currentFurnitureData;
     private Vector3 moveOffset;
+    private bool useDragPlane;
+    private Plane dragPlane;
 
     // 元の位置を記憶（既存配置物の移動用）
     private Vector3 originalPosition;
@@ -311,6 +313,7 @@ public class FreePlacementSystem : MonoBehaviour
         isMovingFurniture = false;
         previewObject = null;
         currentFurnitureData = null;
+        useDragPlane = false;
 
         if (EnsurePlayerControl())
         {
@@ -470,12 +473,21 @@ public class FreePlacementSystem : MonoBehaviour
         // ゴーストを生成
         ghostManager?.CreateGhost(previewObject, originalPosition, originalRotation);
 
+        useDragPlane = false;
+
         // 参照位置とオブジェクト位置の差をオフセットとして保存
         moveOffset = furniture.transform.position - referencePoint;
+
         if (furniture.furnitureData == null ||
             furniture.furnitureData.placementRules != PlacementRule.Wall)
         {
-            moveOffset.y = 0f;
+            // 高さ方向の参照に床を使うと操作量が増幅されるため、
+            // オブジェクトの高さに合わせたドラッグ用平面を生成する
+            dragPlane = new Plane(Vector3.up, furniture.transform.position);
+            useDragPlane = true;
+
+            Vector3 planeReference = dragPlane.ClosestPointOnPlane(referencePoint);
+            moveOffset = furniture.transform.position - planeReference;
         }
     }
 
@@ -527,15 +539,15 @@ public class FreePlacementSystem : MonoBehaviour
                 snappedAnchor = anchor;
                 var pf = previewObject.GetComponent<PlacedFurniture>();
                 Vector3 offset = pf != null ? pf.GetBottomOffset() : Vector3.zero;
-                Vector3 targetPosition = snappedAnchor.transform.position + offset;
+                Vector3 anchorTargetPosition = snappedAnchor.transform.position + offset;
 
-                previewObject.transform.position = targetPosition;
+                previewObject.transform.position = anchorTargetPosition;
 
-                PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
-                if (placedComp != null)
+                PlacedFurniture anchorPlacedComp = previewObject.GetComponent<PlacedFurniture>();
+                if (anchorPlacedComp != null)
                 {
-                    bool canPlace = !placedComp.IsOverlapping();
-                    placedComp.SetPlacementValid(canPlace);
+                    bool canPlace = !anchorPlacedComp.IsOverlapping();
+                    anchorPlacedComp.SetPlacementValid(canPlace);
                 }
 
                 snappedByAnchorRaycast = true;
@@ -561,41 +573,78 @@ public class FreePlacementSystem : MonoBehaviour
             targetLayer = floorLayer | wallLayer;
         }
 
-        if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
-        {
-            Vector3 targetPosition = hit.point;
+        Vector3 targetPosition = Vector3.zero;
+        bool hasTargetPosition = false;
+        bool hasSurfaceHit = false;
+        RaycastHit surfaceHit = default;
 
-            if (isMovingFurniture)
+        if (isMovingFurniture && useDragPlane)
+        {
+            float enter;
+            if (dragPlane.Raycast(ray, out enter))
+            {
+                Vector3 planePoint = ray.GetPoint(enter);
+                targetPosition = planePoint + moveOffset;
+                hasTargetPosition = true;
+            }
+        }
+
+        if (!hasTargetPosition && Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
+        {
+            targetPosition = hit.point;
+            hasTargetPosition = true;
+            hasSurfaceHit = true;
+            surfaceHit = hit;
+
+            if (isMovingFurniture && (!useDragPlane || currentFurnitureData.placementRules == PlacementRule.Wall))
             {
                 targetPosition += moveOffset;
             }
+        }
 
-            if (currentFurnitureData.placementRules == PlacementRule.Wall &&
-                ((1 << hit.collider.gameObject.layer) & wallLayer) != 0)
+        if (!hasTargetPosition)
+        {
+            return;
+        }
+
+        if (currentFurnitureData.placementRules == PlacementRule.Wall &&
+            hasSurfaceHit &&
+            ((1 << surfaceHit.collider.gameObject.layer) & wallLayer) != 0)
+        {
+            Vector3 projected = Vector3.ProjectOnPlane(surfaceHit.normal, Vector3.up);
+            if (projected.sqrMagnitude < Mathf.Epsilon)
             {
-                Vector3 projected = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
-                if (projected.sqrMagnitude < Mathf.Epsilon)
-                {
-                    projected = Vector3.forward;
-                }
-
-                Quaternion targetRotation = Quaternion.LookRotation(projected, Vector3.up);
-                previewObject.transform.rotation = targetRotation;
-
-                targetPosition = CalculateWallSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
+                projected = Vector3.forward;
             }
 
-            CheckStackPlacement(ref targetPosition);
-            TrySnapToAnchor(ref targetPosition);
+            Quaternion targetRotation = Quaternion.LookRotation(projected, Vector3.up);
+            previewObject.transform.rotation = targetRotation;
 
-            previewObject.transform.position = targetPosition;
+            targetPosition = CalculateWallSnapPosition(previewObject, targetPosition, surfaceHit.point, surfaceHit.normal);
+        }
 
-            PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
-            if (placedComp != null)
+        CheckStackPlacement(ref targetPosition);
+        TrySnapToAnchor(ref targetPosition);
+
+        if (isMovingFurniture &&
+            useDragPlane &&
+            snappedParentFurniture == null &&
+            currentFurnitureData.placementRules != PlacementRule.Wall)
+        {
+            Ray downRay = new Ray(targetPosition + Vector3.up * 5f, Vector3.down);
+            if (Physics.Raycast(downRay, out var downHit, 15f, floorLayer, QueryTriggerInteraction.Ignore))
             {
-                bool canPlace = !placedComp.IsOverlapping();
-                placedComp.SetPlacementValid(canPlace);
+                targetPosition.y = downHit.point.y;
             }
+        }
+
+        previewObject.transform.position = targetPosition;
+
+        PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
+        if (placedComp != null)
+        {
+            bool canPlace = !placedComp.IsOverlapping();
+            placedComp.SetPlacementValid(canPlace);
         }
     }
 
@@ -832,6 +881,7 @@ public class FreePlacementSystem : MonoBehaviour
             isPlacingNewFurniture = false;
             previewObject = null;
             currentFurnitureData = null;
+            useDragPlane = false;
 
             if (EnsurePlayerControl())
             {
@@ -923,6 +973,7 @@ public class FreePlacementSystem : MonoBehaviour
         isPlacingNewFurniture = false;
         previewObject = null;
         currentFurnitureData = null;
+        useDragPlane = false;
         originalParentFurniture = null;
 
         if (EnsurePlayerControl())
