@@ -41,6 +41,13 @@ public class FreePlacementSystem : MonoBehaviour
     public PlacementPlayerControl playerControl;
     public ParticleSystem placementEffect;
 
+    [Header("Audio Settings")]
+    [SerializeField] private AudioClip placementSound;
+    [SerializeField, Range(0f, 1f)] private float placementSoundVolume = 1f;
+    [SerializeField] private AudioSource placementAudioSource;
+
+    private float currentSfxVolume = 1f;
+
     // 現在の状態
     private PlacedFurniture selectedFurniture;
     private bool isMovingFurniture = false;
@@ -69,6 +76,10 @@ public class FreePlacementSystem : MonoBehaviour
 
         EnsurePlayerControl(true, "during Awake");
 
+        SetupPlacementAudioSource();
+        AudioVolumeManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioVolumeManager.SfxVolume);
+
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
@@ -82,6 +93,7 @@ public class FreePlacementSystem : MonoBehaviour
     void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        AudioVolumeManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -893,9 +905,42 @@ public class FreePlacementSystem : MonoBehaviour
 
     private void PlayPlacementEffect(Vector3 position)
     {
-        if (placementEffect == null) return;
-        placementEffect.transform.position = position;
-        placementEffect.Play();
+        if (placementEffect != null)
+        {
+            placementEffect.transform.position = position;
+            placementEffect.Play();
+        }
+
+        if (placementSound != null && placementAudioSource != null)
+        {
+            placementAudioSource.transform.position = position;
+            float volume = placementSoundVolume * currentSfxVolume;
+            if (volume > 0f)
+            {
+                placementAudioSource.PlayOneShot(placementSound, volume);
+            }
+        }
+    }
+
+    private void SetupPlacementAudioSource()
+    {
+        if (placementAudioSource == null)
+        {
+            placementAudioSource = gameObject.GetComponent<AudioSource>();
+            if (placementAudioSource == null)
+            {
+                placementAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        placementAudioSource.playOnAwake = false;
+        placementAudioSource.loop = false;
+        placementAudioSource.spatialBlend = 0f;
+    }
+
+    private void HandleSfxVolumeChanged(float value)
+    {
+        currentSfxVolume = Mathf.Clamp01(value);
     }
 
     void RotateFurniture(float angle)
