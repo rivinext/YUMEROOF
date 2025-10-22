@@ -112,7 +112,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             if (!btn.interactable) return;
             if (hoverClip == null || sfxSource == null) return;
             if (Time.unscaledTime - lastHoverTime < hoverCooldown) return;
-            if (isMuted) return;
+            if (IsSoundSuppressed()) return;
 
             sfxSource.PlayOneShot(hoverClip, hoverVolume);
             lastHoverTime = Time.unscaledTime;
@@ -133,7 +133,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             if (hoverClip == null || sfxSource == null) return;
             if (Time.unscaledTime - lastHoverTime < hoverCooldown) return;
             if (IsMovementKeyHeld()) return;
-            if (isMuted) return;
+            if (IsSoundSuppressed()) return;
 
             sfxSource.PlayOneShot(hoverClip, hoverVolume);
             lastHoverTime = Time.unscaledTime;
@@ -185,7 +185,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             bool triggeredByPointer = pointerClickCandidates.Remove(id);
             bool triggeredBySubmit = submitClickCandidates.Remove(id);
             if (!triggeredByPointer && !triggeredBySubmit) return;
-            if (isMuted) return;
+            if (IsSoundSuppressed()) return;
 
             sfxSource.PlayOneShot(clickClip, clickVolume);
         });
@@ -214,5 +214,22 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
     public void SetMuted(bool muted)
     {
         isMuted = muted;
+    }
+
+    bool IsSoundSuppressed()
+    {
+        if (isMuted) return true;
+
+        if (SceneTransitionManager.Instance != null && SceneTransitionManager.Instance.IsTransitioning)
+        {
+            return true;
+        }
+
+        if (SlideTransitionManager.Instance != null && SlideTransitionManager.Instance.IsTransitioning)
+        {
+            return true;
+        }
+
+        return false;
     }
 }
