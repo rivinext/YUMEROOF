@@ -539,15 +539,15 @@ public class FreePlacementSystem : MonoBehaviour
                 snappedAnchor = anchor;
                 var pf = previewObject.GetComponent<PlacedFurniture>();
                 Vector3 offset = pf != null ? pf.GetBottomOffset() : Vector3.zero;
-                Vector3 targetPosition = snappedAnchor.transform.position + offset;
+                Vector3 anchorTargetPosition = snappedAnchor.transform.position + offset;
 
-                previewObject.transform.position = targetPosition;
+                previewObject.transform.position = anchorTargetPosition;
 
-                PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
-                if (placedComp != null)
+                PlacedFurniture anchorPlacedComp = previewObject.GetComponent<PlacedFurniture>();
+                if (anchorPlacedComp != null)
                 {
-                    bool canPlace = !placedComp.IsOverlapping();
-                    placedComp.SetPlacementValid(canPlace);
+                    bool canPlace = !anchorPlacedComp.IsOverlapping();
+                    anchorPlacedComp.SetPlacementValid(canPlace);
                 }
 
                 snappedByAnchorRaycast = true;
