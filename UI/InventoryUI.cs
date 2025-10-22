@@ -69,10 +69,6 @@ public class InventoryUI : MonoBehaviour
 
     [Header("Auto Reopen")]
     public Toggle autoReopenToggle;
-    public Button autoReopenButton;
-    public Text autoReopenStatusLabel;
-    [SerializeField] private Color autoReopenOnColor = new Color(0.278f, 0.749f, 0.392f);
-    [SerializeField] private Color autoReopenOffColor = new Color(0.725f, 0.278f, 0.278f);
 
 
     [Header("Panel Animation")]
@@ -354,11 +350,6 @@ public class InventoryUI : MonoBehaviour
             autoReopenToggle.onValueChanged.AddListener(_ => ToggleAutoReopen());
         }
 
-        if (autoReopenButton != null)
-        {
-            autoReopenButton.onClick.RemoveAllListeners();
-            autoReopenButton.onClick.AddListener(ToggleAutoReopen);
-        }
     }
 
     public void ToggleAutoReopen()
@@ -373,27 +364,6 @@ public class InventoryUI : MonoBehaviour
         if (autoReopenToggle != null)
         {
             autoReopenToggle.SetIsOnWithoutNotify(autoReopenEnabled);
-        }
-
-        if (autoReopenStatusLabel != null)
-        {
-            autoReopenStatusLabel.text = autoReopenEnabled ? "Auto Reopen: ON" : "Auto Reopen: OFF";
-            autoReopenStatusLabel.color = autoReopenEnabled ? autoReopenOnColor : autoReopenOffColor;
-        }
-
-        if (autoReopenButton != null)
-        {
-            var buttonLabel = autoReopenButton.GetComponentInChildren<Text>();
-            if (buttonLabel != null)
-            {
-                buttonLabel.text = autoReopenEnabled ? "Disable Auto Reopen" : "Enable Auto Reopen";
-            }
-
-            var buttonImage = autoReopenButton.GetComponent<Image>();
-            if (buttonImage != null)
-            {
-                buttonImage.color = autoReopenEnabled ? autoReopenOnColor : autoReopenOffColor;
-            }
         }
     }
 
