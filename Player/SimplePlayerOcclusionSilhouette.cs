@@ -15,6 +15,7 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
     private readonly List<Material> createdSilhouetteInstances = new();
 
     private Collider playerCollider;
+    private Transform playerRoot;
     private Camera targetCamera;
     private float nextCheckTime;
     private bool isOccluded;
@@ -22,6 +23,7 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
     private void Awake()
     {
         playerCollider = GetComponent<Collider>();
+        playerRoot = transform.root;
         targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
 
         if (targetRenderers == null || targetRenderers.Length == 0)
@@ -90,21 +92,50 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
         ApplyMaterials(occluded);
     }
 
+    private static readonly Vector3[] OcclusionSampleOffsets =
+    {
+        Vector3.zero,
+        Vector3.right,
+        Vector3.left,
+        Vector3.up,
+        Vector3.down,
+        Vector3.forward,
+        Vector3.back,
+        new Vector3(1f, 1f, 1f),
+        new Vector3(1f, 1f, -1f),
+        new Vector3(1f, -1f, 1f),
+        new Vector3(-1f, 1f, 1f),
+        new Vector3(1f, -1f, -1f),
+        new Vector3(-1f, 1f, -1f),
+        new Vector3(-1f, -1f, 1f),
+        new Vector3(-1f, -1f, -1f)
+    };
+
     private bool IsOccluded()
     {
-        Vector3 center = playerCollider.bounds.center;
-        Vector3 toCamera = targetCamera.transform.position - center;
-        float distance = toCamera.magnitude;
-        if (distance <= Mathf.Epsilon)
-        {
-            return false;
-        }
+        Bounds bounds = playerCollider.bounds;
+        Vector3 extents = bounds.extents;
+        Vector3 cameraPosition = targetCamera.transform.position;
 
-        if (Physics.Raycast(center, toCamera / distance, out RaycastHit hit, distance, occluderMask, QueryTriggerInteraction.Ignore))
+        foreach (var offset in OcclusionSampleOffsets)
         {
-            if (hit.collider != playerCollider && !hit.transform.IsChildOf(transform))
+            Vector3 samplePoint = bounds.center + new Vector3(extents.x * offset.x, extents.y * offset.y, extents.z * offset.z);
+            Vector3 toCamera = cameraPosition - samplePoint;
+            float sqrDistance = toCamera.sqrMagnitude;
+            if (sqrDistance <= Mathf.Epsilon)
             {
-                return true;
+                continue;
+            }
+
+            float distance = Mathf.Sqrt(sqrDistance);
+            Vector3 direction = toCamera / distance;
+
+            if (Physics.Raycast(samplePoint, direction, out RaycastHit hit, distance, occluderMask, QueryTriggerInteraction.Ignore))
+            {
+                if (hit.collider != playerCollider && hit.transform.root != playerRoot)
+                {
+                    return true;
+                }
             }
         }
 
