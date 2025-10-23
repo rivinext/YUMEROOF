@@ -130,10 +130,18 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
 
             if (Physics.Raycast(samplePoint, direction, out RaycastHit hit, distance, occluderMask, QueryTriggerInteraction.Ignore))
             {
-                if (hit.collider != playerCollider && !hit.transform.IsChildOf(transform))
+                Transform hitTransform = hit.transform;
+                if (hit.collider == playerCollider || hitTransform == transform)
                 {
-                    return true;
+                    continue;
                 }
+
+                if (hitTransform.IsChildOf(transform) || hitTransform.root == transform.root)
+                {
+                    continue;
+                }
+
+                return true;
             }
         }
 
