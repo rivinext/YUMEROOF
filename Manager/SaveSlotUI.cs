@@ -51,6 +51,12 @@ public class SaveSlotUI : MonoBehaviour
             selectButton.onClick.AddListener(Select);
         if (deleteButton != null)
             deleteButton.onClick.AddListener(RequestDelete);
+
+        // デフォルトでは「Start」を表示し、スタートボタンのみ操作可能にする
+        SetSelectButtonLabelKey(startKey);
+        if (selectButton != null)
+            selectButton.interactable = true;
+        SetDeleteButtonState(false);
     }
 
     void OnValidate()
@@ -77,8 +83,7 @@ public class SaveSlotUI : MonoBehaviour
             // Select button: show "Load"
             SetSelectButtonLabelKey(loadKey);
 
-            if (deleteButton != null)
-                deleteButton.interactable = true;
+            SetDeleteButtonState(true);
 
             if (lastSaveText != null)
             {
@@ -131,8 +136,7 @@ public class SaveSlotUI : MonoBehaviour
             // Select button: show "Start"
             SetSelectButtonLabelKey(startKey);
 
-            if (deleteButton != null)
-                deleteButton.interactable = false;
+            SetDeleteButtonState(false);
 
             if (lastSaveText != null)
                 lastSaveText.text = string.Empty;
@@ -155,8 +159,7 @@ public class SaveSlotUI : MonoBehaviour
     {
         if (selectButton != null)
             selectButton.interactable = interactable;
-        if (deleteButton != null)
-            deleteButton.interactable = interactable;
+        SetDeleteButtonState(interactable);
     }
 
     void Select()
@@ -167,6 +170,21 @@ public class SaveSlotUI : MonoBehaviour
     private void RequestDelete()
     {
         OnDeleteRequested?.Invoke(slotKey);
+    }
+
+    private void SetDeleteButtonState(bool interactable)
+    {
+        if (deleteButton == null)
+            return;
+
+        deleteButton.interactable = interactable;
+
+        if (deleteButton.transition == Selectable.Transition.ColorTint && deleteButton.targetGraphic != null)
+        {
+            var colors = deleteButton.colors;
+            var targetColor = interactable ? colors.normalColor : colors.disabledColor;
+            deleteButton.targetGraphic.CrossFadeColor(targetColor, 0f, true, true);
+        }
     }
 
     private void UpdateSlotKey()
