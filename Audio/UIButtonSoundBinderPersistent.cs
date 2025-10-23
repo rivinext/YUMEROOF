@@ -90,6 +90,9 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
         var buttons = FindObjectsOfType<Button>(true);
         foreach (var btn in buttons)
         {
+            if (btn == null) continue;
+            if (btn.GetComponentInParent<UIButtonSoundBlocker>() != null) continue;
+
             int id = btn.GetInstanceID();
             if (bound.Contains(id)) continue;
 
@@ -161,7 +164,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             if (!btn.interactable) return;
             if (eventData is PointerEventData pointerEvent)
             {
-                if (pointerEvent.button != PointerEventData.InputButton.Left && pointerEvent.pointerId < 0) return;
+                if (pointerEvent.button != PointerEventData.InputButton.Left) return;
             }
             MarkClickCandidate(pointerClickCandidates, btn.GetInstanceID());
         });
