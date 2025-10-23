@@ -434,17 +434,6 @@ public class UIMenuManager : MonoBehaviour
         if (Screen.width <= 0 || Screen.height <= 0) return;
 
         Vector2 mousePosition = Input.mousePosition;
-        float halfWidth = Screen.width * 0.5f;
-        float halfHeight = Screen.height * 0.5f;
-
-        float normalizedX = halfWidth > 0f ? Mathf.Clamp((mousePosition.x - halfWidth) / halfWidth, -1f, 1f) : 0f;
-        float normalizedY = halfHeight > 0f ? Mathf.Clamp((mousePosition.y - halfHeight) / halfHeight, -1f, 1f) : 0f;
-        if (Cursor.lockState == CursorLockMode.Locked)
-        {
-            normalizedX = 0f;
-            normalizedY = 0f;
-        }
-        Vector2 normalizedOffset = new Vector2(normalizedX, normalizedY);
 
         for (int i = 0; i < parallaxLayers.Length; i++)
         {
@@ -455,7 +444,46 @@ public class UIMenuManager : MonoBehaviour
                 continue;
             }
 
-            Vector2 targetPosition = layer.baseAnchoredPosition + Vector2.Scale(layer.maxOffset, normalizedOffset);
+            if (Cursor.lockState == CursorLockMode.Locked)
+            {
+                layer.target.anchoredPosition = layer.baseAnchoredPosition;
+                layer.velocity = Vector2.zero;
+                parallaxLayers[i] = layer;
+                continue;
+            }
+
+            RectTransform parentRect = layer.target.transform.parent as RectTransform;
+            if (parentRect == null)
+            {
+                parallaxLayers[i] = layer;
+                continue;
+            }
+
+            Canvas parentCanvas = parentRect.GetComponentInParent<Canvas>();
+            Camera eventCamera = null;
+            if (parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+            {
+                eventCamera = parentCanvas.worldCamera;
+                if (eventCamera == null)
+                {
+                    parallaxLayers[i] = layer;
+                    continue;
+                }
+            }
+
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, mousePosition, eventCamera, out Vector2 localPoint))
+            {
+                parallaxLayers[i] = layer;
+                continue;
+            }
+
+            Vector2 delta = localPoint - layer.baseAnchoredPosition;
+            Vector2 clampedDelta = new Vector2(
+                Mathf.Clamp(delta.x, -layer.maxOffset.x, layer.maxOffset.x),
+                Mathf.Clamp(delta.y, -layer.maxOffset.y, layer.maxOffset.y)
+            );
+
+            Vector2 targetPosition = layer.baseAnchoredPosition + clampedDelta;
 
             if (layer.smoothTime > 0f)
             {
