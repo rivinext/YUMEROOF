@@ -18,6 +18,16 @@ namespace Player
         public float checkInterval = 0.1f;
         public bool forceSilhouette = false;
 
+        [Header("Occlusion Sampling")]
+        [Tooltip("シルエット判定に使用する垂直方向のサンプル数です。1 以上の値を設定してください。")]
+        public int verticalSampleCount = 3;
+
+        [Tooltip("シルエット判定に使用する左右方向のサンプル数です。1 以上の値を設定してください。")]
+        public int horizontalSampleCount = 3;
+
+        [Tooltip("シルエット判定に使用する前後方向のサンプル数です。1 以上の値を設定してください。")]
+        public int depthSampleCount = 3;
+
         [Tooltip("シルエットマテリアルのレンダーキューを調整したい場合は 0 より大きい値を設定します。")]
         public int silhouetteRenderQueueOverride = 0;
 
@@ -186,21 +196,46 @@ namespace Player
             Vector3 forwardOffset = transform.forward * bounds.extents.z;
             Vector3 rightOffset = transform.right * bounds.extents.x;
 
-            Vector3[] samplePoints =
+            int verticalSteps = Mathf.Max(1, verticalSampleCount);
+            int horizontalSteps = Mathf.Max(1, horizontalSampleCount);
+            int depthSteps = Mathf.Max(1, depthSampleCount);
+
+            List<Vector3> samplePoints = new List<Vector3>(verticalSteps * horizontalSteps * depthSteps + 8)
             {
                 bounds.center,
                 bounds.center + upOffset,
-                bounds.center - upOffset * 0.5f,
-                bounds.center + forwardOffset * 0.5f,
-                bounds.center - forwardOffset * 0.5f,
-                bounds.center + rightOffset * 0.5f,
-                bounds.center - rightOffset * 0.5f
+                bounds.center - upOffset,
+                bounds.center + forwardOffset,
+                bounds.center - forwardOffset,
+                bounds.center + rightOffset,
+                bounds.center - rightOffset
             };
+
+            for (int y = 0; y < verticalSteps; y++)
+            {
+                float verticalT = verticalSteps == 1 ? 0f : Mathf.Lerp(-1f, 1f, y / (float)(verticalSteps - 1));
+                Vector3 verticalOffset = upOffset * verticalT;
+
+                for (int x = 0; x < horizontalSteps; x++)
+                {
+                    float horizontalT = horizontalSteps == 1 ? 0f : Mathf.Lerp(-1f, 1f, x / (float)(horizontalSteps - 1));
+                    Vector3 horizontalOffset = rightOffset * horizontalT;
+
+                    for (int z = 0; z < depthSteps; z++)
+                    {
+                        float depthT = depthSteps == 1 ? 0f : Mathf.Lerp(-1f, 1f, z / (float)(depthSteps - 1));
+                        Vector3 depthOffset = forwardOffset * depthT;
+
+                        Vector3 samplePoint = bounds.center + verticalOffset + horizontalOffset + depthOffset;
+                        samplePoints.Add(samplePoint);
+                    }
+                }
+            }
 
             Vector3 cameraPosition = targetCamera.transform.position;
             Transform playerTransform = transform;
 
-            for (int i = 0; i < samplePoints.Length; i++)
+            for (int i = 0; i < samplePoints.Count; i++)
             {
                 Vector3 point = samplePoints[i];
                 Vector3 toCamera = cameraPosition - point;
