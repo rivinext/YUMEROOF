@@ -60,10 +60,6 @@ public class ConfirmationPopup : MonoBehaviour
             if (backdropSprite != null)
                 backdropImage.sprite = backdropSprite;
             SetBackdropActive(false);
-            if (backdropButton != null && !backdropButton.TryGetComponent<UIButtonSoundBlocker>(out _))
-            {
-                backdropButton.gameObject.AddComponent<UIButtonSoundBlocker>();
-            }
         }
         else
         {
