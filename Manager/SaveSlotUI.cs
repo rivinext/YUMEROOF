@@ -44,6 +44,8 @@ public class SaveSlotUI : MonoBehaviour
 
     public string SlotKey => slotKey;
 
+    private bool hasSaveData;
+
     void Awake()
     {
         UpdateSlotKey();
@@ -57,7 +59,10 @@ public class SaveSlotUI : MonoBehaviour
         if (selectButton != null)
             selectButton.interactable = true;
         if (deleteButton != null)
+        {
+            hasSaveData = false;
             deleteButton.interactable = false;
+        }
     }
 
     void OnValidate()
@@ -81,6 +86,7 @@ public class SaveSlotUI : MonoBehaviour
         var data = SaveGameManager.Instance.LoadMetadata(slotKey);
         if (data != null)
         {
+            hasSaveData = true;
             // Select button: show "Load"
             SetSelectButtonLabelKey(loadKey);
 
@@ -135,6 +141,7 @@ public class SaveSlotUI : MonoBehaviour
         }
         else
         {
+            hasSaveData = false;
             // Select button: show "Start"
             SetSelectButtonLabelKey(startKey);
 
@@ -163,7 +170,7 @@ public class SaveSlotUI : MonoBehaviour
         if (selectButton != null)
             selectButton.interactable = interactable;
         if (deleteButton != null)
-            deleteButton.interactable = interactable;
+            deleteButton.interactable = interactable && hasSaveData;
     }
 
     void Select()
