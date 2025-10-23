@@ -161,7 +161,10 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
             if (!btn.interactable) return;
             if (eventData is PointerEventData pointerEvent)
             {
-                if (pointerEvent.button != PointerEventData.InputButton.Left && pointerEvent.pointerId < 0) return;
+                if (pointerEvent.button != PointerEventData.InputButton.Left) return;
+
+                var module = pointerEvent.pointerPressRaycast.module;
+                if (module != null && !(module is GraphicRaycaster)) return;
             }
             MarkClickCandidate(pointerClickCandidates, btn.GetInstanceID());
         });
