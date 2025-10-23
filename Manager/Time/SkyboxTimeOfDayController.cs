@@ -6,12 +6,14 @@ using UnityEngine;
 public class SkyboxTimeOfDayController : MonoBehaviour
 {
     [SerializeField] private string transitionPropertyName = "_CubemapTransition";
-    [SerializeField] private string exposurePropertyName = "_CubemapExposure";
+    [SerializeField] private string exposurePropertyName = "_Exposure";
     [SerializeField] private AnimationCurve transitionCurve = CreateDefaultTransitionCurve();
     [SerializeField] private AnimationCurve exposureCurve = CreateDefaultExposureCurve();
 
     private Material skyboxInstance;
     private GameClock clock;
+    private bool hasLoggedMissingTransitionProperty;
+    private bool hasLoggedMissingExposureProperty;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void EnsureInstance()
@@ -101,14 +103,30 @@ public class SkyboxTimeOfDayController : MonoBehaviour
 
         if (!string.IsNullOrEmpty(transitionPropertyName))
         {
-            float transitionValue = transitionCurve.Evaluate(normalizedTime);
-            skyboxInstance.SetFloat(transitionPropertyName, transitionValue);
+            if (skyboxInstance.HasProperty(transitionPropertyName))
+            {
+                float transitionValue = transitionCurve.Evaluate(normalizedTime);
+                skyboxInstance.SetFloat(transitionPropertyName, transitionValue);
+            }
+            else if (!hasLoggedMissingTransitionProperty)
+            {
+                Debug.LogWarning($"SkyboxTimeOfDayController: Skybox material is missing transition property '{transitionPropertyName}'.");
+                hasLoggedMissingTransitionProperty = true;
+            }
         }
 
         if (!string.IsNullOrEmpty(exposurePropertyName))
         {
-            float exposureValue = exposureCurve.Evaluate(normalizedTime);
-            skyboxInstance.SetFloat(exposurePropertyName, exposureValue);
+            if (skyboxInstance.HasProperty(exposurePropertyName))
+            {
+                float exposureValue = exposureCurve.Evaluate(normalizedTime);
+                skyboxInstance.SetFloat(exposurePropertyName, exposureValue);
+            }
+            else if (!hasLoggedMissingExposureProperty)
+            {
+                Debug.LogWarning($"SkyboxTimeOfDayController: Skybox material is missing exposure property '{exposurePropertyName}'.");
+                hasLoggedMissingExposureProperty = true;
+            }
         }
     }
 
