@@ -18,7 +18,6 @@ public class FreePlacementSystem : MonoBehaviour
 
     [Header("Placement Settings")]
     public GameObject cornerMarkerPrefab;
-    public GameObject removeButtonPrefab;
     public float wallSnapDistance = 0.1f;
     [Tooltip("アンカー同士の吸着を許可する距離")]
     [SerializeField] private float anchorSnapDistance = 0.3f;
