@@ -12,8 +12,12 @@ public enum SlotType { Story, Creative }
 public class SaveSlotUI : MonoBehaviour
 {
     private string slotKey;
+
+    [Header("Slot Identity")]
     [SerializeField] private SlotType slotType;
     [SerializeField] private int slotIndex;
+
+    [Header("UI References")]
     [SerializeField] private TMP_Text slotNameText;
     [SerializeField] private TMP_Text lastSaveText;
     [SerializeField] private TMP_Text chapterText;
@@ -22,10 +26,18 @@ public class SaveSlotUI : MonoBehaviour
     [SerializeField] private Image screenshotImage;
     [SerializeField] private Button selectButton;
     [SerializeField] private Button deleteButton;
-    [SerializeField] private TMP_Text selectButtonLabel;
-    [SerializeField] private LocalizeStringEvent selectButtonLocalizer;
-    [SerializeField] private LocalizedString selectButtonStartString;
-    [SerializeField] private LocalizedString selectButtonLoadString;
+
+    [Header("Localization (Select Button)")]
+    [Tooltip("Localize String Event attached to the select button label (e.g., TextMeshProUGUI on the button).")]
+    [SerializeField] private LocalizeStringEvent selectButtonLocalizeEvent;
+
+    [Tooltip("Fallback plain text label, used only if LocalizeStringEvent is not provided.")]
+    [SerializeField] private TMP_Text selectButtonLabelFallback;
+
+    [Header("Localization Keys")]
+    [SerializeField] private string tableName = "StandardText";
+    [SerializeField] private string startKey = "Start";
+    [SerializeField] private string loadKey = "Load";
 
     public event Action<string> OnSelected;
     public event Action<string> OnDeleteRequested;
@@ -35,8 +47,6 @@ public class SaveSlotUI : MonoBehaviour
     void Awake()
     {
         UpdateSlotKey();
-        if (selectButtonLocalizer == null && selectButtonLabel != null)
-            selectButtonLocalizer = selectButtonLabel.GetComponent<LocalizeStringEvent>();
         if (selectButton != null)
             selectButton.onClick.AddListener(Select);
         if (deleteButton != null)
@@ -64,9 +74,12 @@ public class SaveSlotUI : MonoBehaviour
         var data = SaveGameManager.Instance.LoadMetadata(slotKey);
         if (data != null)
         {
-            UpdateSelectButtonLocalization(selectButtonLoadString);
+            // Select button: show "Load"
+            SetSelectButtonLabelKey(loadKey);
+
             if (deleteButton != null)
                 deleteButton.interactable = true;
+
             if (lastSaveText != null)
             {
                 if (DateTime.TryParse(data.saveDate, out DateTime saveDate))
@@ -74,6 +87,7 @@ public class SaveSlotUI : MonoBehaviour
                 else
                     lastSaveText.text = data.saveDate; // 変換できない場合は元の文字列を表示
             }
+
             if (chapterText != null)
             {
                 if (data is StorySaveData story)
@@ -83,13 +97,16 @@ public class SaveSlotUI : MonoBehaviour
                 else
                     chapterText.text = data.chapterName;
             }
+
             if (locationText != null)
                 locationText.text = data.location;
+
             if (playTimeText != null)
             {
                 var ts = TimeSpan.FromSeconds(data.playTime);
                 playTimeText.text = ts.ToString(@"hh\:mm\:ss");
             }
+
             if (screenshotImage != null)
             {
                 screenshotImage.sprite = null;
@@ -111,9 +128,12 @@ public class SaveSlotUI : MonoBehaviour
         }
         else
         {
-            UpdateSelectButtonLocalization(selectButtonStartString);
+            // Select button: show "Start"
+            SetSelectButtonLabelKey(startKey);
+
             if (deleteButton != null)
                 deleteButton.interactable = false;
+
             if (lastSaveText != null)
                 lastSaveText.text = string.Empty;
             if (chapterText != null)
@@ -125,23 +145,6 @@ public class SaveSlotUI : MonoBehaviour
             if (screenshotImage != null)
                 screenshotImage.sprite = null;
         }
-    }
-
-    private void UpdateSelectButtonLocalization(LocalizedString targetString)
-    {
-        if (selectButtonLocalizer == null)
-        {
-            if (selectButtonLabel != null)
-                selectButtonLocalizer = selectButtonLabel.GetComponent<LocalizeStringEvent>();
-            if (selectButtonLocalizer == null)
-                return;
-        }
-
-        if (targetString == null)
-            return;
-
-        selectButtonLocalizer.StringReference = targetString;
-        selectButtonLocalizer.RefreshString();
     }
 
     /// <summary>
@@ -196,5 +199,23 @@ public class SaveSlotUI : MonoBehaviour
         }
 
         slotKey = $"{slotType}{slotIndex}";
+    }
+
+    /// <summary>
+    /// LocalizeStringEvent があればキーを割り当てて即座に更新。
+    /// なければフォールバックの TMP_Text に英語キー文字列を直接表示。
+    /// </summary>
+    private void SetSelectButtonLabelKey(string key)
+    {
+        if (selectButtonLocalizeEvent != null)
+        {
+            selectButtonLocalizeEvent.StringReference = new LocalizedString(tableName, key);
+            selectButtonLocalizeEvent.RefreshString();
+        }
+        else if (selectButtonLabelFallback != null)
+        {
+            // フォールバック: ローカライズ未使用の場合は英語キーそのまま表示
+            selectButtonLabelFallback.text = key;
+        }
     }
 }
