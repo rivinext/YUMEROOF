@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
 
 public enum SlotType { Story, Creative }
 
@@ -21,6 +23,9 @@ public class SaveSlotUI : MonoBehaviour
     [SerializeField] private Button selectButton;
     [SerializeField] private Button deleteButton;
     [SerializeField] private TMP_Text selectButtonLabel;
+    [SerializeField] private LocalizeStringEvent selectButtonLocalizer;
+    [SerializeField] private LocalizedString selectButtonStartString;
+    [SerializeField] private LocalizedString selectButtonLoadString;
 
     public event Action<string> OnSelected;
     public event Action<string> OnDeleteRequested;
@@ -30,6 +35,8 @@ public class SaveSlotUI : MonoBehaviour
     void Awake()
     {
         UpdateSlotKey();
+        if (selectButtonLocalizer == null && selectButtonLabel != null)
+            selectButtonLocalizer = selectButtonLabel.GetComponent<LocalizeStringEvent>();
         if (selectButton != null)
             selectButton.onClick.AddListener(Select);
         if (deleteButton != null)
@@ -57,8 +64,7 @@ public class SaveSlotUI : MonoBehaviour
         var data = SaveGameManager.Instance.LoadMetadata(slotKey);
         if (data != null)
         {
-            if (selectButtonLabel != null)
-                selectButtonLabel.text = "Load";
+            UpdateSelectButtonLocalization(selectButtonLoadString);
             if (deleteButton != null)
                 deleteButton.interactable = true;
             if (lastSaveText != null)
@@ -105,8 +111,7 @@ public class SaveSlotUI : MonoBehaviour
         }
         else
         {
-            if (selectButtonLabel != null)
-                selectButtonLabel.text = "Start";
+            UpdateSelectButtonLocalization(selectButtonStartString);
             if (deleteButton != null)
                 deleteButton.interactable = false;
             if (lastSaveText != null)
@@ -120,6 +125,23 @@ public class SaveSlotUI : MonoBehaviour
             if (screenshotImage != null)
                 screenshotImage.sprite = null;
         }
+    }
+
+    private void UpdateSelectButtonLocalization(LocalizedString targetString)
+    {
+        if (selectButtonLocalizer == null)
+        {
+            if (selectButtonLabel != null)
+                selectButtonLocalizer = selectButtonLabel.GetComponent<LocalizeStringEvent>();
+            if (selectButtonLocalizer == null)
+                return;
+        }
+
+        if (targetString == null)
+            return;
+
+        selectButtonLocalizer.StringReference = targetString;
+        selectButtonLocalizer.RefreshString();
     }
 
     /// <summary>
