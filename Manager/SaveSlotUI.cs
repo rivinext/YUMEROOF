@@ -51,6 +51,13 @@ public class SaveSlotUI : MonoBehaviour
             selectButton.onClick.AddListener(Select);
         if (deleteButton != null)
             deleteButton.onClick.AddListener(RequestDelete);
+
+        // デフォルトでは「Start」を表示し、スタートボタンのみ操作可能にする
+        SetSelectButtonLabelKey(startKey);
+        if (selectButton != null)
+            selectButton.interactable = true;
+        if (deleteButton != null)
+            deleteButton.interactable = false;
     }
 
     void OnValidate()
