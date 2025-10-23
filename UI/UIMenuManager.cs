@@ -10,6 +10,17 @@ using DG.Tweening;
 /// </summary>
 public class UIMenuManager : MonoBehaviour
 {
+    [System.Serializable]
+    private struct ParallaxLayer
+    {
+        public RectTransform target;
+        public Vector2 maxOffset;
+        public float smoothTime;
+
+        [HideInInspector] public Vector2 baseAnchoredPosition;
+        [HideInInspector] public Vector2 velocity;
+    }
+
     [Header("UI Panels")]
     [SerializeField] private UISlidePanel optionPanel;
     [SerializeField] private UISlidePanel storySlotPanel;
@@ -43,6 +54,9 @@ public class UIMenuManager : MonoBehaviour
         SelectedSlotKey = null;
     }
 
+    [Header("Parallax")]
+    [SerializeField] private ParallaxLayer[] parallaxLayers;
+
     [Header("Post Processing")]
     [SerializeField] private Volume postProcessVolume;
     [SerializeField] private float blurTransitionDuration = 0.3f;
@@ -51,6 +65,11 @@ public class UIMenuManager : MonoBehaviour
     private DepthOfField depthOfField;
     private UISlidePanel currentOpenPanel;
     private bool isTransitioning = false;
+
+    private void Awake()
+    {
+        InitializeParallaxLayers();
+    }
 
     private void Start()
     {
@@ -79,6 +98,11 @@ public class UIMenuManager : MonoBehaviour
         SetupPanelCallbacks();
         InitializeSlots();
         CloseAllPanelsImmediate();
+    }
+
+    private void Update()
+    {
+        UpdateParallax();
     }
 
 
@@ -358,6 +382,8 @@ public class UIMenuManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        ResetParallax();
+
         // イベントリスナーのクリーンアップ
         if (optionButton != null) optionButton.onClick.RemoveAllListeners();
         if (storyButton != null) storyButton.onClick.RemoveAllListeners();
@@ -380,6 +406,89 @@ public class UIMenuManager : MonoBehaviour
                 slot.OnSelected -= HandleSlotSelected;
                 slot.OnDeleteRequested -= HandleDeleteRequested;
             }
+        }
+    }
+
+    private void InitializeParallaxLayers()
+    {
+        if (parallaxLayers == null) return;
+
+        for (int i = 0; i < parallaxLayers.Length; i++)
+        {
+            var layer = parallaxLayers[i];
+            if (layer.target == null)
+            {
+                parallaxLayers[i] = layer;
+                continue;
+            }
+
+            layer.baseAnchoredPosition = layer.target.anchoredPosition;
+            layer.velocity = Vector2.zero;
+            parallaxLayers[i] = layer;
+        }
+    }
+
+    private void UpdateParallax()
+    {
+        if (parallaxLayers == null || parallaxLayers.Length == 0) return;
+        if (Screen.width <= 0 || Screen.height <= 0) return;
+
+        Vector2 mousePosition = Input.mousePosition;
+        float halfWidth = Screen.width * 0.5f;
+        float halfHeight = Screen.height * 0.5f;
+
+        float normalizedX = halfWidth > 0f ? Mathf.Clamp((mousePosition.x - halfWidth) / halfWidth, -1f, 1f) : 0f;
+        float normalizedY = halfHeight > 0f ? Mathf.Clamp((mousePosition.y - halfHeight) / halfHeight, -1f, 1f) : 0f;
+        if (Cursor.lockState == CursorLockMode.Locked)
+        {
+            normalizedX = 0f;
+            normalizedY = 0f;
+        }
+        Vector2 normalizedOffset = new Vector2(normalizedX, normalizedY);
+
+        for (int i = 0; i < parallaxLayers.Length; i++)
+        {
+            var layer = parallaxLayers[i];
+            if (layer.target == null)
+            {
+                parallaxLayers[i] = layer;
+                continue;
+            }
+
+            Vector2 targetPosition = layer.baseAnchoredPosition + Vector2.Scale(layer.maxOffset, normalizedOffset);
+
+            if (layer.smoothTime > 0f)
+            {
+                Vector2 currentPosition = layer.target.anchoredPosition;
+                Vector2 newPosition = Vector2.SmoothDamp(currentPosition, targetPosition, ref layer.velocity, layer.smoothTime);
+                layer.target.anchoredPosition = newPosition;
+            }
+            else
+            {
+                layer.target.anchoredPosition = targetPosition;
+                layer.velocity = Vector2.zero;
+            }
+
+            parallaxLayers[i] = layer;
+        }
+    }
+
+    public void ResetParallax()
+    {
+        if (parallaxLayers == null) return;
+
+        for (int i = 0; i < parallaxLayers.Length; i++)
+        {
+            var layer = parallaxLayers[i];
+            if (layer.target == null)
+            {
+                parallaxLayers[i] = layer;
+                continue;
+            }
+
+            layer.target.anchoredPosition = layer.baseAnchoredPosition;
+            layer.velocity = Vector2.zero;
+            parallaxLayers[i] = layer;
         }
     }
 }
