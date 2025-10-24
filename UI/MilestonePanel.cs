@@ -637,12 +637,22 @@ public class MilestonePanel : MonoBehaviour
         currentProgressIndex = targetIndex;
     }
 
-    public void ShowMilestoneTooltip(int index, RectTransform milestoneRectTransform)
+    public void ShowMilestoneTooltip(int index, RectTransform milestoneRectTransform = null)
     {
         if (MilestoneManager.Instance == null)
         {
             HideMilestoneTooltip();
             return;
+        }
+
+        if (milestoneRectTransform == null &&
+            index >= 0 && index < milestoneImages.Count)
+        {
+            var image = milestoneImages[index];
+            if (image != null)
+            {
+                milestoneRectTransform = image.rectTransform;
+            }
         }
 
         if (!MilestoneManager.Instance.TryGetMilestone(index, out var milestone) ||
