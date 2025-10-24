@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using UnityEngine.Serialization;
 using TMPro;
 using System.Collections;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
 
 public class MilestonePanel : MonoBehaviour
 {
@@ -22,6 +24,10 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private Image rewardImage;
     [SerializeField] private Sprite rewardFallbackSprite;
     public TMP_Text milestoneIdText;
+    [Header("Localization")]
+    [SerializeField] private string localizationTableName = "StandardText";
+    [SerializeField] private string cozyLabelKey = "Cozy";
+    [SerializeField] private string natureLabelKey = "Nature";
     [Header("Tooltip")]
     [SerializeField] private GameObject tooltipPanel;
     [SerializeField] private TMP_Text tooltipText;
@@ -74,6 +80,15 @@ public class MilestonePanel : MonoBehaviour
     private Coroutine tooltipFadeCoroutine;
     private int currentProgressIndex = 0;
     private bool tooltipActive;
+    private string cozyLabel = "Cozy";
+    private string natureLabel = "Nature";
+    private bool isLocalizationSubscribed;
+    private MilestoneManager.Milestone lastMilestoneData;
+    private int lastCozyValue;
+    private int lastNatureValue;
+    private int lastItemCountValue;
+    private bool hasDisplayData;
+    private MilestoneManager.Milestone currentTooltipMilestone;
 
     void Awake()
     {
@@ -83,6 +98,7 @@ public class MilestonePanel : MonoBehaviour
 
     void Start()
     {
+        StartCoroutine(InitializeLocalization());
         isOpen = false;
         CacheTooltipReferences();
         if (rewardImage != null)
@@ -155,6 +171,11 @@ public class MilestonePanel : MonoBehaviour
 
     void OnDestroy()
     {
+        if (isLocalizationSubscribed)
+        {
+            LocalizationSettings.SelectedLocaleChanged -= HandleLocaleChanged;
+            isLocalizationSubscribed = false;
+        }
         if (MilestoneManager.Instance != null)
         {
             MilestoneManager.Instance.OnMilestoneProgress -= HandleMilestoneProgress;
@@ -453,13 +474,19 @@ public class MilestonePanel : MonoBehaviour
 
     void UpdateDisplay(MilestoneManager.Milestone milestone, int cozy, int nature, int itemCount)
     {
+        lastMilestoneData = milestone;
+        lastCozyValue = cozy;
+        lastNatureValue = nature;
+        lastItemCountValue = itemCount;
+        hasDisplayData = milestone != null;
+
         if (cozyText != null)
         {
-            cozyText.text = $"Cozy: {cozy}/{milestone.cozyRequirement}";
+            cozyText.text = $"{cozyLabel}: {cozy}/{milestone.cozyRequirement}";
         }
         if (natureText != null)
         {
-            natureText.text = $"Nature: {nature}/{milestone.natureRequirement}";
+            natureText.text = $"{natureLabel}: {nature}/{milestone.natureRequirement}";
         }
         if (itemText != null)
         {
@@ -478,6 +505,67 @@ public class MilestonePanel : MonoBehaviour
         if (milestoneIdText != null)
         {
             milestoneIdText.text = $"Milestone: {milestone.id}";
+        }
+    }
+
+    private IEnumerator InitializeLocalization()
+    {
+        yield return LocalizationSettings.InitializationOperation;
+        UpdateLocalizedLabels();
+        RefreshDisplayWithLastKnownData();
+        if (tooltipActive && currentTooltipMilestone != null)
+        {
+            UpdateTooltipDisplay(currentTooltipMilestone);
+        }
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationSettings.SelectedLocaleChanged += HandleLocaleChanged;
+            isLocalizationSubscribed = true;
+        }
+    }
+
+    private void HandleLocaleChanged(Locale _)
+    {
+        UpdateLocalizedLabels();
+        RefreshDisplayWithLastKnownData();
+        if (tooltipActive && currentTooltipMilestone != null)
+        {
+            UpdateTooltipDisplay(currentTooltipMilestone);
+        }
+    }
+
+    private void UpdateLocalizedLabels()
+    {
+        string localizedCozy = GetLocalizedString(cozyLabelKey, cozyLabel);
+        string localizedNature = GetLocalizedString(natureLabelKey, natureLabel);
+
+        if (!string.IsNullOrEmpty(localizedCozy))
+        {
+            cozyLabel = localizedCozy;
+        }
+
+        if (!string.IsNullOrEmpty(localizedNature))
+        {
+            natureLabel = localizedNature;
+        }
+    }
+
+    private string GetLocalizedString(string key, string fallback)
+    {
+        if (string.IsNullOrEmpty(localizationTableName) || string.IsNullOrEmpty(key))
+        {
+            return fallback;
+        }
+
+        string localized = LocalizationSettings.StringDatabase.GetLocalizedString(localizationTableName, key);
+        return string.IsNullOrEmpty(localized) ? fallback : localized;
+    }
+
+    private void RefreshDisplayWithLastKnownData()
+    {
+        if (hasDisplayData && lastMilestoneData != null)
+        {
+            UpdateDisplay(lastMilestoneData, lastCozyValue, lastNatureValue, lastItemCountValue);
         }
     }
 
@@ -614,33 +702,39 @@ public class MilestonePanel : MonoBehaviour
             tooltipText.text = milestone.id;
         }
 
-        UpdateTooltipFields();
+        currentTooltipMilestone = milestone;
+        UpdateTooltipDisplay(milestone);
+    }
 
-        void UpdateTooltipFields()
+    private void UpdateTooltipDisplay(MilestoneManager.Milestone milestone)
+    {
+        if (milestone == null)
         {
-            if (tooltipCozyText != null)
-            {
-                tooltipCozyText.text = $"Cozy: {milestone.cozyRequirement}";
-            }
-            if (tooltipNatureText != null)
-            {
-                tooltipNatureText.text = $"Nature: {milestone.natureRequirement}";
-            }
-            if (tooltipItemText != null)
-            {
-                tooltipItemText.text = $"Items: {milestone.itemCountRequirement}";
-            }
-            UpdateRarityRequirementText(tooltipRarityText, milestone);
-            if (tooltipRewardItemText != null)
-            {
-                tooltipRewardItemText.text = milestone.reward ?? string.Empty;
-            }
-            if (tooltipRewardMoneyText != null)
-            {
-                tooltipRewardMoneyText.text = milestone.moneyReward.ToString();
-            }
-            UpdateRewardIcon(milestone, tooltipRewardImage);
+            return;
         }
+
+        if (tooltipCozyText != null)
+        {
+            tooltipCozyText.text = $"{cozyLabel}: {milestone.cozyRequirement}";
+        }
+        if (tooltipNatureText != null)
+        {
+            tooltipNatureText.text = $"{natureLabel}: {milestone.natureRequirement}";
+        }
+        if (tooltipItemText != null)
+        {
+            tooltipItemText.text = $"Items: {milestone.itemCountRequirement}";
+        }
+        UpdateRarityRequirementText(tooltipRarityText, milestone);
+        if (tooltipRewardItemText != null)
+        {
+            tooltipRewardItemText.text = milestone.reward ?? string.Empty;
+        }
+        if (tooltipRewardMoneyText != null)
+        {
+            tooltipRewardMoneyText.text = milestone.moneyReward.ToString();
+        }
+        UpdateRewardIcon(milestone, tooltipRewardImage);
     }
 
     private void UpdateRarityRequirementText(TMP_Text targetText, MilestoneManager.Milestone milestone)
@@ -663,6 +757,7 @@ public class MilestonePanel : MonoBehaviour
     public void HideMilestoneTooltip()
     {
         tooltipActive = false;
+        currentTooltipMilestone = null;
         FadeTooltip(false);
     }
 
