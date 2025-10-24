@@ -1,6 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Draws a silhouette for the player when their collider is occluded by geometry.
+/// Environment objects that share the player's root can now act as occluders;
+/// place any equipment or attachments that should be ignored under <see cref="ignoreRoot"/>.
+/// </summary>
 [RequireComponent(typeof(Collider))]
 public class SimplePlayerOcclusionSilhouette : MonoBehaviour
 {
@@ -9,6 +14,8 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
     [SerializeField] private Renderer[] targetRenderers;
     [SerializeField] private LayerMask occluderMask = ~0;
     [SerializeField] private float checkInterval = 0.1f;
+    [SerializeField, Tooltip("Transforms under this root are ignored when checking for occlusion. Leave empty to default to the player's root.")]
+    private Transform ignoreRoot;
 
     private readonly List<Material[]> originalMaterials = new();
     private readonly List<Material[]> occludedMaterials = new();
@@ -23,6 +30,11 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
 
     private void Awake()
     {
+        if (ignoreRoot == null)
+        {
+            ignoreRoot = transform.root != null ? transform.root : transform;
+        }
+
         playerCollider = GetComponent<Collider>();
         playerColliders = GetComponentsInChildren<Collider>(true) ?? System.Array.Empty<Collider>();
         playerColliderSet.Clear();
@@ -170,12 +182,8 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
                 }
 
                 Transform hitTransform = hit.transform;
-                if (hitTransform == transform)
-                {
-                    continue;
-                }
-
-                if (hitTransform.IsChildOf(transform) || hitTransform.root == transform.root)
+                Transform ignoreTarget = ignoreRoot != null ? ignoreRoot : transform;
+                if (ignoreTarget != null && (hitTransform == ignoreTarget || hitTransform.IsChildOf(ignoreTarget)))
                 {
                     continue;
                 }
