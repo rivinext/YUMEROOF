@@ -24,31 +24,14 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
     private Collider playerCollider;
     private Collider[] playerColliders = System.Array.Empty<Collider>();
     private readonly HashSet<Collider> playerColliderSet = new();
+    private bool colliderCacheDirty;
     private Camera targetCamera;
     private float nextCheckTime;
     private bool isOccluded;
 
     private void Awake()
     {
-        if (ignoreRoot == null)
-        {
-            ignoreRoot = transform.root != null ? transform.root : transform;
-        }
-
-        playerCollider = GetComponent<Collider>();
-        playerColliders = GetComponentsInChildren<Collider>(true) ?? System.Array.Empty<Collider>();
-        playerColliderSet.Clear();
-        foreach (var collider in playerColliders)
-        {
-            if (collider != null)
-            {
-                playerColliderSet.Add(collider);
-            }
-        }
-        if (playerCollider != null)
-        {
-            playerColliderSet.Add(playerCollider);
-        }
+        RebuildPlayerColliderCache();
         targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
 
         if (targetRenderers == null || targetRenderers.Length == 0)
@@ -88,8 +71,23 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        colliderCacheDirty = true;
+    }
+
+    private void OnTransformChildrenChanged()
+    {
+        colliderCacheDirty = true;
+    }
+
     private void LateUpdate()
     {
+        if (colliderCacheDirty)
+        {
+            RebuildPlayerColliderCache();
+        }
+
         if (targetCamera == null)
         {
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
@@ -115,6 +113,63 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
 
         isOccluded = occluded;
         ApplyMaterials(occluded);
+    }
+
+    private void RebuildPlayerColliderCache()
+    {
+        colliderCacheDirty = false;
+
+        if (ignoreRoot == null)
+        {
+            ignoreRoot = transform.root != null ? transform.root : transform;
+        }
+
+        playerCollider = GetComponent<Collider>();
+
+        playerColliderSet.RemoveWhere(collider => collider == null);
+        playerColliderSet.Clear();
+
+        var collectedColliders = new List<Collider>();
+
+        void TryAddCollider(Collider collider)
+        {
+            if (collider == null)
+            {
+                return;
+            }
+
+            if (playerColliderSet.Add(collider))
+            {
+                collectedColliders.Add(collider);
+            }
+        }
+
+        TryAddCollider(playerCollider);
+
+        var hierarchyColliders = GetComponentsInChildren<Collider>(true);
+        if (hierarchyColliders != null)
+        {
+            foreach (var collider in hierarchyColliders)
+            {
+                TryAddCollider(collider);
+            }
+        }
+
+        if (ignoreRoot != null && ignoreRoot != transform)
+        {
+            var ignoredColliders = ignoreRoot.GetComponentsInChildren<Collider>(true);
+            if (ignoredColliders != null)
+            {
+                foreach (var collider in ignoredColliders)
+                {
+                    TryAddCollider(collider);
+                }
+            }
+        }
+
+        playerColliders = collectedColliders.Count > 0
+            ? collectedColliders.ToArray()
+            : System.Array.Empty<Collider>();
     }
 
     private static readonly Vector3[] OcclusionSampleOffsets =
