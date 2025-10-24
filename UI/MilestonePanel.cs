@@ -15,7 +15,9 @@ public class MilestonePanel : MonoBehaviour
     public TMP_Text cozyText;
     public TMP_Text natureText;
     public TMP_Text itemText;
-    public TMP_Text rarityProgressText;
+    [FormerlySerializedAs("rarityProgressText")]
+    public TMP_Text rarityValueText;
+    [SerializeField] private TMP_Text rarityLabelText;
     [FormerlySerializedAs("rewardText")]
     public TMP_Text rewardItemText;
     public TMP_Text rewardMoneyText;
@@ -28,7 +30,9 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private TMP_Text tooltipCozyText;
     [SerializeField] private TMP_Text tooltipNatureText;
     [SerializeField] private TMP_Text tooltipItemText;
-    [SerializeField] private TMP_Text tooltipRarityText;
+    [FormerlySerializedAs("tooltipRarityText")]
+    [SerializeField] private TMP_Text tooltipRarityValueText;
+    [SerializeField] private TMP_Text tooltipRarityLabelText;
     [FormerlySerializedAs("tooltipRewardText")]
     [SerializeField] private TMP_Text tooltipRewardItemText;
     [SerializeField] private TMP_Text tooltipRewardMoneyText;
@@ -455,20 +459,20 @@ public class MilestonePanel : MonoBehaviour
     {
         if (cozyText != null)
         {
-            cozyText.text = $"Cozy: {cozy}/{milestone.cozyRequirement}";
+            cozyText.text = $"{cozy}/{milestone.cozyRequirement}";
         }
         if (natureText != null)
         {
-            natureText.text = $"Nature: {nature}/{milestone.natureRequirement}";
+            natureText.text = $"{nature}/{milestone.natureRequirement}";
         }
         if (itemText != null)
         {
-            itemText.text = $"Items: {itemCount}/{milestone.itemCountRequirement}";
+            itemText.text = $"{itemCount}/{milestone.itemCountRequirement}";
         }
-        UpdateRarityRequirementText(rarityProgressText, milestone);
+        UpdateRarityRequirementTexts(rarityLabelText, rarityValueText, milestone, true);
         if (rewardItemText != null)
         {
-            rewardItemText.text = milestone.reward ?? string.Empty;
+            rewardItemText.text = GetRewardItemName(milestone);
         }
         if (rewardMoneyText != null)
         {
@@ -620,20 +624,20 @@ public class MilestonePanel : MonoBehaviour
         {
             if (tooltipCozyText != null)
             {
-                tooltipCozyText.text = $"Cozy: {milestone.cozyRequirement}";
+                tooltipCozyText.text = $"{milestone.cozyRequirement}";
             }
             if (tooltipNatureText != null)
             {
-                tooltipNatureText.text = $"Nature: {milestone.natureRequirement}";
+                tooltipNatureText.text = $"{milestone.natureRequirement}";
             }
             if (tooltipItemText != null)
             {
-                tooltipItemText.text = $"Items: {milestone.itemCountRequirement}";
+                tooltipItemText.text = $"{milestone.itemCountRequirement}";
             }
-            UpdateRarityRequirementText(tooltipRarityText, milestone);
+            UpdateRarityRequirementTexts(tooltipRarityLabelText, tooltipRarityValueText, milestone, false);
             if (tooltipRewardItemText != null)
             {
-                tooltipRewardItemText.text = milestone.reward ?? string.Empty;
+                tooltipRewardItemText.text = GetRewardItemName(milestone);
             }
             if (tooltipRewardMoneyText != null)
             {
@@ -643,16 +647,51 @@ public class MilestonePanel : MonoBehaviour
         }
     }
 
-    private void UpdateRarityRequirementText(TMP_Text targetText, MilestoneManager.Milestone milestone)
+    private string GetRewardItemName(MilestoneManager.Milestone milestone)
     {
-        if (targetText == null || milestone == null)
+        if (milestone == null || string.IsNullOrEmpty(milestone.reward) ||
+            string.Equals(milestone.reward, "None", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        var dataManager = FurnitureDataManager.Instance;
+        var furnitureData = dataManager?.GetFurnitureDataSO(milestone.reward);
+
+        if (furnitureData != null && !string.IsNullOrEmpty(furnitureData.nameID))
+        {
+            return furnitureData.nameID;
+        }
+
+        return milestone.reward;
+    }
+
+    private void UpdateRarityRequirementTexts(TMP_Text labelText, TMP_Text valueText, MilestoneManager.Milestone milestone, bool includeCurrentProgress)
+    {
+        if (milestone == null)
         {
             return;
         }
 
         string rarityName = GetRarityDisplayName(milestone.rarityRequirement);
-        int currentCount = MilestoneManager.Instance?.GetPlacedCountForRarity(milestone.rarityRequirement) ?? 0;
-        targetText.text = $"{rarityName}: {currentCount}/{milestone.rarityCountRequirement}";
+
+        if (labelText != null)
+        {
+            labelText.text = rarityName;
+        }
+
+        if (valueText != null)
+        {
+            if (includeCurrentProgress)
+            {
+                int currentCount = MilestoneManager.Instance?.GetPlacedCountForRarity(milestone.rarityRequirement) ?? 0;
+                valueText.text = $"{currentCount}/{milestone.rarityCountRequirement}";
+            }
+            else
+            {
+                valueText.text = $"{milestone.rarityCountRequirement}";
+            }
+        }
     }
 
     private string GetRarityDisplayName(Rarity rarity)
