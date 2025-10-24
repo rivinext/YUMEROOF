@@ -2,3 +2,6 @@ Key,Value
 CozyProgress,"Cozy: {0}/{1}"
 NatureProgress,"Nature: {0}/{1}"
 ItemProgress,"Items: {0}/{1}"
+Rarity_Common,Common
+Rarity_Uncommon,Uncommon
+Rarity_Rare,Rare

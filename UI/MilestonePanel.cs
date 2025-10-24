@@ -668,6 +668,41 @@ public class MilestonePanel : MonoBehaviour
 
     private string GetRarityDisplayName(Rarity rarity)
     {
+        string rarityKey = null;
+
+        switch (rarity)
+        {
+            case Rarity.Common:
+                rarityKey = "Rarity_Common";
+                break;
+            case Rarity.Uncommon:
+                rarityKey = "Rarity_Uncommon";
+                break;
+            case Rarity.Rare:
+                rarityKey = "Rarity_Rare";
+                break;
+        }
+
+        if (!string.IsNullOrEmpty(rarityKey) && LocalizationSettings.HasSettings &&
+            LocalizationSettings.StringDatabase != null)
+        {
+            try
+            {
+                string localizedString = LocalizationSettings.StringDatabase.GetLocalizedString(
+                    "StandardText",
+                    rarityKey);
+
+                if (!string.IsNullOrEmpty(localizedString))
+                {
+                    return localizedString;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"MilestonePanel: Failed to get localized rarity for key '{rarityKey}'. {ex.Message}");
+            }
+        }
+
         return rarity.ToString();
     }
 
