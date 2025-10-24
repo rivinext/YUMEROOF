@@ -192,6 +192,7 @@ public class DynamicLocalizer : MonoBehaviour
 
     private void Awake()
     {
+        ValidateUniqueFieldNames();
         InitializeAllFields();
         StartCoroutine(WaitForLocalizationReady());
 
@@ -395,6 +396,33 @@ public class DynamicLocalizer : MonoBehaviour
         foreach (var pair in fieldKeyPairs)
         {
             SetFieldByName(pair.Key, pair.Value);
+        }
+    }
+
+    /// <summary>
+    /// ローカライズフィールドの重複名を検知して警告を出す
+    /// </summary>
+    private void ValidateUniqueFieldNames()
+    {
+        var seen = new HashSet<string>();
+        var duplicates = new HashSet<string>();
+
+        foreach (var field in localizedFields)
+        {
+            if (field == null || string.IsNullOrEmpty(field.fieldName))
+            {
+                continue;
+            }
+
+            if (!seen.Add(field.fieldName))
+            {
+                duplicates.Add(field.fieldName);
+            }
+        }
+
+        if (duplicates.Count > 0)
+        {
+            Debug.LogWarning($"[DynamicLocalizer] Duplicate field names detected: {string.Join(", ", duplicates)}. Please ensure each LocalizedTextField has a unique Field Name.");
         }
     }
 

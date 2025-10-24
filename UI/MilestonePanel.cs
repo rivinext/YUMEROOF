@@ -655,11 +655,11 @@ public class MilestonePanel : MonoBehaviour
             {
                 if (!string.IsNullOrEmpty(tooltipRewardKey))
                 {
-                    tooltipRewardDynamicLocalizer.SetFieldByName("RewardName", tooltipRewardKey);
+                    tooltipRewardDynamicLocalizer.SetFieldByName("TooltipRewardName", tooltipRewardKey);
                 }
                 else
                 {
-                    tooltipRewardDynamicLocalizer.ClearField("RewardName");
+                    tooltipRewardDynamicLocalizer.ClearField("TooltipRewardName");
                 }
             }
             else if (tooltipRewardItemText != null)
