@@ -17,12 +17,6 @@ namespace Player
         public float checkInterval = 0.1f;
         public bool forceSilhouette = false;
 
-        [Tooltip("シルエットマテリアルのレンダーキューを調整したい場合は 0 より大きい値を設定します。")]
-        public int silhouetteRenderQueueOverride = 0;
-
-        [Tooltip("Override が 0 の場合にベースマテリアルから加算するオフセット値です。")]
-        public int silhouetteRenderQueueOffset = 0;
-
         private readonly List<Material[]> originalMaterials = new List<Material[]>();
         private readonly List<Material[]> silhouetteMaterials = new List<Material[]>();
         private readonly List<MaterialPropertyBlock> propertyBlocks = new List<MaterialPropertyBlock>();
@@ -42,7 +36,25 @@ namespace Player
 
             if (targetRenderers == null || targetRenderers.Length == 0)
             {
-                targetRenderers = GetComponentsInChildren<Renderer>();
+                Renderer[] childRenderers = GetComponentsInChildren<Renderer>();
+                List<Renderer> filteredRenderers = new List<Renderer>(childRenderers.Length);
+                for (int i = 0; i < childRenderers.Length; i++)
+                {
+                    Renderer renderer = childRenderers[i];
+                    if (renderer == null)
+                    {
+                        continue;
+                    }
+
+                    if (renderer is ParticleSystemRenderer)
+                    {
+                        continue;
+                    }
+
+                    filteredRenderers.Add(renderer);
+                }
+
+                targetRenderers = filteredRenderers.ToArray();
             }
 
             originalMaterials.Clear();
@@ -107,26 +119,13 @@ namespace Player
 
             Material materialInstance = new Material(silhouetteMaterial);
 
-            if (silhouetteRenderQueueOverride > 0)
+            int baseRenderQueue = silhouetteMaterial.renderQueue;
+            if (sourceMaterial != null && materialInstance.renderQueue <= sourceMaterial.renderQueue)
             {
-                materialInstance.renderQueue = silhouetteRenderQueueOverride;
+                baseRenderQueue = sourceMaterial.renderQueue + 1;
             }
-            else
-            {
-                int baseRenderQueue = silhouetteMaterial.renderQueue;
-                if (sourceMaterial != null && sourceMaterial.renderQueue > baseRenderQueue)
-                {
-                    baseRenderQueue = sourceMaterial.renderQueue;
-                }
 
-                int renderQueueOffset = silhouetteRenderQueueOffset;
-                if (renderQueueOffset == 0 && materialInstance.renderQueue <= baseRenderQueue)
-                {
-                    renderQueueOffset = 1;
-                }
-
-                materialInstance.renderQueue = baseRenderQueue + renderQueueOffset;
-            }
+            materialInstance.renderQueue = baseRenderQueue;
 
             createdSilhouetteMaterials.Add(materialInstance);
             return materialInstance;
