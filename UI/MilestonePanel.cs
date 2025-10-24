@@ -3,9 +3,6 @@ using UnityEngine.UI;
 using UnityEngine.Serialization;
 using TMPro;
 using System.Collections;
-using UnityEngine.Localization;
-using UnityEngine.Localization.Settings;
-using UnityEngine.Localization.Tables;
 
 public class MilestonePanel : MonoBehaviour
 {
@@ -51,11 +48,6 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private Image progressLine;
     private readonly System.Collections.Generic.List<Image> milestoneImages = new System.Collections.Generic.List<Image>();
     private readonly System.Collections.Generic.List<Sprite> milestoneDefaultSprites = new System.Collections.Generic.List<Sprite>();
-
-    [Header("Localization")]
-    [SerializeField] private string cozyProgressKey = "CozyProgress";
-    [SerializeField] private string natureProgressKey = "NatureProgress";
-    [SerializeField] private string itemProgressKey = "ItemProgress";
 
     [Header("Milestone Sprites")]
     [SerializeField] private Sprite completedSprite;
@@ -463,15 +455,15 @@ public class MilestonePanel : MonoBehaviour
     {
         if (cozyText != null)
         {
-            cozyText.text = GetProgressString(cozyProgressKey, "Cozy", cozy, milestone.cozyRequirement);
+            cozyText.text = $"Cozy: {cozy}/{milestone.cozyRequirement}";
         }
         if (natureText != null)
         {
-            natureText.text = GetProgressString(natureProgressKey, "Nature", nature, milestone.natureRequirement);
+            natureText.text = $"Nature: {nature}/{milestone.natureRequirement}";
         }
         if (itemText != null)
         {
-            itemText.text = GetProgressString(itemProgressKey, "Items", itemCount, milestone.itemCountRequirement);
+            itemText.text = $"Items: {itemCount}/{milestone.itemCountRequirement}";
         }
         UpdateRarityRequirementText(rarityProgressText, milestone);
         if (rewardItemText != null)
@@ -628,18 +620,15 @@ public class MilestonePanel : MonoBehaviour
         {
             if (tooltipCozyText != null)
             {
-                tooltipCozyText.text = GetProgressString(cozyProgressKey, "Cozy",
-                    milestone.cozyRequirement, milestone.cozyRequirement);
+                tooltipCozyText.text = $"Cozy: {milestone.cozyRequirement}";
             }
             if (tooltipNatureText != null)
             {
-                tooltipNatureText.text = GetProgressString(natureProgressKey, "Nature",
-                    milestone.natureRequirement, milestone.natureRequirement);
+                tooltipNatureText.text = $"Nature: {milestone.natureRequirement}";
             }
             if (tooltipItemText != null)
             {
-                tooltipItemText.text = GetProgressString(itemProgressKey, "Items",
-                    milestone.itemCountRequirement, milestone.itemCountRequirement);
+                tooltipItemText.text = $"Items: {milestone.itemCountRequirement}";
             }
             UpdateRarityRequirementText(tooltipRarityText, milestone);
             if (tooltipRewardItemText != null)
@@ -668,66 +657,7 @@ public class MilestonePanel : MonoBehaviour
 
     private string GetRarityDisplayName(Rarity rarity)
     {
-        string rarityKey = null;
-
-        switch (rarity)
-        {
-            case Rarity.Common:
-                rarityKey = "Rarity_Common";
-                break;
-            case Rarity.Uncommon:
-                rarityKey = "Rarity_Uncommon";
-                break;
-            case Rarity.Rare:
-                rarityKey = "Rarity_Rare";
-                break;
-        }
-
-        if (!string.IsNullOrEmpty(rarityKey) && LocalizationSettings.HasSettings &&
-            LocalizationSettings.StringDatabase != null)
-        {
-            try
-            {
-                string localizedString = LocalizationSettings.StringDatabase.GetLocalizedString(
-                    "StandardText",
-                    rarityKey);
-
-                if (!string.IsNullOrEmpty(localizedString))
-                {
-                    return localizedString;
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"MilestonePanel: Failed to get localized rarity for key '{rarityKey}'. {ex.Message}");
-            }
-        }
-
         return rarity.ToString();
-    }
-
-    private string GetProgressString(string key, string fallbackLabel, int current, int required)
-    {
-        if (!string.IsNullOrEmpty(key) && LocalizationSettings.HasSettings &&
-            LocalizationSettings.StringDatabase != null)
-        {
-            try
-            {
-                return LocalizationSettings.StringDatabase.GetLocalizedString(
-                    "StandardText",
-                    key,
-                    null,
-                    FallbackBehavior.UseProjectSettings,
-                    current,
-                    required);
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogWarning($"MilestonePanel: Failed to get localized string for key '{key}'. {ex.Message}");
-            }
-        }
-
-        return $"{fallbackLabel}: {current}/{required}";
     }
 
     public void HideMilestoneTooltip()
