@@ -15,7 +15,8 @@ public class MilestonePanel : MonoBehaviour
     public TMP_Text cozyText;
     public TMP_Text natureText;
     public TMP_Text itemText;
-    public TMP_Text rarityProgressText;
+    [SerializeField] private TMP_Text rarityLabelText;
+    [SerializeField] private TMP_Text rarityValueText;
     [FormerlySerializedAs("rewardText")]
     public TMP_Text rewardItemText;
     public TMP_Text rewardMoneyText;
@@ -28,7 +29,8 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private TMP_Text tooltipCozyText;
     [SerializeField] private TMP_Text tooltipNatureText;
     [SerializeField] private TMP_Text tooltipItemText;
-    [SerializeField] private TMP_Text tooltipRarityText;
+    [SerializeField] private TMP_Text tooltipRarityLabelText;
+    [SerializeField] private TMP_Text tooltipRarityValueText;
     [FormerlySerializedAs("tooltipRewardText")]
     [SerializeField] private TMP_Text tooltipRewardItemText;
     [SerializeField] private TMP_Text tooltipRewardMoneyText;
@@ -455,17 +457,17 @@ public class MilestonePanel : MonoBehaviour
     {
         if (cozyText != null)
         {
-            cozyText.text = $"Cozy: {cozy}/{milestone.cozyRequirement}";
+            cozyText.text = $"{cozy}/{milestone.cozyRequirement}";
         }
         if (natureText != null)
         {
-            natureText.text = $"Nature: {nature}/{milestone.natureRequirement}";
+            natureText.text = $"{nature}/{milestone.natureRequirement}";
         }
         if (itemText != null)
         {
-            itemText.text = $"Items: {itemCount}/{milestone.itemCountRequirement}";
+            itemText.text = $"{itemCount}/{milestone.itemCountRequirement}";
         }
-        UpdateRarityRequirementText(rarityProgressText, milestone);
+        UpdateRarityRequirementText(rarityLabelText, rarityValueText, milestone);
         if (rewardItemText != null)
         {
             rewardItemText.text = GetRewardItemName(milestone);
@@ -620,17 +622,17 @@ public class MilestonePanel : MonoBehaviour
         {
             if (tooltipCozyText != null)
             {
-                tooltipCozyText.text = $"Cozy: {milestone.cozyRequirement}";
+                tooltipCozyText.text = $"{milestone.cozyRequirement}";
             }
             if (tooltipNatureText != null)
             {
-                tooltipNatureText.text = $"Nature: {milestone.natureRequirement}";
+                tooltipNatureText.text = $"{milestone.natureRequirement}";
             }
             if (tooltipItemText != null)
             {
-                tooltipItemText.text = $"Items: {milestone.itemCountRequirement}";
+                tooltipItemText.text = $"{milestone.itemCountRequirement}";
             }
-            UpdateRarityRequirementText(tooltipRarityText, milestone);
+            UpdateRarityRequirementText(tooltipRarityLabelText, tooltipRarityValueText, milestone);
             if (tooltipRewardItemText != null)
             {
                 tooltipRewardItemText.text = GetRewardItemName(milestone);
@@ -662,16 +664,24 @@ public class MilestonePanel : MonoBehaviour
         return milestone.reward;
     }
 
-    private void UpdateRarityRequirementText(TMP_Text targetText, MilestoneManager.Milestone milestone)
+    private void UpdateRarityRequirementText(TMP_Text labelText, TMP_Text valueText, MilestoneManager.Milestone milestone)
     {
-        if (targetText == null || milestone == null)
+        if (milestone == null)
         {
             return;
         }
 
         string rarityName = GetRarityDisplayName(milestone.rarityRequirement);
         int currentCount = MilestoneManager.Instance?.GetPlacedCountForRarity(milestone.rarityRequirement) ?? 0;
-        targetText.text = $"{rarityName}: {currentCount}/{milestone.rarityCountRequirement}";
+        if (labelText != null)
+        {
+            labelText.text = rarityName;
+        }
+
+        if (valueText != null)
+        {
+            valueText.text = $"{currentCount}/{milestone.rarityCountRequirement}";
+        }
     }
 
     private string GetRarityDisplayName(Rarity rarity)
