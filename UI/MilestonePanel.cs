@@ -468,7 +468,7 @@ public class MilestonePanel : MonoBehaviour
         UpdateRarityRequirementText(rarityProgressText, milestone);
         if (rewardItemText != null)
         {
-            rewardItemText.text = milestone.reward ?? string.Empty;
+            rewardItemText.text = GetRewardItemName(milestone);
         }
         if (rewardMoneyText != null)
         {
@@ -633,7 +633,7 @@ public class MilestonePanel : MonoBehaviour
             UpdateRarityRequirementText(tooltipRarityText, milestone);
             if (tooltipRewardItemText != null)
             {
-                tooltipRewardItemText.text = milestone.reward ?? string.Empty;
+                tooltipRewardItemText.text = GetRewardItemName(milestone);
             }
             if (tooltipRewardMoneyText != null)
             {
@@ -641,6 +641,25 @@ public class MilestonePanel : MonoBehaviour
             }
             UpdateRewardIcon(milestone, tooltipRewardImage);
         }
+    }
+
+    private string GetRewardItemName(MilestoneManager.Milestone milestone)
+    {
+        if (milestone == null || string.IsNullOrEmpty(milestone.reward) ||
+            string.Equals(milestone.reward, "None", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        var dataManager = FurnitureDataManager.Instance;
+        var furnitureData = dataManager?.GetFurnitureDataSO(milestone.reward);
+
+        if (furnitureData != null && !string.IsNullOrEmpty(furnitureData.nameID))
+        {
+            return furnitureData.nameID;
+        }
+
+        return milestone.reward;
     }
 
     private void UpdateRarityRequirementText(TMP_Text targetText, MilestoneManager.Milestone milestone)
