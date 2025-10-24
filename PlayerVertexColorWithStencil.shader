@@ -4,9 +4,12 @@ Shader "Player/VertexColorWithStencil_URP"
     {
         _Color ("Color", Color) = (1,1,1,1)
         _MainTex ("Texture", 2D) = "white" {}
-        _AmbientStrength ("Ambient Strength", Range(0, 1)) = 0.6
-        _LightingStrength ("Lighting Strength", Range(0, 1)) = 0.5
-        _ShadowStrength ("Shadow Strength", Range(0, 1)) = 0.75
+        _Metallic ("Metallic", Range(0, 1)) = 0.0
+        _Smoothness ("Smoothness", Range(0, 1)) = 0.5
+        _SpecColor ("Specular Color", Color) = (0.2, 0.2, 0.2, 1)
+        [Normal] _BumpMap ("Normal Map", 2D) = "bump" {}
+        _BumpScale ("Normal Scale", Range(0, 2)) = 1.0
+        _MetallicGlossMap ("Metallic Map", 2D) = "white" {}
     }
 
     SubShader
@@ -37,8 +40,16 @@ Shader "Player/VertexColorWithStencil_URP"
             #pragma fragment frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
+            #pragma multi_compile_fragment _ _LIGHT_COOKIES
             #pragma multi_compile_fog
+            #pragma shader_feature_local _NORMALMAP
+            #pragma shader_feature_local _METALLICSPECGLOSSMAP
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -47,6 +58,7 @@ Shader "Player/VertexColorWithStencil_URP"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float4 tangentOS : TANGENT;
                 float2 uv : TEXCOORD0;
                 float4 color : COLOR;
             };
@@ -58,18 +70,27 @@ Shader "Player/VertexColorWithStencil_URP"
                 float4 color : COLOR;
                 float3 positionWS : TEXCOORD1;
                 float3 normalWS : TEXCOORD2;
-                float fogFactor : TEXCOORD3;
+                float3 tangentWS : TEXCOORD3;
+                float3 bitangentWS : TEXCOORD4;
+                float fogFactor : TEXCOORD5;
             };
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
+            TEXTURE2D(_BumpMap);
+            SAMPLER(sampler_BumpMap);
+            TEXTURE2D(_MetallicGlossMap);
+            SAMPLER(sampler_MetallicGlossMap);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
                 float4 _Color;
-                float _AmbientStrength;
-                float _LightingStrength;
-                float _ShadowStrength;
+                float _Metallic;
+                float _Smoothness;
+                float4 _SpecColor;
+                float _BumpScale;
+                float4 _BumpMap_ST;
+                float4 _MetallicGlossMap_ST;
             CBUFFER_END
 
             Varyings vert(Attributes input)
@@ -77,8 +98,15 @@ Shader "Player/VertexColorWithStencil_URP"
                 Varyings output;
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
-                output.uv = TRANSFORM_TEX(input.uv, _MainTex);
+                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                float3 tangentWS = TransformObjectToWorldDir(input.tangentOS.xyz);
+                normalWS = normalize(normalWS);
+                tangentWS = normalize(tangentWS);
+                float3 bitangentWS = normalize(cross(normalWS, tangentWS)) * input.tangentOS.w;
+                output.normalWS = normalWS;
+                output.tangentWS = tangentWS;
+                output.bitangentWS = bitangentWS;
+                output.uv = input.uv;
                 output.color = input.color;
                 float fogDistance = distance(output.positionWS, _WorldSpaceCameraPos);
                 output.fogFactor = ComputeFogFactor(fogDistance);
@@ -87,28 +115,54 @@ Shader "Player/VertexColorWithStencil_URP"
 
             half4 frag(Varyings input) : SV_Target
             {
-                half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
-                col *= input.color * _Color;
+                SurfaceData surfaceData = (SurfaceData)0;
+                InputData inputData = (InputData)0;
 
-                // 影の計算
-                float4 shadowCoord = TransformWorldToShadowCoord(input.positionWS);
-                Light mainLight = GetMainLight(shadowCoord);
+                float2 baseUV = TRANSFORM_TEX(input.uv, _MainTex);
+                half4 mainSample = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, baseUV) * _Color;
+                surfaceData.albedo = mainSample.rgb * input.color.rgb;
+                surfaceData.alpha = mainSample.a * input.color.a;
+                surfaceData.emission = 0;
+                surfaceData.occlusion = 1;
+                surfaceData.specular = _SpecColor.rgb;
 
-                // より明るいランバートライティング
-                half NdotL = saturate(dot(normalize(input.normalWS), mainLight.direction));
+                #if defined(_METALLICSPECGLOSSMAP)
+                    float2 metallicUV = TRANSFORM_TEX(input.uv, _MetallicGlossMap);
+                    half4 metallicGloss = SAMPLE_TEXTURE2D(_MetallicGlossMap, sampler_MetallicGlossMap, metallicUV);
+                    surfaceData.metallic = metallicGloss.r * _Metallic;
+                    surfaceData.smoothness = metallicGloss.a * _Smoothness;
+                #else
+                    surfaceData.metallic = _Metallic;
+                    surfaceData.smoothness = _Smoothness;
+                #endif
 
-                // ライティングの影響を調整（暗くなりすぎないように）
-                half lightingFactor = lerp(1.0, NdotL, _LightingStrength);
+                #if defined(_NORMALMAP)
+                    float2 normalUV = TRANSFORM_TEX(input.uv, _BumpMap);
+                    float3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, normalUV), _BumpScale);
+                    surfaceData.normalTS = normalTS;
+                #else
+                    surfaceData.normalTS = float3(0.0, 0.0, 1.0);
+                #endif
 
-                // 影の影響を調整（_ShadowStrength が高いほど影が濃くなる）
-                half shadowFactor = lerp(1.0, mainLight.shadowAttenuation, saturate(_ShadowStrength));
+                float3 normalWS = NormalizeNormalPerPixel(input.normalWS);
+                #if defined(_NORMALMAP)
+                    float3 tangentWS = normalize(input.tangentWS);
+                    float3 bitangentWS = normalize(input.bitangentWS);
+                    float3x3 tangentToWorld = float3x3(tangentWS, bitangentWS, normalWS);
+                    normalWS = TransformTangentToWorld(surfaceData.normalTS, tangentToWorld);
+                    normalWS = NormalizeNormalPerPixel(normalWS);
+                #endif
 
-                half3 lighting = mainLight.color * lightingFactor * shadowFactor;
-                lighting += half3(_AmbientStrength, _AmbientStrength, _AmbientStrength); // 環境光を増加
-
-                col.rgb *= lighting;
-                col.rgb = MixFog(col.rgb, input.fogFactor);
-                return col;
+                inputData.positionWS = input.positionWS;
+                inputData.normalWS = normalWS;
+                inputData.viewDirectionWS = SafeNormalize(_WorldSpaceCameraPos - input.positionWS);
+                inputData.shadowCoord = TransformWorldToShadowCoord(input.positionWS);
+                inputData.fogCoord = input.fogFactor;
+                inputData.bakedGI = SampleSH(normalWS);
+                inputData.vertexLighting = VertexLighting(input.positionWS, normalWS);
+                half4 color = UniversalFragmentPBR(inputData, surfaceData);
+                color.rgb = MixFog(color.rgb, input.fogFactor);
+                return color;
             }
             ENDHLSL
         }
