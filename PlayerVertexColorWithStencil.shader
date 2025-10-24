@@ -41,6 +41,7 @@ Shader "Player/VertexColorWithStencil_URP"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
             #pragma multi_compile_fragment _ _REFLECTION_PROBE_BOX_PROJECTION
@@ -160,9 +161,32 @@ Shader "Player/VertexColorWithStencil_URP"
                 inputData.fogCoord = input.fogFactor;
                 inputData.bakedGI = SampleSH(normalWS);
                 inputData.vertexLighting = VertexLighting(input.positionWS, normalWS);
-                half4 color = UniversalFragmentPBR(inputData, surfaceData);
-                color.rgb = MixFog(color.rgb, input.fogFactor);
-                return color;
+
+                BRDFData brdfData;
+                InitializeBRDFData(surfaceData, brdfData);
+
+                Light mainLight = GetMainLight(inputData.shadowCoord, inputData.positionWS, inputData.normalWS);
+                half3 color = GlobalIllumination(brdfData, inputData.bakedGI, surfaceData.occlusion);
+                color += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS) * surfaceData.occlusion;
+
+                #if defined(_ADDITIONAL_LIGHTS)
+                    uint additionalLightsCount = GetAdditionalLightsCount();
+                    for (uint lightIndex = 0u; lightIndex < additionalLightsCount; ++lightIndex)
+                    {
+                        Light light = GetAdditionalLight(lightIndex, input.positionWS);
+                        color += LightingPhysicallyBased(brdfData, light, inputData.normalWS, inputData.viewDirectionWS) * surfaceData.occlusion;
+                    }
+                #endif
+
+                #if defined(_ADDITIONAL_LIGHTS_VERTEX)
+                    color += inputData.vertexLighting * surfaceData.albedo;
+                #endif
+
+                color += surfaceData.emission;
+
+                half4 finalColor = half4(color, surfaceData.alpha);
+                finalColor.rgb = MixFog(finalColor.rgb, input.fogFactor);
+                return finalColor;
             }
             ENDHLSL
         }
