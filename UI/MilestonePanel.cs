@@ -22,6 +22,8 @@ public class MilestonePanel : MonoBehaviour
     public TMP_Text rewardMoneyText;
     [SerializeField] private Image rewardImage;
     [SerializeField] private Sprite rewardFallbackSprite;
+    [Header("Localization")]
+    [SerializeField] private DynamicLocalizer rewardDynamicLocalizer;
     public TMP_Text milestoneIdText;
     [Header("Tooltip")]
     [SerializeField] private GameObject tooltipPanel;
@@ -35,6 +37,7 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private TMP_Text tooltipRewardItemText;
     [SerializeField] private TMP_Text tooltipRewardMoneyText;
     [SerializeField] private Image tooltipRewardImage;
+    [SerializeField] private DynamicLocalizer tooltipRewardDynamicLocalizer;
     [SerializeField] private CanvasGroup tooltipCanvasGroup;
     [SerializeField] private float tooltipFadeDuration = 0.2f;
     [SerializeField] private Vector2 tooltipOffset = new Vector2(0f, -10f);
@@ -468,9 +471,22 @@ public class MilestonePanel : MonoBehaviour
             itemText.text = $"{itemCount}/{milestone.itemCountRequirement}";
         }
         UpdateRarityRequirementText(rarityLabelText, rarityValueText, milestone);
-        if (rewardItemText != null)
+
+        string rewardKey = GetRewardItemName(milestone);
+        if (rewardDynamicLocalizer != null)
         {
-            rewardItemText.text = GetRewardItemName(milestone);
+            if (!string.IsNullOrEmpty(rewardKey))
+            {
+                rewardDynamicLocalizer.SetFieldByName("RewardName", rewardKey);
+            }
+            else
+            {
+                rewardDynamicLocalizer.ClearField("RewardName");
+            }
+        }
+        else if (rewardItemText != null)
+        {
+            Debug.LogWarning("MilestonePanel: Reward DynamicLocalizer not assigned.");
         }
         if (rewardMoneyText != null)
         {
@@ -633,9 +649,22 @@ public class MilestonePanel : MonoBehaviour
                 tooltipItemText.text = $"{milestone.itemCountRequirement}";
             }
             UpdateRarityRequirementText(tooltipRarityLabelText, tooltipRarityValueText, milestone);
-            if (tooltipRewardItemText != null)
+
+            string tooltipRewardKey = GetRewardItemName(milestone);
+            if (tooltipRewardDynamicLocalizer != null)
             {
-                tooltipRewardItemText.text = GetRewardItemName(milestone);
+                if (!string.IsNullOrEmpty(tooltipRewardKey))
+                {
+                    tooltipRewardDynamicLocalizer.SetFieldByName("RewardName", tooltipRewardKey);
+                }
+                else
+                {
+                    tooltipRewardDynamicLocalizer.ClearField("RewardName");
+                }
+            }
+            else if (tooltipRewardItemText != null)
+            {
+                Debug.LogWarning("MilestonePanel: Tooltip reward DynamicLocalizer not assigned.");
             }
             if (tooltipRewardMoneyText != null)
             {
