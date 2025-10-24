@@ -172,6 +172,8 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
             : System.Array.Empty<Collider>();
     }
 
+    private const float SampleSurfaceOffset = 0.01f;
+
     private static readonly Vector3[] OcclusionSampleOffsets =
     {
         Vector3.zero,
@@ -200,17 +202,32 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
         foreach (var offset in OcclusionSampleOffsets)
         {
             Vector3 samplePoint = bounds.center + new Vector3(extents.x * offset.x, extents.y * offset.y, extents.z * offset.z);
-            Vector3 toCamera = cameraPosition - samplePoint;
-            float sqrDistance = toCamera.sqrMagnitude;
+
+            Vector3 offsetDirection = samplePoint - bounds.center;
+            if (offsetDirection.sqrMagnitude > Mathf.Epsilon)
+            {
+                samplePoint += offsetDirection.normalized * SampleSurfaceOffset;
+            }
+            else
+            {
+                Vector3 cameraToCenter = bounds.center - cameraPosition;
+                if (cameraToCenter.sqrMagnitude > Mathf.Epsilon)
+                {
+                    samplePoint += cameraToCenter.normalized * SampleSurfaceOffset;
+                }
+            }
+
+            Vector3 toSample = samplePoint - cameraPosition;
+            float sqrDistance = toSample.sqrMagnitude;
             if (sqrDistance <= Mathf.Epsilon)
             {
                 continue;
             }
 
             float distance = Mathf.Sqrt(sqrDistance);
-            Vector3 direction = toCamera / distance;
+            Vector3 direction = toSample / distance;
 
-            var hits = Physics.RaycastAll(samplePoint, direction, distance, occluderMask, QueryTriggerInteraction.Ignore);
+            var hits = Physics.RaycastAll(cameraPosition, direction, distance, occluderMask, QueryTriggerInteraction.Ignore);
             if (hits == null || hits.Length == 0)
             {
                 continue;
