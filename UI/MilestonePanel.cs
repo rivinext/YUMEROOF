@@ -3,6 +3,9 @@ using UnityEngine.UI;
 using UnityEngine.Serialization;
 using TMPro;
 using System.Collections;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
+using UnityEngine.Localization.Tables;
 
 public class MilestonePanel : MonoBehaviour
 {
@@ -19,6 +22,7 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private TMP_Text rarityValueText;
     [FormerlySerializedAs("rewardText")]
     public TMP_Text rewardItemText;
+    [SerializeField] private LocalizeStringEvent rewardItemNameLocalizeEvent;
     public TMP_Text rewardMoneyText;
     [SerializeField] private Image rewardImage;
     [SerializeField] private Sprite rewardFallbackSprite;
@@ -33,6 +37,7 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private TMP_Text tooltipRarityValueText;
     [FormerlySerializedAs("tooltipRewardText")]
     [SerializeField] private TMP_Text tooltipRewardItemText;
+    [SerializeField] private LocalizeStringEvent tooltipRewardItemNameLocalizeEvent;
     [SerializeField] private TMP_Text tooltipRewardMoneyText;
     [SerializeField] private Image tooltipRewardImage;
     [SerializeField] private CanvasGroup tooltipCanvasGroup;
@@ -50,6 +55,9 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private Image progressLine;
     private readonly System.Collections.Generic.List<Image> milestoneImages = new System.Collections.Generic.List<Image>();
     private readonly System.Collections.Generic.List<Sprite> milestoneDefaultSprites = new System.Collections.Generic.List<Sprite>();
+
+    [Header("Localization")]
+    [SerializeField] private TableReference rewardItemNameTableReference = new TableReference("FurnitureNames");
 
     [Header("Milestone Sprites")]
     [SerializeField] private Sprite completedSprite;
@@ -81,6 +89,24 @@ public class MilestonePanel : MonoBehaviour
     {
         CacheTooltipReferences();
         UIPanelExclusionManager.Instance?.Register(this);
+
+        if (rewardItemNameLocalizeEvent == null && rewardItemText != null)
+        {
+            rewardItemNameLocalizeEvent = rewardItemText.GetComponent<LocalizeStringEvent>();
+            if (rewardItemNameLocalizeEvent == null)
+            {
+                rewardItemNameLocalizeEvent = rewardItemText.gameObject.AddComponent<LocalizeStringEvent>();
+            }
+        }
+
+        if (tooltipRewardItemNameLocalizeEvent == null && tooltipRewardItemText != null)
+        {
+            tooltipRewardItemNameLocalizeEvent = tooltipRewardItemText.GetComponent<LocalizeStringEvent>();
+            if (tooltipRewardItemNameLocalizeEvent == null)
+            {
+                tooltipRewardItemNameLocalizeEvent = tooltipRewardItemText.gameObject.AddComponent<LocalizeStringEvent>();
+            }
+        }
     }
 
     void Start()
@@ -468,10 +494,8 @@ public class MilestonePanel : MonoBehaviour
             itemText.text = $"{itemCount}/{milestone.itemCountRequirement}";
         }
         UpdateRarityRequirementText(rarityLabelText, rarityValueText, milestone);
-        if (rewardItemText != null)
-        {
-            rewardItemText.text = GetRewardItemName(milestone);
-        }
+        string rewardLocalizationKey = GetRewardItemLocalizationKey(milestone);
+        UpdateRewardItemNameDisplay(rewardItemNameLocalizeEvent, rewardItemText, rewardLocalizationKey);
         if (rewardMoneyText != null)
         {
             rewardMoneyText.text = milestone.moneyReward.ToString();
@@ -480,6 +504,34 @@ public class MilestonePanel : MonoBehaviour
         if (milestoneIdText != null)
         {
             milestoneIdText.text = $"Milestone: {milestone.id}";
+        }
+    }
+
+    private void UpdateRewardItemNameDisplay(LocalizeStringEvent localizeEvent, TMP_Text fallbackText, string localizationKey)
+    {
+        if (localizeEvent != null)
+        {
+            if (!rewardItemNameTableReference.IsEmpty)
+            {
+                localizeEvent.StringReference.TableReference = rewardItemNameTableReference;
+            }
+
+            if (!string.IsNullOrEmpty(localizationKey))
+            {
+                localizeEvent.StringReference.TableEntryReference = new TableEntryReference(localizationKey);
+            }
+            else
+            {
+                localizeEvent.StringReference.TableEntryReference = default;
+            }
+
+            localizeEvent.RefreshString();
+            return;
+        }
+
+        if (fallbackText != null)
+        {
+            fallbackText.text = string.IsNullOrEmpty(localizationKey) ? string.Empty : localizationKey;
         }
     }
 
@@ -633,10 +685,8 @@ public class MilestonePanel : MonoBehaviour
                 tooltipItemText.text = $"{milestone.itemCountRequirement}";
             }
             UpdateRarityRequirementText(tooltipRarityLabelText, tooltipRarityValueText, milestone);
-            if (tooltipRewardItemText != null)
-            {
-                tooltipRewardItemText.text = GetRewardItemName(milestone);
-            }
+            string rewardLocalizationKey = GetRewardItemLocalizationKey(milestone);
+            UpdateRewardItemNameDisplay(tooltipRewardItemNameLocalizeEvent, tooltipRewardItemText, rewardLocalizationKey);
             if (tooltipRewardMoneyText != null)
             {
                 tooltipRewardMoneyText.text = milestone.moneyReward.ToString();
@@ -645,7 +695,7 @@ public class MilestonePanel : MonoBehaviour
         }
     }
 
-    private string GetRewardItemName(MilestoneManager.Milestone milestone)
+    private string GetRewardItemLocalizationKey(MilestoneManager.Milestone milestone)
     {
         if (milestone == null || string.IsNullOrEmpty(milestone.reward) ||
             string.Equals(milestone.reward, "None", System.StringComparison.OrdinalIgnoreCase))
