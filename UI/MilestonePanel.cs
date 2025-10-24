@@ -713,11 +713,9 @@ public class MilestonePanel : MonoBehaviour
         {
             try
             {
-                var tableReference = new TableReference("StandardText");
-                var entryReference = new TableEntryReference(key);
                 return LocalizationSettings.StringDatabase.GetLocalizedString(
-                    tableReference,
-                    entryReference,
+                    "StandardText",
+                    key,
                     null,
                     FallbackBehavior.UseProjectSettings,
                     current,
