@@ -399,6 +399,27 @@ public class DynamicLocalizer : MonoBehaviour
     }
 
     /// <summary>
+    /// 名前でフィールドをクリア
+    /// </summary>
+    public void ClearField(string fieldName)
+    {
+        var field = GetFieldByName(fieldName);
+        if (field != null)
+        {
+            field.Clear();
+
+            if (debugMode)
+            {
+                Debug.Log($"[DynamicLocalizer] Cleared field '{fieldName}'");
+            }
+        }
+        else if (debugMode)
+        {
+            Debug.LogWarning($"[DynamicLocalizer] Field '{fieldName}' not found when attempting to clear");
+        }
+    }
+
+    /// <summary>
     /// ItemSOから情報を設定
     /// </summary>
     public void SetFromItemSO(ItemSO itemSO)
