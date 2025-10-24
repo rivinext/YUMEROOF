@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.Serialization;
 using TMPro;
 using System.Collections;
+using UnityEngine.Localization.Settings;
 
 public class MilestonePanel : MonoBehaviour
 {
@@ -455,15 +456,15 @@ public class MilestonePanel : MonoBehaviour
     {
         if (cozyText != null)
         {
-            cozyText.text = $"Cozy: {cozy}/{milestone.cozyRequirement}";
+            cozyText.text = GetLocalizedMilestoneProgressString("Milestone_Cozy_Progress", "Cozy", cozy, milestone.cozyRequirement);
         }
         if (natureText != null)
         {
-            natureText.text = $"Nature: {nature}/{milestone.natureRequirement}";
+            natureText.text = GetLocalizedMilestoneProgressString("Milestone_Nature_Progress", "Nature", nature, milestone.natureRequirement);
         }
         if (itemText != null)
         {
-            itemText.text = $"Items: {itemCount}/{milestone.itemCountRequirement}";
+            itemText.text = GetLocalizedMilestoneProgressString("Milestone_Items_Progress", "Items", itemCount, milestone.itemCountRequirement);
         }
         UpdateRarityRequirementText(rarityProgressText, milestone);
         if (rewardItemText != null)
@@ -620,15 +621,15 @@ public class MilestonePanel : MonoBehaviour
         {
             if (tooltipCozyText != null)
             {
-                tooltipCozyText.text = $"Cozy: {milestone.cozyRequirement}";
+                tooltipCozyText.text = GetLocalizedMilestoneRequirementString("Milestone_Cozy_Requirement", "Cozy", milestone.cozyRequirement);
             }
             if (tooltipNatureText != null)
             {
-                tooltipNatureText.text = $"Nature: {milestone.natureRequirement}";
+                tooltipNatureText.text = GetLocalizedMilestoneRequirementString("Milestone_Nature_Requirement", "Nature", milestone.natureRequirement);
             }
             if (tooltipItemText != null)
             {
-                tooltipItemText.text = $"Items: {milestone.itemCountRequirement}";
+                tooltipItemText.text = GetLocalizedMilestoneRequirementString("Milestone_Items_Requirement", "Items", milestone.itemCountRequirement);
             }
             UpdateRarityRequirementText(tooltipRarityText, milestone);
             if (tooltipRewardItemText != null)
@@ -652,12 +653,65 @@ public class MilestonePanel : MonoBehaviour
 
         string rarityName = GetRarityDisplayName(milestone.rarityRequirement);
         int currentCount = MilestoneManager.Instance?.GetPlacedCountForRarity(milestone.rarityRequirement) ?? 0;
-        targetText.text = $"{rarityName}: {currentCount}/{milestone.rarityCountRequirement}";
+        targetText.text = GetLocalizedRarityProgressString(rarityName, milestone.rarityRequirement, currentCount, milestone.rarityCountRequirement);
     }
 
     private string GetRarityDisplayName(Rarity rarity)
     {
+        if (LocalizationSettings.StringDatabase != null)
+        {
+            string localized = LocalizationSettings.StringDatabase.GetLocalizedString("StandardText", rarity.ToString());
+            if (!string.IsNullOrEmpty(localized))
+            {
+                return localized;
+            }
+        }
+
         return rarity.ToString();
+    }
+
+    private string GetLocalizedMilestoneProgressString(string entryKey, string fallbackLabel, int currentValue, int requiredValue)
+    {
+        if (LocalizationSettings.StringDatabase != null)
+        {
+            string localized = LocalizationSettings.StringDatabase.GetLocalizedString("UITerms", entryKey, currentValue, requiredValue);
+            if (!string.IsNullOrEmpty(localized))
+            {
+                return localized;
+            }
+        }
+
+        return $"{fallbackLabel}: {currentValue}/{requiredValue}";
+    }
+
+    private string GetLocalizedMilestoneRequirementString(string entryKey, string fallbackLabel, int requiredValue)
+    {
+        if (LocalizationSettings.StringDatabase != null)
+        {
+            string localized = LocalizationSettings.StringDatabase.GetLocalizedString("UITerms", entryKey, requiredValue);
+            if (!string.IsNullOrEmpty(localized))
+            {
+                return localized;
+            }
+        }
+
+        return $"{fallbackLabel}: {requiredValue}";
+    }
+
+    private string GetLocalizedRarityProgressString(string rarityDisplayName, Rarity rarity, int currentValue, int requiredValue)
+    {
+        string fallbackLabel = string.IsNullOrEmpty(rarityDisplayName) ? rarity.ToString() : rarityDisplayName;
+
+        if (LocalizationSettings.StringDatabase != null)
+        {
+            string localized = LocalizationSettings.StringDatabase.GetLocalizedString("UITerms", "Milestone_Rarity_Progress", fallbackLabel, currentValue, requiredValue);
+            if (!string.IsNullOrEmpty(localized))
+            {
+                return localized;
+            }
+        }
+
+        return $"{fallbackLabel}: {currentValue}/{requiredValue}";
     }
 
     public void HideMilestoneTooltip()
