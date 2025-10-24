@@ -15,6 +15,8 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
     private readonly List<Material> createdSilhouetteInstances = new();
 
     private Collider playerCollider;
+    private Collider[] playerColliders = System.Array.Empty<Collider>();
+    private readonly HashSet<Collider> playerColliderSet = new();
     private Camera targetCamera;
     private float nextCheckTime;
     private bool isOccluded;
@@ -22,6 +24,19 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
     private void Awake()
     {
         playerCollider = GetComponent<Collider>();
+        playerColliders = GetComponentsInChildren<Collider>(true) ?? System.Array.Empty<Collider>();
+        playerColliderSet.Clear();
+        foreach (var collider in playerColliders)
+        {
+            if (collider != null)
+            {
+                playerColliderSet.Add(collider);
+            }
+        }
+        if (playerCollider != null)
+        {
+            playerColliderSet.Add(playerCollider);
+        }
         targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
 
         if (targetRenderers == null || targetRenderers.Length == 0)
@@ -128,10 +143,34 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
             float distance = Mathf.Sqrt(sqrDistance);
             Vector3 direction = toCamera / distance;
 
-            if (Physics.Raycast(samplePoint, direction, out RaycastHit hit, distance, occluderMask, QueryTriggerInteraction.Ignore))
+            var hits = Physics.RaycastAll(samplePoint, direction, distance, occluderMask, QueryTriggerInteraction.Ignore);
+            if (hits == null || hits.Length == 0)
             {
+                continue;
+            }
+
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+            foreach (var hit in hits)
+            {
+                if (hit.distance >= distance)
+                {
+                    continue;
+                }
+
+                var hitCollider = hit.collider;
+                if (hitCollider == null)
+                {
+                    continue;
+                }
+
+                if (playerColliderSet.Contains(hitCollider))
+                {
+                    continue;
+                }
+
                 Transform hitTransform = hit.transform;
-                if (hit.collider == playerCollider || hitTransform == transform)
+                if (hitTransform == transform)
                 {
                     continue;
                 }
