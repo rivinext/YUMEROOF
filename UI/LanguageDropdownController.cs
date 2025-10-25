@@ -9,6 +9,19 @@ public class LanguageDropdownController : MonoBehaviour
 {
     [SerializeField] TMP_Dropdown languageDropdown;
 
+    [System.Serializable]
+    struct LocaleSprite
+    {
+        [Tooltip("ロケール識別子コード (例: en, ja, zh-Hans)")]
+        public string localeCode;
+        [Tooltip("ドロップダウンの項目およびキャプションに表示するスプライト")]
+        public Sprite sprite;
+    }
+
+    [SerializeField]
+    [Tooltip("ロケールコードとドロップダウンに表示するスプライトの対応表")]
+    List<LocaleSprite> localeSprites = new List<LocaleSprite>();
+
     // 固定文字列の辞書。ScriptableObject やローカライズシステムから取得しないことに注意。
     // 新しい言語を追加する際はこの辞書の内容を直接編集してください。
     static readonly Dictionary<string, string> LocaleDisplayNames = new Dictionary<string, string>
@@ -56,7 +69,9 @@ public class LanguageDropdownController : MonoBehaviour
         for (int i = 0; i < locales.Count; i++)
         {
             var locale = locales[i];
-            languageDropdown.options.Add(new TMP_Dropdown.OptionData(GetLocaleDisplayName(locale)));
+            var sprite = GetLocaleSprite(locale);
+            var option = new TMP_Dropdown.OptionData(GetLocaleDisplayName(locale), sprite, Color.white);
+            languageDropdown.options.Add(option);
             if (LocalizationSettings.SelectedLocale == locale)
             {
                 selectedIndex = i;
@@ -88,5 +103,30 @@ public class LanguageDropdownController : MonoBehaviour
         }
 
         return locale.Identifier.CultureInfo?.NativeName ?? locale.LocaleName;
+    }
+
+    Sprite GetLocaleSprite(Locale locale)
+    {
+        if (locale == null)
+        {
+            return null;
+        }
+
+        if (localeSprites == null)
+        {
+            return null;
+        }
+
+        var code = locale.Identifier.Code;
+        for (int i = 0; i < localeSprites.Count; i++)
+        {
+            var entry = localeSprites[i];
+            if (!string.IsNullOrEmpty(entry.localeCode) && entry.localeCode == code)
+            {
+                return entry.sprite;
+            }
+        }
+
+        return null;
     }
 }
