@@ -70,7 +70,8 @@ public class LanguageDropdownController : MonoBehaviour
         {
             var locale = locales[i];
             var sprite = GetLocaleSprite(locale);
-            var option = new TMP_Dropdown.OptionData(GetLocaleDisplayName(locale), sprite);
+            var itemColor = languageDropdown?.itemText != null ? languageDropdown.itemText.color : Color.white;
+            var option = new TMP_Dropdown.OptionData(GetLocaleDisplayName(locale), sprite, itemColor);
             languageDropdown.options.Add(option);
             if (LocalizationSettings.SelectedLocale == locale)
             {
