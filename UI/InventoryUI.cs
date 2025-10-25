@@ -149,10 +149,10 @@ public class InventoryUI : MonoBehaviour
         SetupCraftButton();
         SetupAutoReopenControl();
         RegisterEvents();
-        SwitchTab(true);
+        SwitchTab(false);
 
         // 初期状態のタブボタン画像を設定
-        UpdateTabButtonVisuals(true);
+        UpdateTabButtonVisuals(false);
         CacheSceneInteractionComponents();
         UpdateAutoReopenVisual();
     }
