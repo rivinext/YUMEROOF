@@ -22,6 +22,10 @@ public class UISlidePanel : MonoBehaviour
     [SerializeField] private bool closeOnClickOutside = true;
     [SerializeField] private Camera uiCamera;
 
+    [Header("Pointer Detection")]
+    [Tooltip("クリックを内部扱いにしたい追加のパネル。登録したパネルおよびその子孫も内部として判定されます。")]
+    [SerializeField] private List<RectTransform> exclusionPanels = new();
+
     private RectTransform rectTransform;
     private Vector2 onScreenPosition;
     private Vector2 offScreenPosition;
@@ -123,7 +127,17 @@ public class UISlidePanel : MonoBehaviour
 
             foreach (var result in raycastResults)
             {
-                if (result.gameObject == gameObject || result.gameObject.transform.IsChildOf(transform))
+                var targetTransform = result.gameObject != null ? result.gameObject.transform : null;
+
+                if (targetTransform == null)
+                    continue;
+
+                if (IsWithinPanelHierarchy(targetTransform, rectTransform))
+                {
+                    return true;
+                }
+
+                if (IsWithinExclusionPanels(targetTransform))
                 {
                     return true;
                 }
@@ -133,7 +147,68 @@ public class UISlidePanel : MonoBehaviour
         }
 
         var cameraToUse = uiCamera != null ? uiCamera : Camera.main;
-        return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, Input.mousePosition, cameraToUse);
+        if (RectTransformUtility.RectangleContainsScreenPoint(rectTransform, Input.mousePosition, cameraToUse))
+        {
+            return true;
+        }
+
+        foreach (var panel in exclusionPanels)
+        {
+            if (panel == null)
+                continue;
+
+            if (RectTransformUtility.RectangleContainsScreenPoint(panel, Input.mousePosition, cameraToUse))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsWithinPanelHierarchy(Transform target, RectTransform panel)
+    {
+        if (target == null || panel == null)
+            return false;
+
+        return target == panel.transform || target.IsChildOf(panel);
+    }
+
+    private bool IsWithinExclusionPanels(Transform target)
+    {
+        if (target == null || exclusionPanels == null)
+            return false;
+
+        foreach (var panel in exclusionPanels)
+        {
+            if (panel == null)
+                continue;
+
+            if (IsWithinPanelHierarchy(target, panel))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void OnValidate()
+    {
+        if (exclusionPanels == null)
+        {
+            exclusionPanels = new List<RectTransform>();
+            return;
+        }
+
+        var seen = new HashSet<RectTransform>();
+
+        for (int i = exclusionPanels.Count - 1; i >= 0; i--)
+        {
+            var panel = exclusionPanels[i];
+            if (panel == null || !seen.Add(panel))
+            {
+                exclusionPanels.RemoveAt(i);
+            }
+        }
     }
 
     /// <summary>
