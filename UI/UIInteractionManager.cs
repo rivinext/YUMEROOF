@@ -25,7 +25,7 @@ public class UIInteractionManager : MonoBehaviour
 
     private Camera mainCamera;
     private OrthographicCameraController cameraController;
-    private Canvas canvas;
+    private Canvas backgroundCanvas;
 
     void Awake()
     {
@@ -48,7 +48,7 @@ public class UIInteractionManager : MonoBehaviour
         // Canvas取得（UIのルート）
         if (backgroundImage != null)
         {
-            canvas = backgroundImage.GetComponentInParent<Canvas>();
+            backgroundCanvas = backgroundImage.GetComponentInParent<Canvas>();
         }
 
         // 自動的にBackground画像を探す（設定されていない場合）
@@ -84,7 +84,7 @@ public class UIInteractionManager : MonoBehaviour
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             bgRect,
             Input.mousePosition,
-            canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : mainCamera,
+            GetEventCamera(backgroundCanvas),
             out localMousePosition
         );
 
@@ -107,7 +107,7 @@ public class UIInteractionManager : MonoBehaviour
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 rect,
                 Input.mousePosition,
-                canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : mainCamera,
+                GetEventCamera(rect.GetComponentInParent<Canvas>()),
                 out localMousePosition
             );
 
@@ -131,10 +131,6 @@ public class UIInteractionManager : MonoBehaviour
     /// </summary>
     public bool ShouldBlockCameraControl()
     {
-        // インベントリパネルが開いていない場合はブロックしない
-        if (inventoryPanel != null && !inventoryPanel.activeInHierarchy)
-            return false;
-
         // Background画像の範囲内かチェック
         if (blockCameraInBackgroundArea && IsMouseOverBackgroundArea())
             return true;
@@ -143,7 +139,37 @@ public class UIInteractionManager : MonoBehaviour
         if (IsMouseOverAdditionalBlockingArea())
             return true;
 
+        // EventSystemによる汎用的なUIヒットを確認
+        if (EventSystem.current != null)
+        {
+            if (EventSystem.current.IsPointerOverGameObject())
+            {
+#if UNITY_EDITOR
+                if (debugMode)
+                {
+                    Debug.Log("[UIInteractionManager] Pointer is over a UI element via EventSystem");
+                }
+#endif
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    private Camera GetEventCamera(Canvas targetCanvas)
+    {
+        if (targetCanvas == null || targetCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+        {
+            return null;
+        }
+
+        if (targetCanvas.worldCamera != null)
+        {
+            return targetCanvas.worldCamera;
+        }
+
+        return mainCamera;
     }
 
     /// <summary>
