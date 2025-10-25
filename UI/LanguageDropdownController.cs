@@ -9,6 +9,20 @@ public class LanguageDropdownController : MonoBehaviour
 {
     [SerializeField] TMP_Dropdown languageDropdown;
 
+    // 固定文字列の辞書。ScriptableObject やローカライズシステムから取得しないことに注意。
+    // 新しい言語を追加する際はこの辞書の内容を直接編集してください。
+    static readonly Dictionary<string, string> LocaleDisplayNames = new Dictionary<string, string>
+    {
+        {"en", "English"},
+        {"ja", "日本語"},
+        {"zh-Hans", "简体字"},
+        {"zh-Hant", "繁體字"},
+        {"fr", "Français"},
+        {"de", "Deutsch"},
+        {"es", "Español"},
+        {"ko", "한국어"},
+    };
+
     void Awake()
     {
         string savedCode = PlayerPrefs.GetString("language", "");
@@ -42,7 +56,7 @@ public class LanguageDropdownController : MonoBehaviour
         for (int i = 0; i < locales.Count; i++)
         {
             var locale = locales[i];
-            languageDropdown.options.Add(new TMP_Dropdown.OptionData(locale.LocaleName));
+            languageDropdown.options.Add(new TMP_Dropdown.OptionData(GetLocaleDisplayName(locale)));
             if (LocalizationSettings.SelectedLocale == locale)
             {
                 selectedIndex = i;
@@ -64,5 +78,15 @@ public class LanguageDropdownController : MonoBehaviour
             PlayerPrefs.SetString("language", selected.Identifier.Code);
             PlayerPrefs.Save();
         }
+    }
+
+    string GetLocaleDisplayName(Locale locale)
+    {
+        if (LocaleDisplayNames.TryGetValue(locale.Identifier.Code, out var displayName))
+        {
+            return displayName;
+        }
+
+        return locale.Identifier.CultureInfo?.NativeName ?? locale.LocaleName;
     }
 }
