@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,17 +8,6 @@ using TMPro;
 public class LanguageDropdownController : MonoBehaviour
 {
     [SerializeField] TMP_Dropdown languageDropdown;
-    [SerializeField] TMP_FontAsset defaultFont;
-    [SerializeField] List<LocaleFontMapping> localeFonts = new();
-
-    TMP_FontAsset defaultItemFont;
-
-    [System.Serializable]
-    public struct LocaleFontMapping
-    {
-        public string localeCode;
-        public TMP_FontAsset font;
-    }
 
     // 固定文字列の辞書。ScriptableObject やローカライズシステムから取得しないことに注意。
     // 新しい言語を追加する際はこの辞書の内容を直接編集してください。
@@ -37,24 +25,6 @@ public class LanguageDropdownController : MonoBehaviour
 
     void Awake()
     {
-        if (languageDropdown != null)
-        {
-            if (defaultFont == null && languageDropdown.captionText != null)
-            {
-                defaultFont = languageDropdown.captionText.font;
-            }
-
-            if (languageDropdown.itemText != null)
-            {
-                defaultItemFont = languageDropdown.itemText.font;
-            }
-
-            if (defaultFont == null)
-            {
-                defaultFont = defaultItemFont;
-            }
-        }
-
         string savedCode = PlayerPrefs.GetString("language", "");
         if (!string.IsNullOrEmpty(savedCode))
         {
@@ -96,8 +66,6 @@ public class LanguageDropdownController : MonoBehaviour
         languageDropdown.value = selectedIndex;
         languageDropdown.RefreshShownValue();
         languageDropdown.onValueChanged.AddListener(OnLanguageChanged);
-
-        ApplyLocaleFont(LocalizationSettings.SelectedLocale?.Identifier.Code);
     }
 
     public void OnLanguageChanged(int index)
@@ -109,8 +77,6 @@ public class LanguageDropdownController : MonoBehaviour
             LocalizationSettings.SelectedLocale = selected;
             PlayerPrefs.SetString("language", selected.Identifier.Code);
             PlayerPrefs.Save();
-
-            ApplyLocaleFont(selected.Identifier.Code);
         }
     }
 
@@ -122,43 +88,5 @@ public class LanguageDropdownController : MonoBehaviour
         }
 
         return locale.Identifier.CultureInfo?.NativeName ?? locale.LocaleName;
-    }
-
-    TMP_FontAsset FindFont(string localeCode)
-    {
-        if (string.IsNullOrEmpty(localeCode))
-        {
-            return null;
-        }
-
-        foreach (var mapping in localeFonts)
-        {
-            if (!string.IsNullOrEmpty(mapping.localeCode) &&
-                string.Equals(mapping.localeCode, localeCode, StringComparison.OrdinalIgnoreCase))
-            {
-                return mapping.font;
-            }
-        }
-
-        return null;
-    }
-
-    void ApplyLocaleFont(string localeCode)
-    {
-        var localeFont = FindFont(localeCode);
-        var fallbackFont = defaultFont != null ? defaultFont : defaultItemFont;
-
-        if (languageDropdown != null)
-        {
-            if (languageDropdown.captionText != null)
-            {
-                languageDropdown.captionText.font = localeFont != null ? localeFont : fallbackFont;
-            }
-
-            if (languageDropdown.itemText != null)
-            {
-                languageDropdown.itemText.font = localeFont != null ? localeFont : fallbackFont;
-            }
-        }
     }
 }
