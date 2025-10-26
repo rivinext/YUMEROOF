@@ -35,6 +35,8 @@ public class UISlidePanel : MonoBehaviour
     public Action OnSlideInComplete;
     public Action OnSlideOutComplete;
 
+    public bool IsOpen => isOpen;
+
     private void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
