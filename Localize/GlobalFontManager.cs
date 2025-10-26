@@ -57,7 +57,7 @@ public class GlobalFontManager : MonoBehaviour
 
     [Header("オプション")]
     [SerializeField] private bool updateAllTextsOnLocaleChange = true;  // 言語変更時に全テキスト更新
-    [SerializeField] private bool excludeDynamicLocalizer = true;  // DynamicLocalizerがあるテキストは除外
+    [SerializeField] private bool excludeDynamicLocalizer = false;  // DynamicLocalizerがあるテキストは除外
     [SerializeField] private bool debugMode = false;
 
     private Locale currentLocale;
