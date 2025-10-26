@@ -78,7 +78,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         var allRenderers = new System.Collections.Generic.List<Renderer>();
 
         // 通常のシーンオブジェクト
-        allRenderers.AddRange(FindObjectsOfType<Renderer>(true));
+        allRenderers.AddRange(FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None));
 
         // DontDestroyOnLoad内のオブジェクトを明示的に検索
         foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
