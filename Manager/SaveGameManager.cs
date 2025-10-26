@@ -419,16 +419,20 @@ public class SaveGameManager : MonoBehaviour
         foreach (var id in items)
         {
             bool added = false;
-            var furnitureMgr = FurnitureDataManager.Instance;
-            if (furnitureMgr != null && furnitureMgr.GetFurnitureData(id) != null)
-            {
-                inv.AddFurniture(id, 1);
-                added = true;
-            }
-            else if (inv.GetMaterialData(id) != null)
+            var materialData = inv.GetMaterialData(id);
+            if (materialData != null)
             {
                 inv.AddMaterial(id, 1);
                 added = true;
+            }
+            else
+            {
+                var furnitureMgr = FurnitureDataManager.Instance;
+                if (furnitureMgr != null && furnitureMgr.GetFurnitureData(id) != null)
+                {
+                    inv.AddFurniture(id, 1);
+                    added = true;
+                }
             }
 
             if (!added)
