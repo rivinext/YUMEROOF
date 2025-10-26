@@ -18,7 +18,7 @@ public class SkyboxTimeOfDayController : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void EnsureInstance()
     {
-        if (FindObjectOfType<SkyboxTimeOfDayController>() != null)
+        if (FindFirstObjectByType<SkyboxTimeOfDayController>() != null)
         {
             return;
         }

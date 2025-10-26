@@ -131,7 +131,7 @@ public class DropMaterialSaveManager : MonoBehaviour
     public void ClearAllDrops()
     {
         // Destroy any drop objects present in the active scene(s)
-        foreach (var drop in FindObjectsOfType<DropMaterial>())
+        foreach (var drop in FindObjectsByType<DropMaterial>(FindObjectsSortMode.None))
         {
             Destroy(drop.gameObject);
         }
