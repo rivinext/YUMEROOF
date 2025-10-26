@@ -189,7 +189,9 @@ public class GlobalFontManager : MonoBehaviour
         }
 
         // シーン内の全TextMeshProを取得
-        TextMeshProUGUI[] allTexts = FindObjectsOfType<TextMeshProUGUI>(true);  // 非アクティブも含む
+        TextMeshProUGUI[] allTexts = FindObjectsByType<TextMeshProUGUI>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
         int updatedCount = 0;
 
         foreach (var text in allTexts)
