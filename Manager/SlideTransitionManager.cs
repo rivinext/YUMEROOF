@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
@@ -13,6 +14,8 @@ public class SlideTransitionManager : MonoBehaviour
     public static SlideTransitionManager Instance { get; private set; }
 
     [SerializeField] private UISlidePanel slidePanel;
+    [SerializeField] private UISlidePanel secondarySlidePanel;
+    [SerializeField, Min(0f)] private float panelSequenceDelaySeconds = 2f;
     [Header("Loading Indicator")]
     [SerializeField] private GameObject loadingIndicatorRoot;
     [SerializeField] private TMP_Text loadingStatusText;
@@ -21,6 +24,8 @@ public class SlideTransitionManager : MonoBehaviour
     [SerializeField] private string sceneLoadingMessage = "Loading scene...";
     [SerializeField] private string furnitureLoadingMessage = "Placing furniture...";
     [SerializeField] private string finishingLoadingMessage = "Ready!";
+
+    private readonly List<UISlidePanel> orderedSlidePanels = new(2);
 
     private void Awake()
     {
@@ -47,28 +52,12 @@ public class SlideTransitionManager : MonoBehaviour
     /// </summary>
     public IEnumerator RunSlideOut()
     {
-        if (slidePanel != null)
-        {
-            bool outComplete = false;
-            System.Action onOut = () => outComplete = true;
-            slidePanel.OnSlideOutComplete += onOut;
-            slidePanel.SlideOut();
-            yield return new WaitUntil(() => outComplete);
-            slidePanel.OnSlideOutComplete -= onOut;
-        }
+        yield return RunSlideSequence(slideIn: false);
     }
 
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
-        if (slidePanel != null)
-        {
-            bool inComplete = false;
-            System.Action onIn = () => inComplete = true;
-            slidePanel.OnSlideInComplete += onIn;
-            slidePanel.SlideIn();
-            yield return new WaitUntil(() => inComplete);
-            slidePanel.OnSlideInComplete -= onIn;
-        }
+        yield return RunSlideSequence(slideIn: true);
 
         SaveGameManager.Instance.SaveCurrentSlot();
 
@@ -229,5 +218,70 @@ public class SlideTransitionManager : MonoBehaviour
         {
             loadingStatusText.text = message;
         }
+    }
+
+    private IEnumerator RunSlideSequence(bool slideIn)
+    {
+        var panels = CollectSlidePanels();
+        if (panels.Count == 0)
+            yield break;
+
+        for (int i = 0; i < panels.Count; i++)
+        {
+            if (i > 0 && panelSequenceDelaySeconds > 0f)
+            {
+                yield return new WaitForSecondsRealtime(panelSequenceDelaySeconds);
+            }
+
+            UISlidePanel panel = panels[i];
+            if (panel == null)
+                continue;
+
+            yield return SlideSinglePanel(panel, slideIn);
+        }
+    }
+
+    private List<UISlidePanel> CollectSlidePanels()
+    {
+        orderedSlidePanels.Clear();
+
+        if (slidePanel != null)
+            orderedSlidePanels.Add(slidePanel);
+
+        if (secondarySlidePanel != null && !orderedSlidePanels.Contains(secondarySlidePanel))
+            orderedSlidePanels.Add(secondarySlidePanel);
+
+        return orderedSlidePanels;
+    }
+
+    private IEnumerator SlideSinglePanel(UISlidePanel panel, bool slideIn)
+    {
+        if (panel == null)
+            yield break;
+
+        bool shouldAnimate = slideIn ? !panel.IsOpen : panel.IsOpen;
+        if (!shouldAnimate)
+            yield break;
+
+        bool completed = false;
+        System.Action handler = () => completed = true;
+
+        if (slideIn)
+        {
+            panel.OnSlideInComplete += handler;
+            panel.SlideIn();
+        }
+        else
+        {
+            panel.OnSlideOutComplete += handler;
+            panel.SlideOut();
+        }
+
+        yield return new WaitUntil(() => completed);
+
+        if (slideIn)
+            panel.OnSlideInComplete -= handler;
+        else
+            panel.OnSlideOutComplete -= handler;
     }
 }
