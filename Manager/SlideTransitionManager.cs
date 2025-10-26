@@ -226,18 +226,41 @@ public class SlideTransitionManager : MonoBehaviour
         if (panels.Count == 0)
             yield break;
 
-        for (int i = 0; i < panels.Count; i++)
+        var activeStates = new List<PanelSlideState>(panels.Count);
+
+        try
         {
-            if (i > 0 && panelSequenceDelaySeconds > 0f)
+            bool hasStartedAnyPanel = false;
+
+            foreach (var panel in EnumeratePanelOrder(panels, slideIn))
             {
-                yield return new WaitForSecondsRealtime(panelSequenceDelaySeconds);
+                if (!ShouldAnimatePanel(panel, slideIn))
+                    continue;
+
+                if (hasStartedAnyPanel && panelSequenceDelaySeconds > 0f)
+                {
+                    yield return new WaitForSecondsRealtime(panelSequenceDelaySeconds);
+                }
+
+                var state = StartPanelSlide(panel, slideIn);
+                activeStates.Add(state);
+                hasStartedAnyPanel = true;
             }
 
-            UISlidePanel panel = panels[i];
-            if (panel == null)
-                continue;
-
-            yield return SlideSinglePanel(panel, slideIn);
+            foreach (var state in activeStates)
+            {
+                if (!state.Completed)
+                {
+                    yield return new WaitUntil(() => state.Completed);
+                }
+            }
+        }
+        finally
+        {
+            foreach (var state in activeStates)
+            {
+                state.UnsubscribeOnce();
+            }
         }
     }
 
@@ -254,34 +277,70 @@ public class SlideTransitionManager : MonoBehaviour
         return orderedSlidePanels;
     }
 
-    private IEnumerator SlideSinglePanel(UISlidePanel panel, bool slideIn)
+    private static bool ShouldAnimatePanel(UISlidePanel panel, bool slideIn)
     {
         if (panel == null)
-            yield break;
+            return false;
 
-        bool shouldAnimate = slideIn ? !panel.IsOpen : panel.IsOpen;
-        if (!shouldAnimate)
-            yield break;
+        return slideIn ? !panel.IsOpen : panel.IsOpen;
+    }
 
-        bool completed = false;
-        System.Action handler = () => completed = true;
+    private static IEnumerable<UISlidePanel> EnumeratePanelOrder(List<UISlidePanel> panels, bool slideIn)
+    {
+        if (slideIn)
+        {
+            for (int i = panels.Count - 1; i >= 0; i--)
+            {
+                yield return panels[i];
+            }
+        }
+        else
+        {
+            for (int i = 0; i < panels.Count; i++)
+            {
+                yield return panels[i];
+            }
+        }
+    }
+
+    private PanelSlideState StartPanelSlide(UISlidePanel panel, bool slideIn)
+    {
+        var state = new PanelSlideState();
+
+        void Handler()
+        {
+            state.Completed = true;
+            state.UnsubscribeOnce();
+        }
 
         if (slideIn)
         {
-            panel.OnSlideInComplete += handler;
+            state.Unsubscribe = () => panel.OnSlideInComplete -= Handler;
+            panel.OnSlideInComplete += Handler;
             panel.SlideIn();
         }
         else
         {
-            panel.OnSlideOutComplete += handler;
+            state.Unsubscribe = () => panel.OnSlideOutComplete -= Handler;
+            panel.OnSlideOutComplete += Handler;
             panel.SlideOut();
         }
 
-        yield return new WaitUntil(() => completed);
+        return state;
+    }
 
-        if (slideIn)
-            panel.OnSlideInComplete -= handler;
-        else
-            panel.OnSlideOutComplete -= handler;
+    private sealed class PanelSlideState
+    {
+        public bool Completed;
+        public System.Action Unsubscribe;
+
+        public void UnsubscribeOnce()
+        {
+            if (Unsubscribe == null)
+                return;
+
+            Unsubscribe.Invoke();
+            Unsubscribe = null;
+        }
     }
 }
