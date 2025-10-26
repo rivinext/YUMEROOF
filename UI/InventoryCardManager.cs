@@ -23,7 +23,7 @@ public class InventoryCardManager : MonoBehaviour
     private GameObject furnitureContent;
 
     // デバッグモード
-    public bool debugMode = false;
+    public bool debugMode = true;
 
     public void Initialize(GameObject content)
     {
