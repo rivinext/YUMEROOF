@@ -87,7 +87,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
     /// </summary>
     public void RebindAll()
     {
-        var buttons = FindObjectsOfType<Button>(true);
+        var buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         foreach (var btn in buttons)
         {
             int id = btn.GetInstanceID();
