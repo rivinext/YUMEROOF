@@ -500,6 +500,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         Color c = previewImage.color;
         c.a = 0.7f;
         previewImage.color = c;
+
+        OnItemDragged?.Invoke(currentItem);
     }
 
     // ドラッグ中
