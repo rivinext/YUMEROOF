@@ -199,7 +199,7 @@ public class SceneTransitionManager : MonoBehaviour
         }
 
         // スポーンポイントを探す
-        PlayerSpawnPoint[] spawnPoints = FindObjectsOfType<PlayerSpawnPoint>();
+        PlayerSpawnPoint[] spawnPoints = FindObjectsByType<PlayerSpawnPoint>(FindObjectsSortMode.None);
         foreach (var point in spawnPoints)
         {
             if (point.spawnPointName == spawnPointName)
