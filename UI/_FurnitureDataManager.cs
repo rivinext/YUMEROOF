@@ -213,8 +213,31 @@ public class FurnitureDataManager : MonoBehaviour
             }
         }
 
+        if (IsMaterialIdentifier(idOrName))
+            return null;
+
         Debug.LogWarning($"FurnitureDataSO not found: {idOrName}");
         return null;
+    }
+
+    private bool IsMaterialIdentifier(string idOrName)
+    {
+        if (string.IsNullOrEmpty(idOrName))
+            return false;
+
+        if (materialDict.ContainsKey(idOrName))
+            return true;
+
+        if (materialDatabase != null)
+        {
+            foreach (var material in materialDatabase)
+            {
+                if (material != null && material.materialID == idOrName)
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     // Prefab取得
@@ -290,4 +313,25 @@ public class FurnitureDataManager : MonoBehaviour
         LoadAllData();
         Debug.Log("Database reloaded!");
     }
+
+#if UNITY_EDITOR
+    [ContextMenu("Debug Furniture Lookup")]
+    void DebugFurnitureLookup()
+    {
+        var sampleMaterialId = materialDatabase?.FirstOrDefault(material => material != null)?.materialID;
+        if (!string.IsNullOrEmpty(sampleMaterialId))
+        {
+            var materialResult = GetFurnitureDataSO(sampleMaterialId);
+            Debug.Log($"Lookup with material ID '{sampleMaterialId}' returned {(materialResult == null ? "null" : "a result")} (no warning expected).");
+        }
+        else
+        {
+            Debug.Log("No material IDs available to test material lookup behavior.");
+        }
+
+        const string nonexistentId = "__DEBUG_INVALID_FURNITURE_ID__";
+        var missingResult = GetFurnitureDataSO(nonexistentId);
+        Debug.Log($"Lookup with invalid furniture ID '{nonexistentId}' returned {(missingResult == null ? "null" : "a result")} (warning should have been emitted).");
+    }
+#endif
 }
