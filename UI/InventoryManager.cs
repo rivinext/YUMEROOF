@@ -392,9 +392,7 @@ public class InventoryManager : MonoBehaviour
             // ここでは再度トグルしない（既に変更済み）
             // item.ToggleFavorite(); // この行は削除
 
-#if UNITY_EDITOR
             Debug.Log($"InventoryManager - Item: {itemID}, Favorite: {item.isFavorite}");
-#endif
 
             OnItemUpdated?.Invoke(item);
             OnInventoryChanged?.Invoke();
