@@ -36,6 +36,7 @@ public class OrthographicCameraController : MonoBehaviour
     [Header("UI Interaction")]
     public bool blockCameraWhenUIActive = true; // UI操作時にカメラ操作をブロック
     public bool blockCameraWhenPlacing = true;  // 配置中にカメラ操作を制限
+    [Tooltip("Editor で UI 検出ログを確認したいときのみ手動で有効化してください。ビルド時は自動で無効化されます。")]
     public bool debugUIDetection = false;       // UIデバッグモード
 
     private Camera orthographicCamera;
@@ -98,6 +99,13 @@ public class OrthographicCameraController : MonoBehaviour
 
     public event Action<float> FieldOfViewChanged;
     public event Action<float> DistanceChanged;
+
+    void Awake()
+    {
+#if !UNITY_EDITOR
+        debugUIDetection = false;
+#endif
+    }
 
     void OnEnable()
     {

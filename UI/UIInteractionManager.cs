@@ -18,6 +18,7 @@ public class UIInteractionManager : MonoBehaviour
 
     [Header("Settings")]
     public bool blockCameraInBackgroundArea = true;
+    [Tooltip("Editor で UI の当たり判定を調査したいときのみ手動で有効化してください。ビルド時は自動で無効化されます。")]
     public bool debugMode = false;
 
     [Header("Additional Blocking Areas")]
@@ -29,6 +30,9 @@ public class UIInteractionManager : MonoBehaviour
 
     void Awake()
     {
+#if !UNITY_EDITOR
+        debugMode = false;
+#endif
         if (instance == null)
         {
             instance = this;
