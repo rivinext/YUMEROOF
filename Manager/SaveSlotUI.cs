@@ -185,7 +185,7 @@ public class SaveSlotUI : MonoBehaviour
 
     private void UpdateSlotKey()
     {
-        var slots = FindObjectsOfType<SaveSlotUI>();
+        var slots = FindObjectsByType<SaveSlotUI>(FindObjectsSortMode.None);
 
         // Collect indices already used by other slots of the same type
         var usedIndices = new HashSet<int>();
