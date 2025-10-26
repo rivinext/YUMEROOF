@@ -604,7 +604,7 @@ public class FurnitureSaveManager : MonoBehaviour
     public void SaveCurrentSceneFurniture()
     {
         string currentScene = SceneManager.GetActiveScene().name;
-        PlacedFurniture[] allFurniture = FindObjectsOfType<PlacedFurniture>();
+        PlacedFurniture[] allFurniture = FindObjectsByType<PlacedFurniture>(FindObjectsSortMode.None);
 
         Debug.Log($"[FurnitureSave] Found {allFurniture.Length} furniture in {currentScene}");
 
