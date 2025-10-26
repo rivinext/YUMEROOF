@@ -229,10 +229,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
                 favoriteOnImage.gameObject.SetActive(currentItem.isFavorite);
             }
 
-#if UNITY_EDITOR
-            // デバッグログ（エディタのみ）
+            // デバッグログ
             Debug.Log($"Item: {currentItem.itemID}, Favorite: {currentItem.isFavorite}");
-#endif
         }
     }
 
