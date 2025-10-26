@@ -755,7 +755,7 @@ public class FreePlacementSystem : MonoBehaviour
         AnchorPoint nearest = null;
         float nearestDistance = float.MaxValue;
 
-        AnchorPoint[] anchors = FindObjectsOfType<AnchorPoint>();
+        AnchorPoint[] anchors = FindObjectsByType<AnchorPoint>(FindObjectsSortMode.None);
         foreach (var anchor in anchors)
         {
             if (anchor.IsOccupied) continue;
