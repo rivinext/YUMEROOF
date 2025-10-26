@@ -35,6 +35,7 @@ public class UISlidePanel : MonoBehaviour
     public Action OnSlideInComplete;
     public Action OnSlideOutComplete;
 
+    // パネルが開いているかどうかを取得
     public bool IsOpen => isOpen;
 
     private void Awake()
@@ -222,11 +223,6 @@ public class UISlidePanel : MonoBehaviour
         rectTransform.anchoredPosition = offScreenPosition;
         gameObject.SetActive(false);
     }
-
-    /// <summary>
-    /// パネルが開いているかどうか
-    /// </summary>
-    public bool IsOpen => isOpen;
 
     /// <summary>
     /// エディタ上でオフスクリーン位置を設定するためのヘルパー
