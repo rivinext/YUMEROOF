@@ -222,7 +222,7 @@ public class SlideTransitionManager : MonoBehaviour
 
     private IEnumerator RunSlideSequence(bool slideIn)
     {
-        var panels = CollectSlidePanels();
+        var panels = CollectSlidePanels(slideIn);
         if (panels.Count == 0)
             yield break;
 
@@ -264,7 +264,7 @@ public class SlideTransitionManager : MonoBehaviour
         }
     }
 
-    private List<UISlidePanel> CollectSlidePanels()
+    private List<UISlidePanel> CollectSlidePanels(bool slideIn)
     {
         orderedSlidePanels.Clear();
 
@@ -273,6 +273,11 @@ public class SlideTransitionManager : MonoBehaviour
 
         if (secondarySlidePanel != null && !orderedSlidePanels.Contains(secondarySlidePanel))
             orderedSlidePanels.Add(secondarySlidePanel);
+
+        if (slideIn && orderedSlidePanels.Count > 1)
+        {
+            orderedSlidePanels.Reverse();
+        }
 
         return orderedSlidePanels;
     }
