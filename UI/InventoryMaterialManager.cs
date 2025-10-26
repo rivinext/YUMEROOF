@@ -12,6 +12,9 @@ public class InventoryMaterialManager : MonoBehaviour
     [SerializeField]
     public MaterialDescriptionPanel materialDescPanel;
 
+    [SerializeField]
+    private bool debugMode = false;
+
     // アイコンのキャッシュ
     private Dictionary<Transform, GameObject> materialIcons = new Dictionary<Transform, GameObject>();
     private Queue<GameObject> materialIconPool = new Queue<GameObject>();
@@ -39,7 +42,10 @@ public class InventoryMaterialManager : MonoBehaviour
                 {
                     materialSlots[i] = materialContent.transform.GetChild(i);
                 }
-                Debug.Log($"Auto-detected {materialSlots.Length} material slots");
+                if (debugMode)
+                {
+                    Debug.Log($"Auto-detected {materialSlots.Length} material slots");
+                }
             }
         }
 
@@ -59,8 +65,11 @@ public class InventoryMaterialManager : MonoBehaviour
 
     public void RefreshMaterialIcons(List<InventoryItem> items)
     {
-        Debug.Log($"RefreshMaterialIcons called with {items.Count} items");
-        Debug.Log($"Material slots available: {materialSlots?.Length ?? 0}");
+        if (debugMode)
+        {
+            Debug.Log($"RefreshMaterialIcons called with {items.Count} items");
+            Debug.Log($"Material slots available: {materialSlots?.Length ?? 0}");
+        }
         // 既存のアイコンをクリア
         foreach (var kvp in materialIcons)
         {
@@ -87,9 +96,12 @@ public class InventoryMaterialManager : MonoBehaviour
             icon.SetActive(true);
         }
         // 各アイテムの詳細をログ出力
-        foreach (var item in items)
+        if (debugMode)
         {
-            Debug.Log($"Material: {item.itemID}, Quantity: {item.quantity}");
+            foreach (var item in items)
+            {
+                Debug.Log($"Material: {item.itemID}, Quantity: {item.quantity}");
+            }
         }
     }
 
@@ -181,7 +193,10 @@ public class InventoryMaterialManager : MonoBehaviour
     void OnMaterialClicked(InventoryItem item)
     {
         selectedMaterialItem = item;
-        Debug.Log($"Material clicked: {item.itemID}");
+        if (debugMode)
+        {
+            Debug.Log($"Material clicked: {item.itemID}");
+        }
 
         // 説明エリア更新（必要に応じて）
         UpdateMaterialDescription(item);
