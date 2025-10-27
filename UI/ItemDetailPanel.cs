@@ -51,7 +51,7 @@ public class ItemDetailPanel : MonoBehaviour
         if (sellButton != null)
             sellButton.onClick.AddListener(SellItem);
         if (closeButton != null)
-            closeButton.onClick.AddListener(OnCloseButtonClicked);
+            closeButton.onClick.AddListener(ClosePanel);
 
         // ボタンの状態変更設定
         SetupButtonStates();
@@ -323,11 +323,6 @@ public class ItemDetailPanel : MonoBehaviour
         {
             ClosePanel();
         }
-    }
-
-    private void OnCloseButtonClicked()
-    {
-        ClosePanel();
     }
 
     // パネルを閉じる
