@@ -1,0 +1,5 @@
+Name,Category,ItemID,NameID,2DImage,3DModel,DescriptionID
+Hair_A,Hair,item_hair_a,name_hair_a,hair_a_image,hair_a_model,desc_hair_a
+Accesories_B,Accesories,item_accesories_b,name_accesories_b,accesories_b_image,accesories_b_model,desc_accesories_b
+Eyewear_C,Eyewear,item_eyewear_c,name_eyewear_c,eyewear_c_image,eyewear_c_model,desc_eyewear_c
+Hair_D,Hair,item_hair_d,name_hair_d,hair_d_image,hair_d_model,desc_hair_d
