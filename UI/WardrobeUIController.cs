@@ -22,6 +22,8 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private Button openCloseButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private ToggleGroup tabToggleGroup;
+    [SerializeField] private ScrollRect sharedScrollRect;
+    [SerializeField] private Transform sharedContentRoot;
     [SerializeField] private List<CategoryTab> categoryTabs = new List<CategoryTab>();
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private Transform previewPlayerRoot;
@@ -34,7 +36,10 @@ public class WardrobeUIController : MonoBehaviour
     {
         public WardrobeTabType category;
         public Toggle toggle;
-        public GameObject content;
+        public GameObject contentPrefab;
+        public Transform contentRoot;
+
+        [NonSerialized] public GameObject runtimeContent;
     }
 
     [Serializable]
@@ -55,6 +60,7 @@ public class WardrobeUIController : MonoBehaviour
     private readonly Dictionary<WardrobeTabType, GameObject> equippedInstances = new Dictionary<WardrobeTabType, GameObject>();
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
+    private Transform tabContentStorageRoot;
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -361,6 +367,136 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
+    private Transform GetTabContentStorageRoot()
+    {
+        if (tabContentStorageRoot == null)
+        {
+            GameObject storage = new GameObject("WardrobeTabContentStorage");
+            Transform storageTransform = storage.transform;
+            storageTransform.SetParent(transform, false);
+            tabContentStorageRoot = storageTransform;
+        }
+
+        return tabContentStorageRoot;
+    }
+
+    private GameObject EnsureTabContentInstance(CategoryTab tab)
+    {
+        if (tab == null)
+        {
+            return null;
+        }
+
+        if (tab.runtimeContent != null)
+        {
+            return tab.runtimeContent;
+        }
+
+        GameObject contentInstance = null;
+
+        if (tab.contentRoot != null)
+        {
+            contentInstance = tab.contentRoot.gameObject;
+        }
+        else if (tab.contentPrefab != null)
+        {
+            Transform parent = sharedContentRoot != null ? GetTabContentStorageRoot() : transform;
+            contentInstance = Instantiate(tab.contentPrefab, parent, false);
+        }
+
+        if (contentInstance != null)
+        {
+            tab.runtimeContent = contentInstance;
+
+            if (tab.contentRoot == null)
+            {
+                tab.contentRoot = contentInstance.transform;
+            }
+
+            if (sharedContentRoot != null)
+            {
+                Transform contentTransform = contentInstance.transform;
+                Transform storageRoot = GetTabContentStorageRoot();
+                if (contentTransform.parent != sharedContentRoot && contentTransform.parent != storageRoot)
+                {
+                    contentTransform.SetParent(storageRoot, false);
+                }
+
+                if (contentInstance.activeSelf)
+                {
+                    contentInstance.SetActive(false);
+                }
+            }
+        }
+
+        return tab.runtimeContent;
+    }
+
+    private void EnsureScrollRectConfigured()
+    {
+        if (sharedScrollRect == null || sharedContentRoot == null)
+        {
+            return;
+        }
+
+        RectTransform contentRect = sharedContentRoot as RectTransform;
+        if (contentRect != null && sharedScrollRect.content != contentRect)
+        {
+            sharedScrollRect.content = contentRect;
+        }
+    }
+
+    private void ResetSharedScrollPosition()
+    {
+        if (sharedScrollRect == null)
+        {
+            return;
+        }
+
+        sharedScrollRect.StopMovement();
+        sharedScrollRect.horizontalNormalizedPosition = 0f;
+        sharedScrollRect.verticalNormalizedPosition = 1f;
+    }
+
+    private void ApplyTabContentState(CategoryTab tab, bool isOn, bool resetScrollPosition)
+    {
+        GameObject contentInstance = EnsureTabContentInstance(tab);
+        if (contentInstance == null)
+        {
+            return;
+        }
+
+        if (sharedContentRoot == null)
+        {
+            if (contentInstance.activeSelf != isOn)
+            {
+                contentInstance.SetActive(isOn);
+            }
+            return;
+        }
+
+        Transform targetParent = isOn ? sharedContentRoot : GetTabContentStorageRoot();
+        Transform contentTransform = contentInstance.transform;
+        if (contentTransform.parent != targetParent)
+        {
+            contentTransform.SetParent(targetParent, false);
+        }
+
+        if (contentInstance.activeSelf != isOn)
+        {
+            contentInstance.SetActive(isOn);
+        }
+
+        if (isOn)
+        {
+            EnsureScrollRectConfigured();
+            if (resetScrollPosition)
+            {
+                ResetSharedScrollPosition();
+            }
+        }
+    }
+
     private void SetupTabs()
     {
         toggleHandlers.Clear();
@@ -371,10 +507,14 @@ public class WardrobeUIController : MonoBehaviour
             tabToggleGroup = group;
         }
 
+        EnsureScrollRectConfigured();
+
         for (int i = 0; i < categoryTabs.Count; i++)
         {
             CategoryTab tab = categoryTabs[i];
             UnityAction<bool> handler = null;
+
+            EnsureTabContentInstance(tab);
 
             if (tab != null && tab.toggle != null)
             {
@@ -389,9 +529,9 @@ public class WardrobeUIController : MonoBehaviour
             }
 
             bool isActive = tab != null && tab.toggle != null && tab.toggle.isOn;
-            if (tab != null && tab.content != null)
+            if (tab != null)
             {
-                tab.content.SetActive(isActive);
+                ApplyTabContentState(tab, isActive, true);
             }
 
             toggleHandlers.Add(handler);
@@ -411,10 +551,7 @@ public class WardrobeUIController : MonoBehaviour
             return;
         }
 
-        if (tab.content != null)
-        {
-            tab.content.SetActive(isOn);
-        }
+        ApplyTabContentState(tab, isOn, true);
     }
 
     private void RegisterItemViewsInChildren()
@@ -437,24 +574,35 @@ public class WardrobeUIController : MonoBehaviour
 
     private void EnsureAnyTabIsActive()
     {
-        for (int i = 0; i < categoryTabs.Count; i++)
-        {
-            CategoryTab tab = categoryTabs[i];
-            if (tab != null && tab.toggle != null && tab.toggle.isOn)
-            {
-                OnTabToggled(i, true);
-                return;
-            }
-        }
+        bool hasActiveTab = false;
 
         for (int i = 0; i < categoryTabs.Count; i++)
         {
             CategoryTab tab = categoryTabs[i];
-            if (tab != null && tab.toggle != null)
+            if (tab == null)
             {
-                tab.toggle.isOn = true;
-                OnTabToggled(i, true);
-                break;
+                continue;
+            }
+
+            bool isOn = tab.toggle != null && tab.toggle.isOn;
+            ApplyTabContentState(tab, isOn, false);
+
+            if (isOn)
+            {
+                hasActiveTab = true;
+            }
+        }
+
+        if (!hasActiveTab)
+        {
+            for (int i = 0; i < categoryTabs.Count; i++)
+            {
+                CategoryTab tab = categoryTabs[i];
+                if (tab != null && tab.toggle != null)
+                {
+                    tab.toggle.isOn = true;
+                    break;
+                }
             }
         }
     }
