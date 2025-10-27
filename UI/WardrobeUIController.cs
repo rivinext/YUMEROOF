@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using TMPro;
 
 public enum WardrobeTabType
 {
@@ -28,6 +29,9 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private Camera previewCamera;
     [SerializeField] private RawImage previewTargetImage;
     [SerializeField] private bool autoRegisterItemsOnAwake = true;
+    [SerializeField] private WardrobeCatalog wardrobeCatalog;
+    [SerializeField] private WardrobeItemView wardrobeItemViewPrefab;
+    [SerializeField] private TMP_Text descriptionText;
 
     [Serializable]
     private class CategoryTab
@@ -55,6 +59,7 @@ public class WardrobeUIController : MonoBehaviour
     private readonly Dictionary<WardrobeTabType, GameObject> equippedInstances = new Dictionary<WardrobeTabType, GameObject>();
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
+    private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -117,12 +122,14 @@ public class WardrobeUIController : MonoBehaviour
 
         BuildAttachmentLookup();
         SetupTabs();
+        PopulateCatalogItems();
 
         if (autoRegisterItemsOnAwake)
         {
             RegisterItemViewsInChildren();
         }
 
+        UpdateDescription(null);
         InitializePreviewTarget();
         UpdatePreviewActivation(panelAnimator != null && panelAnimator.IsShown);
     }
@@ -263,6 +270,7 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         registeredItems.Remove(itemView);
+        runtimeGeneratedItems.Remove(itemView);
 
         WardrobeItemView active;
         if (activeSelections.TryGetValue(itemView.Category, out active) && active == itemView)
@@ -304,6 +312,7 @@ public class WardrobeUIController : MonoBehaviour
         equippedInstances[category] = newInstance;
         UpdateSelectionState(category, source);
         onItemEquipped.Invoke(category, newInstance, source);
+        UpdateDescription(source);
     }
 
     private void UpdateSelectionState(WardrobeTabType category, WardrobeItemView selectedView)
@@ -435,6 +444,98 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
+    private void PopulateCatalogItems()
+    {
+        if (wardrobeCatalog == null || wardrobeItemViewPrefab == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < runtimeGeneratedItems.Count; i++)
+        {
+            WardrobeItemView generated = runtimeGeneratedItems[i];
+            if (generated == null)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(generated.gameObject);
+            }
+            else
+            {
+                DestroyImmediate(generated.gameObject);
+            }
+        }
+
+        runtimeGeneratedItems.Clear();
+
+        Dictionary<WardrobeTabType, Transform> parentLookup = new Dictionary<WardrobeTabType, Transform>();
+        for (int i = 0; i < categoryTabs.Count; i++)
+        {
+            CategoryTab tab = categoryTabs[i];
+            if (tab == null || tab.content == null)
+            {
+                continue;
+            }
+
+            Transform parentTransform = tab.content.transform;
+            if (parentTransform == null)
+            {
+                continue;
+            }
+
+            if (!parentLookup.ContainsKey(tab.category))
+            {
+                parentLookup.Add(tab.category, parentTransform);
+            }
+        }
+
+        IReadOnlyList<WardrobeCatalogEntry> entries = wardrobeCatalog.Entries;
+        if (entries == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            WardrobeCatalogEntry entry = entries[i];
+            Transform parent;
+            if (!parentLookup.TryGetValue(entry.TabType, out parent) || parent == null)
+            {
+                continue;
+            }
+
+            WardrobeItemView viewInstance = Instantiate(wardrobeItemViewPrefab, parent);
+            if (viewInstance == null)
+            {
+                continue;
+            }
+
+            viewInstance.ApplyCatalogEntry(entry);
+            runtimeGeneratedItems.Add(viewInstance);
+        }
+    }
+
+    private void UpdateDescription(WardrobeItemView view)
+    {
+        if (descriptionText == null)
+        {
+            return;
+        }
+
+        if (view == null)
+        {
+            descriptionText.text = string.Empty;
+            return;
+        }
+
+        descriptionText.text = !string.IsNullOrEmpty(view.DescriptionId)
+            ? view.DescriptionId
+            : view.DisplayName;
+    }
+
     private void EnsureAnyTabIsActive()
     {
         for (int i = 0; i < categoryTabs.Count; i++)
@@ -524,6 +625,13 @@ public class WardrobeItemView : MonoBehaviour
     [SerializeField] private GameObject wearablePrefab;
     [SerializeField] private Button button;
     [SerializeField] private GameObject selectionIndicator;
+    [SerializeField] private TMP_Text nameLabel;
+    [SerializeField] private Image iconImage;
+
+    private string displayName;
+    private string nameId;
+    private string descriptionId;
+    private Sprite iconSprite;
 
     private WardrobeUIController owner;
     private bool isSelected;
@@ -541,6 +649,26 @@ public class WardrobeItemView : MonoBehaviour
     public bool IsEmpty
     {
         get { return wearablePrefab == null; }
+    }
+
+    public string DisplayName
+    {
+        get { return displayName; }
+    }
+
+    public string NameId
+    {
+        get { return nameId; }
+    }
+
+    public string DescriptionId
+    {
+        get { return descriptionId; }
+    }
+
+    public Sprite IconSprite
+    {
+        get { return iconSprite; }
     }
 
     private void Reset()
@@ -574,6 +702,55 @@ public class WardrobeItemView : MonoBehaviour
     public void SetWearablePrefab(GameObject prefab)
     {
         wearablePrefab = prefab;
+    }
+
+    public void ApplyCatalogEntry(WardrobeCatalogEntry entry)
+    {
+        category = entry.TabType;
+        displayName = entry.DisplayName;
+        SetNameId(entry.NameId);
+        descriptionId = entry.DescriptionId;
+
+        string viewName = !string.IsNullOrEmpty(entry.DisplayName) ? entry.DisplayName : entry.NameId;
+        if (!string.IsNullOrEmpty(viewName))
+        {
+            gameObject.name = viewName;
+        }
+
+        GameObject prefab = entry.WearablePrefab;
+        if (prefab == null && !string.IsNullOrEmpty(entry.Model3D))
+        {
+            prefab = Resources.Load<GameObject>(entry.Model3D);
+        }
+
+        SetWearablePrefab(prefab);
+
+        Sprite sprite = entry.ImageSprite;
+        if (sprite == null && !string.IsNullOrEmpty(entry.Image2D))
+        {
+            sprite = Resources.Load<Sprite>(entry.Image2D);
+        }
+
+        SetIcon(sprite);
+    }
+
+    public void SetNameId(string value)
+    {
+        nameId = value;
+        if (nameLabel != null)
+        {
+            nameLabel.text = value;
+        }
+    }
+
+    public void SetIcon(Sprite sprite)
+    {
+        iconSprite = sprite;
+        if (iconImage != null)
+        {
+            iconImage.sprite = sprite;
+            iconImage.enabled = sprite != null;
+        }
     }
 
     private void Bind()

@@ -34,12 +34,56 @@ public static class WardrobeCatalogImporter
             return;
         }
 
+        PreserveExistingEntryData(parsedEntries, catalog);
         Undo.RecordObject(catalog, "Update Wardrobe Catalog");
         catalog.SetEntries(parsedEntries);
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"Updated WardrobeCatalog asset with {parsedEntries.Count} entries.");
+    }
+
+    private static void PreserveExistingEntryData(List<WardrobeCatalogEntry> parsedEntries, WardrobeCatalog catalog)
+    {
+        if (parsedEntries == null || catalog == null)
+        {
+            return;
+        }
+
+        IReadOnlyList<WardrobeCatalogEntry> existingEntries = catalog.Entries;
+        if (existingEntries == null)
+        {
+            return;
+        }
+
+        Dictionary<string, WardrobeCatalogEntry> existingLookup = new Dictionary<string, WardrobeCatalogEntry>();
+        for (int i = 0; i < existingEntries.Count; i++)
+        {
+            WardrobeCatalogEntry existing = existingEntries[i];
+            if (!string.IsNullOrEmpty(existing.ItemId) && !existingLookup.ContainsKey(existing.ItemId))
+            {
+                existingLookup.Add(existing.ItemId, existing);
+            }
+        }
+
+        for (int i = 0; i < parsedEntries.Count; i++)
+        {
+            WardrobeCatalogEntry entry = parsedEntries[i];
+            if (string.IsNullOrEmpty(entry.ItemId))
+            {
+                continue;
+            }
+
+            WardrobeCatalogEntry existing;
+            if (!existingLookup.TryGetValue(entry.ItemId, out existing))
+            {
+                continue;
+            }
+
+            entry.ImageSprite = existing.ImageSprite;
+            entry.WearablePrefab = existing.WearablePrefab;
+            parsedEntries[i] = entry;
+        }
     }
 
     private static List<WardrobeCatalogEntry> ParseCsv(string csvText)
