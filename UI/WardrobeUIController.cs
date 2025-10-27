@@ -107,7 +107,7 @@ public class WardrobeUIController : MonoBehaviour
 
         if (closeButton != null)
         {
-            closeButton.onClick.AddListener(HidePanel);
+            closeButton.onClick.AddListener(OnCloseButtonClicked);
         }
 
         if (panelAnimator != null)
@@ -141,7 +141,7 @@ public class WardrobeUIController : MonoBehaviour
 
         if (closeButton != null)
         {
-            closeButton.onClick.RemoveListener(HidePanel);
+            closeButton.onClick.RemoveListener(OnCloseButtonClicked);
         }
 
         if (panelAnimator != null)
@@ -194,6 +194,11 @@ public class WardrobeUIController : MonoBehaviour
             panelRoot.SetActive(false);
             UpdatePreviewActivation(false);
         }
+    }
+
+    private void OnCloseButtonClicked()
+    {
+        HidePanel();
     }
 
     public void TogglePanel()
