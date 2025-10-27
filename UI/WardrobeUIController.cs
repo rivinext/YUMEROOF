@@ -625,7 +625,6 @@ public class WardrobeItemView : MonoBehaviour
     [SerializeField] private GameObject wearablePrefab;
     [SerializeField] private Button button;
     [SerializeField] private GameObject selectionIndicator;
-    [SerializeField] private WardrobeCard wardrobeCard;
     [SerializeField] private TMP_Text nameLabel;
     [SerializeField] private Image iconImage;
 
@@ -726,73 +725,32 @@ public class WardrobeItemView : MonoBehaviour
 
         SetWearablePrefab(prefab);
 
-        ApplyCard(entry);
+        Sprite sprite = entry.ImageSprite;
+        if (sprite == null && !string.IsNullOrEmpty(entry.Image2D))
+        {
+            sprite = Resources.Load<Sprite>(entry.Image2D);
+        }
+
+        SetIcon(sprite);
     }
 
     public void SetNameId(string value)
     {
         nameId = value;
-        if (wardrobeCard != null)
+        if (nameLabel != null)
         {
-            wardrobeCard.SetName(value);
-            return;
-        }
-
-        TMP_Text label = GetNameLabel();
-        if (label != null)
-        {
-            label.text = value;
+            nameLabel.text = value;
         }
     }
 
     public void SetIcon(Sprite sprite)
     {
         iconSprite = sprite;
-        if (wardrobeCard != null)
+        if (iconImage != null)
         {
-            wardrobeCard.SetIcon(sprite);
-            return;
+            iconImage.sprite = sprite;
+            iconImage.enabled = sprite != null;
         }
-
-        Image image = GetIconImage();
-        if (image != null)
-        {
-            image.sprite = sprite;
-            image.enabled = sprite != null;
-        }
-    }
-
-    private void ApplyCard(WardrobeCatalogEntry entry)
-    {
-        if (wardrobeCard != null)
-        {
-            wardrobeCard.Apply(entry);
-            iconSprite = wardrobeCard.IconSprite;
-            return;
-        }
-
-        Sprite sprite = WardrobeCard.LoadSprite(entry);
-        SetIcon(sprite);
-    }
-
-    private TMP_Text GetNameLabel()
-    {
-        if (wardrobeCard != null && wardrobeCard.NameLabel != null)
-        {
-            return wardrobeCard.NameLabel;
-        }
-
-        return nameLabel;
-    }
-
-    private Image GetIconImage()
-    {
-        if (wardrobeCard != null && wardrobeCard.IconImage != null)
-        {
-            return wardrobeCard.IconImage;
-        }
-
-        return iconImage;
     }
 
     private void Bind()
