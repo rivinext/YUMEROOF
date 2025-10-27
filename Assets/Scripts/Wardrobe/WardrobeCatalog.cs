@@ -29,7 +29,9 @@ public struct WardrobeCatalogEntry
     [SerializeField] private string itemId;
     [SerializeField] private string nameId;
     [SerializeField] private string image2D;
+    [SerializeField] private Sprite imageSprite;
     [SerializeField] private string model3D;
+    [SerializeField] private GameObject wearablePrefab;
     [SerializeField] private string descriptionId;
     [SerializeField] private WardrobeTabType tabType;
 
@@ -63,10 +65,22 @@ public struct WardrobeCatalogEntry
         set { image2D = value; }
     }
 
+    public Sprite ImageSprite
+    {
+        get { return imageSprite; }
+        set { imageSprite = value; }
+    }
+
     public string Model3D
     {
         get { return model3D; }
         set { model3D = value; }
+    }
+
+    public GameObject WearablePrefab
+    {
+        get { return wearablePrefab; }
+        set { wearablePrefab = value; }
     }
 
     public string DescriptionId
