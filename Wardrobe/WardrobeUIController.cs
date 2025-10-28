@@ -831,7 +831,8 @@ public class WardrobeUIController : MonoBehaviour
         Vector2 delta = eventData.position - lastPointerPosition;
         lastPointerPosition = eventData.position;
 
-        float yaw = delta.x * previewRotateSpeed;
+        // Negate delta.x so the preview rotates opposite to the drag direction.
+        float yaw = -delta.x * previewRotateSpeed;
         if (previewUseDeltaTime)
         {
             yaw *= Time.deltaTime;
