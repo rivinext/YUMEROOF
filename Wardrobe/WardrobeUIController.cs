@@ -69,6 +69,7 @@ public class WardrobeUIController : MonoBehaviour
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
 
     private bool isDraggingPreview;
+    private int activePointerId = PointerEventData.kInvalidPointerId;
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
@@ -733,6 +734,7 @@ public class WardrobeUIController : MonoBehaviour
     {
         isDraggingPreview = false;
         lastPointerPosition = Vector2.zero;
+        activePointerId = PointerEventData.kInvalidPointerId;
     }
 
     private void SetupPreviewEventTrigger()
@@ -757,6 +759,7 @@ public class WardrobeUIController : MonoBehaviour
         AddEventTriggerListener(eventTrigger, EventTriggerType.Drag, OnPreviewDrag);
         AddEventTriggerListener(eventTrigger, EventTriggerType.PointerUp, OnPreviewPointerUp);
         AddEventTriggerListener(eventTrigger, EventTriggerType.PointerExit, OnPreviewPointerExit);
+        AddEventTriggerListener(eventTrigger, EventTriggerType.Cancel, OnPreviewPointerCancel);
     }
 
     private void AddEventTriggerListener(EventTrigger trigger, EventTriggerType eventType, Action<PointerEventData> callback)
@@ -786,22 +789,41 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         isDraggingPreview = true;
+        activePointerId = eventData.pointerId;
         lastPointerPosition = eventData.position;
     }
 
     private void OnPreviewPointerUp(PointerEventData eventData)
     {
+        if (eventData == null || eventData.pointerId != activePointerId)
+        {
+            return;
+        }
+
         ResetPreviewInteractionState();
     }
 
     private void OnPreviewPointerExit(PointerEventData eventData)
     {
+        if (eventData != null && eventData.pointerId == activePointerId)
+        {
+            lastPointerPosition = eventData.position;
+        }
+    }
+
+    private void OnPreviewPointerCancel(PointerEventData eventData)
+    {
+        if (eventData == null || eventData.pointerId != activePointerId)
+        {
+            return;
+        }
+
         ResetPreviewInteractionState();
     }
 
     private void OnPreviewDrag(PointerEventData eventData)
     {
-        if (!isDraggingPreview || previewPlayerRoot == null || eventData == null)
+        if (!isDraggingPreview || previewPlayerRoot == null || eventData == null || eventData.pointerId != activePointerId)
         {
             return;
         }
