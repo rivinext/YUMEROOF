@@ -8,7 +8,7 @@ using UnityEngine;
 public static class WardrobeCatalogImporter
 {
     private const string CsvAssetPath = "Assets/Resources/Data/YUME_ROOF - Wardrobe.csv";
-    private const string CatalogAssetPath = "Assets/Data/ScriptableObjects/Wardrobe/WardrobeCatalog.asset";
+    internal const string CatalogAssetPath = "Assets/Data/ScriptableObjects/Wardrobe/WardrobeCatalog.asset";
 
     [MenuItem("Tools/Wardrobe/Import Catalog")]
     public static void ImportCatalog()
@@ -30,6 +30,7 @@ public static class WardrobeCatalogImporter
             AssetDatabase.CreateAsset(catalog, CatalogAssetPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            WardrobeCatalogAutoBinder.AutoBindCatalogAssets();
             Debug.Log($"Created WardrobeCatalog asset with {parsedEntries.Count} entries.");
             return;
         }
@@ -41,6 +42,8 @@ public static class WardrobeCatalogImporter
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"Updated WardrobeCatalog asset with {parsedEntries.Count} entries.");
+
+        WardrobeCatalogAutoBinder.AutoBindCatalogAssets();
     }
 
     private static void PreserveExistingEntryData(List<WardrobeCatalogEntry> parsedEntries, WardrobeCatalog catalog)
