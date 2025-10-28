@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 
@@ -30,6 +31,8 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private Transform gamePlayerRoot;
     [SerializeField] private Camera previewCamera;
     [SerializeField] private RawImage previewTargetImage;
+    [SerializeField] private float previewRotateSpeed = 0.25f;
+    [SerializeField] private bool previewUseDeltaTime = false;
     [SerializeField] private bool autoRegisterItemsOnAwake = true;
     [SerializeField] private WardrobeCatalog wardrobeCatalog;
     [SerializeField] private WardrobeItemView wardrobeItemViewPrefab;
@@ -64,6 +67,11 @@ public class WardrobeUIController : MonoBehaviour
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
+
+    private bool isDraggingPreview;
+    private Vector2 lastPointerPosition;
+    private Quaternion previewInitialRotation;
+    private bool previewInitialRotationCaptured;
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -144,6 +152,8 @@ public class WardrobeUIController : MonoBehaviour
         UpdateDescription(null);
         InitializePreviewTarget();
         UpdatePreviewActivation(panelAnimator != null && panelAnimator.IsShown);
+        CapturePreviewInitialRotation();
+        SetupPreviewEventTrigger();
     }
 
     private void Start()
@@ -689,7 +699,123 @@ public class WardrobeUIController : MonoBehaviour
         if (visible)
         {
             InitializePreviewTarget();
+            CapturePreviewInitialRotation();
         }
+        else
+        {
+            ResetPreviewInteractionState();
+            RestorePreviewRotation();
+        }
+    }
+
+    private void CapturePreviewInitialRotation()
+    {
+        if (previewPlayerRoot == null)
+        {
+            return;
+        }
+
+        previewInitialRotation = previewPlayerRoot.rotation;
+        previewInitialRotationCaptured = true;
+    }
+
+    private void RestorePreviewRotation()
+    {
+        if (!previewInitialRotationCaptured || previewPlayerRoot == null)
+        {
+            return;
+        }
+
+        previewPlayerRoot.rotation = previewInitialRotation;
+    }
+
+    private void ResetPreviewInteractionState()
+    {
+        isDraggingPreview = false;
+        lastPointerPosition = Vector2.zero;
+    }
+
+    private void SetupPreviewEventTrigger()
+    {
+        if (previewTargetImage == null)
+        {
+            return;
+        }
+
+        EventTrigger eventTrigger = previewTargetImage.GetComponent<EventTrigger>();
+        if (eventTrigger == null)
+        {
+            eventTrigger = previewTargetImage.gameObject.AddComponent<EventTrigger>();
+        }
+
+        if (eventTrigger.triggers == null)
+        {
+            eventTrigger.triggers = new List<EventTrigger.Entry>();
+        }
+
+        AddEventTriggerListener(eventTrigger, EventTriggerType.PointerDown, OnPreviewPointerDown);
+        AddEventTriggerListener(eventTrigger, EventTriggerType.Drag, OnPreviewDrag);
+        AddEventTriggerListener(eventTrigger, EventTriggerType.PointerUp, OnPreviewPointerUp);
+        AddEventTriggerListener(eventTrigger, EventTriggerType.PointerExit, OnPreviewPointerExit);
+    }
+
+    private void AddEventTriggerListener(EventTrigger trigger, EventTriggerType eventType, Action<PointerEventData> callback)
+    {
+        if (trigger == null || callback == null)
+        {
+            return;
+        }
+
+        EventTrigger.Entry entry = new EventTrigger.Entry { eventID = eventType };
+        entry.callback.AddListener(data =>
+        {
+            PointerEventData pointerEventData = data as PointerEventData;
+            if (pointerEventData != null)
+            {
+                callback(pointerEventData);
+            }
+        });
+        trigger.triggers.Add(entry);
+    }
+
+    private void OnPreviewPointerDown(PointerEventData eventData)
+    {
+        if (eventData == null)
+        {
+            return;
+        }
+
+        isDraggingPreview = true;
+        lastPointerPosition = eventData.position;
+    }
+
+    private void OnPreviewPointerUp(PointerEventData eventData)
+    {
+        ResetPreviewInteractionState();
+    }
+
+    private void OnPreviewPointerExit(PointerEventData eventData)
+    {
+        ResetPreviewInteractionState();
+    }
+
+    private void OnPreviewDrag(PointerEventData eventData)
+    {
+        if (!isDraggingPreview || previewPlayerRoot == null || eventData == null)
+        {
+            return;
+        }
+
+        Vector2 delta = eventData.position - lastPointerPosition;
+        lastPointerPosition = eventData.position;
+
+        float yaw = delta.x * previewRotateSpeed;
+        if (previewUseDeltaTime)
+        {
+            yaw *= Time.deltaTime;
+        }
+
+        previewPlayerRoot.Rotate(0f, yaw, 0f, Space.World);
     }
 
     private void OnPanelVisibilityChanged(bool visible)
