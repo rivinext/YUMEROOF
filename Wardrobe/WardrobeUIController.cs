@@ -25,7 +25,9 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private ToggleGroup tabToggleGroup;
     [SerializeField] private List<CategoryTab> categoryTabs = new List<CategoryTab>();
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
+    [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private Transform previewPlayerRoot;
+    [SerializeField] private Transform gamePlayerRoot;
     [SerializeField] private Camera previewCamera;
     [SerializeField] private RawImage previewTargetImage;
     [SerializeField] private bool autoRegisterItemsOnAwake = true;
@@ -42,7 +44,7 @@ public class WardrobeUIController : MonoBehaviour
     }
 
     [Serializable]
-    private class AttachmentPoint
+    public class AttachmentPoint
     {
         public WardrobeTabType category;
         public Transform mountPoint;
@@ -56,7 +58,9 @@ public class WardrobeUIController : MonoBehaviour
 
     private readonly List<UnityAction<bool>> toggleHandlers = new List<UnityAction<bool>>();
     private readonly Dictionary<WardrobeTabType, AttachmentPoint> attachmentLookup = new Dictionary<WardrobeTabType, AttachmentPoint>();
-    private readonly Dictionary<WardrobeTabType, GameObject> equippedInstances = new Dictionary<WardrobeTabType, GameObject>();
+    private readonly Dictionary<WardrobeTabType, AttachmentPoint> gameAttachmentLookup = new Dictionary<WardrobeTabType, AttachmentPoint>();
+    private readonly Dictionary<WardrobeTabType, GameObject> previewEquippedInstances = new Dictionary<WardrobeTabType, GameObject>();
+    private readonly Dictionary<WardrobeTabType, GameObject> gameEquippedInstances = new Dictionary<WardrobeTabType, GameObject>();
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
@@ -69,7 +73,14 @@ public class WardrobeUIController : MonoBehaviour
     public GameObject GetEquippedInstance(WardrobeTabType category)
     {
         GameObject instance;
-        equippedInstances.TryGetValue(category, out instance);
+        previewEquippedInstances.TryGetValue(category, out instance);
+        return instance;
+    }
+
+    public GameObject GetGameEquippedInstance(WardrobeTabType category)
+    {
+        GameObject instance;
+        gameEquippedInstances.TryGetValue(category, out instance);
         return instance;
     }
 
@@ -121,6 +132,7 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         BuildAttachmentLookup();
+        BuildGameAttachmentLookup();
         SetupTabs();
         PopulateCatalogItems();
 
@@ -282,44 +294,39 @@ public class WardrobeUIController : MonoBehaviour
     private void EquipItem(WardrobeTabType category, GameObject prefab, WardrobeItemView source)
     {
         GameObject currentInstance;
-        if (equippedInstances.TryGetValue(category, out currentInstance) && currentInstance != null)
+        if (previewEquippedInstances.TryGetValue(category, out currentInstance) && currentInstance != null)
         {
             DestroyInstance(currentInstance);
         }
+        previewEquippedInstances.Remove(category);
 
-        GameObject newInstance = null;
+        if (gameEquippedInstances.TryGetValue(category, out currentInstance) && currentInstance != null)
+        {
+            DestroyInstance(currentInstance);
+        }
+        gameEquippedInstances.Remove(category);
+
+        GameObject newPreviewInstance = null;
+        GameObject newGameInstance = null;
 
         if (prefab != null)
         {
-            AttachmentPoint attachmentPoint;
-            if (!attachmentLookup.TryGetValue(category, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
-            {
-                Debug.LogWarningFormat(this, "[WardrobeUIController] Attachment point for category '{0}' is not configured.", category);
-            }
-            else
-            {
-                newInstance = Instantiate(prefab, attachmentPoint.mountPoint, false);
-                if (newInstance != null && attachmentPoint.mountPoint != null)
-                {
-                    int mountLayer = attachmentPoint.mountPoint.gameObject.layer;
-                    if (mountLayer >= 0 && mountLayer < 32)
-                    {
-                        ApplyLayerRecursively(newInstance, mountLayer);
-                    }
-                }
-                if (attachmentPoint.resetLocalTransform && newInstance != null)
-                {
-                    Transform instanceTransform = newInstance.transform;
-                    instanceTransform.localPosition = Vector3.zero;
-                    instanceTransform.localRotation = Quaternion.identity;
-                    instanceTransform.localScale = Vector3.one;
-                }
-            }
+            newPreviewInstance = InstantiateForAttachment(prefab, attachmentLookup, category, "Preview", true);
+            newGameInstance = InstantiateForAttachment(prefab, gameAttachmentLookup, category, "Game", false);
         }
 
-        equippedInstances[category] = newInstance;
+        if (newPreviewInstance != null)
+        {
+            previewEquippedInstances[category] = newPreviewInstance;
+        }
+
+        if (newGameInstance != null)
+        {
+            gameEquippedInstances[category] = newGameInstance;
+        }
+
         UpdateSelectionState(category, source);
-        onItemEquipped.Invoke(category, newInstance, source);
+        onItemEquipped.Invoke(category, newPreviewInstance, source);
         UpdateDescription(source);
     }
 
@@ -381,21 +388,92 @@ public class WardrobeUIController : MonoBehaviour
 
     private void BuildAttachmentLookup()
     {
-        attachmentLookup.Clear();
+        BuildAttachmentLookupInternal(attachmentLookup, attachmentPoints, previewPlayerRoot);
+    }
 
-        for (int i = 0; i < attachmentPoints.Count; i++)
+    private void BuildGameAttachmentLookup()
+    {
+        BuildAttachmentLookupInternal(gameAttachmentLookup, gameAttachmentPoints, gamePlayerRoot);
+    }
+
+    private void BuildAttachmentLookupInternal(Dictionary<WardrobeTabType, AttachmentPoint> lookup, List<AttachmentPoint> points, Transform root)
+    {
+        lookup.Clear();
+
+        if (points == null)
         {
-            AttachmentPoint point = attachmentPoints[i];
+            return;
+        }
+
+        for (int i = 0; i < points.Count; i++)
+        {
+            AttachmentPoint point = points[i];
             if (point == null || point.mountPoint == null)
             {
                 continue;
             }
 
-            if (!attachmentLookup.ContainsKey(point.category))
+            if (root != null && !point.mountPoint.IsChildOf(root))
             {
-                attachmentLookup.Add(point.category, point);
+                continue;
+            }
+
+            if (!lookup.ContainsKey(point.category))
+            {
+                lookup.Add(point.category, point);
             }
         }
+    }
+
+    private GameObject InstantiateForAttachment(GameObject prefab, Dictionary<WardrobeTabType, AttachmentPoint> lookup, WardrobeTabType category, string attachmentRole, bool logWarnings)
+    {
+        if (prefab == null)
+        {
+            return null;
+        }
+
+        AttachmentPoint attachmentPoint;
+        if (!lookup.TryGetValue(category, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
+        {
+            if (logWarnings)
+            {
+                Debug.LogWarningFormat(this, "[WardrobeUIController] {0} attachment point for category '{1}' is not configured.", attachmentRole, category);
+            }
+
+            return null;
+        }
+
+        return InstantiateForAttachment(prefab, attachmentPoint);
+    }
+
+    private GameObject InstantiateForAttachment(GameObject prefab, AttachmentPoint attachmentPoint)
+    {
+        if (prefab == null || attachmentPoint == null || attachmentPoint.mountPoint == null)
+        {
+            return null;
+        }
+
+        GameObject instance = Instantiate(prefab, attachmentPoint.mountPoint, false);
+        if (instance == null)
+        {
+            return null;
+        }
+
+        int mountLayer = attachmentPoint.mountPoint.gameObject.layer;
+        if (mountLayer >= 0 && mountLayer < 32)
+        {
+            ApplyLayerRecursively(instance, mountLayer);
+        }
+
+        if (attachmentPoint.resetLocalTransform)
+        {
+            Transform instanceTransform = instance.transform;
+            instanceTransform.localPosition = Vector3.zero;
+            instanceTransform.localRotation = Quaternion.identity;
+            instanceTransform.localScale = Vector3.one;
+        }
+
+        return instance;
     }
 
     private void SetupTabs()
@@ -619,6 +697,22 @@ public class WardrobeUIController : MonoBehaviour
         UpdatePreviewActivation(visible);
     }
 
+    /// <summary>
+    /// Subscribes to <see cref="OnItemEquipped"/> and forwards equipment changes to another player rig.
+    /// The returned <see cref="IDisposable"/> must be disposed to unsubscribe and clean up instantiated objects.
+    /// </summary>
+    /// <param name="playerRoot">Optional descriptive root for the forwarded player hierarchy.</param>
+    /// <param name="attachmentPoints">Attachment points that define where each wardrobe category should be mounted.</param>
+    public IDisposable SubscribeGamePlayer(Transform playerRoot, IEnumerable<AttachmentPoint> attachmentPoints)
+    {
+        if (attachmentPoints == null)
+        {
+            throw new ArgumentNullException(nameof(attachmentPoints));
+        }
+
+        return new EquipmentForwardSubscription(this, playerRoot, attachmentPoints);
+    }
+
     private WardrobeItemView FindItemView(WardrobeTabType category, GameObject prefab)
     {
         for (int i = 0; i < registeredItems.Count; i++)
@@ -643,5 +737,102 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         return null;
+    }
+
+    private sealed class EquipmentForwardSubscription : IDisposable
+    {
+        private readonly WardrobeUIController controller;
+        private readonly Transform playerRoot;
+        private readonly Dictionary<WardrobeTabType, AttachmentPoint> attachments = new Dictionary<WardrobeTabType, AttachmentPoint>();
+        private readonly Dictionary<WardrobeTabType, GameObject> instances = new Dictionary<WardrobeTabType, GameObject>();
+        private readonly UnityAction<WardrobeTabType, GameObject, WardrobeItemView> handler;
+        private bool disposed;
+
+        public EquipmentForwardSubscription(WardrobeUIController controller, Transform playerRoot, IEnumerable<AttachmentPoint> attachmentPoints)
+        {
+            this.controller = controller;
+            this.playerRoot = playerRoot;
+
+            foreach (AttachmentPoint point in attachmentPoints)
+            {
+                if (point == null || point.mountPoint == null)
+                {
+                    continue;
+                }
+
+                if (this.playerRoot != null && point.mountPoint != null && !point.mountPoint.IsChildOf(this.playerRoot))
+                {
+                    continue;
+                }
+
+                if (!attachments.ContainsKey(point.category))
+                {
+                    attachments.Add(point.category, point);
+                }
+            }
+
+            handler = HandleEquipmentChanged;
+            controller.onItemEquipped.AddListener(handler);
+            SyncExistingEquipment();
+        }
+
+        public void Dispose()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            disposed = true;
+            controller.onItemEquipped.RemoveListener(handler);
+
+            foreach (KeyValuePair<WardrobeTabType, GameObject> pair in instances)
+            {
+                controller.DestroyInstance(pair.Value);
+            }
+
+            instances.Clear();
+            attachments.Clear();
+        }
+
+        private void HandleEquipmentChanged(WardrobeTabType category, GameObject previewInstance, WardrobeItemView source)
+        {
+            Forward(category, source);
+        }
+
+        private void Forward(WardrobeTabType category, WardrobeItemView source)
+        {
+            GameObject currentInstance;
+            if (instances.TryGetValue(category, out currentInstance) && currentInstance != null)
+            {
+                controller.DestroyInstance(currentInstance);
+            }
+            instances.Remove(category);
+
+            if (source == null || source.WearablePrefab == null)
+            {
+                return;
+            }
+
+            AttachmentPoint attachmentPoint;
+            if (!attachments.TryGetValue(category, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
+            {
+                return;
+            }
+
+            GameObject newInstance = controller.InstantiateForAttachment(source.WearablePrefab, attachmentPoint);
+            if (newInstance != null)
+            {
+                instances[category] = newInstance;
+            }
+        }
+
+        private void SyncExistingEquipment()
+        {
+            foreach (KeyValuePair<WardrobeTabType, WardrobeItemView> pair in controller.activeSelections)
+            {
+                Forward(pair.Key, pair.Value);
+            }
+        }
     }
 }
