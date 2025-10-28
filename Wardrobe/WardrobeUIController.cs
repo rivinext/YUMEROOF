@@ -44,9 +44,6 @@ public class WardrobeUIController : MonoBehaviour
         public WardrobeTabType category;
         public Toggle toggle;
         public GameObject content;
-        public Image iconImage;
-        public Sprite normalSprite;
-        public Sprite selectedSprite;
     }
 
     [Serializable]
@@ -71,8 +68,9 @@ public class WardrobeUIController : MonoBehaviour
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
 
+    private const int InvalidPointerId = -1;   // 追加：無効ポインタID
     private bool isDraggingPreview;
-    private int activePointerId = PointerEventData.kInvalidPointerId;
+    private int activePointerId = InvalidPointerId;
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
@@ -523,8 +521,6 @@ public class WardrobeUIController : MonoBehaviour
                 tab.content.SetActive(isActive);
             }
 
-            RefreshTabVisual(tab, isActive);
-
             toggleHandlers.Add(handler);
         }
     }
@@ -545,26 +541,6 @@ public class WardrobeUIController : MonoBehaviour
         if (tab.content != null)
         {
             tab.content.SetActive(isOn);
-        }
-
-        RefreshTabVisual(tab, isOn);
-    }
-
-    private void RefreshTabVisual(CategoryTab tab, bool isOn)
-    {
-        if (tab == null || tab.iconImage == null)
-        {
-            return;
-        }
-
-        Sprite targetSprite = isOn ? tab.selectedSprite : tab.normalSprite;
-        if (tab.iconImage.sprite != targetSprite)
-        {
-            tab.iconImage.sprite = targetSprite;
-            if (targetSprite != null)
-            {
-                tab.iconImage.SetNativeSize();
-            }
         }
     }
 
@@ -759,7 +735,7 @@ public class WardrobeUIController : MonoBehaviour
     {
         isDraggingPreview = false;
         lastPointerPosition = Vector2.zero;
-        activePointerId = PointerEventData.kInvalidPointerId;
+        activePointerId = InvalidPointerId;
     }
 
     private void SetupPreviewEventTrigger()
