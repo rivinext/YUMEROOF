@@ -299,6 +299,14 @@ public class WardrobeUIController : MonoBehaviour
             else
             {
                 newInstance = Instantiate(prefab, attachmentPoint.mountPoint, false);
+                if (newInstance != null && attachmentPoint.mountPoint != null)
+                {
+                    int mountLayer = attachmentPoint.mountPoint.gameObject.layer;
+                    if (mountLayer >= 0 && mountLayer < 32)
+                    {
+                        ApplyLayerRecursively(newInstance, mountLayer);
+                    }
+                }
                 if (attachmentPoint.resetLocalTransform && newInstance != null)
                 {
                     Transform instanceTransform = newInstance.transform;
@@ -313,6 +321,26 @@ public class WardrobeUIController : MonoBehaviour
         UpdateSelectionState(category, source);
         onItemEquipped.Invoke(category, newInstance, source);
         UpdateDescription(source);
+    }
+
+    private void ApplyLayerRecursively(GameObject target, int layer)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        target.layer = layer;
+
+        Transform targetTransform = target.transform;
+        for (int i = 0; i < targetTransform.childCount; i++)
+        {
+            Transform child = targetTransform.GetChild(i);
+            if (child != null)
+            {
+                ApplyLayerRecursively(child.gameObject, layer);
+            }
+        }
     }
 
     private void UpdateSelectionState(WardrobeTabType category, WardrobeItemView selectedView)
