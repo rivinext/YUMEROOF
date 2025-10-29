@@ -78,20 +78,21 @@ public class WardrobeUIController : MonoBehaviour
     }
 
     [Serializable]
-    public class WardrobeEquipEvent : UnityEvent<WardrobeTabType, GameObject, WardrobeItemView> { }
+    public class WardrobeEquipEvent : UnityEvent<WardrobeTabType, WardrobeEquippedSet, WardrobeItemView> { }
 
     [SerializeField] private WardrobeEquipEvent onItemEquipped = new WardrobeEquipEvent();
 
     private readonly List<UnityAction<bool>> toggleHandlers = new List<UnityAction<bool>>();
     private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> attachmentLookup = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>>();
     private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> gameAttachmentLookup = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>>();
-    private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> previewEquippedInstances = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>>();
-    private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> gameEquippedInstances = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>>();
+    private readonly Dictionary<WardrobeTabType, WardrobeEquippedSet> previewEquippedInstances = new Dictionary<WardrobeTabType, WardrobeEquippedSet>();
+    private readonly Dictionary<WardrobeTabType, WardrobeEquippedSet> gameEquippedInstances = new Dictionary<WardrobeTabType, WardrobeEquippedSet>();
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
 
     private const int InvalidPointerId = -1;   // 追加：無効ポインタID
+    private static readonly List<GameObject> WearablePartsBuffer = new List<GameObject>();
     private bool isDraggingPreview;
     private int activePointerId = InvalidPointerId;
     private Vector2 lastPointerPosition;
@@ -103,14 +104,28 @@ public class WardrobeUIController : MonoBehaviour
         get { return onItemEquipped; }
     }
 
+    [Obsolete("Use GetEquippedSet instead. Returns the first equipped instance in the set.")]
     public GameObject GetEquippedInstance(WardrobeTabType category)
     {
-        return GetEquippedInstance(previewEquippedInstances, category);
+        WardrobeEquippedSet set = GetEquippedSet(category);
+        return set != null ? set.GetFirstInstance() : null;
     }
 
+    [Obsolete("Use GetGameEquippedSet instead. Returns the first equipped instance in the set.")]
     public GameObject GetGameEquippedInstance(WardrobeTabType category)
     {
-        return GetEquippedInstance(gameEquippedInstances, category);
+        WardrobeEquippedSet set = GetGameEquippedSet(category);
+        return set != null ? set.GetFirstInstance() : null;
+    }
+
+    public WardrobeEquippedSet GetEquippedSet(WardrobeTabType category)
+    {
+        return GetEquippedSetInternal(previewEquippedInstances, category);
+    }
+
+    public WardrobeEquippedSet GetGameEquippedSet(WardrobeTabType category)
+    {
+        return GetEquippedSetInternal(gameEquippedInstances, category);
     }
 
     public WardrobeItemView GetSelectedItem(WardrobeTabType category)
@@ -330,13 +345,25 @@ public class WardrobeUIController : MonoBehaviour
 
     private void EquipItem(WardrobeTabType category, GameObject prefab, WardrobeItemView source)
     {
-        GameObject newPreviewInstance = null;
-        GameObject newGameInstance = null;
+        WardrobeEquippedSet previewSetForEvent = null;
 
-        if (prefab == null)
+        WearablePartsBuffer.Clear();
+        if (source != null)
+        {
+            source.CollectWearablePrefabs(WearablePartsBuffer);
+        }
+
+        if (WearablePartsBuffer.Count == 0 && prefab != null)
+        {
+            WearablePartsBuffer.Add(prefab);
+        }
+
+        if (WearablePartsBuffer.Count == 0)
         {
             RemoveEquippedInstances(previewEquippedInstances, category, WardrobeBodyAnchor.None);
             RemoveEquippedInstances(gameEquippedInstances, category, WardrobeBodyAnchor.None);
+            previewEquippedInstances.Remove(category);
+            gameEquippedInstances.Remove(category);
         }
         else
         {
@@ -345,27 +372,81 @@ public class WardrobeUIController : MonoBehaviour
             RemoveEquippedInstances(previewEquippedInstances, category, anchor);
             RemoveEquippedInstances(gameEquippedInstances, category, anchor);
 
-            AttachmentPoint previewAttachmentPoint;
-            newPreviewInstance = InstantiateForAttachment(prefab, attachmentLookup, category, anchor, "Preview", true, out previewAttachmentPoint);
+            WardrobeEquippedSet newPreviewSet = null;
+            WardrobeEquippedSet newGameSet = null;
 
-            AttachmentPoint gameAttachmentPoint;
-            newGameInstance = InstantiateForAttachment(prefab, gameAttachmentLookup, category, anchor, "Game", false, out gameAttachmentPoint);
-
-            if (newPreviewInstance != null)
+            for (int i = 0; i < WearablePartsBuffer.Count; i++)
             {
-                WardrobeBodyAnchor resolvedAnchor = previewAttachmentPoint != null ? previewAttachmentPoint.GetResolvedAnchor() : anchor;
-                StoreEquippedInstance(previewEquippedInstances, category, resolvedAnchor, newPreviewInstance);
+                GameObject partPrefab = WearablePartsBuffer[i];
+                if (partPrefab == null)
+                {
+                    continue;
+                }
+
+                AttachmentPoint previewAttachmentPoint;
+                GameObject newPreviewInstance = InstantiateForAttachment(partPrefab, attachmentLookup, category, anchor, "Preview", true, out previewAttachmentPoint);
+
+                if (newPreviewInstance != null)
+                {
+                    if (newPreviewSet == null)
+                    {
+                        newPreviewSet = new WardrobeEquippedSet();
+                    }
+
+                    WardrobeBodyAnchor resolvedAnchor = previewAttachmentPoint != null ? previewAttachmentPoint.GetResolvedAnchor() : anchor;
+                    if (resolvedAnchor == WardrobeBodyAnchor.None)
+                    {
+                        resolvedAnchor = GetDefaultAnchorForCategory(category);
+                    }
+
+                    newPreviewSet.Add(resolvedAnchor, newPreviewInstance);
+                }
+
+                AttachmentPoint gameAttachmentPoint;
+                GameObject newGameInstance = InstantiateForAttachment(partPrefab, gameAttachmentLookup, category, anchor, "Game", false, out gameAttachmentPoint);
+
+                if (newGameInstance != null)
+                {
+                    if (newGameSet == null)
+                    {
+                        newGameSet = new WardrobeEquippedSet();
+                    }
+
+                    WardrobeBodyAnchor resolvedAnchor = gameAttachmentPoint != null ? gameAttachmentPoint.GetResolvedAnchor() : anchor;
+                    if (resolvedAnchor == WardrobeBodyAnchor.None)
+                    {
+                        resolvedAnchor = GetDefaultAnchorForCategory(category);
+                    }
+
+                    newGameSet.Add(resolvedAnchor, newGameInstance);
+                }
             }
 
-            if (newGameInstance != null)
+            if (newPreviewSet != null && !newPreviewSet.IsEmpty)
             {
-                WardrobeBodyAnchor resolvedAnchor = gameAttachmentPoint != null ? gameAttachmentPoint.GetResolvedAnchor() : anchor;
-                StoreEquippedInstance(gameEquippedInstances, category, resolvedAnchor, newGameInstance);
+                previewEquippedInstances[category] = newPreviewSet;
+                previewSetForEvent = newPreviewSet;
+            }
+            else
+            {
+                previewEquippedInstances.Remove(category);
+            }
+
+            if (newGameSet != null && !newGameSet.IsEmpty)
+            {
+                gameEquippedInstances[category] = newGameSet;
+            }
+            else
+            {
+                gameEquippedInstances.Remove(category);
             }
         }
 
+        previewSetForEvent = GetEquippedSetInternal(previewEquippedInstances, category);
+        WearablePartsBuffer.Clear();
+
         UpdateSelectionState(category, source);
-        onItemEquipped.Invoke(category, newPreviewInstance, source);
+        onItemEquipped.Invoke(category, previewSetForEvent, source);
         UpdateDescription(source);
     }
 
@@ -529,95 +610,43 @@ public class WardrobeUIController : MonoBehaviour
         return instance;
     }
 
-    private void RemoveEquippedInstances(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor)
+    private void RemoveEquippedInstances(Dictionary<WardrobeTabType, WardrobeEquippedSet> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor)
     {
         if (lookup == null)
         {
             return;
         }
 
-        Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
-        if (!lookup.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+        WardrobeEquippedSet set;
+        if (!lookup.TryGetValue(category, out set) || set == null)
         {
             return;
         }
 
-        if (anchor == WardrobeBodyAnchor.None)
-        {
-            foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
-            {
-                DestroyInstance(pair.Value);
-            }
+        List<GameObject> removedInstances = anchor == WardrobeBodyAnchor.None
+            ? set.RemoveAll()
+            : set.Remove(anchor);
 
-            lookup.Remove(category);
-            return;
-        }
-
-        GameObject instance;
-        if (anchorLookup.TryGetValue(anchor, out instance) && instance != null)
-        {
-            DestroyInstance(instance);
-        }
-
-        anchorLookup.Remove(anchor);
-
-        if (anchorLookup.Count == 0)
+        if (anchor == WardrobeBodyAnchor.None || set.IsEmpty)
         {
             lookup.Remove(category);
         }
+
+        for (int i = 0; i < removedInstances.Count; i++)
+        {
+            DestroyInstance(removedInstances[i]);
+        }
     }
 
-    private void StoreEquippedInstance(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor, GameObject instance)
-    {
-        if (lookup == null || instance == null)
-        {
-            return;
-        }
-
-        if (anchor == WardrobeBodyAnchor.None)
-        {
-            anchor = GetDefaultAnchorForCategory(category);
-        }
-
-        Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
-        if (!lookup.TryGetValue(category, out anchorLookup) || anchorLookup == null)
-        {
-            anchorLookup = new Dictionary<WardrobeBodyAnchor, GameObject>();
-            lookup[category] = anchorLookup;
-        }
-
-        anchorLookup[anchor] = instance;
-    }
-
-    private GameObject GetEquippedInstance(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> lookup, WardrobeTabType category)
+    private WardrobeEquippedSet GetEquippedSetInternal(Dictionary<WardrobeTabType, WardrobeEquippedSet> lookup, WardrobeTabType category)
     {
         if (lookup == null)
         {
             return null;
         }
 
-        Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
-        if (!lookup.TryGetValue(category, out anchorLookup) || anchorLookup == null)
-        {
-            return null;
-        }
-
-        WardrobeBodyAnchor defaultAnchor = GetDefaultAnchorForCategory(category);
-        GameObject instance;
-        if (defaultAnchor != WardrobeBodyAnchor.None && anchorLookup.TryGetValue(defaultAnchor, out instance) && instance != null)
-        {
-            return instance;
-        }
-
-        foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
-        {
-            if (pair.Value != null)
-            {
-                return pair.Value;
-            }
-        }
-
-        return null;
+        WardrobeEquippedSet set;
+        return lookup.TryGetValue(category, out set) ? set : null;
     }
 
     private static bool TryGetAttachmentPoint(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor, out AttachmentPoint attachmentPoint)
@@ -1117,8 +1146,8 @@ public class WardrobeUIController : MonoBehaviour
         private readonly WardrobeUIController controller;
         private readonly Transform playerRoot;
         private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> attachments = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>>();
-        private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> instances = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>>();
-        private readonly UnityAction<WardrobeTabType, GameObject, WardrobeItemView> handler;
+        private readonly Dictionary<WardrobeTabType, WardrobeEquippedSet> instances = new Dictionary<WardrobeTabType, WardrobeEquippedSet>();
+        private readonly UnityAction<WardrobeTabType, WardrobeEquippedSet, WardrobeItemView> handler;
         private bool disposed;
 
         public EquipmentForwardSubscription(WardrobeUIController controller, Transform playerRoot, IDictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> attachmentLookup)
@@ -1186,17 +1215,18 @@ public class WardrobeUIController : MonoBehaviour
             disposed = true;
             controller.onItemEquipped.RemoveListener(handler);
 
-            foreach (KeyValuePair<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> categoryPair in instances)
+            foreach (KeyValuePair<WardrobeTabType, WardrobeEquippedSet> categoryPair in instances)
             {
-                Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup = categoryPair.Value;
-                if (anchorLookup == null)
+                WardrobeEquippedSet set = categoryPair.Value;
+                if (set == null)
                 {
                     continue;
                 }
 
-                foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
+                List<GameObject> removed = set.RemoveAll();
+                for (int i = 0; i < removed.Count; i++)
                 {
-                    controller.DestroyInstance(pair.Value);
+                    controller.DestroyInstance(removed[i]);
                 }
             }
 
@@ -1204,7 +1234,7 @@ public class WardrobeUIController : MonoBehaviour
             attachments.Clear();
         }
 
-        private void HandleEquipmentChanged(WardrobeTabType category, GameObject previewInstance, WardrobeItemView source)
+        private void HandleEquipmentChanged(WardrobeTabType category, WardrobeEquippedSet previewSet, WardrobeItemView source)
         {
             Forward(category, source);
         }
@@ -1235,34 +1265,24 @@ public class WardrobeUIController : MonoBehaviour
 
         private void RemoveInstance(WardrobeTabType category, WardrobeBodyAnchor anchor)
         {
-            Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
-            if (!instances.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+            WardrobeEquippedSet set;
+            if (!instances.TryGetValue(category, out set) || set == null)
             {
                 return;
             }
 
-            if (anchor == WardrobeBodyAnchor.None)
-            {
-                foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
-                {
-                    controller.DestroyInstance(pair.Value);
-                }
+            List<GameObject> removed = anchor == WardrobeBodyAnchor.None
+                ? set.RemoveAll()
+                : set.Remove(anchor);
 
-                instances.Remove(category);
-                return;
-            }
-
-            GameObject currentInstance;
-            if (anchorLookup.TryGetValue(anchor, out currentInstance) && currentInstance != null)
-            {
-                controller.DestroyInstance(currentInstance);
-            }
-
-            anchorLookup.Remove(anchor);
-
-            if (anchorLookup.Count == 0)
+            if (anchor == WardrobeBodyAnchor.None || set.IsEmpty)
             {
                 instances.Remove(category);
+            }
+
+            for (int i = 0; i < removed.Count; i++)
+            {
+                controller.DestroyInstance(removed[i]);
             }
         }
 
@@ -1273,14 +1293,19 @@ public class WardrobeUIController : MonoBehaviour
                 return;
             }
 
-            Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
-            if (!instances.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+            WardrobeEquippedSet set;
+            if (!instances.TryGetValue(category, out set) || set == null)
             {
-                anchorLookup = new Dictionary<WardrobeBodyAnchor, GameObject>();
-                instances[category] = anchorLookup;
+                set = new WardrobeEquippedSet();
+                instances[category] = set;
             }
 
-            anchorLookup[anchor] = instance;
+            if (anchor == WardrobeBodyAnchor.None)
+            {
+                anchor = GetDefaultAnchorForCategory(category);
+            }
+
+            set.Add(anchor, instance);
         }
 
         private void SyncExistingEquipment()
