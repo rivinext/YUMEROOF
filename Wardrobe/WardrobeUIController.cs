@@ -50,8 +50,63 @@ public class WardrobeUIController : MonoBehaviour
     public class AttachmentPoint
     {
         public WardrobeTabType category;
+        public string partName = string.Empty;
         public Transform mountPoint;
         public bool resetLocalTransform = true;
+    }
+
+    private sealed class EquippedInstanceSet
+    {
+        private readonly Dictionary<string, GameObject> instances = new Dictionary<string, GameObject>();
+
+        public bool IsEmpty => instances.Count == 0;
+
+        public void Add(string partName, GameObject instance)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            instances[NormalizePartName(partName)] = instance;
+        }
+
+        public bool TryGet(string partName, out GameObject instance)
+        {
+            return instances.TryGetValue(NormalizePartName(partName), out instance);
+        }
+
+        public GameObject GetDefault()
+        {
+            GameObject instance;
+            if (instances.TryGetValue(string.Empty, out instance) && instance != null)
+            {
+                return instance;
+            }
+
+            foreach (KeyValuePair<string, GameObject> pair in instances)
+            {
+                if (pair.Value != null)
+                {
+                    return pair.Value;
+                }
+            }
+
+            return null;
+        }
+
+        public void DestroyAll(Action<GameObject> destroyer)
+        {
+            foreach (KeyValuePair<string, GameObject> pair in instances)
+            {
+                if (pair.Value != null)
+                {
+                    destroyer?.Invoke(pair.Value);
+                }
+            }
+
+            instances.Clear();
+        }
     }
 
     [Serializable]
@@ -60,10 +115,10 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private WardrobeEquipEvent onItemEquipped = new WardrobeEquipEvent();
 
     private readonly List<UnityAction<bool>> toggleHandlers = new List<UnityAction<bool>>();
-    private readonly Dictionary<WardrobeTabType, AttachmentPoint> attachmentLookup = new Dictionary<WardrobeTabType, AttachmentPoint>();
-    private readonly Dictionary<WardrobeTabType, AttachmentPoint> gameAttachmentLookup = new Dictionary<WardrobeTabType, AttachmentPoint>();
-    private readonly Dictionary<WardrobeTabType, GameObject> previewEquippedInstances = new Dictionary<WardrobeTabType, GameObject>();
-    private readonly Dictionary<WardrobeTabType, GameObject> gameEquippedInstances = new Dictionary<WardrobeTabType, GameObject>();
+    private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> attachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
+    private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> gameAttachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
+    private readonly Dictionary<WardrobeTabType, EquippedInstanceSet> previewEquippedInstances = new Dictionary<WardrobeTabType, EquippedInstanceSet>();
+    private readonly Dictionary<WardrobeTabType, EquippedInstanceSet> gameEquippedInstances = new Dictionary<WardrobeTabType, EquippedInstanceSet>();
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
@@ -82,16 +137,24 @@ public class WardrobeUIController : MonoBehaviour
 
     public GameObject GetEquippedInstance(WardrobeTabType category)
     {
-        GameObject instance;
-        previewEquippedInstances.TryGetValue(category, out instance);
-        return instance;
+        EquippedInstanceSet instanceSet;
+        if (previewEquippedInstances.TryGetValue(category, out instanceSet) && instanceSet != null)
+        {
+            return instanceSet.GetDefault();
+        }
+
+        return null;
     }
 
     public GameObject GetGameEquippedInstance(WardrobeTabType category)
     {
-        GameObject instance;
-        gameEquippedInstances.TryGetValue(category, out instance);
-        return instance;
+        EquippedInstanceSet instanceSet;
+        if (gameEquippedInstances.TryGetValue(category, out instanceSet) && instanceSet != null)
+        {
+            return instanceSet.GetDefault();
+        }
+
+        return null;
     }
 
     public WardrobeItemView GetSelectedItem(WardrobeTabType category)
@@ -305,36 +368,33 @@ public class WardrobeUIController : MonoBehaviour
 
     private void EquipItem(WardrobeTabType category, GameObject prefab, WardrobeItemView source)
     {
-        GameObject currentInstance;
-        if (previewEquippedInstances.TryGetValue(category, out currentInstance) && currentInstance != null)
+        EquippedInstanceSet currentSet;
+        if (previewEquippedInstances.TryGetValue(category, out currentSet) && currentSet != null)
         {
-            DestroyInstance(currentInstance);
+            currentSet.DestroyAll(DestroyInstance);
         }
         previewEquippedInstances.Remove(category);
 
-        if (gameEquippedInstances.TryGetValue(category, out currentInstance) && currentInstance != null)
+        if (gameEquippedInstances.TryGetValue(category, out currentSet) && currentSet != null)
         {
-            DestroyInstance(currentInstance);
+            currentSet.DestroyAll(DestroyInstance);
         }
         gameEquippedInstances.Remove(category);
 
+        EquippedInstanceSet newPreviewSet = InstantiatePartSet(prefab, source, attachmentLookup, category, "Preview", true);
+        EquippedInstanceSet newGameSet = InstantiatePartSet(prefab, source, gameAttachmentLookup, category, "Game", false);
+
         GameObject newPreviewInstance = null;
-        GameObject newGameInstance = null;
 
-        if (prefab != null)
+        if (newPreviewSet != null && !newPreviewSet.IsEmpty)
         {
-            newPreviewInstance = InstantiateForAttachment(prefab, attachmentLookup, category, "Preview", true);
-            newGameInstance = InstantiateForAttachment(prefab, gameAttachmentLookup, category, "Game", false);
+            previewEquippedInstances[category] = newPreviewSet;
+            newPreviewInstance = newPreviewSet.GetDefault();
         }
 
-        if (newPreviewInstance != null)
+        if (newGameSet != null && !newGameSet.IsEmpty)
         {
-            previewEquippedInstances[category] = newPreviewInstance;
-        }
-
-        if (newGameInstance != null)
-        {
-            gameEquippedInstances[category] = newGameInstance;
+            gameEquippedInstances[category] = newGameSet;
         }
 
         UpdateSelectionState(category, source);
@@ -408,7 +468,7 @@ public class WardrobeUIController : MonoBehaviour
         BuildAttachmentLookupInternal(gameAttachmentLookup, gameAttachmentPoints, gamePlayerRoot);
     }
 
-    private void BuildAttachmentLookupInternal(Dictionary<WardrobeTabType, AttachmentPoint> lookup, List<AttachmentPoint> points, Transform root)
+    private void BuildAttachmentLookupInternal(Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, List<AttachmentPoint> points, Transform root)
     {
         lookup.Clear();
 
@@ -430,32 +490,130 @@ public class WardrobeUIController : MonoBehaviour
                 continue;
             }
 
-            if (!lookup.ContainsKey(point.category))
+            Dictionary<string, AttachmentPoint> perCategory;
+            if (!lookup.TryGetValue(point.category, out perCategory))
             {
-                lookup.Add(point.category, point);
+                perCategory = new Dictionary<string, AttachmentPoint>();
+                lookup.Add(point.category, perCategory);
+            }
+
+            string partKey = NormalizePartName(point.partName);
+            if (!perCategory.ContainsKey(partKey))
+            {
+                perCategory.Add(partKey, point);
             }
         }
     }
 
-    private GameObject InstantiateForAttachment(GameObject prefab, Dictionary<WardrobeTabType, AttachmentPoint> lookup, WardrobeTabType category, string attachmentRole, bool logWarnings)
+    private static string NormalizePartName(string partName)
     {
-        if (prefab == null)
+        return string.IsNullOrEmpty(partName) ? string.Empty : partName;
+    }
+
+    private AttachmentPoint ResolveAttachment(Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, WardrobeTabType category, string partName)
+    {
+        Dictionary<string, AttachmentPoint> perCategory;
+        if (!lookup.TryGetValue(category, out perCategory) || perCategory == null)
         {
             return null;
         }
 
         AttachmentPoint attachmentPoint;
-        if (!lookup.TryGetValue(category, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
+        string normalizedPartName = NormalizePartName(partName);
+        if (perCategory.TryGetValue(normalizedPartName, out attachmentPoint) && attachmentPoint != null && attachmentPoint.mountPoint != null)
         {
-            if (logWarnings)
-            {
-                Debug.LogWarningFormat(this, "[WardrobeUIController] {0} attachment point for category '{1}' is not configured.", attachmentRole, category);
-            }
-
-            return null;
+            return attachmentPoint;
         }
 
-        return InstantiateForAttachment(prefab, attachmentPoint);
+        if (perCategory.TryGetValue(string.Empty, out attachmentPoint) && attachmentPoint != null && attachmentPoint.mountPoint != null)
+        {
+            return attachmentPoint;
+        }
+
+        foreach (KeyValuePair<string, AttachmentPoint> pair in perCategory)
+        {
+            if (pair.Value != null && pair.Value.mountPoint != null)
+            {
+                return pair.Value;
+            }
+        }
+
+        return null;
+    }
+
+    private EquippedInstanceSet InstantiatePartSet(GameObject fallbackPrefab, WardrobeItemView source, Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, WardrobeTabType category, string attachmentRole, bool logWarnings)
+    {
+        EquippedInstanceSet instanceSet = null;
+        bool usedPartPrefabs = source != null && source.HasPartPrefabs;
+        bool instantiatedAny = false;
+
+        if (usedPartPrefabs)
+        {
+            IReadOnlyList<WardrobeItemView.WearablePart> parts = source.PartPrefabs;
+            for (int i = 0; i < parts.Count; i++)
+            {
+                WardrobeItemView.WearablePart part = parts[i];
+                if (part == null || part.Prefab == null)
+                {
+                    continue;
+                }
+
+                string partName = part.PartName;
+                AttachmentPoint attachmentPoint = ResolveAttachment(lookup, category, partName);
+                if (attachmentPoint == null)
+                {
+                    if (logWarnings)
+                    {
+                        string label = string.IsNullOrEmpty(partName) ? "<default>" : partName;
+                        Debug.LogWarningFormat(this, "[WardrobeUIController] {0} attachment point for category '{1}' part '{2}' is not configured.", attachmentRole, category, label);
+                    }
+
+                    continue;
+                }
+
+                GameObject instance = InstantiateForAttachment(part.Prefab, attachmentPoint);
+                if (instance == null)
+                {
+                    continue;
+                }
+
+                if (instanceSet == null)
+                {
+                    instanceSet = new EquippedInstanceSet();
+                }
+
+                instanceSet.Add(partName, instance);
+                instantiatedAny = true;
+            }
+        }
+
+        if ((!usedPartPrefabs || !instantiatedAny) && fallbackPrefab != null)
+        {
+            AttachmentPoint attachmentPoint = ResolveAttachment(lookup, category, string.Empty);
+            if (attachmentPoint == null)
+            {
+                if (logWarnings)
+                {
+                    Debug.LogWarningFormat(this, "[WardrobeUIController] {0} attachment point for category '{1}' is not configured.", attachmentRole, category);
+                }
+
+                return instanceSet;
+            }
+
+            GameObject instance = InstantiateForAttachment(fallbackPrefab, attachmentPoint);
+            if (instance != null)
+            {
+                if (instanceSet == null)
+                {
+                    instanceSet = new EquippedInstanceSet();
+                }
+
+                instanceSet.Add(string.Empty, instance);
+                instantiatedAny = true;
+            }
+        }
+
+        return instantiatedAny ? instanceSet : null;
     }
 
     private GameObject InstantiateForAttachment(GameObject prefab, AttachmentPoint attachmentPoint)
@@ -893,8 +1051,8 @@ public class WardrobeUIController : MonoBehaviour
     {
         private readonly WardrobeUIController controller;
         private readonly Transform playerRoot;
-        private readonly Dictionary<WardrobeTabType, AttachmentPoint> attachments = new Dictionary<WardrobeTabType, AttachmentPoint>();
-        private readonly Dictionary<WardrobeTabType, GameObject> instances = new Dictionary<WardrobeTabType, GameObject>();
+        private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> attachments = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
+        private readonly Dictionary<WardrobeTabType, EquippedInstanceSet> instances = new Dictionary<WardrobeTabType, EquippedInstanceSet>();
         private readonly UnityAction<WardrobeTabType, GameObject, WardrobeItemView> handler;
         private bool disposed;
 
@@ -915,9 +1073,17 @@ public class WardrobeUIController : MonoBehaviour
                     continue;
                 }
 
-                if (!attachments.ContainsKey(point.category))
+                Dictionary<string, AttachmentPoint> perCategory;
+                if (!attachments.TryGetValue(point.category, out perCategory))
                 {
-                    attachments.Add(point.category, point);
+                    perCategory = new Dictionary<string, AttachmentPoint>();
+                    attachments.Add(point.category, perCategory);
+                }
+
+                string partKey = NormalizePartName(point.partName);
+                if (!perCategory.ContainsKey(partKey))
+                {
+                    perCategory.Add(partKey, point);
                 }
             }
 
@@ -936,9 +1102,12 @@ public class WardrobeUIController : MonoBehaviour
             disposed = true;
             controller.onItemEquipped.RemoveListener(handler);
 
-            foreach (KeyValuePair<WardrobeTabType, GameObject> pair in instances)
+            foreach (KeyValuePair<WardrobeTabType, EquippedInstanceSet> pair in instances)
             {
-                controller.DestroyInstance(pair.Value);
+                if (pair.Value != null)
+                {
+                    pair.Value.DestroyAll(controller.DestroyInstance);
+                }
             }
 
             instances.Clear();
@@ -952,29 +1121,21 @@ public class WardrobeUIController : MonoBehaviour
 
         private void Forward(WardrobeTabType category, WardrobeItemView source)
         {
-            GameObject currentInstance;
-            if (instances.TryGetValue(category, out currentInstance) && currentInstance != null)
+            EquippedInstanceSet currentSet;
+            if (instances.TryGetValue(category, out currentSet) && currentSet != null)
             {
-                controller.DestroyInstance(currentInstance);
+                currentSet.DestroyAll(controller.DestroyInstance);
             }
             instances.Remove(category);
 
-            if (source == null || source.WearablePrefab == null)
+            GameObject fallbackPrefab = source != null ? source.WearablePrefab : null;
+            EquippedInstanceSet newSet = controller.InstantiatePartSet(fallbackPrefab, source, attachments, category, "Forward", false);
+            if (newSet == null || newSet.IsEmpty)
             {
                 return;
             }
 
-            AttachmentPoint attachmentPoint;
-            if (!attachments.TryGetValue(category, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
-            {
-                return;
-            }
-
-            GameObject newInstance = controller.InstantiateForAttachment(source.WearablePrefab, attachmentPoint);
-            if (newInstance != null)
-            {
-                instances[category] = newInstance;
-            }
+            instances[category] = newSet;
         }
 
         private void SyncExistingEquipment()

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -7,6 +9,7 @@ public class WardrobeItemView : MonoBehaviour
 {
     [SerializeField] private WardrobeTabType category;
     [SerializeField] private GameObject wearablePrefab;
+    [SerializeField] private List<WearablePart> partPrefabs = new List<WearablePart>();
     [SerializeField] private Button button;
     [SerializeField] private GameObject selectionIndicator;
     [SerializeField] private TMP_Text nameLabel;
@@ -27,6 +30,29 @@ public class WardrobeItemView : MonoBehaviour
     public string NameId => nameId;
     public string DescriptionId => descriptionId;
     public Sprite IconSprite => iconSprite;
+    public bool HasPartPrefabs => partPrefabs != null && partPrefabs.Count > 0;
+    public IReadOnlyList<WearablePart> PartPrefabs
+    {
+        get
+        {
+            if (partPrefabs == null)
+            {
+                partPrefabs = new List<WearablePart>();
+            }
+
+            return partPrefabs;
+        }
+    }
+
+    [Serializable]
+    public class WearablePart
+    {
+        public string partName;
+        public GameObject prefab;
+
+        public string PartName => partName;
+        public GameObject Prefab => prefab;
+    }
 
     private void Reset()
     {
