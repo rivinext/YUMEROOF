@@ -381,8 +381,8 @@ public class WardrobeUIController : MonoBehaviour
         }
         gameEquippedInstances.Remove(category);
 
-        EquippedInstanceSet newPreviewSet = InstantiatePartSet(prefab, source, attachmentLookup, category, "Preview", true, previewPlayerRoot);
-        EquippedInstanceSet newGameSet = InstantiatePartSet(prefab, source, gameAttachmentLookup, category, "Game", false, gamePlayerRoot);
+        EquippedInstanceSet newPreviewSet = InstantiatePartSet(prefab, source, attachmentLookup, category, "Preview", true);
+        EquippedInstanceSet newGameSet = InstantiatePartSet(prefab, source, gameAttachmentLookup, category, "Game", false);
 
         GameObject newPreviewInstance = null;
 
@@ -672,7 +672,7 @@ public class WardrobeUIController : MonoBehaviour
         return s_extractedPartsBuffer;
     }
 
-    private EquippedInstanceSet InstantiatePartSet(GameObject fallbackPrefab, WardrobeItemView source, Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, WardrobeTabType category, string attachmentRole, bool logWarnings, Transform rigRoot)
+    private EquippedInstanceSet InstantiatePartSet(GameObject fallbackPrefab, WardrobeItemView source, Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, WardrobeTabType category, string attachmentRole, bool logWarnings)
     {
         EquippedInstanceSet instanceSet = null;
         bool attemptedPartInstantiation = false;
@@ -703,7 +703,7 @@ public class WardrobeUIController : MonoBehaviour
                     continue;
                 }
 
-                GameObject instance = InstantiateForAttachment(part.Prefab, attachmentPoint, rigRoot);
+                GameObject instance = InstantiateForAttachment(part.Prefab, attachmentPoint);
                 if (instance == null)
                 {
                     continue;
@@ -747,7 +747,7 @@ public class WardrobeUIController : MonoBehaviour
                         continue;
                     }
 
-                    GameObject instance = InstantiateForAttachment(extracted.Prefab, attachmentPoint, rigRoot);
+                    GameObject instance = InstantiateForAttachment(extracted.Prefab, attachmentPoint);
                     if (instance == null)
                     {
                         continue;
@@ -777,7 +777,7 @@ public class WardrobeUIController : MonoBehaviour
                 return instanceSet;
             }
 
-            GameObject instance = InstantiateForAttachment(fallbackPrefab, attachmentPoint, rigRoot);
+            GameObject instance = InstantiateForAttachment(fallbackPrefab, attachmentPoint);
             if (instance != null)
             {
                 if (instanceSet == null)
@@ -793,7 +793,7 @@ public class WardrobeUIController : MonoBehaviour
         return instantiatedAny ? instanceSet : null;
     }
 
-    private GameObject InstantiateForAttachment(GameObject prefab, AttachmentPoint attachmentPoint, Transform rigRoot)
+    private GameObject InstantiateForAttachment(GameObject prefab, AttachmentPoint attachmentPoint)
     {
         if (prefab == null || attachmentPoint == null || attachmentPoint.mountPoint == null)
         {
@@ -820,83 +820,7 @@ public class WardrobeUIController : MonoBehaviour
             instanceTransform.localScale = Vector3.one;
         }
 
-        RetargetSkinnedMeshes(instance, rigRoot);
-
         return instance;
-    }
-
-    private void RetargetSkinnedMeshes(GameObject instance, Transform rigRoot)
-    {
-        if (instance == null || rigRoot == null)
-        {
-            return;
-        }
-
-        Transform[] rigBones = rigRoot.GetComponentsInChildren<Transform>(true);
-        if (rigBones == null || rigBones.Length == 0)
-        {
-            return;
-        }
-
-        Dictionary<string, Transform> boneMap = new Dictionary<string, Transform>();
-        for (int i = 0; i < rigBones.Length; i++)
-        {
-            Transform bone = rigBones[i];
-            if (bone == null || string.IsNullOrEmpty(bone.name) || boneMap.ContainsKey(bone.name))
-            {
-                continue;
-            }
-
-            boneMap.Add(bone.name, bone);
-        }
-
-        SkinnedMeshRenderer[] renderers = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            SkinnedMeshRenderer renderer = renderers[i];
-            if (renderer == null)
-            {
-                continue;
-            }
-
-            Transform rootBone = renderer.rootBone;
-            if (rootBone != null)
-            {
-                Transform mapped;
-                if (boneMap.TryGetValue(rootBone.name, out mapped))
-                {
-                    renderer.rootBone = mapped;
-                }
-            }
-
-            Transform[] bones = renderer.bones;
-            if (bones == null || bones.Length == 0)
-            {
-                continue;
-            }
-
-            bool updated = false;
-            for (int boneIndex = 0; boneIndex < bones.Length; boneIndex++)
-            {
-                Transform bone = bones[boneIndex];
-                if (bone == null)
-                {
-                    continue;
-                }
-
-                Transform mapped;
-                if (boneMap.TryGetValue(bone.name, out mapped))
-                {
-                    bones[boneIndex] = mapped;
-                    updated = true;
-                }
-            }
-
-            if (updated)
-            {
-                renderer.bones = bones;
-            }
-        }
     }
 
     private void SetupTabs()
@@ -1382,7 +1306,7 @@ public class WardrobeUIController : MonoBehaviour
             instances.Remove(category);
 
             GameObject fallbackPrefab = source != null ? source.WearablePrefab : null;
-            EquippedInstanceSet newSet = controller.InstantiatePartSet(fallbackPrefab, source, attachments, category, "Forward", false, playerRoot);
+            EquippedInstanceSet newSet = controller.InstantiatePartSet(fallbackPrefab, source, attachments, category, "Forward", false);
             if (newSet == null || newSet.IsEmpty)
             {
                 return;
