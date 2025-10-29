@@ -50,8 +50,31 @@ public class WardrobeUIController : MonoBehaviour
     public class AttachmentPoint
     {
         public WardrobeTabType category;
+        public WardrobeBodyAnchor anchor = WardrobeBodyAnchor.None;
         public Transform mountPoint;
         public bool resetLocalTransform = true;
+
+        public WardrobeBodyAnchor GetResolvedAnchor()
+        {
+            if (anchor != WardrobeBodyAnchor.None)
+            {
+                return anchor;
+            }
+
+            return GetDefaultAnchorForCategory(category);
+        }
+
+        public void EnsureAnchorInitialized()
+        {
+            if (anchor == WardrobeBodyAnchor.None)
+            {
+                WardrobeBodyAnchor defaultAnchor = GetDefaultAnchorForCategory(category);
+                if (defaultAnchor != WardrobeBodyAnchor.None)
+                {
+                    anchor = defaultAnchor;
+                }
+            }
+        }
     }
 
     [Serializable]
@@ -60,10 +83,10 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private WardrobeEquipEvent onItemEquipped = new WardrobeEquipEvent();
 
     private readonly List<UnityAction<bool>> toggleHandlers = new List<UnityAction<bool>>();
-    private readonly Dictionary<WardrobeTabType, AttachmentPoint> attachmentLookup = new Dictionary<WardrobeTabType, AttachmentPoint>();
-    private readonly Dictionary<WardrobeTabType, AttachmentPoint> gameAttachmentLookup = new Dictionary<WardrobeTabType, AttachmentPoint>();
-    private readonly Dictionary<WardrobeTabType, GameObject> previewEquippedInstances = new Dictionary<WardrobeTabType, GameObject>();
-    private readonly Dictionary<WardrobeTabType, GameObject> gameEquippedInstances = new Dictionary<WardrobeTabType, GameObject>();
+    private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> attachmentLookup = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>>();
+    private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> gameAttachmentLookup = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>>();
+    private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> previewEquippedInstances = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>>();
+    private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> gameEquippedInstances = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>>();
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
@@ -82,16 +105,12 @@ public class WardrobeUIController : MonoBehaviour
 
     public GameObject GetEquippedInstance(WardrobeTabType category)
     {
-        GameObject instance;
-        previewEquippedInstances.TryGetValue(category, out instance);
-        return instance;
+        return GetEquippedInstance(previewEquippedInstances, category);
     }
 
     public GameObject GetGameEquippedInstance(WardrobeTabType category)
     {
-        GameObject instance;
-        gameEquippedInstances.TryGetValue(category, out instance);
-        return instance;
+        return GetEquippedInstance(gameEquippedInstances, category);
     }
 
     public WardrobeItemView GetSelectedItem(WardrobeTabType category)
@@ -112,6 +131,12 @@ public class WardrobeUIController : MonoBehaviour
         {
             panelAnimator = GetComponent<WardrobePanelAnimator>();
         }
+    }
+
+    private void OnValidate()
+    {
+        InitializeAttachmentAnchors(attachmentPoints);
+        InitializeAttachmentAnchors(gameAttachmentPoints);
     }
 
     private void Awake()
@@ -305,36 +330,38 @@ public class WardrobeUIController : MonoBehaviour
 
     private void EquipItem(WardrobeTabType category, GameObject prefab, WardrobeItemView source)
     {
-        GameObject currentInstance;
-        if (previewEquippedInstances.TryGetValue(category, out currentInstance) && currentInstance != null)
-        {
-            DestroyInstance(currentInstance);
-        }
-        previewEquippedInstances.Remove(category);
-
-        if (gameEquippedInstances.TryGetValue(category, out currentInstance) && currentInstance != null)
-        {
-            DestroyInstance(currentInstance);
-        }
-        gameEquippedInstances.Remove(category);
-
         GameObject newPreviewInstance = null;
         GameObject newGameInstance = null;
 
-        if (prefab != null)
+        if (prefab == null)
         {
-            newPreviewInstance = InstantiateForAttachment(prefab, attachmentLookup, category, "Preview", true);
-            newGameInstance = InstantiateForAttachment(prefab, gameAttachmentLookup, category, "Game", false);
+            RemoveEquippedInstances(previewEquippedInstances, category, WardrobeBodyAnchor.None);
+            RemoveEquippedInstances(gameEquippedInstances, category, WardrobeBodyAnchor.None);
         }
-
-        if (newPreviewInstance != null)
+        else
         {
-            previewEquippedInstances[category] = newPreviewInstance;
-        }
+            WardrobeBodyAnchor anchor = ResolveAnchorForItem(category, source);
 
-        if (newGameInstance != null)
-        {
-            gameEquippedInstances[category] = newGameInstance;
+            RemoveEquippedInstances(previewEquippedInstances, category, anchor);
+            RemoveEquippedInstances(gameEquippedInstances, category, anchor);
+
+            AttachmentPoint previewAttachmentPoint;
+            newPreviewInstance = InstantiateForAttachment(prefab, attachmentLookup, category, anchor, "Preview", true, out previewAttachmentPoint);
+
+            AttachmentPoint gameAttachmentPoint;
+            newGameInstance = InstantiateForAttachment(prefab, gameAttachmentLookup, category, anchor, "Game", false, out gameAttachmentPoint);
+
+            if (newPreviewInstance != null)
+            {
+                WardrobeBodyAnchor resolvedAnchor = previewAttachmentPoint != null ? previewAttachmentPoint.GetResolvedAnchor() : anchor;
+                StoreEquippedInstance(previewEquippedInstances, category, resolvedAnchor, newPreviewInstance);
+            }
+
+            if (newGameInstance != null)
+            {
+                WardrobeBodyAnchor resolvedAnchor = gameAttachmentPoint != null ? gameAttachmentPoint.GetResolvedAnchor() : anchor;
+                StoreEquippedInstance(gameEquippedInstances, category, resolvedAnchor, newGameInstance);
+            }
         }
 
         UpdateSelectionState(category, source);
@@ -408,7 +435,7 @@ public class WardrobeUIController : MonoBehaviour
         BuildAttachmentLookupInternal(gameAttachmentLookup, gameAttachmentPoints, gamePlayerRoot);
     }
 
-    private void BuildAttachmentLookupInternal(Dictionary<WardrobeTabType, AttachmentPoint> lookup, List<AttachmentPoint> points, Transform root)
+    private void BuildAttachmentLookupInternal(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> lookup, List<AttachmentPoint> points, Transform root)
     {
         lookup.Clear();
 
@@ -430,31 +457,45 @@ public class WardrobeUIController : MonoBehaviour
                 continue;
             }
 
-            if (!lookup.ContainsKey(point.category))
+            point.EnsureAnchorInitialized();
+
+            Dictionary<WardrobeBodyAnchor, AttachmentPoint> categoryLookup;
+            if (!lookup.TryGetValue(point.category, out categoryLookup))
             {
-                lookup.Add(point.category, point);
+                categoryLookup = new Dictionary<WardrobeBodyAnchor, AttachmentPoint>();
+                lookup.Add(point.category, categoryLookup);
+            }
+
+            WardrobeBodyAnchor resolvedAnchor = point.GetResolvedAnchor();
+            if (!categoryLookup.ContainsKey(resolvedAnchor))
+            {
+                categoryLookup.Add(resolvedAnchor, point);
             }
         }
     }
 
-    private GameObject InstantiateForAttachment(GameObject prefab, Dictionary<WardrobeTabType, AttachmentPoint> lookup, WardrobeTabType category, string attachmentRole, bool logWarnings)
+    private GameObject InstantiateForAttachment(GameObject prefab, Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor, string attachmentRole, bool logWarnings, out AttachmentPoint usedAttachmentPoint)
     {
+        usedAttachmentPoint = null;
+
         if (prefab == null)
         {
             return null;
         }
 
         AttachmentPoint attachmentPoint;
-        if (!lookup.TryGetValue(category, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
+        if (!TryGetAttachmentPoint(lookup, category, anchor, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
         {
             if (logWarnings)
             {
-                Debug.LogWarningFormat(this, "[WardrobeUIController] {0} attachment point for category '{1}' is not configured.", attachmentRole, category);
+                WardrobeBodyAnchor resolvedAnchor = anchor != WardrobeBodyAnchor.None ? anchor : GetDefaultAnchorForCategory(category);
+                Debug.LogWarningFormat(this, "[WardrobeUIController] {0} attachment point for category '{1}' (anchor '{2}') is not configured.", attachmentRole, category, resolvedAnchor);
             }
 
             return null;
         }
 
+        usedAttachmentPoint = attachmentPoint;
         return InstantiateForAttachment(prefab, attachmentPoint);
     }
 
@@ -486,6 +527,183 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         return instance;
+    }
+
+    private void RemoveEquippedInstances(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor)
+    {
+        if (lookup == null)
+        {
+            return;
+        }
+
+        Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
+        if (!lookup.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+        {
+            return;
+        }
+
+        if (anchor == WardrobeBodyAnchor.None)
+        {
+            foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
+            {
+                DestroyInstance(pair.Value);
+            }
+
+            lookup.Remove(category);
+            return;
+        }
+
+        GameObject instance;
+        if (anchorLookup.TryGetValue(anchor, out instance) && instance != null)
+        {
+            DestroyInstance(instance);
+        }
+
+        anchorLookup.Remove(anchor);
+
+        if (anchorLookup.Count == 0)
+        {
+            lookup.Remove(category);
+        }
+    }
+
+    private void StoreEquippedInstance(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor, GameObject instance)
+    {
+        if (lookup == null || instance == null)
+        {
+            return;
+        }
+
+        if (anchor == WardrobeBodyAnchor.None)
+        {
+            anchor = GetDefaultAnchorForCategory(category);
+        }
+
+        Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
+        if (!lookup.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+        {
+            anchorLookup = new Dictionary<WardrobeBodyAnchor, GameObject>();
+            lookup[category] = anchorLookup;
+        }
+
+        anchorLookup[anchor] = instance;
+    }
+
+    private GameObject GetEquippedInstance(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> lookup, WardrobeTabType category)
+    {
+        if (lookup == null)
+        {
+            return null;
+        }
+
+        Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
+        if (!lookup.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+        {
+            return null;
+        }
+
+        WardrobeBodyAnchor defaultAnchor = GetDefaultAnchorForCategory(category);
+        GameObject instance;
+        if (defaultAnchor != WardrobeBodyAnchor.None && anchorLookup.TryGetValue(defaultAnchor, out instance) && instance != null)
+        {
+            return instance;
+        }
+
+        foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
+        {
+            if (pair.Value != null)
+            {
+                return pair.Value;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TryGetAttachmentPoint(Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> lookup, WardrobeTabType category, WardrobeBodyAnchor anchor, out AttachmentPoint attachmentPoint)
+    {
+        attachmentPoint = null;
+
+        if (lookup == null)
+        {
+            return false;
+        }
+
+        Dictionary<WardrobeBodyAnchor, AttachmentPoint> anchorLookup;
+        if (!lookup.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+        {
+            return false;
+        }
+
+        if (anchor != WardrobeBodyAnchor.None && anchorLookup.TryGetValue(anchor, out attachmentPoint) && attachmentPoint != null && attachmentPoint.mountPoint != null)
+        {
+            return true;
+        }
+
+        WardrobeBodyAnchor defaultAnchor = GetDefaultAnchorForCategory(category);
+        if (defaultAnchor != WardrobeBodyAnchor.None && anchorLookup.TryGetValue(defaultAnchor, out attachmentPoint) && attachmentPoint != null && attachmentPoint.mountPoint != null)
+        {
+            return true;
+        }
+
+        foreach (KeyValuePair<WardrobeBodyAnchor, AttachmentPoint> pair in anchorLookup)
+        {
+            AttachmentPoint candidate = pair.Value;
+            if (candidate != null && candidate.mountPoint != null)
+            {
+                attachmentPoint = candidate;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private WardrobeBodyAnchor ResolveAnchorForItem(WardrobeTabType category, WardrobeItemView source)
+    {
+        return GetDefaultAnchorForCategory(category);
+    }
+
+    private static WardrobeBodyAnchor GetDefaultAnchorForCategory(WardrobeTabType category)
+    {
+        switch (category)
+        {
+            case WardrobeTabType.Hair:
+                return WardrobeBodyAnchor.HeadTop;
+            case WardrobeTabType.Accessories:
+                return WardrobeBodyAnchor.HeadAccessory;
+            case WardrobeTabType.Eyewear:
+                return WardrobeBodyAnchor.Eyes;
+            case WardrobeTabType.Tops:
+                return WardrobeBodyAnchor.UpperBody;
+            case WardrobeTabType.Pants:
+                return WardrobeBodyAnchor.LowerBody;
+            case WardrobeTabType.OnePiece:
+                return WardrobeBodyAnchor.FullBody;
+            case WardrobeTabType.Shoes:
+                return WardrobeBodyAnchor.Feet;
+            default:
+                return WardrobeBodyAnchor.None;
+        }
+    }
+
+    private void InitializeAttachmentAnchors(List<AttachmentPoint> points)
+    {
+        if (points == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < points.Count; i++)
+        {
+            AttachmentPoint point = points[i];
+            if (point == null)
+            {
+                continue;
+            }
+
+            point.EnsureAnchorInitialized();
+        }
     }
 
     private void SetupTabs()
@@ -852,15 +1070,20 @@ public class WardrobeUIController : MonoBehaviour
     /// The returned <see cref="IDisposable"/> must be disposed to unsubscribe and clean up instantiated objects.
     /// </summary>
     /// <param name="playerRoot">Optional descriptive root for the forwarded player hierarchy.</param>
-    /// <param name="attachmentPoints">Attachment points that define where each wardrobe category should be mounted.</param>
-    public IDisposable SubscribeGamePlayer(Transform playerRoot, IEnumerable<AttachmentPoint> attachmentPoints)
+    /// <param name="attachmentLookup">Attachment points organized by category and anchor for the target player.</param>
+    public IDisposable SubscribeGamePlayer(Transform playerRoot, IDictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> attachmentLookup)
     {
-        if (attachmentPoints == null)
+        if (attachmentLookup == null)
         {
-            throw new ArgumentNullException(nameof(attachmentPoints));
+            throw new ArgumentNullException(nameof(attachmentLookup));
         }
 
-        return new EquipmentForwardSubscription(this, playerRoot, attachmentPoints);
+        return new EquipmentForwardSubscription(this, playerRoot, attachmentLookup);
+    }
+
+    public IDisposable SubscribeGamePlayer(Transform playerRoot)
+    {
+        return SubscribeGamePlayer(playerRoot, gameAttachmentLookup);
     }
 
     private WardrobeItemView FindItemView(WardrobeTabType category, GameObject prefab)
@@ -893,31 +1116,58 @@ public class WardrobeUIController : MonoBehaviour
     {
         private readonly WardrobeUIController controller;
         private readonly Transform playerRoot;
-        private readonly Dictionary<WardrobeTabType, AttachmentPoint> attachments = new Dictionary<WardrobeTabType, AttachmentPoint>();
-        private readonly Dictionary<WardrobeTabType, GameObject> instances = new Dictionary<WardrobeTabType, GameObject>();
+        private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> attachments = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>>();
+        private readonly Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> instances = new Dictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>>();
         private readonly UnityAction<WardrobeTabType, GameObject, WardrobeItemView> handler;
         private bool disposed;
 
-        public EquipmentForwardSubscription(WardrobeUIController controller, Transform playerRoot, IEnumerable<AttachmentPoint> attachmentPoints)
+        public EquipmentForwardSubscription(WardrobeUIController controller, Transform playerRoot, IDictionary<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> attachmentLookup)
         {
             this.controller = controller;
             this.playerRoot = playerRoot;
 
-            foreach (AttachmentPoint point in attachmentPoints)
+            if (attachmentLookup != null)
             {
-                if (point == null || point.mountPoint == null)
+                foreach (KeyValuePair<WardrobeTabType, Dictionary<WardrobeBodyAnchor, AttachmentPoint>> categoryPair in attachmentLookup)
                 {
-                    continue;
-                }
+                    Dictionary<WardrobeBodyAnchor, AttachmentPoint> anchorLookup = categoryPair.Value;
+                    if (anchorLookup == null)
+                    {
+                        continue;
+                    }
 
-                if (this.playerRoot != null && point.mountPoint != null && !point.mountPoint.IsChildOf(this.playerRoot))
-                {
-                    continue;
-                }
+                    Dictionary<WardrobeBodyAnchor, AttachmentPoint> validAnchors = null;
+                    foreach (KeyValuePair<WardrobeBodyAnchor, AttachmentPoint> anchorPair in anchorLookup)
+                    {
+                        AttachmentPoint point = anchorPair.Value;
+                        if (point == null || point.mountPoint == null)
+                        {
+                            continue;
+                        }
 
-                if (!attachments.ContainsKey(point.category))
-                {
-                    attachments.Add(point.category, point);
+                        if (this.playerRoot != null && !point.mountPoint.IsChildOf(this.playerRoot))
+                        {
+                            continue;
+                        }
+
+                        point.EnsureAnchorInitialized();
+                        WardrobeBodyAnchor resolvedAnchor = point.GetResolvedAnchor();
+
+                        if (validAnchors == null)
+                        {
+                            validAnchors = new Dictionary<WardrobeBodyAnchor, AttachmentPoint>();
+                        }
+
+                        if (!validAnchors.ContainsKey(resolvedAnchor))
+                        {
+                            validAnchors.Add(resolvedAnchor, point);
+                        }
+                    }
+
+                    if (validAnchors != null && validAnchors.Count > 0)
+                    {
+                        attachments[categoryPair.Key] = validAnchors;
+                    }
                 }
             }
 
@@ -936,9 +1186,18 @@ public class WardrobeUIController : MonoBehaviour
             disposed = true;
             controller.onItemEquipped.RemoveListener(handler);
 
-            foreach (KeyValuePair<WardrobeTabType, GameObject> pair in instances)
+            foreach (KeyValuePair<WardrobeTabType, Dictionary<WardrobeBodyAnchor, GameObject>> categoryPair in instances)
             {
-                controller.DestroyInstance(pair.Value);
+                Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup = categoryPair.Value;
+                if (anchorLookup == null)
+                {
+                    continue;
+                }
+
+                foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
+                {
+                    controller.DestroyInstance(pair.Value);
+                }
             }
 
             instances.Clear();
@@ -952,20 +1211,17 @@ public class WardrobeUIController : MonoBehaviour
 
         private void Forward(WardrobeTabType category, WardrobeItemView source)
         {
-            GameObject currentInstance;
-            if (instances.TryGetValue(category, out currentInstance) && currentInstance != null)
-            {
-                controller.DestroyInstance(currentInstance);
-            }
-            instances.Remove(category);
-
             if (source == null || source.WearablePrefab == null)
             {
+                RemoveInstance(category, WardrobeBodyAnchor.None);
                 return;
             }
 
+            WardrobeBodyAnchor anchor = controller.ResolveAnchorForItem(category, source);
+            RemoveInstance(category, anchor);
+
             AttachmentPoint attachmentPoint;
-            if (!attachments.TryGetValue(category, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
+            if (!TryGetAttachmentPoint(attachments, category, anchor, out attachmentPoint) || attachmentPoint == null || attachmentPoint.mountPoint == null)
             {
                 return;
             }
@@ -973,8 +1229,58 @@ public class WardrobeUIController : MonoBehaviour
             GameObject newInstance = controller.InstantiateForAttachment(source.WearablePrefab, attachmentPoint);
             if (newInstance != null)
             {
-                instances[category] = newInstance;
+                StoreInstance(category, attachmentPoint.GetResolvedAnchor(), newInstance);
             }
+        }
+
+        private void RemoveInstance(WardrobeTabType category, WardrobeBodyAnchor anchor)
+        {
+            Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
+            if (!instances.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+            {
+                return;
+            }
+
+            if (anchor == WardrobeBodyAnchor.None)
+            {
+                foreach (KeyValuePair<WardrobeBodyAnchor, GameObject> pair in anchorLookup)
+                {
+                    controller.DestroyInstance(pair.Value);
+                }
+
+                instances.Remove(category);
+                return;
+            }
+
+            GameObject currentInstance;
+            if (anchorLookup.TryGetValue(anchor, out currentInstance) && currentInstance != null)
+            {
+                controller.DestroyInstance(currentInstance);
+            }
+
+            anchorLookup.Remove(anchor);
+
+            if (anchorLookup.Count == 0)
+            {
+                instances.Remove(category);
+            }
+        }
+
+        private void StoreInstance(WardrobeTabType category, WardrobeBodyAnchor anchor, GameObject instance)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            Dictionary<WardrobeBodyAnchor, GameObject> anchorLookup;
+            if (!instances.TryGetValue(category, out anchorLookup) || anchorLookup == null)
+            {
+                anchorLookup = new Dictionary<WardrobeBodyAnchor, GameObject>();
+                instances[category] = anchorLookup;
+            }
+
+            anchorLookup[anchor] = instance;
         }
 
         private void SyncExistingEquipment()
