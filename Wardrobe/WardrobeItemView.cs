@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -69,6 +70,19 @@ public class WardrobeItemView : MonoBehaviour
     public void SetWearablePrefab(GameObject prefab)
     {
         wearablePrefab = prefab;
+    }
+
+    internal void CollectWearablePrefabs(List<GameObject> results)
+    {
+        if (results == null)
+        {
+            return;
+        }
+
+        if (wearablePrefab != null)
+        {
+            results.Add(wearablePrefab);
+        }
     }
 
     public void ApplyCatalogEntry(WardrobeCatalogEntry entry)
