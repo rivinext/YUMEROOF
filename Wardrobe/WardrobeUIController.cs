@@ -541,14 +541,146 @@ public class WardrobeUIController : MonoBehaviour
         return null;
     }
 
+    private struct ExtractedPart
+    {
+        public string PartName;
+        public GameObject Prefab;
+    }
+
+    private static readonly List<ExtractedPart> s_extractedPartsBuffer = new List<ExtractedPart>();
+    private static readonly Dictionary<string, ExtractedPart> s_extractedPartsLookup = new Dictionary<string, ExtractedPart>();
+
+    private static bool TryResolvePartNameFromTransform(Transform transform, out string partName)
+    {
+        partName = string.Empty;
+        if (transform == null)
+        {
+            return false;
+        }
+
+        string name = transform.name;
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        const string PrefixToken = "Part_";
+        const string BracketToken = "[Part]";
+
+        if (name.StartsWith(PrefixToken, StringComparison.OrdinalIgnoreCase))
+        {
+            partName = name.Substring(PrefixToken.Length).Trim();
+        }
+        else
+        {
+            int bracketIndex = name.IndexOf(BracketToken, StringComparison.OrdinalIgnoreCase);
+            if (bracketIndex >= 0)
+            {
+                partName = name.Substring(bracketIndex + BracketToken.Length).Trim();
+            }
+        }
+
+        if (string.IsNullOrEmpty(partName))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static IReadOnlyList<ExtractedPart> ExtractFallbackParts(GameObject fallbackPrefab)
+    {
+        s_extractedPartsBuffer.Clear();
+        s_extractedPartsLookup.Clear();
+
+        if (fallbackPrefab == null)
+        {
+            return s_extractedPartsBuffer;
+        }
+
+        WardrobePartTag[] tags = fallbackPrefab.GetComponentsInChildren<WardrobePartTag>(true);
+        for (int i = 0; i < tags.Length; i++)
+        {
+            WardrobePartTag tag = tags[i];
+            if (tag == null)
+            {
+                continue;
+            }
+
+            Transform tagTransform = tag.transform;
+            if (tagTransform == null)
+            {
+                continue;
+            }
+
+            string partName = tag.PartName;
+            if (string.IsNullOrEmpty(partName))
+            {
+                partName = tagTransform.name;
+            }
+
+            partName = NormalizePartName(partName);
+            if (s_extractedPartsLookup.ContainsKey(partName))
+            {
+                continue;
+            }
+
+            ExtractedPart part = new ExtractedPart
+            {
+                PartName = partName,
+                Prefab = tagTransform.gameObject,
+            };
+
+            s_extractedPartsLookup.Add(partName, part);
+            s_extractedPartsBuffer.Add(part);
+        }
+
+        if (s_extractedPartsBuffer.Count == 0)
+        {
+            Transform[] transforms = fallbackPrefab.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform child = transforms[i];
+                if (child == null || child == fallbackPrefab.transform)
+                {
+                    continue;
+                }
+
+                string partName;
+                if (!TryResolvePartNameFromTransform(child, out partName))
+                {
+                    continue;
+                }
+
+                partName = NormalizePartName(partName);
+                if (s_extractedPartsLookup.ContainsKey(partName))
+                {
+                    continue;
+                }
+
+                ExtractedPart part = new ExtractedPart
+                {
+                    PartName = partName,
+                    Prefab = child.gameObject,
+                };
+
+                s_extractedPartsLookup.Add(partName, part);
+                s_extractedPartsBuffer.Add(part);
+            }
+        }
+
+        return s_extractedPartsBuffer;
+    }
+
     private EquippedInstanceSet InstantiatePartSet(GameObject fallbackPrefab, WardrobeItemView source, Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, WardrobeTabType category, string attachmentRole, bool logWarnings)
     {
         EquippedInstanceSet instanceSet = null;
-        bool usedPartPrefabs = source != null && source.HasPartPrefabs;
+        bool attemptedPartInstantiation = false;
         bool instantiatedAny = false;
 
-        if (usedPartPrefabs)
+        if (source != null && source.HasPartPrefabs)
         {
+            attemptedPartInstantiation = true;
             IReadOnlyList<WardrobeItemView.WearablePart> parts = source.PartPrefabs;
             for (int i = 0; i < parts.Count; i++)
             {
@@ -587,7 +719,52 @@ public class WardrobeUIController : MonoBehaviour
             }
         }
 
-        if ((!usedPartPrefabs || !instantiatedAny) && fallbackPrefab != null)
+        if (!attemptedPartInstantiation && fallbackPrefab != null && source != null && !source.HasPartPrefabs)
+        {
+            IReadOnlyList<ExtractedPart> extractedParts = ExtractFallbackParts(fallbackPrefab);
+            if (extractedParts != null && extractedParts.Count > 0)
+            {
+                attemptedPartInstantiation = true;
+
+                for (int i = 0; i < extractedParts.Count; i++)
+                {
+                    ExtractedPart extracted = extractedParts[i];
+                    if (extracted.Prefab == null)
+                    {
+                        continue;
+                    }
+
+                    string partName = extracted.PartName;
+                    AttachmentPoint attachmentPoint = ResolveAttachment(lookup, category, partName);
+                    if (attachmentPoint == null)
+                    {
+                        if (logWarnings)
+                        {
+                            string label = string.IsNullOrEmpty(partName) ? "<default>" : partName;
+                            Debug.LogWarningFormat(this, "[WardrobeUIController] {0} attachment point for category '{1}' part '{2}' is not configured.", attachmentRole, category, label);
+                        }
+
+                        continue;
+                    }
+
+                    GameObject instance = InstantiateForAttachment(extracted.Prefab, attachmentPoint);
+                    if (instance == null)
+                    {
+                        continue;
+                    }
+
+                    if (instanceSet == null)
+                    {
+                        instanceSet = new EquippedInstanceSet();
+                    }
+
+                    instanceSet.Add(partName, instance);
+                    instantiatedAny = true;
+                }
+            }
+        }
+
+        if ((!attemptedPartInstantiation || !instantiatedAny) && fallbackPrefab != null)
         {
             AttachmentPoint attachmentPoint = ResolveAttachment(lookup, category, string.Empty);
             if (attachmentPoint == null)
