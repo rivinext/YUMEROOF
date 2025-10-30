@@ -14,6 +14,7 @@ public class WardrobeItemView : MonoBehaviour
     [SerializeField] private GameObject selectionIndicator;
     [SerializeField] private TMP_Text nameLabel;
     [SerializeField] private Image iconImage;
+    [SerializeField] private string itemId;
 
     private string displayName;
     private string nameId;
@@ -30,6 +31,7 @@ public class WardrobeItemView : MonoBehaviour
     public string NameId => nameId;
     public string DescriptionId => descriptionId;
     public Sprite IconSprite => iconSprite;
+    public string ItemId => itemId;
     public bool HasPartPrefabs => partPrefabs != null && partPrefabs.Count > 0;
     public IReadOnlyList<WearablePart> PartPrefabs
     {
@@ -103,6 +105,7 @@ public class WardrobeItemView : MonoBehaviour
         displayName = entry.DisplayName;
         SetNameId(entry.NameId);
         descriptionId = entry.DescriptionId;
+        itemId = entry.ItemId;
 
         string viewName = !string.IsNullOrEmpty(entry.DisplayName) ? entry.DisplayName : entry.NameId;
         if (!string.IsNullOrEmpty(viewName))
