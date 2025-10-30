@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.Serialization;
 
 public class WardrobePreviewController : MonoBehaviour
 {
@@ -14,17 +15,19 @@ public class WardrobePreviewController : MonoBehaviour
     [SerializeField] private float previewRotateSpeed = 0.25f;
     [SerializeField] private bool previewUseDeltaTime = false;
     [SerializeField] private float previewZoomSpeed = 0.25f;
-    [SerializeField] private float previewMinZoomDistance = 0.5f;
-    [SerializeField] private float previewMaxZoomDistance = 3f;
+    [FormerlySerializedAs("previewMinZoomDistance")]
+    [SerializeField] private float previewMinZoomOffset = -1f;
+    [FormerlySerializedAs("previewMaxZoomDistance")]
+    [SerializeField] private float previewMaxZoomOffset = 1f;
 
     private bool isDraggingPreview;
     private int activePointerId = InvalidPointerId;
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
+    private Vector3 previewInitialCameraLocalPosition;
     private Vector3 previewCameraZoomDirection = Vector3.back;
-    private float previewInitialCameraDistance;
-    private float previewCurrentZoomDistance;
+    private float previewCurrentZoomOffset;
     private bool previewInitialCameraPositionCaptured;
 
     public Transform PreviewPlayerRoot => previewPlayerRoot;
@@ -59,7 +62,7 @@ public class WardrobePreviewController : MonoBehaviour
             }
             else
             {
-                ApplyPreviewZoom(previewCurrentZoomDistance);
+                ApplyPreviewZoom(previewCurrentZoomOffset);
             }
         }
         else
@@ -89,22 +92,44 @@ public class WardrobePreviewController : MonoBehaviour
         }
 
         Transform cameraTransform = previewCamera.transform;
-        Vector3 initialLocalPosition = cameraTransform.localPosition;
-        previewInitialCameraDistance = initialLocalPosition.magnitude;
+        previewInitialCameraLocalPosition = cameraTransform.localPosition;
+        float initialDistance = previewInitialCameraLocalPosition.magnitude;
 
-        if (previewInitialCameraDistance > Mathf.Epsilon)
+        if (initialDistance > Mathf.Epsilon)
         {
-            previewCameraZoomDirection = initialLocalPosition / previewInitialCameraDistance;
+            previewCameraZoomDirection = previewInitialCameraLocalPosition / initialDistance;
         }
         else
         {
-            previewInitialCameraDistance = Mathf.Max(previewInitialCameraDistance, 0.01f);
             previewCameraZoomDirection = Vector3.back;
         }
 
+        if (previewMinZoomOffset > 0f || previewMaxZoomOffset < 0f)
+        {
+            previewMinZoomOffset -= initialDistance;
+            previewMaxZoomOffset -= initialDistance;
+        }
+
+        if (previewMinZoomOffset > previewMaxZoomOffset)
+        {
+            float temp = previewMinZoomOffset;
+            previewMinZoomOffset = previewMaxZoomOffset;
+            previewMaxZoomOffset = temp;
+        }
+
+        if (previewMinZoomOffset > 0f)
+        {
+            previewMinZoomOffset = 0f;
+        }
+
+        if (previewMaxZoomOffset < 0f)
+        {
+            previewMaxZoomOffset = 0f;
+        }
+
+        previewCurrentZoomOffset = 0f;
         previewInitialCameraPositionCaptured = true;
-        previewCurrentZoomDistance = Mathf.Clamp(previewInitialCameraDistance, previewMinZoomDistance, previewMaxZoomDistance);
-        ApplyPreviewZoom(previewCurrentZoomDistance);
+        ApplyPreviewZoom(previewCurrentZoomOffset);
     }
 
     public void SetupPreviewEventTrigger()
@@ -133,17 +158,17 @@ public class WardrobePreviewController : MonoBehaviour
         AddEventTriggerListener(eventTrigger, EventTriggerType.Scroll, OnPreviewScroll);
     }
 
-    private void ApplyPreviewZoom(float distance)
+    private void ApplyPreviewZoom(float zoomOffset)
     {
         if (!previewInitialCameraPositionCaptured || previewCamera == null)
         {
             return;
         }
 
-        float clampedDistance = Mathf.Clamp(distance, previewMinZoomDistance, previewMaxZoomDistance);
+        float clampedOffset = Mathf.Clamp(zoomOffset, previewMinZoomOffset, previewMaxZoomOffset);
         Transform cameraTransform = previewCamera.transform;
-        cameraTransform.localPosition = previewCameraZoomDirection * clampedDistance;
-        previewCurrentZoomDistance = clampedDistance;
+        cameraTransform.localPosition = previewInitialCameraLocalPosition + (previewCameraZoomDirection * clampedOffset);
+        previewCurrentZoomOffset = clampedOffset;
     }
 
     private void RestorePreviewRotation()
@@ -163,7 +188,7 @@ public class WardrobePreviewController : MonoBehaviour
             return;
         }
 
-        ApplyPreviewZoom(previewInitialCameraDistance);
+        ApplyPreviewZoom(0f);
     }
 
     private void ResetPreviewInteractionState()
@@ -264,7 +289,7 @@ public class WardrobePreviewController : MonoBehaviour
             return;
         }
 
-        float targetDistance = previewCurrentZoomDistance - scrollDelta;
-        ApplyPreviewZoom(targetDistance);
+        float targetOffset = previewCurrentZoomOffset - scrollDelta;
+        ApplyPreviewZoom(targetOffset);
     }
 }
