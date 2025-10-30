@@ -29,6 +29,10 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private Transform previewPlayerRoot;
     [SerializeField] private Transform previewRotationHandle;
+    [SerializeField, Tooltip("Animator components on the preview rig that should be paused while dragging so manual rotation is not overridden. Assign the Animator(s) that drive the preview character.")]
+    private Animator[] previewAnimators;
+    [SerializeField, Tooltip("When enabled, any configured preview animators are temporarily disabled during drag interactions.")]
+    private bool pausePreviewAnimatorsDuringDrag = false;
     [SerializeField] private Transform gamePlayerRoot;
     [SerializeField] private Camera previewCamera;
     [SerializeField] private RawImage previewTargetImage;
@@ -130,6 +134,8 @@ public class WardrobeUIController : MonoBehaviour
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
+    private bool previewAnimatorsPaused;
+    private bool[] previewAnimatorEnabledCache;
 
     private Transform PreviewRotationPivot
     {
@@ -1101,9 +1107,66 @@ public class WardrobeUIController : MonoBehaviour
 
     private void ResetPreviewInteractionState()
     {
+        RestorePreviewAnimatorStates();
         isDraggingPreview = false;
         lastPointerPosition = Vector2.zero;
         activePointerId = InvalidPointerId;
+    }
+
+    private void PausePreviewAnimators()
+    {
+        if (previewAnimatorsPaused || previewAnimators == null || previewAnimators.Length == 0)
+        {
+            return;
+        }
+
+        EnsurePreviewAnimatorCache(previewAnimators.Length);
+
+        bool anyAnimatorProcessed = false;
+        for (int i = 0; i < previewAnimators.Length; i++)
+        {
+            Animator animator = previewAnimators[i];
+            if (animator == null)
+            {
+                continue;
+            }
+
+            previewAnimatorEnabledCache[i] = animator.enabled;
+            animator.enabled = false;
+            anyAnimatorProcessed = true;
+        }
+
+        previewAnimatorsPaused = anyAnimatorProcessed;
+    }
+
+    private void RestorePreviewAnimatorStates()
+    {
+        if (!previewAnimatorsPaused || previewAnimators == null || previewAnimatorEnabledCache == null)
+        {
+            return;
+        }
+
+        int count = Math.Min(previewAnimators.Length, previewAnimatorEnabledCache.Length);
+        for (int i = 0; i < count; i++)
+        {
+            Animator animator = previewAnimators[i];
+            if (animator == null)
+            {
+                continue;
+            }
+
+            animator.enabled = previewAnimatorEnabledCache[i];
+        }
+
+        previewAnimatorsPaused = false;
+    }
+
+    private void EnsurePreviewAnimatorCache(int length)
+    {
+        if (previewAnimatorEnabledCache == null || previewAnimatorEnabledCache.Length < length)
+        {
+            previewAnimatorEnabledCache = new bool[length];
+        }
     }
 
     private void SetupPreviewEventTrigger()
@@ -1160,6 +1223,11 @@ public class WardrobeUIController : MonoBehaviour
         isDraggingPreview = true;
         activePointerId = eventData.pointerId;
         lastPointerPosition = eventData.position;
+
+        if (pausePreviewAnimatorsDuringDrag)
+        {
+            PausePreviewAnimators();
+        }
     }
 
     private void OnPreviewPointerUp(PointerEventData eventData)
