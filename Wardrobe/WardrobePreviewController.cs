@@ -171,7 +171,7 @@ public class WardrobePreviewController : MonoBehaviour
         AddEventTriggerListener(trigger, EventTriggerType.PointerDown, OnPreviewPointerDown);
         AddEventTriggerListener(trigger, EventTriggerType.PointerUp, OnPreviewPointerUp);
         AddEventTriggerListener(trigger, EventTriggerType.PointerExit, OnPreviewPointerExit);
-        AddEventTriggerListener(trigger, EventTriggerType.PointerCancel, OnPreviewPointerCancel);
+        AddCancelEventTriggerListener(trigger, OnPreviewPointerCancel);
         AddEventTriggerListener(trigger, EventTriggerType.Drag, OnPreviewDrag);
     }
 
@@ -354,6 +354,19 @@ public class WardrobePreviewController : MonoBehaviour
         trigger.triggers.Add(entry);
     }
 
+    private void AddCancelEventTriggerListener(EventTrigger trigger, Action<BaseEventData> callback)
+    {
+        if (trigger == null || callback == null)
+        {
+            return;
+        }
+
+        EventTrigger.Entry entry = new EventTrigger.Entry { eventID = EventTriggerType.Cancel };
+        entry.callback.AddListener(data => callback(data));
+
+        trigger.triggers.Add(entry);
+    }
+
     private void OnPreviewPointerDown(PointerEventData eventData)
     {
         if (eventData == null)
@@ -386,9 +399,11 @@ public class WardrobePreviewController : MonoBehaviour
         lastPointerPosition = eventData.position;
     }
 
-    private void OnPreviewPointerCancel(PointerEventData eventData)
+    private void OnPreviewPointerCancel(BaseEventData eventData)
     {
-        if (eventData == null || eventData.pointerId != activePointerId)
+        PointerEventData pointerEventData = eventData as PointerEventData;
+
+        if (pointerEventData != null && pointerEventData.pointerId != activePointerId)
         {
             return;
         }
