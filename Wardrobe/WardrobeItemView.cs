@@ -14,6 +14,7 @@ public class WardrobeItemView : MonoBehaviour
     [SerializeField] private GameObject selectionIndicator;
     [SerializeField] private TMP_Text nameLabel;
     [SerializeField] private Image iconImage;
+    [SerializeField] private Image emptyStateImage;
     [SerializeField] private string itemId;
 
     private string displayName;
@@ -69,6 +70,8 @@ public class WardrobeItemView : MonoBehaviour
         {
             tmp.raycastTarget = false; // ← 貫通ON
         }
+
+        UpdateEmptyStateVisuals();
     }
 
     private void OnEnable()
@@ -128,6 +131,8 @@ public class WardrobeItemView : MonoBehaviour
         }
 
         SetIcon(sprite);
+
+        UpdateEmptyStateVisuals();
     }
 
     public void SetNameId(string value)
@@ -145,8 +150,9 @@ public class WardrobeItemView : MonoBehaviour
         if (iconImage != null)
         {
             iconImage.sprite = sprite;
-            iconImage.enabled = sprite != null;
         }
+
+        UpdateEmptyStateVisuals();
     }
 
     private void Bind()
@@ -209,5 +215,26 @@ public class WardrobeItemView : MonoBehaviour
 
         WardrobeItemView currentSelection = owner.GetSelectedItem(category);
         SetSelected(currentSelection == this);
+    }
+
+    private void UpdateEmptyStateVisuals()
+    {
+        bool isEmptyItemId = !string.IsNullOrEmpty(itemId) && itemId.IndexOf("empty", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        if (emptyStateImage != null)
+        {
+            emptyStateImage.gameObject.SetActive(isEmptyItemId);
+        }
+
+        if (nameLabel != null)
+        {
+            nameLabel.gameObject.SetActive(!isEmptyItemId);
+        }
+
+        if (iconImage != null)
+        {
+            iconImage.gameObject.SetActive(!isEmptyItemId);
+            iconImage.enabled = !isEmptyItemId && iconImage.sprite != null;
+        }
     }
 }
