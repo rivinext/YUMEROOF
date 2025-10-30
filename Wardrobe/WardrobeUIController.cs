@@ -507,7 +507,33 @@ public class WardrobeUIController : MonoBehaviour
 
     private static string NormalizePartName(string partName)
     {
-        return string.IsNullOrEmpty(partName) ? string.Empty : partName;
+        if (string.IsNullOrEmpty(partName))
+        {
+            return string.Empty;
+        }
+
+        partName = partName.Trim();
+
+        int dotIndex = partName.LastIndexOf('.');
+        if (dotIndex >= 0 && dotIndex < partName.Length - 1)
+        {
+            bool numericSuffix = true;
+            for (int i = dotIndex + 1; i < partName.Length; i++)
+            {
+                if (!char.IsDigit(partName[i]))
+                {
+                    numericSuffix = false;
+                    break;
+                }
+            }
+
+            if (numericSuffix)
+            {
+                partName = partName.Substring(0, dotIndex);
+            }
+        }
+
+        return partName;
     }
 
     private AttachmentPoint ResolveAttachment(Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, WardrobeTabType category, string partName)
@@ -585,7 +611,9 @@ public class WardrobeUIController : MonoBehaviour
             return false;
         }
 
-        return true;
+        partName = NormalizePartName(partName);
+
+        return !string.IsNullOrEmpty(partName);
     }
 
     private static IReadOnlyList<ExtractedPart> ExtractFallbackParts(GameObject fallbackPrefab)
