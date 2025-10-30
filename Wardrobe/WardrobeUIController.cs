@@ -507,7 +507,7 @@ public class WardrobeUIController : MonoBehaviour
 
     private static string NormalizePartName(string partName)
     {
-        return string.IsNullOrEmpty(partName) ? string.Empty : partName;
+        return WardrobePartNameUtility.NormalizePartName(partName);
     }
 
     private AttachmentPoint ResolveAttachment(Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> lookup, WardrobeTabType category, string partName)
@@ -585,6 +585,14 @@ public class WardrobeUIController : MonoBehaviour
             return false;
         }
 
+        string canonicalName = WardrobePartNameUtility.NormalizePartName(partName);
+        if (string.IsNullOrEmpty(canonicalName))
+        {
+            partName = string.Empty;
+            return false;
+        }
+
+        partName = canonicalName;
         return true;
     }
 
@@ -620,6 +628,10 @@ public class WardrobeUIController : MonoBehaviour
             }
 
             partName = NormalizePartName(partName);
+            if (string.IsNullOrEmpty(partName))
+            {
+                continue;
+            }
             if (s_extractedPartsLookup.ContainsKey(partName))
             {
                 continue;
@@ -653,6 +665,10 @@ public class WardrobeUIController : MonoBehaviour
                 }
 
                 partName = NormalizePartName(partName);
+                if (string.IsNullOrEmpty(partName))
+                {
+                    continue;
+                }
                 if (s_extractedPartsLookup.ContainsKey(partName))
                 {
                     continue;
