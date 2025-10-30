@@ -33,6 +33,9 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private RawImage previewTargetImage;
     [SerializeField] private float previewRotateSpeed = 0.25f;
     [SerializeField] private bool previewUseDeltaTime = false;
+    [SerializeField] private float previewZoomSpeed = 0.25f;
+    [SerializeField] private float previewMinZoomDistance = 0.5f;
+    [SerializeField] private float previewMaxZoomDistance = 3f;
     [SerializeField] private bool autoRegisterItemsOnAwake = true;
     [SerializeField] private WardrobeCatalog wardrobeCatalog;
     [SerializeField] private WardrobeItemView wardrobeItemViewPrefab;
@@ -129,6 +132,10 @@ public class WardrobeUIController : MonoBehaviour
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
+    private Vector3 previewCameraZoomDirection = Vector3.back;
+    private float previewInitialCameraDistance;
+    private float previewCurrentZoomDistance;
+    private bool previewInitialCameraPositionCaptured;
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -216,6 +223,7 @@ public class WardrobeUIController : MonoBehaviour
 
         UpdateDescription(null);
         InitializePreviewTarget();
+        CapturePreviewInitialZoom();
         UpdatePreviewActivation(panelAnimator != null && panelAnimator.IsShown);
         CapturePreviewInitialRotation();
         SetupPreviewEventTrigger();
@@ -1053,11 +1061,20 @@ public class WardrobeUIController : MonoBehaviour
         {
             InitializePreviewTarget();
             CapturePreviewInitialRotation();
+            if (!previewInitialCameraPositionCaptured)
+            {
+                CapturePreviewInitialZoom();
+            }
+            else
+            {
+                ApplyPreviewZoom(previewCurrentZoomDistance);
+            }
         }
         else
         {
             ResetPreviewInteractionState();
             RestorePreviewRotation();
+            RestorePreviewZoom();
         }
     }
 
@@ -1072,6 +1089,45 @@ public class WardrobeUIController : MonoBehaviour
         previewInitialRotationCaptured = true;
     }
 
+    private void CapturePreviewInitialZoom()
+    {
+        if (previewCamera == null)
+        {
+            return;
+        }
+
+        Transform cameraTransform = previewCamera.transform;
+        Vector3 initialLocalPosition = cameraTransform.localPosition;
+        previewInitialCameraDistance = initialLocalPosition.magnitude;
+
+        if (previewInitialCameraDistance > Mathf.Epsilon)
+        {
+            previewCameraZoomDirection = initialLocalPosition / previewInitialCameraDistance;
+        }
+        else
+        {
+            previewInitialCameraDistance = Mathf.Max(previewInitialCameraDistance, 0.01f);
+            previewCameraZoomDirection = Vector3.back;
+        }
+
+        previewInitialCameraPositionCaptured = true;
+        previewCurrentZoomDistance = Mathf.Clamp(previewInitialCameraDistance, previewMinZoomDistance, previewMaxZoomDistance);
+        ApplyPreviewZoom(previewCurrentZoomDistance);
+    }
+
+    private void ApplyPreviewZoom(float distance)
+    {
+        if (!previewInitialCameraPositionCaptured || previewCamera == null)
+        {
+            return;
+        }
+
+        float clampedDistance = Mathf.Clamp(distance, previewMinZoomDistance, previewMaxZoomDistance);
+        Transform cameraTransform = previewCamera.transform;
+        cameraTransform.localPosition = previewCameraZoomDirection * clampedDistance;
+        previewCurrentZoomDistance = clampedDistance;
+    }
+
     private void RestorePreviewRotation()
     {
         if (!previewInitialRotationCaptured || previewPlayerRoot == null)
@@ -1080,6 +1136,16 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         previewPlayerRoot.rotation = previewInitialRotation;
+    }
+
+    private void RestorePreviewZoom()
+    {
+        if (!previewInitialCameraPositionCaptured)
+        {
+            return;
+        }
+
+        ApplyPreviewZoom(previewInitialCameraDistance);
     }
 
     private void ResetPreviewInteractionState()
@@ -1112,6 +1178,7 @@ public class WardrobeUIController : MonoBehaviour
         AddEventTriggerListener(eventTrigger, EventTriggerType.PointerUp, OnPreviewPointerUp);
         AddEventTriggerListener(eventTrigger, EventTriggerType.PointerExit, OnPreviewPointerExit);
         AddEventTriggerListener(eventTrigger, EventTriggerType.Cancel, OnPreviewPointerCancel);
+        AddEventTriggerListener(eventTrigger, EventTriggerType.Scroll, OnPreviewScroll);
     }
 
     private void AddEventTriggerListener(EventTrigger trigger, EventTriggerType eventType, Action<PointerEventData> callback)
@@ -1191,6 +1258,23 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         previewPlayerRoot.Rotate(0f, yaw, 0f, Space.World);
+    }
+
+    private void OnPreviewScroll(PointerEventData eventData)
+    {
+        if (eventData == null || !previewInitialCameraPositionCaptured || previewCamera == null)
+        {
+            return;
+        }
+
+        float scrollDelta = eventData.scrollDelta.y * previewZoomSpeed;
+        if (Mathf.Approximately(scrollDelta, 0f))
+        {
+            return;
+        }
+
+        float targetDistance = previewCurrentZoomDistance - scrollDelta;
+        ApplyPreviewZoom(targetDistance);
     }
 
     private void OnPanelVisibilityChanged(bool visible)
