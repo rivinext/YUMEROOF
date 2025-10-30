@@ -28,11 +28,6 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private Transform previewPlayerRoot;
-    [SerializeField] private Transform previewRotationHandle;
-    [SerializeField, Tooltip("Animator components on the preview rig that should be paused while dragging so manual rotation is not overridden. Assign the Animator(s) that drive the preview character.")]
-    private Animator[] previewAnimators;
-    [SerializeField, Tooltip("When enabled, any configured preview animators are temporarily disabled during drag interactions.")]
-    private bool pausePreviewAnimatorsDuringDrag = false;
     [SerializeField] private Transform gamePlayerRoot;
     [SerializeField] private Camera previewCamera;
     [SerializeField] private RawImage previewTargetImage;
@@ -134,21 +129,6 @@ public class WardrobeUIController : MonoBehaviour
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
-    private bool previewAnimatorsPaused;
-    private bool[] previewAnimatorEnabledCache;
-
-    private Transform PreviewRotationPivot
-    {
-        get
-        {
-            if (previewRotationHandle != null)
-            {
-                return previewRotationHandle;
-            }
-
-            return previewPlayerRoot;
-        }
-    }
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -1059,10 +1039,9 @@ public class WardrobeUIController : MonoBehaviour
 
     private void UpdatePreviewActivation(bool visible)
     {
-        Transform previewPivot = PreviewRotationPivot;
-        if (previewPivot != null)
+        if (previewPlayerRoot != null)
         {
-            previewPivot.gameObject.SetActive(visible);
+            previewPlayerRoot.gameObject.SetActive(visible);
         }
 
         if (previewCamera != null)
@@ -1084,89 +1063,30 @@ public class WardrobeUIController : MonoBehaviour
 
     private void CapturePreviewInitialRotation()
     {
-        Transform previewPivot = PreviewRotationPivot;
-        if (previewPivot == null)
+        if (previewPlayerRoot == null)
         {
             return;
         }
 
-        previewInitialRotation = previewPivot.rotation;
+        previewInitialRotation = previewPlayerRoot.rotation;
         previewInitialRotationCaptured = true;
     }
 
     private void RestorePreviewRotation()
     {
-        Transform previewPivot = PreviewRotationPivot;
-        if (!previewInitialRotationCaptured || previewPivot == null)
+        if (!previewInitialRotationCaptured || previewPlayerRoot == null)
         {
             return;
         }
 
-        previewPivot.rotation = previewInitialRotation;
+        previewPlayerRoot.rotation = previewInitialRotation;
     }
 
     private void ResetPreviewInteractionState()
     {
-        RestorePreviewAnimatorStates();
         isDraggingPreview = false;
         lastPointerPosition = Vector2.zero;
         activePointerId = InvalidPointerId;
-    }
-
-    private void PausePreviewAnimators()
-    {
-        if (previewAnimatorsPaused || previewAnimators == null || previewAnimators.Length == 0)
-        {
-            return;
-        }
-
-        EnsurePreviewAnimatorCache(previewAnimators.Length);
-
-        bool anyAnimatorProcessed = false;
-        for (int i = 0; i < previewAnimators.Length; i++)
-        {
-            Animator animator = previewAnimators[i];
-            if (animator == null)
-            {
-                continue;
-            }
-
-            previewAnimatorEnabledCache[i] = animator.enabled;
-            animator.enabled = false;
-            anyAnimatorProcessed = true;
-        }
-
-        previewAnimatorsPaused = anyAnimatorProcessed;
-    }
-
-    private void RestorePreviewAnimatorStates()
-    {
-        if (!previewAnimatorsPaused || previewAnimators == null || previewAnimatorEnabledCache == null)
-        {
-            return;
-        }
-
-        int count = Math.Min(previewAnimators.Length, previewAnimatorEnabledCache.Length);
-        for (int i = 0; i < count; i++)
-        {
-            Animator animator = previewAnimators[i];
-            if (animator == null)
-            {
-                continue;
-            }
-
-            animator.enabled = previewAnimatorEnabledCache[i];
-        }
-
-        previewAnimatorsPaused = false;
-    }
-
-    private void EnsurePreviewAnimatorCache(int length)
-    {
-        if (previewAnimatorEnabledCache == null || previewAnimatorEnabledCache.Length < length)
-        {
-            previewAnimatorEnabledCache = new bool[length];
-        }
     }
 
     private void SetupPreviewEventTrigger()
@@ -1223,11 +1143,6 @@ public class WardrobeUIController : MonoBehaviour
         isDraggingPreview = true;
         activePointerId = eventData.pointerId;
         lastPointerPosition = eventData.position;
-
-        if (pausePreviewAnimatorsDuringDrag)
-        {
-            PausePreviewAnimators();
-        }
     }
 
     private void OnPreviewPointerUp(PointerEventData eventData)
@@ -1260,8 +1175,7 @@ public class WardrobeUIController : MonoBehaviour
 
     private void OnPreviewDrag(PointerEventData eventData)
     {
-        Transform previewPivot = PreviewRotationPivot;
-        if (!isDraggingPreview || previewPivot == null || eventData == null || eventData.pointerId != activePointerId)
+        if (!isDraggingPreview || previewPlayerRoot == null || eventData == null || eventData.pointerId != activePointerId)
         {
             return;
         }
@@ -1276,7 +1190,7 @@ public class WardrobeUIController : MonoBehaviour
             yaw *= Time.deltaTime;
         }
 
-        previewPivot.Rotate(0f, yaw, 0f, Space.World);
+        previewPlayerRoot.Rotate(0f, yaw, 0f, Space.World);
     }
 
     private void OnPanelVisibilityChanged(bool visible)
