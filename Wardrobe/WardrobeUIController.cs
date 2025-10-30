@@ -28,6 +28,7 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private Transform previewPlayerRoot;
+    [SerializeField] private Transform previewRotationHandle;
     [SerializeField] private Transform gamePlayerRoot;
     [SerializeField] private Camera previewCamera;
     [SerializeField] private RawImage previewTargetImage;
@@ -129,6 +130,19 @@ public class WardrobeUIController : MonoBehaviour
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
+
+    private Transform PreviewRotationPivot
+    {
+        get
+        {
+            if (previewRotationHandle != null)
+            {
+                return previewRotationHandle;
+            }
+
+            return previewPlayerRoot;
+        }
+    }
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -1039,9 +1053,10 @@ public class WardrobeUIController : MonoBehaviour
 
     private void UpdatePreviewActivation(bool visible)
     {
-        if (previewPlayerRoot != null)
+        Transform previewPivot = PreviewRotationPivot;
+        if (previewPivot != null)
         {
-            previewPlayerRoot.gameObject.SetActive(visible);
+            previewPivot.gameObject.SetActive(visible);
         }
 
         if (previewCamera != null)
@@ -1063,23 +1078,25 @@ public class WardrobeUIController : MonoBehaviour
 
     private void CapturePreviewInitialRotation()
     {
-        if (previewPlayerRoot == null)
+        Transform previewPivot = PreviewRotationPivot;
+        if (previewPivot == null)
         {
             return;
         }
 
-        previewInitialRotation = previewPlayerRoot.rotation;
+        previewInitialRotation = previewPivot.rotation;
         previewInitialRotationCaptured = true;
     }
 
     private void RestorePreviewRotation()
     {
-        if (!previewInitialRotationCaptured || previewPlayerRoot == null)
+        Transform previewPivot = PreviewRotationPivot;
+        if (!previewInitialRotationCaptured || previewPivot == null)
         {
             return;
         }
 
-        previewPlayerRoot.rotation = previewInitialRotation;
+        previewPivot.rotation = previewInitialRotation;
     }
 
     private void ResetPreviewInteractionState()
@@ -1175,7 +1192,8 @@ public class WardrobeUIController : MonoBehaviour
 
     private void OnPreviewDrag(PointerEventData eventData)
     {
-        if (!isDraggingPreview || previewPlayerRoot == null || eventData == null || eventData.pointerId != activePointerId)
+        Transform previewPivot = PreviewRotationPivot;
+        if (!isDraggingPreview || previewPivot == null || eventData == null || eventData.pointerId != activePointerId)
         {
             return;
         }
@@ -1190,7 +1208,7 @@ public class WardrobeUIController : MonoBehaviour
             yaw *= Time.deltaTime;
         }
 
-        previewPlayerRoot.Rotate(0f, yaw, 0f, Space.World);
+        previewPivot.Rotate(0f, yaw, 0f, Space.World);
     }
 
     private void OnPanelVisibilityChanged(bool visible)
