@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.EventSystems;
-using UnityEngine.UI;
 using TMPro;
 
 public enum WardrobeTabType
@@ -27,15 +25,8 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private List<CategoryTab> categoryTabs = new List<CategoryTab>();
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
-    [SerializeField] private Transform previewPlayerRoot;
     [SerializeField] private Transform gamePlayerRoot;
-    [SerializeField] private Camera previewCamera;
-    [SerializeField] private RawImage previewTargetImage;
-    [SerializeField] private float previewRotateSpeed = 0.25f;
-    [SerializeField] private bool previewUseDeltaTime = false;
-    [SerializeField] private float previewZoomSpeed = 0.25f;
-    [SerializeField] private float previewMinZoomDistance = 0.5f;
-    [SerializeField] private float previewMaxZoomDistance = 3f;
+    [SerializeField] private WardrobePreviewController previewController;
     [SerializeField] private bool autoRegisterItemsOnAwake = true;
     [SerializeField] private WardrobeCatalog wardrobeCatalog;
     [SerializeField] private WardrobeItemView wardrobeItemViewPrefab;
@@ -126,17 +117,6 @@ public class WardrobeUIController : MonoBehaviour
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
 
-    private const int InvalidPointerId = -1;   // 追加：無効ポインタID
-    private bool isDraggingPreview;
-    private int activePointerId = InvalidPointerId;
-    private Vector2 lastPointerPosition;
-    private Quaternion previewInitialRotation;
-    private bool previewInitialRotationCaptured;
-    private Vector3 previewCameraZoomDirection = Vector3.back;
-    private float previewInitialCameraDistance;
-    private float previewCurrentZoomDistance;
-    private bool previewInitialCameraPositionCaptured;
-
     public WardrobeEquipEvent OnItemEquipped
     {
         get { return onItemEquipped; }
@@ -222,11 +202,14 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         UpdateDescription(null);
-        InitializePreviewTarget();
-        CapturePreviewInitialZoom();
-        UpdatePreviewActivation(panelAnimator != null && panelAnimator.IsShown);
-        CapturePreviewInitialRotation();
-        SetupPreviewEventTrigger();
+        if (previewController != null)
+        {
+            previewController.InitializePreviewTarget();
+            previewController.CapturePreviewInitialZoom();
+            previewController.UpdatePreviewActivation(panelAnimator != null && panelAnimator.IsShown);
+            previewController.CapturePreviewInitialRotation();
+            previewController.SetupPreviewEventTrigger();
+        }
     }
 
     private void Start()
@@ -468,7 +451,8 @@ public class WardrobeUIController : MonoBehaviour
 
     private void BuildAttachmentLookup()
     {
-        BuildAttachmentLookupInternal(attachmentLookup, attachmentPoints, previewPlayerRoot);
+        Transform previewRoot = previewController != null ? previewController.PreviewPlayerRoot : null;
+        BuildAttachmentLookupInternal(attachmentLookup, attachmentPoints, previewRoot);
     }
 
     private void BuildGameAttachmentLookup()
@@ -1037,244 +1021,12 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
-    private void InitializePreviewTarget()
-    {
-        if (previewTargetImage != null && previewCamera != null)
-        {
-            previewTargetImage.texture = previewCamera.targetTexture;
-        }
-    }
-
     private void UpdatePreviewActivation(bool visible)
     {
-        if (previewPlayerRoot != null)
+        if (previewController != null)
         {
-            previewPlayerRoot.gameObject.SetActive(visible);
+            previewController.UpdatePreviewActivation(visible);
         }
-
-        if (previewCamera != null)
-        {
-            previewCamera.gameObject.SetActive(visible);
-        }
-
-        if (visible)
-        {
-            InitializePreviewTarget();
-            CapturePreviewInitialRotation();
-            if (!previewInitialCameraPositionCaptured)
-            {
-                CapturePreviewInitialZoom();
-            }
-            else
-            {
-                ApplyPreviewZoom(previewCurrentZoomDistance);
-            }
-        }
-        else
-        {
-            ResetPreviewInteractionState();
-            RestorePreviewRotation();
-            RestorePreviewZoom();
-        }
-    }
-
-    private void CapturePreviewInitialRotation()
-    {
-        if (previewPlayerRoot == null)
-        {
-            return;
-        }
-
-        previewInitialRotation = previewPlayerRoot.rotation;
-        previewInitialRotationCaptured = true;
-    }
-
-    private void CapturePreviewInitialZoom()
-    {
-        if (previewCamera == null)
-        {
-            return;
-        }
-
-        Transform cameraTransform = previewCamera.transform;
-        Vector3 initialLocalPosition = cameraTransform.localPosition;
-        previewInitialCameraDistance = initialLocalPosition.magnitude;
-
-        if (previewInitialCameraDistance > Mathf.Epsilon)
-        {
-            previewCameraZoomDirection = initialLocalPosition / previewInitialCameraDistance;
-        }
-        else
-        {
-            previewInitialCameraDistance = Mathf.Max(previewInitialCameraDistance, 0.01f);
-            previewCameraZoomDirection = Vector3.back;
-        }
-
-        previewInitialCameraPositionCaptured = true;
-        previewCurrentZoomDistance = Mathf.Clamp(previewInitialCameraDistance, previewMinZoomDistance, previewMaxZoomDistance);
-        ApplyPreviewZoom(previewCurrentZoomDistance);
-    }
-
-    private void ApplyPreviewZoom(float distance)
-    {
-        if (!previewInitialCameraPositionCaptured || previewCamera == null)
-        {
-            return;
-        }
-
-        float clampedDistance = Mathf.Clamp(distance, previewMinZoomDistance, previewMaxZoomDistance);
-        Transform cameraTransform = previewCamera.transform;
-        cameraTransform.localPosition = previewCameraZoomDirection * clampedDistance;
-        previewCurrentZoomDistance = clampedDistance;
-    }
-
-    private void RestorePreviewRotation()
-    {
-        if (!previewInitialRotationCaptured || previewPlayerRoot == null)
-        {
-            return;
-        }
-
-        previewPlayerRoot.rotation = previewInitialRotation;
-    }
-
-    private void RestorePreviewZoom()
-    {
-        if (!previewInitialCameraPositionCaptured)
-        {
-            return;
-        }
-
-        ApplyPreviewZoom(previewInitialCameraDistance);
-    }
-
-    private void ResetPreviewInteractionState()
-    {
-        isDraggingPreview = false;
-        lastPointerPosition = Vector2.zero;
-        activePointerId = InvalidPointerId;
-    }
-
-    private void SetupPreviewEventTrigger()
-    {
-        if (previewTargetImage == null)
-        {
-            return;
-        }
-
-        EventTrigger eventTrigger = previewTargetImage.GetComponent<EventTrigger>();
-        if (eventTrigger == null)
-        {
-            eventTrigger = previewTargetImage.gameObject.AddComponent<EventTrigger>();
-        }
-
-        if (eventTrigger.triggers == null)
-        {
-            eventTrigger.triggers = new List<EventTrigger.Entry>();
-        }
-
-        AddEventTriggerListener(eventTrigger, EventTriggerType.PointerDown, OnPreviewPointerDown);
-        AddEventTriggerListener(eventTrigger, EventTriggerType.Drag, OnPreviewDrag);
-        AddEventTriggerListener(eventTrigger, EventTriggerType.PointerUp, OnPreviewPointerUp);
-        AddEventTriggerListener(eventTrigger, EventTriggerType.PointerExit, OnPreviewPointerExit);
-        AddEventTriggerListener(eventTrigger, EventTriggerType.Cancel, OnPreviewPointerCancel);
-        AddEventTriggerListener(eventTrigger, EventTriggerType.Scroll, OnPreviewScroll);
-    }
-
-    private void AddEventTriggerListener(EventTrigger trigger, EventTriggerType eventType, Action<PointerEventData> callback)
-    {
-        if (trigger == null || callback == null)
-        {
-            return;
-        }
-
-        EventTrigger.Entry entry = new EventTrigger.Entry { eventID = eventType };
-        entry.callback.AddListener(data =>
-        {
-            PointerEventData pointerEventData = data as PointerEventData;
-            if (pointerEventData != null)
-            {
-                callback(pointerEventData);
-            }
-        });
-        trigger.triggers.Add(entry);
-    }
-
-    private void OnPreviewPointerDown(PointerEventData eventData)
-    {
-        if (eventData == null)
-        {
-            return;
-        }
-
-        isDraggingPreview = true;
-        activePointerId = eventData.pointerId;
-        lastPointerPosition = eventData.position;
-    }
-
-    private void OnPreviewPointerUp(PointerEventData eventData)
-    {
-        if (eventData == null || eventData.pointerId != activePointerId)
-        {
-            return;
-        }
-
-        ResetPreviewInteractionState();
-    }
-
-    private void OnPreviewPointerExit(PointerEventData eventData)
-    {
-        if (eventData != null && eventData.pointerId == activePointerId)
-        {
-            lastPointerPosition = eventData.position;
-        }
-    }
-
-    private void OnPreviewPointerCancel(PointerEventData eventData)
-    {
-        if (eventData == null || eventData.pointerId != activePointerId)
-        {
-            return;
-        }
-
-        ResetPreviewInteractionState();
-    }
-
-    private void OnPreviewDrag(PointerEventData eventData)
-    {
-        if (!isDraggingPreview || previewPlayerRoot == null || eventData == null || eventData.pointerId != activePointerId)
-        {
-            return;
-        }
-
-        Vector2 delta = eventData.position - lastPointerPosition;
-        lastPointerPosition = eventData.position;
-
-        // Negate delta.x so the preview rotates opposite to the drag direction.
-        float yaw = -delta.x * previewRotateSpeed;
-        if (previewUseDeltaTime)
-        {
-            yaw *= Time.deltaTime;
-        }
-
-        previewPlayerRoot.Rotate(0f, yaw, 0f, Space.World);
-    }
-
-    private void OnPreviewScroll(PointerEventData eventData)
-    {
-        if (eventData == null || !previewInitialCameraPositionCaptured || previewCamera == null)
-        {
-            return;
-        }
-
-        float scrollDelta = eventData.scrollDelta.y * previewZoomSpeed;
-        if (Mathf.Approximately(scrollDelta, 0f))
-        {
-            return;
-        }
-
-        float targetDistance = previewCurrentZoomDistance - scrollDelta;
-        ApplyPreviewZoom(targetDistance);
     }
 
     private void OnPanelVisibilityChanged(bool visible)
