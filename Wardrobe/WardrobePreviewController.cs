@@ -24,6 +24,9 @@ public class WardrobePreviewController : MonoBehaviour
     [SerializeField] private bool invertVerticalDrag = false;
     [SerializeField, Range(0f, 89.5f)] private float minVerticalAngle = 0f;
     [SerializeField, Range(0f, 89.5f)] private float maxVerticalAngle = 85f;
+    [SerializeField] private float minOrbitDistance = 0.2f;
+    [SerializeField] private float maxOrbitDistance = 4f;
+    [SerializeField] private float zoomSensitivity = 0.5f;
 
     private bool isDragging;
     private int activePointerId = InvalidPointerId;
@@ -34,6 +37,7 @@ public class WardrobePreviewController : MonoBehaviour
     private float initialYaw;
     private float initialPitch;
     private float orbitRadius = 2f;
+    private float initialOrbitRadius = 2f;
     private bool orbitInitialized;
 
     private bool previewActive;
@@ -76,6 +80,12 @@ public class WardrobePreviewController : MonoBehaviour
         dragSensitivity = Mathf.Max(0f, dragSensitivity);
         maxVerticalAngle = Mathf.Clamp(maxVerticalAngle, 0f, 89.5f);
         minVerticalAngle = Mathf.Clamp(minVerticalAngle, 0f, maxVerticalAngle);
+        zoomSensitivity = Mathf.Max(0f, zoomSensitivity);
+        minOrbitDistance = Mathf.Max(0.01f, minOrbitDistance);
+        if (maxOrbitDistance < minOrbitDistance)
+        {
+            maxOrbitDistance = minOrbitDistance;
+        }
     }
 
     private void LateUpdate()
@@ -173,6 +183,7 @@ public class WardrobePreviewController : MonoBehaviour
         AddEventTriggerListener(trigger, EventTriggerType.PointerExit, OnPreviewPointerExit);
         AddCancelEventTriggerListener(trigger, OnPreviewPointerCancel);
         AddEventTriggerListener(trigger, EventTriggerType.Drag, OnPreviewDrag);
+        AddEventTriggerListener(trigger, EventTriggerType.Scroll, OnPreviewScroll);
     }
 
     public void SetFocusAnchor(Transform anchor, Vector3? offsetOverride = null, bool? useLocalOffset = null)
@@ -224,11 +235,7 @@ public class WardrobePreviewController : MonoBehaviour
             direction = Vector3.forward;
         }
 
-        orbitRadius = direction.magnitude;
-        if (orbitRadius < 0.01f)
-        {
-            orbitRadius = 0.01f;
-        }
+        orbitRadius = Mathf.Clamp(direction.magnitude, minOrbitDistance, maxOrbitDistance);
 
         direction.Normalize();
 
@@ -240,6 +247,7 @@ public class WardrobePreviewController : MonoBehaviour
 
         initialYaw = yaw;
         initialPitch = pitch;
+        initialOrbitRadius = orbitRadius;
 
         orbitInitialized = true;
     }
@@ -253,6 +261,7 @@ public class WardrobePreviewController : MonoBehaviour
 
         yaw = initialYaw;
         pitch = initialPitch;
+        orbitRadius = Mathf.Clamp(initialOrbitRadius, minOrbitDistance, maxOrbitDistance);
         ApplyOrbitToCamera();
     }
 
@@ -270,7 +279,9 @@ public class WardrobePreviewController : MonoBehaviour
         Vector3 direction = GetDirectionFromAngles(yaw, pitch);
 
         Transform cameraTransform = previewCamera.transform;
-        cameraTransform.position = anchorPosition + direction * orbitRadius;
+        float clampedRadius = Mathf.Clamp(orbitRadius, minOrbitDistance, maxOrbitDistance);
+        orbitRadius = clampedRadius;
+        cameraTransform.position = anchorPosition + direction * clampedRadius;
 
         Vector3 up = Vector3.up;
         float alignment = Mathf.Abs(Vector3.Dot(direction, up));
@@ -427,6 +438,39 @@ public class WardrobePreviewController : MonoBehaviour
         yaw += delta.x * dragSensitivity * horizontalSign;
         pitch += delta.y * dragSensitivity * verticalSign;
 
+        ApplyOrbitToCamera();
+    }
+
+    private void OnPreviewScroll(PointerEventData eventData)
+    {
+        if (eventData == null)
+        {
+            return;
+        }
+
+        float scrollDelta = eventData.scrollDelta.y;
+        if (Mathf.Approximately(scrollDelta, 0f) || Mathf.Approximately(zoomSensitivity, 0f))
+        {
+            return;
+        }
+
+        orbitRadius = Mathf.Clamp(orbitRadius - scrollDelta * zoomSensitivity, minOrbitDistance, maxOrbitDistance);
+        ApplyOrbitToCamera();
+    }
+
+    public void SetOrbitDistance(float distance)
+    {
+        orbitRadius = Mathf.Clamp(distance, minOrbitDistance, maxOrbitDistance);
+        initialOrbitRadius = orbitRadius;
+        ApplyOrbitToCamera();
+    }
+
+    public void SetOrbitDistanceRange(float minDistance, float maxDistance)
+    {
+        minOrbitDistance = Mathf.Max(0.01f, minDistance);
+        maxOrbitDistance = Mathf.Max(minOrbitDistance, maxDistance);
+        orbitRadius = Mathf.Clamp(orbitRadius, minOrbitDistance, maxOrbitDistance);
+        initialOrbitRadius = Mathf.Clamp(initialOrbitRadius, minOrbitDistance, maxOrbitDistance);
         ApplyOrbitToCamera();
     }
 }
