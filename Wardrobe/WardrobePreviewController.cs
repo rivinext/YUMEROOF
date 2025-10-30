@@ -12,6 +12,8 @@ public class WardrobePreviewController : MonoBehaviour
     [SerializeField] private Transform previewPlayerRoot;
     [SerializeField] private Camera previewCamera;
     [SerializeField] private RawImage previewTargetImage;
+    [SerializeField] private bool previewRotateCamera = false;
+    [SerializeField] private Transform previewCameraOrbitRoot;
     [SerializeField] private float previewRotateSpeed = 0.25f;
     [SerializeField] private bool previewUseDeltaTime = false;
     [SerializeField] private float previewZoomSpeed = 0.25f;
@@ -25,10 +27,13 @@ public class WardrobePreviewController : MonoBehaviour
     private Vector2 lastPointerPosition;
     private Quaternion previewInitialRotation;
     private bool previewInitialRotationCaptured;
+    private Quaternion previewInitialCameraOrbitRotation;
+    private bool previewInitialCameraOrbitRotationCaptured;
     private Vector3 previewInitialCameraLocalPosition;
     private Vector3 previewCameraZoomDirection = Vector3.back;
     private float previewCurrentZoomOffset;
     private bool previewInitialCameraPositionCaptured;
+    private Transform resolvedCameraOrbitRoot;
 
     public Transform PreviewPlayerRoot => previewPlayerRoot;
 
@@ -56,6 +61,7 @@ public class WardrobePreviewController : MonoBehaviour
         {
             InitializePreviewTarget();
             CapturePreviewInitialRotation();
+            CapturePreviewInitialCameraOrbitRotation();
             if (!previewInitialCameraPositionCaptured)
             {
                 CapturePreviewInitialZoom();
@@ -69,6 +75,7 @@ public class WardrobePreviewController : MonoBehaviour
         {
             ResetPreviewInteractionState();
             RestorePreviewRotation();
+            RestorePreviewCameraOrbitRotation();
             RestorePreviewZoom();
         }
     }
@@ -167,7 +174,7 @@ public class WardrobePreviewController : MonoBehaviour
 
         float clampedOffset = Mathf.Clamp(zoomOffset, previewMinZoomOffset, previewMaxZoomOffset);
         Transform cameraTransform = previewCamera.transform;
-        cameraTransform.localPosition = previewInitialCameraLocalPosition + Vector3.back * clampedOffset;
+        cameraTransform.localPosition = previewInitialCameraLocalPosition + previewCameraZoomDirection * clampedOffset;
         previewCurrentZoomOffset = clampedOffset;
     }
 
@@ -196,6 +203,44 @@ public class WardrobePreviewController : MonoBehaviour
         isDraggingPreview = false;
         lastPointerPosition = Vector2.zero;
         activePointerId = InvalidPointerId;
+    }
+
+    private Transform ResolveCameraOrbitRoot()
+    {
+        if (previewCameraOrbitRoot != null)
+        {
+            return previewCameraOrbitRoot;
+        }
+
+        if (previewCamera != null && previewCamera.transform.parent != null)
+        {
+            return previewCamera.transform.parent;
+        }
+
+        return previewCamera != null ? previewCamera.transform : null;
+    }
+
+    private void CapturePreviewInitialCameraOrbitRotation()
+    {
+        resolvedCameraOrbitRoot = ResolveCameraOrbitRoot();
+        if (resolvedCameraOrbitRoot == null)
+        {
+            previewInitialCameraOrbitRotationCaptured = false;
+            return;
+        }
+
+        previewInitialCameraOrbitRotation = resolvedCameraOrbitRoot.rotation;
+        previewInitialCameraOrbitRotationCaptured = true;
+    }
+
+    private void RestorePreviewCameraOrbitRotation()
+    {
+        if (!previewInitialCameraOrbitRotationCaptured || resolvedCameraOrbitRoot == null)
+        {
+            return;
+        }
+
+        resolvedCameraOrbitRoot.rotation = previewInitialCameraOrbitRotation;
     }
 
     private void AddEventTriggerListener(EventTrigger trigger, EventTriggerType eventType, Action<PointerEventData> callback)
@@ -259,7 +304,7 @@ public class WardrobePreviewController : MonoBehaviour
 
     private void OnPreviewDrag(PointerEventData eventData)
     {
-        if (!isDraggingPreview || previewPlayerRoot == null || eventData == null || eventData.pointerId != activePointerId)
+        if (!isDraggingPreview || eventData == null || eventData.pointerId != activePointerId)
         {
             return;
         }
@@ -273,7 +318,24 @@ public class WardrobePreviewController : MonoBehaviour
             yaw *= Time.deltaTime;
         }
 
-        previewPlayerRoot.Rotate(0f, yaw, 0f, Space.World);
+        if (previewRotateCamera)
+        {
+            if (resolvedCameraOrbitRoot == null)
+            {
+                resolvedCameraOrbitRoot = ResolveCameraOrbitRoot();
+            }
+
+            if (resolvedCameraOrbitRoot != null)
+            {
+                resolvedCameraOrbitRoot.Rotate(0f, yaw, 0f, Space.World);
+                return;
+            }
+        }
+
+        if (previewPlayerRoot != null)
+        {
+            previewPlayerRoot.Rotate(0f, yaw, 0f, Space.World);
+        }
     }
 
     private void OnPreviewScroll(PointerEventData eventData)
