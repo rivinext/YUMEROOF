@@ -167,7 +167,7 @@ public class WardrobePreviewController : MonoBehaviour
 
         float clampedOffset = Mathf.Clamp(zoomOffset, previewMinZoomOffset, previewMaxZoomOffset);
         Transform cameraTransform = previewCamera.transform;
-        cameraTransform.localPosition = previewInitialCameraLocalPosition + (previewCameraZoomDirection * clampedOffset);
+        cameraTransform.localPosition = previewInitialCameraLocalPosition + Vector3.back * clampedOffset;
         previewCurrentZoomOffset = clampedOffset;
     }
 
