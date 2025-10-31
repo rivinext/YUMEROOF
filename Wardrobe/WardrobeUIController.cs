@@ -33,6 +33,9 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private WardrobeItemView wardrobeItemViewPrefab;
     [SerializeField] private TMP_Text descriptionText;
 
+    private const string SelectionKeyPrefix = "WardrobeSelection_";
+    private const string EmptySelectionToken = "__EMPTY__";
+
     [Serializable]
     private class CategoryTab
     {
@@ -211,6 +214,8 @@ public class WardrobeUIController : MonoBehaviour
             previewController.CapturePreviewInitialRotation();
             previewController.SetupPreviewEventTrigger();
         }
+
+        RestoreSavedSelections();
     }
 
     private void Start()
@@ -392,6 +397,7 @@ public class WardrobeUIController : MonoBehaviour
         UpdateSelectionState(category, source);
         onItemEquipped.Invoke(category, newPreviewInstance, source);
         UpdateDescription(source);
+        SaveSelectionState(category, source != null && !source.IsEmpty && !string.IsNullOrEmpty(source.ItemId) ? source.ItemId : null);
     }
 
     private void ApplyLayerRecursively(GameObject target, int layer)
@@ -1028,6 +1034,105 @@ public class WardrobeUIController : MonoBehaviour
         {
             previewController.UpdatePreviewActivation(visible);
         }
+    }
+
+    private string GetSelectionKey(WardrobeTabType category)
+    {
+        return SelectionKeyPrefix + category.ToString();
+    }
+
+    private static bool IsEmptySelectionValue(string storedValue)
+    {
+        return string.IsNullOrEmpty(storedValue) || string.Equals(storedValue, EmptySelectionToken, StringComparison.Ordinal);
+    }
+
+    private void SaveSelectionState(WardrobeTabType category, string itemId)
+    {
+        string key = GetSelectionKey(category);
+        string valueToStore = string.IsNullOrEmpty(itemId) ? EmptySelectionToken : itemId;
+
+        bool hasKey = PlayerPrefs.HasKey(key);
+        if (hasKey)
+        {
+            string existingValue = PlayerPrefs.GetString(key);
+            if (string.Equals(existingValue, valueToStore, StringComparison.Ordinal))
+            {
+                return;
+            }
+        }
+
+        PlayerPrefs.SetString(key, valueToStore);
+        PlayerPrefs.Save();
+    }
+
+    private void RestoreSavedSelections()
+    {
+        foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
+        {
+            string key = GetSelectionKey(category);
+            if (!PlayerPrefs.HasKey(key))
+            {
+                continue;
+            }
+
+            string storedValue = PlayerPrefs.GetString(key);
+            if (IsEmptySelectionValue(storedValue))
+            {
+                WardrobeItemView emptyView = FindItemView(category, null);
+                EquipItem(category, null, emptyView);
+                continue;
+            }
+
+            WardrobeItemView itemView = FindItemViewByItemId(category, storedValue);
+            if (itemView == null)
+            {
+                WardrobeItemView emptyView = FindItemView(category, null);
+                EquipItem(category, null, emptyView);
+                continue;
+            }
+
+            EquipItem(category, itemView.WearablePrefab, itemView);
+        }
+    }
+
+    private WardrobeItemView FindItemViewByItemId(WardrobeTabType category, string targetItemId)
+    {
+        if (string.IsNullOrEmpty(targetItemId))
+        {
+            return null;
+        }
+
+        for (int i = 0; i < registeredItems.Count; i++)
+        {
+            WardrobeItemView view = registeredItems[i];
+            if (view == null || view.Category != category)
+            {
+                continue;
+            }
+
+            string itemId = view.ItemId;
+            if (!string.IsNullOrEmpty(itemId) && string.Equals(itemId, targetItemId, StringComparison.Ordinal))
+            {
+                return view;
+            }
+        }
+
+        for (int i = 0; i < runtimeGeneratedItems.Count; i++)
+        {
+            WardrobeItemView view = runtimeGeneratedItems[i];
+            if (view == null || view.Category != category)
+            {
+                continue;
+            }
+
+            string itemId = view.ItemId;
+            if (!string.IsNullOrEmpty(itemId) && string.Equals(itemId, targetItemId, StringComparison.Ordinal))
+            {
+                return view;
+            }
+        }
+
+        return null;
     }
 
     private void OnPanelVisibilityChanged(bool visible)
