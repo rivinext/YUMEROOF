@@ -45,6 +45,20 @@ namespace Player
         [ContextMenu("Refresh Target Renderers")]
         public void RefreshTargetRenderers()
         {
+            bool wasOccluded = isOccluded;
+
+            bool canRestoreOriginals =
+                wasOccluded &&
+                targetRenderers != null &&
+                originalMaterials.Count == targetRenderers.Length &&
+                occludedMaterials.Count == targetRenderers.Length &&
+                propertyBlocks.Count == targetRenderers.Length;
+
+            if (canRestoreOriginals)
+            {
+                ApplyMaterials(false);
+            }
+
             for (int i = 0; i < createdSilhouetteMaterials.Count; i++)
             {
                 Material material = createdSilhouetteMaterials[i];
@@ -94,6 +108,7 @@ namespace Player
 
             if (targetRenderers == null)
             {
+                isOccluded = wasOccluded;
                 return;
             }
 
@@ -144,7 +159,8 @@ namespace Player
                 propertyBlocks.Add(block);
             }
 
-            ApplyMaterials(isOccluded);
+            isOccluded = wasOccluded;
+            ApplyMaterials(wasOccluded);
         }
 
         private Material CreateSilhouetteMaterialInstance(Material sourceMaterial)
@@ -263,7 +279,16 @@ namespace Player
 
         private void ApplyMaterials(bool occluded)
         {
-            for (int i = 0; i < targetRenderers.Length; i++)
+            if (targetRenderers == null)
+            {
+                return;
+            }
+
+            int rendererCount = targetRenderers.Length;
+            int originalCount = originalMaterials.Count;
+            int occludedCount = occludedMaterials.Count;
+            int propertyBlockCount = propertyBlocks.Count;
+            for (int i = 0; i < rendererCount; i++)
             {
                 Renderer renderer = targetRenderers[i];
                 if (renderer == null)
@@ -273,7 +298,7 @@ namespace Player
 
                 if (occluded)
                 {
-                    Material[] combinedMaterials = occludedMaterials[i];
+                    Material[] combinedMaterials = i < occludedCount ? occludedMaterials[i] : null;
                     if (combinedMaterials == null)
                     {
                         continue;
@@ -284,10 +309,16 @@ namespace Player
                 else
                 {
                     // 遮蔽されていない場合は通常マテリアルのみ
-                    renderer.sharedMaterials = originalMaterials[i];
+                    Material[] originals = i < originalCount ? originalMaterials[i] : null;
+                    if (originals == null)
+                    {
+                        continue;
+                    }
+
+                    renderer.sharedMaterials = originals;
                 }
 
-                MaterialPropertyBlock block = propertyBlocks[i];
+                MaterialPropertyBlock block = i < propertyBlockCount ? propertyBlocks[i] : null;
                 if (block != null)
                 {
                     renderer.SetPropertyBlock(block);
