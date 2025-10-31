@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -108,27 +109,33 @@ namespace Player
                     continue;
                 }
 
-                Material[] runtimeMaterials = renderer.materials;
-                Material[] runtimeMaterialsCopy = new Material[runtimeMaterials.Length];
-                for (int m = 0; m < runtimeMaterials.Length; m++)
+                Material[] sharedMaterials = renderer.sharedMaterials;
+                if (sharedMaterials == null)
                 {
-                    runtimeMaterialsCopy[m] = runtimeMaterials[m];
+                    originalMaterials.Add(null);
+                    silhouetteMaterials.Add(null);
+                    occludedMaterials.Add(null);
+                    propertyBlocks.Add(null);
+                    continue;
                 }
-                originalMaterials.Add(runtimeMaterialsCopy);
 
-                Material[] silhouetteArray = new Material[runtimeMaterials.Length];
-                for (int m = 0; m < runtimeMaterials.Length; m++)
+                Material[] sharedMaterialsCopy = new Material[sharedMaterials.Length];
+                Array.Copy(sharedMaterials, sharedMaterialsCopy, sharedMaterials.Length);
+                originalMaterials.Add(sharedMaterialsCopy);
+
+                Material[] silhouetteArray = new Material[sharedMaterials.Length];
+                for (int m = 0; m < sharedMaterials.Length; m++)
                 {
-                    silhouetteArray[m] = CreateSilhouetteMaterialInstance(runtimeMaterials[m]);
+                    silhouetteArray[m] = CreateSilhouetteMaterialInstance(sharedMaterials[m]);
                 }
                 silhouetteMaterials.Add(silhouetteArray);
 
                 Material[] combinedMaterials = null;
-                if (runtimeMaterialsCopy != null && silhouetteArray != null)
+                if (sharedMaterialsCopy != null && silhouetteArray != null)
                 {
-                    combinedMaterials = new Material[runtimeMaterialsCopy.Length + silhouetteArray.Length];
-                    runtimeMaterialsCopy.CopyTo(combinedMaterials, 0);
-                    silhouetteArray.CopyTo(combinedMaterials, runtimeMaterialsCopy.Length);
+                    combinedMaterials = new Material[sharedMaterialsCopy.Length + silhouetteArray.Length];
+                    Array.Copy(sharedMaterialsCopy, combinedMaterials, sharedMaterialsCopy.Length);
+                    Array.Copy(silhouetteArray, 0, combinedMaterials, sharedMaterialsCopy.Length, silhouetteArray.Length);
                 }
                 occludedMaterials.Add(combinedMaterials);
 
@@ -270,12 +277,12 @@ namespace Player
                         continue;
                     }
 
-                    renderer.materials = combinedMaterials;
+                    renderer.sharedMaterials = combinedMaterials;
                 }
                 else
                 {
                     // 遮蔽されていない場合は通常マテリアルのみ
-                    renderer.materials = originalMaterials[i];
+                    renderer.sharedMaterials = originalMaterials[i];
                 }
 
                 MaterialPropertyBlock block = propertyBlocks[i];
