@@ -3,6 +3,10 @@ using UnityEngine.UI;
 
 public class MaterialHueController : MonoBehaviour
 {
+    private const string HueKey = "material_hue";
+    private const string SaturationKey = "material_saturation";
+    private const string ValueKey = "material_value";
+
     [SerializeField] private Material targetMaterial;
 
     [Range(0f, 1f)]
@@ -19,12 +23,7 @@ public class MaterialHueController : MonoBehaviour
 
     private void Start()
     {
-        if (targetMaterial == null)
-        {
-            return;
-        }
-
-        ApplyColor();
+        LoadSavedValues();
 
         if (hueSlider != null)
         {
@@ -41,24 +40,65 @@ public class MaterialHueController : MonoBehaviour
             valueSlider.value = value;
             valueSlider.onValueChanged.AddListener(UpdateValue);
         }
+
+        ApplyColor();
     }
 
     public void UpdateHue(float newHue)
     {
+        bool hasChanged = !Mathf.Approximately(hue, newHue);
         hue = newHue;
         ApplyColor();
+
+        if (hasChanged)
+        {
+            PlayerPrefs.SetFloat(HueKey, hue);
+            PlayerPrefs.Save();
+        }
     }
 
     public void UpdateSaturation(float newSat)
     {
+        bool hasChanged = !Mathf.Approximately(saturation, newSat);
         saturation = newSat;
         ApplyColor();
+
+        if (hasChanged)
+        {
+            PlayerPrefs.SetFloat(SaturationKey, saturation);
+            PlayerPrefs.Save();
+        }
     }
 
     public void UpdateValue(float newVal)
     {
+        bool hasChanged = !Mathf.Approximately(value, newVal);
         value = newVal;
         ApplyColor();
+
+        if (hasChanged)
+        {
+            PlayerPrefs.SetFloat(ValueKey, value);
+            PlayerPrefs.Save();
+        }
+    }
+
+    private void LoadSavedValues()
+    {
+        if (PlayerPrefs.HasKey(HueKey))
+        {
+            hue = PlayerPrefs.GetFloat(HueKey);
+        }
+
+        if (PlayerPrefs.HasKey(SaturationKey))
+        {
+            saturation = PlayerPrefs.GetFloat(SaturationKey);
+        }
+
+        if (PlayerPrefs.HasKey(ValueKey))
+        {
+            value = PlayerPrefs.GetFloat(ValueKey);
+        }
     }
 
     private void ApplyColor()
@@ -73,6 +113,11 @@ public class MaterialHueController : MonoBehaviour
 
     private void OnValidate()
     {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
         ApplyColor();
     }
 }
