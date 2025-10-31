@@ -33,8 +33,45 @@ namespace Player
         {
             playerCollider = GetComponent<Collider>();
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
+            RefreshTargetRenderers();
+        }
 
-            if (targetRenderers == null || targetRenderers.Length == 0)
+        public void RefreshTargetRenderers()
+        {
+            if (playerCollider == null)
+            {
+                playerCollider = GetComponent<Collider>();
+            }
+
+            if (targetCamera == null)
+            {
+                targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
+            }
+
+            if (createdSilhouetteMaterials.Count > 0)
+            {
+                for (int i = 0; i < createdSilhouetteMaterials.Count; i++)
+                {
+                    Material material = createdSilhouetteMaterials[i];
+                    if (material == null)
+                    {
+                        continue;
+                    }
+
+                    if (Application.isPlaying)
+                    {
+                        Destroy(material);
+                    }
+                    else
+                    {
+                        DestroyImmediate(material);
+                    }
+                }
+                createdSilhouetteMaterials.Clear();
+            }
+
+            Renderer[] renderers = targetRenderers;
+            if (renderers == null || renderers.Length == 0)
             {
                 Renderer[] childRenderers = GetComponentsInChildren<Renderer>();
                 List<Renderer> filteredRenderers = new List<Renderer>(childRenderers.Length);
@@ -54,14 +91,15 @@ namespace Player
                     filteredRenderers.Add(renderer);
                 }
 
-                targetRenderers = filteredRenderers.ToArray();
+                renderers = filteredRenderers.ToArray();
             }
+
+            targetRenderers = renderers;
 
             originalMaterials.Clear();
             silhouetteMaterials.Clear();
             propertyBlocks.Clear();
             occludedMaterials.Clear();
-            createdSilhouetteMaterials.Clear();
 
             if (targetRenderers == null)
             {
@@ -107,6 +145,15 @@ namespace Player
                 MaterialPropertyBlock block = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(block);
                 propertyBlocks.Add(block);
+            }
+
+            if (isOccluded)
+            {
+                ApplyMaterials(true);
+            }
+            else
+            {
+                ApplyMaterials(false);
             }
         }
 

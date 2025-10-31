@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -36,8 +37,21 @@ namespace Player
         [SerializeField]
         private SlotBinding[] slotBindings = System.Array.Empty<SlotBinding>();
 
+        [SerializeField]
+        private PlayerOcclusionSilhouette occlusionSilhouette;
+
         private readonly Dictionary<WardrobeCategory, EquipmentSlot> slotLookup = new();
         private readonly Dictionary<WardrobeCategory, EquipmentItem> equippedLookup = new();
+        private Coroutine pendingSilhouetteRefresh;
+
+        private void OnDisable()
+        {
+            if (pendingSilhouetteRefresh != null)
+            {
+                StopCoroutine(pendingSilhouetteRefresh);
+                pendingSilhouetteRefresh = null;
+            }
+        }
 
         private void Awake()
         {
@@ -98,6 +112,8 @@ namespace Player
             {
                 slot.Equip(item);
             }
+
+            RefreshTargetRenderers();
         }
 
         /// <summary>
@@ -224,6 +240,58 @@ namespace Player
                     slot.Equip(item);
                 }
             }
+
+            RefreshTargetRenderers();
+        }
+
+        private void RefreshTargetRenderers()
+        {
+            if (occlusionSilhouette == null)
+            {
+                occlusionSilhouette = GetComponentInChildren<PlayerOcclusionSilhouette>(true);
+            }
+
+            if (occlusionSilhouette == null)
+            {
+                return;
+            }
+
+            if (!Application.isPlaying)
+            {
+                occlusionSilhouette.RefreshTargetRenderers();
+                return;
+            }
+
+            if (!isActiveAndEnabled)
+            {
+                occlusionSilhouette.RefreshTargetRenderers();
+                return;
+            }
+
+            if (pendingSilhouetteRefresh != null)
+            {
+                StopCoroutine(pendingSilhouetteRefresh);
+            }
+
+            pendingSilhouetteRefresh = StartCoroutine(RefreshTargetRenderersCoroutine());
+        }
+
+        private IEnumerator RefreshTargetRenderersCoroutine()
+        {
+            yield return null;
+            yield return new WaitForEndOfFrame();
+
+            if (occlusionSilhouette == null)
+            {
+                occlusionSilhouette = GetComponentInChildren<PlayerOcclusionSilhouette>(true);
+            }
+
+            if (occlusionSilhouette != null)
+            {
+                occlusionSilhouette.RefreshTargetRenderers();
+            }
+
+            pendingSilhouetteRefresh = null;
         }
     }
 }
