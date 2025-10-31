@@ -1,4 +1,5 @@
 using System.Collections;
+using Player;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -9,8 +10,8 @@ public class WardrobeSilhouetteSync : MonoBehaviour
     private WardrobeUIController wardrobeUIController;
 
     [SerializeField]
-    [Tooltip("Simple player occlusion silhouette component that needs to refresh its target renderers after wardrobe changes.")]
-    private SimplePlayerOcclusionSilhouette playerSilhouette;
+    [Tooltip("Player occlusion silhouette component that needs to refresh its target renderers after wardrobe changes.")]
+    private PlayerOcclusionSilhouette playerSilhouette;
 
     private Coroutine refreshRoutine;
     private readonly WaitForEndOfFrame waitForEndOfFrame = new WaitForEndOfFrame();
@@ -117,7 +118,7 @@ public class WardrobeSilhouetteSync : MonoBehaviour
 
         if (!warnedMissingSilhouette)
         {
-            Debug.LogWarning($"{nameof(WardrobeSilhouetteSync)} on {name} is missing a {nameof(SimplePlayerOcclusionSilhouette)} reference.", this);
+            Debug.LogWarning($"{nameof(WardrobeSilhouetteSync)} on {name} is missing a {nameof(PlayerOcclusionSilhouette)} reference.", this);
             warnedMissingSilhouette = true;
         }
 
