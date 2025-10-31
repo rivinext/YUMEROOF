@@ -96,6 +96,27 @@ public class PlayerController : MonoBehaviour
             if (cameraController != null)
             {
                 Transform target = cameraTargetOverride;
+
+                // すでに別のターゲットが設定されている場合は尊重する
+                if (target == null && cameraController.cameraTarget != null)
+                {
+                    bool isPlayerTarget = cameraController.cameraTarget == transform;
+
+                    if (!isPlayerTarget)
+                    {
+                        Transform existing = cameraController.cameraTarget;
+
+                        if (existing != null)
+                        {
+                            // プレイヤー階層下のターゲットかどうかを確認
+                            if (!existing.IsChildOf(transform))
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+
                 if (target == null)
                 {
                     target = transform.Find("CameraTarget");
