@@ -143,6 +143,8 @@ namespace Player
                 renderer.GetPropertyBlock(block);
                 propertyBlocks.Add(block);
             }
+
+            ApplyMaterials(isOccluded);
         }
 
         private Material CreateSilhouetteMaterialInstance(Material sourceMaterial)
