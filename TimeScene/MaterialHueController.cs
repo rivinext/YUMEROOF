@@ -24,12 +24,7 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
-        Color.RGBToHSV(targetMaterial.color, out var h, out var s, out value);
-        h = 0f;
-        s = 0f;
-        targetMaterial.color = Color.HSVToRGB(0f, 0f, value);
-        hue = 0f;
-        saturation = 0f;
+        ApplyColor();
 
         if (hueSlider != null)
         {
