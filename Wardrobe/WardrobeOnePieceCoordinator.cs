@@ -104,10 +104,26 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
     /// </summary>
     public void ApplyInitialEquipment()
     {
-        EquipByItemId(WardrobeTabType.Hair, initialHairItemId);
-        EquipByItemId(WardrobeTabType.Tops, initialTopsItemId);
-        EquipByItemId(WardrobeTabType.Pants, initialPantsItemId);
-        EquipByItemId(WardrobeTabType.Shoes, initialShoesItemId);
+        ApplyInitialEquipmentForCategory(WardrobeTabType.Hair, initialHairItemId);
+        ApplyInitialEquipmentForCategory(WardrobeTabType.Tops, initialTopsItemId);
+        ApplyInitialEquipmentForCategory(WardrobeTabType.Pants, initialPantsItemId);
+        ApplyInitialEquipmentForCategory(WardrobeTabType.Shoes, initialShoesItemId);
+    }
+
+    private void ApplyInitialEquipmentForCategory(WardrobeTabType category, string itemId)
+    {
+        if (wardrobeUIController == null)
+        {
+            return;
+        }
+
+        WardrobeItemView selectedItem = wardrobeUIController.GetSelectedItem(category);
+        if (selectedItem != null)
+        {
+            return;
+        }
+
+        EquipByItemId(category, itemId);
     }
 
     private void HandleItemEquipped(WardrobeTabType category, GameObject instance, WardrobeItemView source)
