@@ -34,6 +34,34 @@ namespace Player
             playerCollider = GetComponent<Collider>();
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
 
+            RefreshTargetRenderers();
+        }
+
+        [ContextMenu("Refresh Target Renderers")]
+        public void RefreshTargetRenderers()
+        {
+            for (int i = 0; i < createdSilhouetteMaterials.Count; i++)
+            {
+                Material material = createdSilhouetteMaterials[i];
+                if (material != null)
+                {
+                    if (Application.isPlaying)
+                    {
+                        Destroy(material);
+                    }
+                    else
+                    {
+                        DestroyImmediate(material);
+                    }
+                }
+            }
+
+            createdSilhouetteMaterials.Clear();
+            originalMaterials.Clear();
+            silhouetteMaterials.Clear();
+            propertyBlocks.Clear();
+            occludedMaterials.Clear();
+
             if (targetRenderers == null || targetRenderers.Length == 0)
             {
                 Renderer[] childRenderers = GetComponentsInChildren<Renderer>();
@@ -56,12 +84,6 @@ namespace Player
 
                 targetRenderers = filteredRenderers.ToArray();
             }
-
-            originalMaterials.Clear();
-            silhouetteMaterials.Clear();
-            propertyBlocks.Clear();
-            occludedMaterials.Clear();
-            createdSilhouetteMaterials.Clear();
 
             if (targetRenderers == null)
             {
