@@ -12,6 +12,10 @@ namespace Player
 
         public Renderer[] targetRenderers;
 
+        [SerializeField]
+        [Tooltip("When enabled, RefreshTargetRenderers automatically collects all child renderers, overwriting manual assignments.")]
+        private bool autoCollectRenderers = true;
+
         public LayerMask occluderMask = ~0;
 
         public float checkInterval = 0.1f;
@@ -62,9 +66,11 @@ namespace Player
             propertyBlocks.Clear();
             occludedMaterials.Clear();
 
-            if (targetRenderers == null || targetRenderers.Length == 0)
+            bool shouldAutoCollect = autoCollectRenderers || targetRenderers == null || targetRenderers.Length == 0;
+
+            if (shouldAutoCollect)
             {
-                Renderer[] childRenderers = GetComponentsInChildren<Renderer>();
+                Renderer[] childRenderers = GetComponentsInChildren<Renderer>(true);
                 List<Renderer> filteredRenderers = new List<Renderer>(childRenderers.Length);
                 for (int i = 0; i < childRenderers.Length; i++)
                 {
