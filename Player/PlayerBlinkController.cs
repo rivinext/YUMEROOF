@@ -89,12 +89,29 @@ public class PlayerBlinkController : MonoBehaviour
         }
 
         idleTimer = 0f;
+        bool shouldCrossFade = false;
+
         if (isEyesClosed)
         {
-            isEyesClosed = false;
+            shouldCrossFade = true;
         }
 
-        CrossFadeToState(blinkStateHash);
+        isEyesClosed = false;
+
+        if (!shouldCrossFade && animator != null && blinkStateHash != -1)
+        {
+            AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(0);
+            bool isBlinkStateActive = currentState.shortNameHash == blinkStateHash || currentState.IsName(blinkStateName);
+            if (!isBlinkStateActive)
+            {
+                shouldCrossFade = true;
+            }
+        }
+
+        if (shouldCrossFade)
+        {
+            CrossFadeToState(blinkStateHash);
+        }
     }
 
     /// <summary>
