@@ -20,6 +20,8 @@ public class PlayerIdleSleepController : MonoBehaviour
     [Header("Timing")]
     [SerializeField, Tooltip("Inactive duration (in seconds) before transitioning to the sleep state.")]
     private float inactiveToSleepDelay = 10f;
+    [SerializeField, Tooltip("Time (in seconds) spent sitting before transitioning to the sit sleep state.")]
+    private float sitSleepDelay = 5f;
     [SerializeField, Tooltip("Cross-fade duration (in seconds) when switching between idle/sleep states.")]
     private float crossFadeDuration = 0.25f;
 
@@ -91,6 +93,13 @@ public class PlayerIdleSleepController : MonoBehaviour
         if (isSleeping)
         {
             EnsureSleepStateMatchesPosture();
+            return;
+        }
+
+        if (isSitting && sitSleepDelay > 0f && sitElapsedTimer >= sitSleepDelay)
+        {
+            isSleeping = true;
+            CrossFadeToState(sitSleepStateHash);
             return;
         }
 
