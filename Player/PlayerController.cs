@@ -48,6 +48,9 @@ public class PlayerController : MonoBehaviour
     [Header("Blink Controller")]
     [SerializeField] private PlayerBlinkController blinkController;
 
+    [Header("Sleep Controller")]
+    [SerializeField] private PlayerIdleSleepController sleepController;
+
     private Vector3 currentMoveVelocity;
     private Vector3 moveDampVelocity;
     private bool hadInputLastFrame = false;
@@ -74,6 +77,11 @@ public class PlayerController : MonoBehaviour
         if (blinkController == null)
         {
             blinkController = GetComponent<PlayerBlinkController>();
+        }
+
+        if (sleepController == null)
+        {
+            sleepController = GetComponent<PlayerIdleSleepController>();
         }
 
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
@@ -174,6 +182,7 @@ public class PlayerController : MonoBehaviour
             distanceAccumulator = 0f;
             prevPosition = rb.position;
             blinkController?.SetBlinkingEnabled(false);
+            sleepController?.ForceState(IsSitting);
             hadInputLastFrame = false;
             return;
         }
@@ -191,11 +200,13 @@ public class PlayerController : MonoBehaviour
             if (!hadInputLastFrame)
             {
                 blinkController?.NotifyActive();
+                sleepController?.NotifyActive(IsSitting);
             }
         }
         else
         {
             blinkController?.NotifyInactive(Time.fixedDeltaTime);
+            sleepController?.NotifyInactive(Time.fixedDeltaTime, IsSitting);
         }
 
         hadInputLastFrame = hasInput;
@@ -345,6 +356,7 @@ public class PlayerController : MonoBehaviour
         isMovingToSeat = false;
         if (animator != null)
             animator.applyRootMotion = false;
+        sleepController?.ForceState(true);
     }
 
     public void StandUp()
@@ -375,6 +387,7 @@ public class PlayerController : MonoBehaviour
             rb.isKinematic = false;
             SetGlobalInputEnabled(true);
             IsSitting = false;
+            sleepController?.ForceState(false);
             if (animator != null)
                 animator.applyRootMotion = false;
             yield break;
@@ -410,6 +423,7 @@ public class PlayerController : MonoBehaviour
         seatCollider = null;
         if (animator != null)
             animator.applyRootMotion = false;
+        sleepController?.ForceState(false);
     }
 
     private void EmitStep(bool isRun)
