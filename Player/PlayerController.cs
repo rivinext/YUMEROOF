@@ -45,18 +45,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform cameraTargetOverride;
     private OrthographicCameraController cameraController;
 
-    [Header("Idle Blink")]
-    [SerializeField] private float idleBlinkThreshold = 5f;
-    [SerializeField] private float idleBlinkCrossFadeDuration = 0.1f;
-    [SerializeField] private string idleBlinkStateName = "IdleBlink";
-    [SerializeField] private string idleClosedEyesStateName = "IdleClosedEyes";
-    private float idleTimer = 0f;
-    private bool isIdleEyesClosed = false;
-    private int idleBlinkStateHash = -1;
-    private int idleClosedEyesStateHash = -1;
+    [Header("Blink Controller")]
+    [SerializeField] private PlayerBlinkController blinkController;
 
     private Vector3 currentMoveVelocity;
     private Vector3 moveDampVelocity;
+    private bool hadInputLastFrame = false;
 
     // 距離積算で足音（足跡）を出す
     private Vector3 prevPosition;
@@ -77,11 +71,10 @@ public class PlayerController : MonoBehaviour
     {
         animator = GetComponent<Animator>();
 
-        if (!string.IsNullOrEmpty(idleBlinkStateName))
-            idleBlinkStateHash = Animator.StringToHash(idleBlinkStateName);
-
-        if (!string.IsNullOrEmpty(idleClosedEyesStateName))
-            idleClosedEyesStateHash = Animator.StringToHash(idleClosedEyesStateName);
+        if (blinkController == null)
+        {
+            blinkController = GetComponent<PlayerBlinkController>();
+        }
 
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
 
@@ -168,7 +161,9 @@ public class PlayerController : MonoBehaviour
     void FixedUpdate()
     {
         // 入力が無効なら停止＆積算リセット
-        if (!GlobalInputEnabled || !inputEnabled)
+        bool canProcessInput = GlobalInputEnabled && inputEnabled;
+
+        if (!canProcessInput)
         {
             if (IsSitting && !isMovingToSeat && seatAnchor != null)
             {
@@ -178,10 +173,12 @@ public class PlayerController : MonoBehaviour
             animator?.SetFloat("moveSpeed", 0f);
             distanceAccumulator = 0f;
             prevPosition = rb.position;
-            idleTimer = 0f;
-            isIdleEyesClosed = false;
+            blinkController?.SetBlinkingEnabled(false);
+            hadInputLastFrame = false;
             return;
         }
+
+        blinkController?.SetBlinkingEnabled(true);
 
         float moveHorizontal = Input.GetAxis("Horizontal");
         float moveVertical = Input.GetAxis("Vertical");
@@ -191,29 +188,17 @@ public class PlayerController : MonoBehaviour
 
         if (hasInput)
         {
-            if (idleTimer > 0f)
+            if (!hadInputLastFrame)
             {
-                idleTimer = 0f;
-            }
-
-            if (isIdleEyesClosed)
-            {
-                if (animator != null && idleBlinkStateHash != -1)
-                    animator.CrossFade(idleBlinkStateHash, idleBlinkCrossFadeDuration, 0, 0f);
-                isIdleEyesClosed = false;
+                blinkController?.NotifyActive();
             }
         }
         else
         {
-            idleTimer += Time.fixedDeltaTime;
-
-            if (!isIdleEyesClosed && idleTimer >= idleBlinkThreshold)
-            {
-                if (animator != null && idleClosedEyesStateHash != -1)
-                    animator.CrossFade(idleClosedEyesStateHash, idleBlinkCrossFadeDuration, 0, 0f);
-                isIdleEyesClosed = true;
-            }
+            blinkController?.NotifyInactive(Time.fixedDeltaTime);
         }
+
+        hadInputLastFrame = hasInput;
 
         // カメラ基準で入力を回す
         float cameraRotationY = 45f;
