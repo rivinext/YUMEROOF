@@ -29,8 +29,10 @@ public class PlayerIdleSleepController : MonoBehaviour
     private int sitSleepStateHash = -1;
 
     private float inactivityTimer = 0f;
+    private float sitElapsedTimer = 0f;
     private bool isSleeping = false;
     private bool isCurrentlySitting = false;
+    private bool wasSittingPreviousFrame = false;
     private int currentStateHash = -1;
 
     private void Awake()
@@ -70,6 +72,22 @@ public class PlayerIdleSleepController : MonoBehaviour
     {
         isCurrentlySitting = isSitting;
 
+        bool startedSittingThisFrame = isSitting && !wasSittingPreviousFrame;
+        if (startedSittingThisFrame)
+        {
+            sitElapsedTimer = 0f;
+        }
+        else if (isSitting)
+        {
+            sitElapsedTimer += deltaTime;
+        }
+        else
+        {
+            sitElapsedTimer = 0f;
+        }
+
+        wasSittingPreviousFrame = isSitting;
+
         if (isSleeping)
         {
             EnsureSleepStateMatchesPosture();
@@ -91,13 +109,18 @@ public class PlayerIdleSleepController : MonoBehaviour
     public void NotifyActive(bool isSitting)
     {
         isCurrentlySitting = isSitting;
+        wasSittingPreviousFrame = isSitting;
         inactivityTimer = 0f;
-
+        
         if (isSleeping)
         {
             isSleeping = false;
         }
 
+        if (!isSitting)
+        {
+            sitElapsedTimer = 0f;
+        }
         CrossFadeToState(isSitting ? sitNormalStateHash : idleNormalStateHash);
     }
 
@@ -108,8 +131,13 @@ public class PlayerIdleSleepController : MonoBehaviour
     public void ForceState(bool isSitting)
     {
         isCurrentlySitting = isSitting;
+        wasSittingPreviousFrame = isSitting;
         inactivityTimer = 0f;
         isSleeping = false;
+        if (!isSitting)
+        {
+            sitElapsedTimer = 0f;
+        }
         CrossFadeToState(isSitting ? sitNormalStateHash : idleNormalStateHash);
     }
 
