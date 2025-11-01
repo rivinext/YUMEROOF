@@ -173,7 +173,9 @@ public class PlayerController : MonoBehaviour
 
         if (!canProcessInput)
         {
-            if (IsSitting && !isMovingToSeat && seatAnchor != null)
+            bool isSeatedIdle = IsSitting && !isMovingToSeat;
+
+            if (isSeatedIdle && seatAnchor != null)
             {
                 rb.MovePosition(new Vector3(seatAnchor.position.x, rb.position.y, seatAnchor.position.z));
                 rb.MoveRotation(seatAnchor.rotation);
@@ -181,8 +183,21 @@ public class PlayerController : MonoBehaviour
             animator?.SetFloat("moveSpeed", 0f);
             distanceAccumulator = 0f;
             prevPosition = rb.position;
-            blinkController?.SetBlinkingEnabled(false);
-            sleepController?.ForceState(IsSitting);
+            if (blinkController != null)
+            {
+                blinkController.SetBlinkingEnabled(isSeatedIdle);
+            }
+            if (sleepController != null)
+            {
+                if (isSeatedIdle)
+                {
+                    sleepController.NotifyInactive(Time.fixedDeltaTime, true);
+                }
+                else
+                {
+                    sleepController.ForceState(IsSitting);
+                }
+            }
             hadInputLastFrame = false;
             return;
         }
