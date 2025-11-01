@@ -14,7 +14,7 @@ public class PlayerIdleSleepController : MonoBehaviour
     [SerializeField] private string idleSleepStateName = "IdleSleep";
 
     [Header("Sit States")]
-    [SerializeField] private string sitNormalStateName = "Sit";
+    [SerializeField] private string sitNormalStateName = "SitIdle";
     [SerializeField] private string sitSleepStateName = "SitSleep";
 
     [Header("Timing")]
