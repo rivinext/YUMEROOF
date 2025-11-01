@@ -186,6 +186,10 @@ public class PlayerController : MonoBehaviour
             if (blinkController != null)
             {
                 blinkController.SetBlinkingEnabled(isSeatedIdle);
+                if (isSeatedIdle)
+                {
+                    blinkController.NotifyInactive(Time.fixedDeltaTime);
+                }
             }
             if (sleepController != null)
             {
