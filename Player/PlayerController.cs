@@ -45,6 +45,16 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform cameraTargetOverride;
     private OrthographicCameraController cameraController;
 
+    [Header("Idle Blink")]
+    [SerializeField] private float idleBlinkThreshold = 5f;
+    [SerializeField] private float idleBlinkCrossFadeDuration = 0.1f;
+    [SerializeField] private string idleBlinkStateName = "IdleBlink";
+    [SerializeField] private string idleClosedEyesStateName = "IdleClosedEyes";
+    private float idleTimer = 0f;
+    private bool isIdleEyesClosed = false;
+    private int idleBlinkStateHash = -1;
+    private int idleClosedEyesStateHash = -1;
+
     private Vector3 currentMoveVelocity;
     private Vector3 moveDampVelocity;
 
@@ -66,6 +76,12 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         animator = GetComponent<Animator>();
+
+        if (!string.IsNullOrEmpty(idleBlinkStateName))
+            idleBlinkStateHash = Animator.StringToHash(idleBlinkStateName);
+
+        if (!string.IsNullOrEmpty(idleClosedEyesStateName))
+            idleClosedEyesStateHash = Animator.StringToHash(idleClosedEyesStateName);
 
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
 
@@ -162,12 +178,42 @@ public class PlayerController : MonoBehaviour
             animator?.SetFloat("moveSpeed", 0f);
             distanceAccumulator = 0f;
             prevPosition = rb.position;
+            idleTimer = 0f;
+            isIdleEyesClosed = false;
             return;
         }
 
         float moveHorizontal = Input.GetAxis("Horizontal");
         float moveVertical = Input.GetAxis("Vertical");
         Vector3 inputDirection = new Vector3(moveHorizontal, 0, moveVertical);
+        float inputMagnitude = inputDirection.magnitude;
+        bool hasInput = inputMagnitude > inputDeadZone;
+
+        if (hasInput)
+        {
+            if (idleTimer > 0f)
+            {
+                idleTimer = 0f;
+            }
+
+            if (isIdleEyesClosed)
+            {
+                if (animator != null && idleBlinkStateHash != -1)
+                    animator.CrossFade(idleBlinkStateHash, idleBlinkCrossFadeDuration, 0, 0f);
+                isIdleEyesClosed = false;
+            }
+        }
+        else
+        {
+            idleTimer += Time.fixedDeltaTime;
+
+            if (!isIdleEyesClosed && idleTimer >= idleBlinkThreshold)
+            {
+                if (animator != null && idleClosedEyesStateHash != -1)
+                    animator.CrossFade(idleClosedEyesStateHash, idleBlinkCrossFadeDuration, 0, 0f);
+                isIdleEyesClosed = true;
+            }
+        }
 
         // カメラ基準で入力を回す
         float cameraRotationY = 45f;
@@ -204,7 +250,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // 回転
-        if (inputDirection.magnitude > 0.01f)
+        if (hasInput)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection.normalized);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
@@ -214,8 +260,6 @@ public class PlayerController : MonoBehaviour
         animator?.SetFloat("moveSpeed", currentMoveVelocity.magnitude);
 
         // ===== ここから「距離ベースの一発発生」 =====
-        bool hasInput = inputDirection.magnitude > inputDeadZone;
-
         // 入力がない（スティック離した）瞬間は積算をリセットすると挙動が安定
         if (!hasInput)
         {
