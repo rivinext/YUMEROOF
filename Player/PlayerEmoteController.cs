@@ -28,6 +28,9 @@ public class PlayerEmoteController : MonoBehaviour
         [Tooltip("Cross-fade duration when transitioning into the emote state.")]
         public float crossFadeIn = 0.15f;
 
+        [Tooltip("If true the emote waits for movement input before finishing when not looping.")]
+        public bool waitForMovementInput = false;
+
         [Tooltip("Cross-fade duration when returning to the baseline idle state.")]
         public float crossFadeOut = 0.15f;
 
@@ -217,12 +220,32 @@ public class PlayerEmoteController : MonoBehaviour
         }
         else
         {
-            float duration = Mathf.Max(GetEmoteDuration(entry), 0f);
-            float elapsed = 0f;
-            while (elapsed < duration && !stopRequested)
+            if (entry.waitForMovementInput)
             {
-                elapsed += Time.deltaTime;
-                yield return null;
+                float deadZone = playerController != null ? Mathf.Max(0f, playerController.inputDeadZone) : 0f;
+                while (!stopRequested)
+                {
+                    float horizontal = Input.GetAxisRaw("Horizontal");
+                    float vertical = Input.GetAxisRaw("Vertical");
+                    Vector2 inputVector = new Vector2(horizontal, vertical);
+                    float inputMagnitude = inputVector.magnitude;
+                    if ((deadZone > 0f && inputMagnitude >= deadZone) || (deadZone <= 0f && inputMagnitude > 0f))
+                    {
+                        break;
+                    }
+
+                    yield return null;
+                }
+            }
+            else
+            {
+                float duration = Mathf.Max(GetEmoteDuration(entry), 0f);
+                float elapsed = 0f;
+                while (elapsed < duration && !stopRequested)
+                {
+                    elapsed += Time.deltaTime;
+                    yield return null;
+                }
             }
         }
 
