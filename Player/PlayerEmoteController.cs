@@ -65,6 +65,8 @@ public class PlayerEmoteController : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private PlayerEyeBlendShapeController eyeBlendShapeController;
     [SerializeField] private PlayerEmoteEyeSliderPanel eyeSliderPanel;
+    [SerializeField] private PlayerMouthBlendShapeController mouthBlendShapeController;
+    [SerializeField] private PlayerEmoteMouthSliderPanel mouthSliderPanel;
 
     [Header("Baseline States")]
     [SerializeField, Tooltip("Animator state used when the player is standing idle.")]
@@ -119,6 +121,11 @@ public class PlayerEmoteController : MonoBehaviour
         if (eyeBlendShapeController == null)
         {
             eyeBlendShapeController = GetComponent<PlayerEyeBlendShapeController>();
+        }
+
+        if (mouthBlendShapeController == null)
+        {
+            mouthBlendShapeController = GetComponent<PlayerMouthBlendShapeController>();
         }
 
         CacheBaselineStateHashes();
@@ -210,6 +217,11 @@ public class PlayerEmoteController : MonoBehaviour
             eyeBlendShapeController.SetManualControlActive(true);
         }
 
+        if (mouthBlendShapeController != null)
+        {
+            mouthBlendShapeController.SetManualControlActive(true);
+        }
+
         if (eyeSliderPanel != null)
         {
             eyeSliderPanel.SetEmoteModeActive(true);
@@ -220,6 +232,19 @@ public class PlayerEmoteController : MonoBehaviour
             else
             {
                 eyeSliderPanel.ResetSliders();
+            }
+        }
+
+        if (mouthSliderPanel != null)
+        {
+            mouthSliderPanel.SetEmoteModeActive(true);
+            if (mouthBlendShapeController != null)
+            {
+                mouthSliderPanel.RefreshSliderValues(mouthBlendShapeController.VerticalWeight, mouthBlendShapeController.HorizontalWeight);
+            }
+            else
+            {
+                mouthSliderPanel.ResetSliders();
             }
         }
 
@@ -317,10 +342,21 @@ public class PlayerEmoteController : MonoBehaviour
             eyeBlendShapeController.SetManualControlActive(false);
         }
 
+        if (mouthBlendShapeController != null)
+        {
+            mouthBlendShapeController.SetManualControlActive(false);
+        }
+
         if (eyeSliderPanel != null)
         {
             eyeSliderPanel.SetEmoteModeActive(false);
             eyeSliderPanel.ResetSliders();
+        }
+
+        if (mouthSliderPanel != null)
+        {
+            mouthSliderPanel.SetEmoteModeActive(false);
+            mouthSliderPanel.ResetSliders();
         }
 
         if (sleepController != null)
