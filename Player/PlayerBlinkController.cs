@@ -12,11 +12,15 @@ public class PlayerBlinkController : MonoBehaviour
     [SerializeField] private string blinkEnabledBoolName = "BlinkEnabled";
     [SerializeField] private string idleBoolName = "IsIdle";
 
+    [Header("Idle Settings")]
+    [SerializeField] private float idleClosedEyesDelay = 3f;
+
     private int blinkEnabledBoolHash = -1;
     private int idleBoolHash = -1;
 
     private bool blinkingEnabled = true;
     private bool isIdle = false;
+    private float inactivityTimer = 0f;
 
     void Awake()
     {
@@ -54,6 +58,7 @@ public class PlayerBlinkController : MonoBehaviour
 
         if (!blinkingEnabled)
         {
+            inactivityTimer = 0f;
             SetIdle(false);
         }
         else
@@ -67,12 +72,27 @@ public class PlayerBlinkController : MonoBehaviour
     /// </summary>
     public void NotifyInactive(float deltaTime)
     {
+        if (deltaTime <= 0f)
+        {
+            ForceEyesClosed();
+            return;
+        }
+
         if (!blinkingEnabled)
         {
             return;
         }
 
-        SetIdle(true);
+        inactivityTimer += deltaTime;
+
+        if (inactivityTimer >= idleClosedEyesDelay)
+        {
+            ForceEyesClosed();
+        }
+        else
+        {
+            SetIdle(false);
+        }
     }
 
     /// <summary>
@@ -80,8 +100,10 @@ public class PlayerBlinkController : MonoBehaviour
     /// </summary>
     public void NotifyActive()
     {
+        inactivityTimer = 0f;
         if (!blinkingEnabled)
         {
+            SetIdle(false);
             return;
         }
 
@@ -93,12 +115,35 @@ public class PlayerBlinkController : MonoBehaviour
     /// </summary>
     public void ResetBlinkState()
     {
+        inactivityTimer = 0f;
         if (!blinkingEnabled)
         {
+            SetIdle(false);
             return;
         }
 
         SetIdle(false);
+    }
+
+    /// <summary>
+    /// 即時に閉眼状態へ遷移させる。
+    /// </summary>
+    public void ForceEyesClosed()
+    {
+        inactivityTimer = idleClosedEyesDelay;
+
+        if (!blinkingEnabled)
+        {
+            SetIdle(false);
+            return;
+        }
+
+        if (!isIdle)
+        {
+            isIdle = true;
+        }
+
+        ApplyIdleState();
     }
 
     private void SetIdle(bool value)
