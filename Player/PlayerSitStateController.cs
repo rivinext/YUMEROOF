@@ -498,7 +498,7 @@ public class PlayerSitStateController : MonoBehaviour
         bool canControlBlink = blinkController != null && (emoteController == null || !emoteController.IsBlinkLocked);
         if (canControlBlink)
         {
-            blinkController.NotifyInactive(0f);
+            blinkController.ForceEyesClosed();
         }
     }
 
