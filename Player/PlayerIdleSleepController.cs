@@ -20,8 +20,6 @@ public class PlayerIdleSleepController : MonoBehaviour
     [Header("Timing")]
     [SerializeField, Tooltip("Inactive duration (in seconds) before transitioning to the sleep state.")]
     private float inactiveToSleepDelay = 10f;
-    [SerializeField, Tooltip("Time (in seconds) spent sitting before transitioning to the sit sleep state.")]
-    private float sitSleepDelay = 5f;
     [SerializeField, Tooltip("Cross-fade duration (in seconds) when switching between idle/sleep states.")]
     private float crossFadeDuration = 0.25f;
 
@@ -31,10 +29,8 @@ public class PlayerIdleSleepController : MonoBehaviour
     private int sitSleepStateHash = -1;
 
     private float inactivityTimer = 0f;
-    private float sitElapsedTimer = 0f;
     private bool isSleeping = false;
-    private bool isCurrentlySitting = false;
-    private bool wasSittingPreviousFrame = false;
+    private bool isSitting = false;
     private int currentStateHash = -1;
 
     private void Awake()
@@ -69,37 +65,16 @@ public class PlayerIdleSleepController : MonoBehaviour
     /// Accumulates inactivity time and transitions to sleep states when the delay is exceeded.
     /// </summary>
     /// <param name="deltaTime">Frame delta time.</param>
-    /// <param name="isSitting">Whether the player is currently sitting.</param>
-    public void NotifyInactive(float deltaTime, bool isSitting)
+    public void NotifyInactive(float deltaTime)
     {
-        isCurrentlySitting = isSitting;
-
-        bool startedSittingThisFrame = isSitting && !wasSittingPreviousFrame;
-        if (startedSittingThisFrame)
+        if (isSitting)
         {
-            sitElapsedTimer = 0f;
-        }
-        else if (isSitting)
-        {
-            sitElapsedTimer += deltaTime;
-        }
-        else
-        {
-            sitElapsedTimer = 0f;
-        }
-
-        wasSittingPreviousFrame = isSitting;
-
-        if (isSleeping)
-        {
-            EnsureSleepStateMatchesPosture();
             return;
         }
 
-        if (isSitting && sitSleepDelay > 0f && sitElapsedTimer >= sitSleepDelay)
+        if (isSleeping)
         {
-            isSleeping = true;
-            CrossFadeToState(sitSleepStateHash);
+            CrossFadeToState(idleSleepStateHash);
             return;
         }
 
@@ -107,7 +82,7 @@ public class PlayerIdleSleepController : MonoBehaviour
         if (inactivityTimer >= inactiveToSleepDelay)
         {
             isSleeping = true;
-            CrossFadeToState(isSitting ? sitSleepStateHash : idleSleepStateHash);
+            CrossFadeToState(idleSleepStateHash);
         }
     }
 
@@ -117,20 +92,17 @@ public class PlayerIdleSleepController : MonoBehaviour
     /// <param name="isSitting">Whether the player is currently sitting.</param>
     public void NotifyActive(bool isSitting)
     {
-        isCurrentlySitting = isSitting;
-        wasSittingPreviousFrame = isSitting;
         inactivityTimer = 0f;
-        
-        if (isSleeping)
+        this.isSitting = isSitting;
+
+        if (this.isSitting)
         {
             isSleeping = false;
+            return;
         }
 
-        if (!isSitting)
-        {
-            sitElapsedTimer = 0f;
-        }
-        CrossFadeToState(isSitting ? sitNormalStateHash : idleNormalStateHash);
+        isSleeping = false;
+        CrossFadeToState(idleNormalStateHash);
     }
 
     /// <summary>
@@ -139,21 +111,34 @@ public class PlayerIdleSleepController : MonoBehaviour
     /// <param name="isSitting">Whether the player should be in the sit baseline state.</param>
     public void ForceState(bool isSitting)
     {
-        isCurrentlySitting = isSitting;
-        wasSittingPreviousFrame = isSitting;
         inactivityTimer = 0f;
-        isSleeping = false;
-        if (!isSitting)
+        this.isSitting = isSitting;
+
+        if (this.isSitting)
         {
-            sitElapsedTimer = 0f;
+            isSleeping = false;
+            CrossFadeToState(sitNormalStateHash);
+            return;
         }
-        CrossFadeToState(isSitting ? sitNormalStateHash : idleNormalStateHash);
+
+        isSleeping = false;
+        CrossFadeToState(idleNormalStateHash);
     }
 
-    private void EnsureSleepStateMatchesPosture()
+    public void NotifySitState(bool isSitting, bool isSleeping)
     {
-        int targetSleepState = isCurrentlySitting ? sitSleepStateHash : idleSleepStateHash;
-        CrossFadeToState(targetSleepState);
+        this.isSitting = isSitting;
+
+        if (!this.isSitting)
+        {
+            this.isSleeping = false;
+            return;
+        }
+
+        inactivityTimer = 0f;
+        this.isSleeping = isSleeping;
+
+        CrossFadeToState(this.isSleeping ? sitSleepStateHash : sitNormalStateHash);
     }
 
     private void CrossFadeToState(int stateHash)

@@ -142,12 +142,14 @@ public class PlayerSitStateController : MonoBehaviour
         {
             hasEnteredSleepState = true;
             CrossFadeToState(sitSleepStateHash);
+            sleepController?.NotifySitState(true, true);
             NotifyControllersSleepStarted();
         }
         else if (!shouldEnterSleep && hasEnteredSleepState)
         {
             hasEnteredSleepState = false;
             CrossFadeToState(sitIdleStateHash);
+            sleepController?.NotifySitState(true, false);
         }
         else if (!hasEnteredSleepState)
         {
@@ -360,6 +362,7 @@ public class PlayerSitStateController : MonoBehaviour
         {
             sleepController.ForceState(true);
             sleepController.NotifyActive(true);
+            sleepController.NotifySitState(true, false);
         }
 
         if (blinkController != null)
@@ -387,6 +390,8 @@ public class PlayerSitStateController : MonoBehaviour
             if (sleepController != null)
             {
                 sleepController.ForceState(false);
+                sleepController.NotifySitState(false, false);
+                sleepController.NotifyActive(false);
             }
 
             if (animator != null)
@@ -439,6 +444,7 @@ public class PlayerSitStateController : MonoBehaviour
         if (sleepController != null)
         {
             sleepController.ForceState(false);
+            sleepController.NotifySitState(false, false);
             sleepController.NotifyActive(false);
         }
 
@@ -493,6 +499,7 @@ public class PlayerSitStateController : MonoBehaviour
         if (sleepController != null)
         {
             sleepController.NotifyActive(true);
+            sleepController.NotifySitState(true, false);
         }
 
         ResetSitTimer();
@@ -519,7 +526,6 @@ public class PlayerSitStateController : MonoBehaviour
             blinkController.NotifyInactive(deltaTime);
         }
 
-        sleepController?.NotifyInactive(deltaTime, true);
     }
 
     private void NotifyControllersSleepStarted()
@@ -529,8 +535,6 @@ public class PlayerSitStateController : MonoBehaviour
         {
             blinkController.NotifyInactive(0f);
         }
-
-        sleepController?.NotifyInactive(0f, true);
     }
 
     private void UpdateBlinkControl(bool shouldEnableBlinking)
