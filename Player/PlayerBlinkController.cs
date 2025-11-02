@@ -24,9 +24,6 @@ public class PlayerBlinkController : MonoBehaviour
     private float idleTimer = 0f;
     private bool isEyesClosed = false;
     private bool blinkingEnabled = true;
-    private bool manualBlinkSuppressed = false;
-
-    private bool IsBlinkingAllowed => blinkingEnabled && !manualBlinkSuppressed;
 
     void Awake()
     {
@@ -57,35 +54,9 @@ public class PlayerBlinkController : MonoBehaviour
         }
 
         blinkingEnabled = enabled;
-        if (!IsBlinkingAllowed)
+        if (!blinkingEnabled)
         {
             ResetBlinkState();
-        }
-        else
-        {
-            NotifyActive();
-        }
-    }
-
-    /// <summary>
-    /// Allows systems like emotes to temporarily suppress blinking without
-    /// interfering with other enable/disable requests (e.g. sitting logic).
-    /// </summary>
-    public void SetManualBlinkSuppressed(bool suppressed)
-    {
-        if (manualBlinkSuppressed == suppressed)
-        {
-            return;
-        }
-
-        manualBlinkSuppressed = suppressed;
-        if (!IsBlinkingAllowed)
-        {
-            ResetBlinkState();
-        }
-        else
-        {
-            NotifyActive();
         }
     }
 
@@ -94,7 +65,7 @@ public class PlayerBlinkController : MonoBehaviour
     /// </summary>
     public void NotifyInactive(float deltaTime)
     {
-        if (!IsBlinkingAllowed || isEyesClosed)
+        if (!blinkingEnabled || isEyesClosed)
         {
             return;
         }
@@ -112,7 +83,7 @@ public class PlayerBlinkController : MonoBehaviour
     /// </summary>
     public void NotifyActive()
     {
-        if (!IsBlinkingAllowed)
+        if (!blinkingEnabled)
         {
             return;
         }
