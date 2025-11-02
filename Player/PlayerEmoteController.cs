@@ -198,7 +198,7 @@ public class PlayerEmoteController : MonoBehaviour
 
         if (blinkController != null)
         {
-            blinkController.SetManualBlinkSuppressed(true);
+            blinkController.SetBlinkingEnabled(false);
             blinkController.ResetBlinkState();
             blinkLockedByEmote = true;
         }
@@ -305,7 +305,7 @@ public class PlayerEmoteController : MonoBehaviour
 
         if (blinkLockedByEmote && blinkController != null)
         {
-            blinkController.SetManualBlinkSuppressed(false);
+            blinkController.SetBlinkingEnabled(true);
             blinkController.NotifyActive();
         }
         blinkLockedByEmote = false;
