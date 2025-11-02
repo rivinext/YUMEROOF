@@ -16,13 +16,43 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
     }
 
     [SerializeField] private PlayerEmoteController emoteController;
+    [SerializeField] private PlayerController playerController;
     [SerializeField] private List<EmoteButtonEntry> buttonEntries = new List<EmoteButtonEntry>();
 
     private readonly Dictionary<Button, UnityAction> buttonCallbacks = new Dictionary<Button, UnityAction>();
+    private readonly Dictionary<Button, bool> buttonOriginalInteractable = new Dictionary<Button, bool>();
+    private bool wasPlayerSitting;
 
     private void Awake()
     {
         SetupButtonEvents();
+    }
+
+    private void Update()
+    {
+        if (playerController == null)
+        {
+            TryResolvePlayerController();
+        }
+
+        bool isSitting = playerController != null && playerController.IsSitting;
+
+        if (isSitting == wasPlayerSitting)
+        {
+            return;
+        }
+
+        wasPlayerSitting = isSitting;
+
+        if (isSitting)
+        {
+            ApplySittingRestrictions();
+        }
+        else
+        {
+            RestoreButtonInteractableState();
+            SetupButtonEvents();
+        }
     }
 
     /// <summary>
@@ -30,6 +60,7 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
     /// </summary>
     public void SetupButtonEvents()
     {
+        TryResolvePlayerController();
         if (emoteController == null)
         {
 #if UNITY_2023_1_OR_NEWER
@@ -38,6 +69,8 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
             emoteController = FindObjectOfType<PlayerEmoteController>();
 #endif
         }
+
+        CleanupButtonCaches();
 
         foreach (EmoteButtonEntry entry in buttonEntries)
         {
@@ -62,6 +95,15 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
             entry.button.onClick.AddListener(action);
             buttonCallbacks[entry.button] = action;
         }
+
+        if (playerController != null && playerController.IsSitting)
+        {
+            ApplySittingRestrictions();
+        }
+        else
+        {
+            RefreshInteractableCache();
+        }
     }
 
     private void OnDestroy()
@@ -80,5 +122,111 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
     private void TriggerEmote(string emoteId)
     {
         emoteController?.PlayEmote(emoteId);
+    }
+
+    private void TryResolvePlayerController()
+    {
+        if (playerController != null)
+        {
+            return;
+        }
+
+        if (emoteController != null)
+        {
+            playerController = emoteController.GetComponent<PlayerController>();
+        }
+
+        if (playerController == null)
+        {
+            playerController = GetComponent<PlayerController>();
+        }
+    }
+
+    private void CleanupButtonCaches()
+    {
+        if (buttonOriginalInteractable.Count == 0)
+        {
+            return;
+        }
+
+        List<Button> keys = new List<Button>(buttonOriginalInteractable.Keys);
+        foreach (Button button in keys)
+        {
+            if (button == null || !IsButtonTracked(button))
+            {
+                buttonOriginalInteractable.Remove(button);
+            }
+        }
+    }
+
+    private bool IsButtonTracked(Button button)
+    {
+        foreach (EmoteButtonEntry entry in buttonEntries)
+        {
+            if (entry != null && entry.button == button)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void RefreshInteractableCache()
+    {
+        if (playerController != null && playerController.IsSitting)
+        {
+            return;
+        }
+
+        buttonOriginalInteractable.Clear();
+
+        foreach (EmoteButtonEntry entry in buttonEntries)
+        {
+            if (entry?.button == null)
+            {
+                continue;
+            }
+
+            buttonOriginalInteractable[entry.button] = entry.button.interactable;
+        }
+    }
+
+    private void ApplySittingRestrictions()
+    {
+        foreach (EmoteButtonEntry entry in buttonEntries)
+        {
+            if (entry?.button == null)
+            {
+                continue;
+            }
+
+            if (!buttonOriginalInteractable.ContainsKey(entry.button))
+            {
+                buttonOriginalInteractable[entry.button] = entry.button.interactable;
+            }
+
+            entry.button.interactable = false;
+        }
+    }
+
+    private void RestoreButtonInteractableState()
+    {
+        foreach (EmoteButtonEntry entry in buttonEntries)
+        {
+            if (entry?.button == null)
+            {
+                continue;
+            }
+
+            if (buttonOriginalInteractable.TryGetValue(entry.button, out bool wasInteractable))
+            {
+                entry.button.interactable = wasInteractable;
+            }
+            else
+            {
+                entry.button.interactable = true;
+            }
+        }
     }
 }
