@@ -158,9 +158,17 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        bool escOrEPressed = Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape);
+
+        if (escOrEPressed)
+        {
+            blinkController?.NotifyActive();
+            sleepController?.NotifyActive(IsSitting);
+        }
+
         if (IsSitting)
         {
-            if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape))
+            if (escOrEPressed)
             {
                 StandUp();
             }
