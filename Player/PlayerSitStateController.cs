@@ -16,17 +16,11 @@ public class PlayerSitStateController : MonoBehaviour
     [SerializeField] private string sitTriggerName = "SitDown";
     [SerializeField] private string standTriggerName = "StandUp";
     [SerializeField] private string sitBoolName = "IsSitting";
-
-    [Header("Animator States")]
-    [SerializeField] private string sitIdleStateName = "SitIdle";
-    [SerializeField] private string sitSleepStateName = "SitSleep";
+    [SerializeField] private string sitSleepBoolName = "IsSitSleeping";
 
     [Header("Timing")]
     [SerializeField, Tooltip("Delay in seconds before transitioning from sit idle to sit sleep.")]
     private float sitSleepDelay = 5f;
-    [SerializeField, Tooltip("Cross fade duration used for sit idle/sleep transitions.")]
-    private float crossFadeDuration = 0.1f;
-
     [Header("Input")]
     [SerializeField, Tooltip("Input magnitude below this value is ignored when checking for stand up requests.")]
     private float inputDeadZone = 0.1f;
@@ -50,9 +44,8 @@ public class PlayerSitStateController : MonoBehaviour
     private bool isStandingUp;
     private bool hasEnteredSleepState;
     private float sitTimer;
-    private int currentStateHash = -1;
-    private int sitIdleStateHash = -1;
-    private int sitSleepStateHash = -1;
+    private bool animatorSitValue;
+    private bool animatorSitSleepValue;
 
     private Coroutine seatMoveRoutine;
     private Coroutine standMoveRoutine;
@@ -89,15 +82,8 @@ public class PlayerSitStateController : MonoBehaviour
             emoteController = GetComponent<PlayerEmoteController>();
         }
 
-        if (!string.IsNullOrEmpty(sitIdleStateName))
-        {
-            sitIdleStateHash = Animator.StringToHash(sitIdleStateName);
-        }
-
-        if (!string.IsNullOrEmpty(sitSleepStateName))
-        {
-            sitSleepStateHash = Animator.StringToHash(sitSleepStateName);
-        }
+        animatorSitValue = false;
+        animatorSitSleepValue = false;
     }
 
     public void Configure(PlayerBlinkController blink, PlayerIdleSleepController sleep, PlayerEmoteController emote)
@@ -138,23 +124,7 @@ public class PlayerSitStateController : MonoBehaviour
         sitTimer += Time.deltaTime;
 
         bool shouldEnterSleep = sitSleepDelay > 0f && sitTimer >= sitSleepDelay;
-        if (shouldEnterSleep && !hasEnteredSleepState)
-        {
-            hasEnteredSleepState = true;
-            CrossFadeToState(sitSleepStateHash);
-            sleepController?.NotifySitState(true, true);
-            NotifyControllersSleepStarted();
-        }
-        else if (!shouldEnterSleep && hasEnteredSleepState)
-        {
-            hasEnteredSleepState = false;
-            CrossFadeToState(sitIdleStateHash);
-            sleepController?.NotifySitState(true, false);
-        }
-        else if (!hasEnteredSleepState)
-        {
-            CrossFadeToState(sitIdleStateHash);
-        }
+        UpdateSitSleepState(shouldEnterSleep);
 
         NotifyControllersIdle(Time.deltaTime);
     }
@@ -175,7 +145,6 @@ public class PlayerSitStateController : MonoBehaviour
         isSitting = false;
         hasEnteredSleepState = false;
         sitTimer = 0f;
-        currentStateHash = -1;
 
         if (playerCollider != null && seatCollider != null)
         {
@@ -204,10 +173,8 @@ public class PlayerSitStateController : MonoBehaviour
                 animator.SetTrigger(sitTriggerName);
             }
 
-            if (!string.IsNullOrEmpty(sitBoolName))
-            {
-                animator.SetBool(sitBoolName, true);
-            }
+            SetAnimatorBool(ref animatorSitValue, sitBoolName, true);
+            SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
         }
 
         UpdateBlinkControl(false);
@@ -239,10 +206,8 @@ public class PlayerSitStateController : MonoBehaviour
                 animator.SetTrigger(standTriggerName);
             }
 
-            if (!string.IsNullOrEmpty(sitBoolName))
-            {
-                animator.SetBool(sitBoolName, false);
-            }
+            SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
+            SetAnimatorBool(ref animatorSitValue, sitBoolName, false);
         }
 
         isStandingUp = true;
@@ -297,6 +262,7 @@ public class PlayerSitStateController : MonoBehaviour
     {
         ResetSitTimer();
         hasEnteredSleepState = false;
+        SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
     }
 
     private IEnumerator MoveToSeat(Transform anchor, float normalizedStartTime = -1f)
@@ -349,7 +315,7 @@ public class PlayerSitStateController : MonoBehaviour
         isSitting = true;
         sitTimer = 0f;
         hasEnteredSleepState = false;
-        currentStateHash = -1;
+        SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
 
         if (animator != null)
         {
@@ -369,8 +335,6 @@ public class PlayerSitStateController : MonoBehaviour
         {
             blinkController.NotifyActive();
         }
-
-        CrossFadeToState(sitIdleStateHash);
     }
 
     private IEnumerator MoveFromSeat()
@@ -454,12 +418,12 @@ public class PlayerSitStateController : MonoBehaviour
         }
 
         UpdateBlinkControl(false);
+        SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
     }
 
     private void ResetSitTimer()
     {
         sitTimer = 0f;
-        currentStateHash = -1;
     }
 
     private void ResetCoroutines()
@@ -504,6 +468,7 @@ public class PlayerSitStateController : MonoBehaviour
 
         ResetSitTimer();
         hasEnteredSleepState = false;
+        SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
 
         if (StandUpRequested != null)
         {
@@ -552,19 +517,38 @@ public class PlayerSitStateController : MonoBehaviour
         blinkController.SetBlinkingEnabled(shouldEnableBlinking);
     }
 
-    private void CrossFadeToState(int stateHash)
+    private void UpdateSitSleepState(bool shouldSleep)
     {
-        if (animator == null || stateHash == -1)
+        SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, shouldSleep);
+
+        if (hasEnteredSleepState == shouldSleep)
         {
             return;
         }
 
-        if (currentStateHash == stateHash)
+        hasEnteredSleepState = shouldSleep;
+        sleepController?.NotifySitState(true, shouldSleep);
+
+        if (shouldSleep)
+        {
+            NotifyControllersSleepStarted();
+        }
+    }
+
+    private void SetAnimatorBool(ref bool cachedValue, string parameterName, bool value)
+    {
+        if (cachedValue == value)
         {
             return;
         }
 
-        animator.CrossFade(stateHash, crossFadeDuration, 0, 0f);
-        currentStateHash = stateHash;
+        cachedValue = value;
+
+        if (animator == null || string.IsNullOrEmpty(parameterName))
+        {
+            return;
+        }
+
+        animator.SetBool(parameterName, value);
     }
 }
