@@ -198,18 +198,18 @@ public class PlayerEmoteController : MonoBehaviour
         activeEmote = entry;
         stopRequested = false;
 
-        bool shouldLockInput = playerController != null && !entry.allowMovement;
-        if (shouldLockInput)
-        {
-            playerController.SetInputEnabled(false);
-            inputLockedByEmote = true;
-        }
-
         if (blinkController != null)
         {
             blinkController.SetBlinkingEnabled(false);
             blinkController.ResetBlinkState();
             blinkLockedByEmote = true;
+        }
+
+        bool shouldLockInput = playerController != null && !entry.allowMovement;
+        if (shouldLockInput)
+        {
+            playerController.SetInputEnabled(false);
+            inputLockedByEmote = true;
         }
 
         if (eyeBlendShapeController != null)
