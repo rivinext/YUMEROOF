@@ -234,7 +234,10 @@ public class PlayerController : MonoBehaviour
             {
                 blinkController.NotifyInactive(Time.fixedDeltaTime);
             }
-            sleepController?.NotifyInactive(Time.fixedDeltaTime, IsSitting);
+            if (!IsSitting)
+            {
+                sleepController?.NotifyInactive(Time.fixedDeltaTime);
+            }
         }
 
         hadInputLastFrame = hasInput;
