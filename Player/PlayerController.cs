@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -22,15 +21,9 @@ public class PlayerController : MonoBehaviour
     [Tooltip("1歩でEmitする粒子数")]
     public int particlesPerStep = 1;
 
-    [Header("Sit")]
-    [SerializeField] private string sitTriggerName = "SitDown";
-    [SerializeField] private string standTriggerName = "StandUp";
-    [SerializeField] private string sitBoolName = "IsSitting";
-    private Transform seatAnchor;
-    public bool IsSitting { get; private set; } = false;
-    private bool isMovingToSeat = false;
-    [SerializeField] private AnimationCurve seatMoveCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-    [SerializeField] private AnimationCurve standUpForwardOffsetCurve = AnimationCurve.Linear(0f, 0f, 1f, 0.5f);
+    [Header("Sit State Controller")]
+    [SerializeField] private PlayerSitStateController sitStateController;
+    public bool IsSitting => sitStateController != null && sitStateController.IsSitting;
 
     // --- 入力有効/無効 ---
     public static bool GlobalInputEnabled { get; private set; } = true;
@@ -39,8 +32,6 @@ public class PlayerController : MonoBehaviour
     public void SetInputEnabled(bool enabled) => inputEnabled = enabled;
 
     private Rigidbody rb;
-    private Collider playerCollider;
-    private Collider seatCollider;
     private Animator animator;
     [SerializeField] private Transform cameraTargetOverride;
     private OrthographicCameraController cameraController;
@@ -65,12 +56,19 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        playerCollider = GetComponent<Collider>();
+        if (sitStateController == null)
+        {
+            sitStateController = GetComponent<PlayerSitStateController>();
+        }
     }
 
     void OnEnable()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
+        if (sitStateController != null)
+        {
+            sitStateController.StandUpRequested += HandleStandUpRequested;
+        }
     }
 
     void Start()
@@ -92,6 +90,11 @@ public class PlayerController : MonoBehaviour
             sleepController = GetComponent<PlayerIdleSleepController>();
         }
 
+        if (sitStateController != null)
+        {
+            sitStateController.Configure(blinkController, sleepController, emoteController);
+        }
+
         OnSceneLoaded(SceneManager.GetActiveScene(), LoadSceneMode.Single);
 
         prevPosition = rb.position;
@@ -104,12 +107,20 @@ public class PlayerController : MonoBehaviour
     void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (sitStateController != null)
+        {
+            sitStateController.StandUpRequested -= HandleStandUpRequested;
+        }
     }
 
     void OnDestroy()
     {
         // Ensure the global input flag is reset when the player is destroyed.
         SetGlobalInputEnabled(true);
+        if (sitStateController != null)
+        {
+            sitStateController.StandUpRequested -= HandleStandUpRequested;
+        }
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -158,28 +169,18 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        bool escOrEPressed = Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Escape);
-
-        if (escOrEPressed)
-        {
-            blinkController?.NotifyActive();
-            sleepController?.NotifyActive(IsSitting);
-        }
-
-        if (IsSitting)
-        {
-            if (escOrEPressed)
-            {
-                StandUp();
-            }
-            return;
-        }
+        sitStateController?.Tick();
 
         if (!GlobalInputEnabled || !inputEnabled)
             return;
 
         // Interaction for sitting is now handled via PlayerRayInteractor.
         // The E key will only trigger Sit() when a SitTrigger is focused.
+    }
+
+    private void HandleStandUpRequested()
+    {
+        StandUp();
     }
 
     void FixedUpdate()
@@ -190,35 +191,17 @@ public class PlayerController : MonoBehaviour
 
         if (!canProcessInput)
         {
-            bool isSeatedIdle = IsSitting && !isMovingToSeat;
+            bool isSeatedIdle = sitStateController != null && sitStateController.IsSeatIdle;
+            Transform seatedAnchor = sitStateController != null ? sitStateController.CurrentSeatAnchor : null;
 
-            if (isSeatedIdle && seatAnchor != null)
+            if (isSeatedIdle && seatedAnchor != null)
             {
-                rb.MovePosition(new Vector3(seatAnchor.position.x, rb.position.y, seatAnchor.position.z));
-                rb.MoveRotation(seatAnchor.rotation);
+                rb.MovePosition(new Vector3(seatedAnchor.position.x, rb.position.y, seatedAnchor.position.z));
+                rb.MoveRotation(seatedAnchor.rotation);
             }
             animator?.SetFloat("moveSpeed", 0f);
             distanceAccumulator = 0f;
             prevPosition = rb.position;
-            if (canControlBlink)
-            {
-                blinkController.SetBlinkingEnabled(isSeatedIdle);
-                if (isSeatedIdle)
-                {
-                    blinkController.NotifyInactive(Time.fixedDeltaTime);
-                }
-            }
-            if (sleepController != null)
-            {
-                if (isSeatedIdle)
-                {
-                    sleepController.NotifyInactive(Time.fixedDeltaTime, true);
-                }
-                else
-                {
-                    sleepController.ForceState(IsSitting);
-                }
-            }
             hadInputLastFrame = false;
             return;
         }
@@ -326,149 +309,27 @@ public class PlayerController : MonoBehaviour
 
     public void Sit(Transform anchor, Collider seatCol)
     {
-        if (anchor != null)
-        {
-            seatAnchor = anchor;
-        }
-        seatCollider = seatCol;
-        if (playerCollider != null && seatCollider != null)
-            Physics.IgnoreCollision(playerCollider, seatCollider, true);
-        rb.isKinematic = true;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-        SetGlobalInputEnabled(false);
-        if (animator != null)
-            animator.applyRootMotion = true;
-        animator?.SetTrigger(sitTriggerName);
-        animator?.SetBool(sitBoolName, true);
-        StartCoroutine(MoveToSeat(anchor));
+        sitStateController?.Sit(anchor, seatCol);
     }
 
     public void StartSeatMove()
     {
-        if (seatAnchor != null && !isMovingToSeat)
-        {
-            StartCoroutine(MoveToSeat(seatAnchor));
-        }
+        sitStateController?.StartSeatMove();
     }
 
-    private IEnumerator MoveToSeat(Transform anchor, float normalizedStartTime = -1f)
+    public void StartSeatMove(float normalizedStartTime)
     {
-        if (anchor == null)
-            yield break;
-
-        isMovingToSeat = true;
-
-        if (normalizedStartTime >= 0f && animator != null)
-        {
-            AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-            while (stateInfo.normalizedTime < normalizedStartTime)
-            {
-                yield return null;
-                stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-            }
-        }
-        // Delay has been removed; encode any desired wait time in the initial flat
-        // section of the seatMoveCurve.
-
-        Vector3 startPos = transform.position;
-        Quaternion startRot = transform.rotation;
-        Vector3 targetPos = anchor.position;
-        Quaternion targetRot = anchor.rotation;
-
-        float duration = seatMoveCurve.keys[^1].time;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            float t = seatMoveCurve.Evaluate(elapsed);
-            transform.position = Vector3.Lerp(startPos, targetPos, t);
-            transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
-
-            if (animator != null)
-            {
-                animator.MatchTarget(targetPos, targetRot, AvatarTarget.Root,
-                    new MatchTargetWeightMask(Vector3.one, 1f), 0f, 1f, true);
-            }
-
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        float finalT = seatMoveCurve.Evaluate(duration);
-        transform.position = Vector3.Lerp(startPos, targetPos, finalT);
-        transform.rotation = Quaternion.Slerp(startRot, targetRot, finalT);
-        IsSitting = true;
-        isMovingToSeat = false;
-        if (animator != null)
-            animator.applyRootMotion = false;
-        sleepController?.ForceState(true);
+        sitStateController?.StartSeatMove(normalizedStartTime);
     }
 
     public void StandUp()
     {
-        if (animator != null)
-            animator.applyRootMotion = true;
-        StartCoroutine(StandUpRoutine());
-    }
-
-    private IEnumerator StandUpRoutine()
-    {
-        animator?.SetTrigger(standTriggerName);
-        animator?.SetBool(sitBoolName, false);
-
-        StartStandUpMove();
-        yield break;
+        sitStateController?.StandUp();
     }
 
     public void StartStandUpMove()
     {
-        StartCoroutine(MoveFromSeat());
-    }
-
-    private IEnumerator MoveFromSeat()
-    {
-        if (seatAnchor == null)
-        {
-            rb.isKinematic = false;
-            SetGlobalInputEnabled(true);
-            IsSitting = false;
-            sleepController?.ForceState(false);
-            if (animator != null)
-                animator.applyRootMotion = false;
-            yield break;
-        }
-
-        Vector3 startPos = seatAnchor.position;
-        Quaternion targetRot = seatAnchor.rotation;
-
-        float duration = standUpForwardOffsetCurve.keys[^1].time;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            float offset = standUpForwardOffsetCurve.Evaluate(elapsed);
-            transform.position = startPos + seatAnchor.forward * offset;
-            transform.rotation = targetRot;
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        transform.position = startPos + seatAnchor.forward * standUpForwardOffsetCurve.Evaluate(duration);
-        transform.rotation = targetRot;
-
-        if (playerCollider != null && seatCollider != null)
-            Physics.IgnoreCollision(playerCollider, seatCollider, false);
-
-        rb.isKinematic = false;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-
-        SetGlobalInputEnabled(true);
-        IsSitting = false;
-        seatAnchor = null;
-        seatCollider = null;
-        if (animator != null)
-            animator.applyRootMotion = false;
-        sleepController?.ForceState(false);
+        sitStateController?.StartStandUpMove();
     }
 
     private void EmitStep(bool isRun)
