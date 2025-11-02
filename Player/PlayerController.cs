@@ -48,6 +48,9 @@ public class PlayerController : MonoBehaviour
     [Header("Blink Controller")]
     [SerializeField] private PlayerBlinkController blinkController;
 
+    [Header("Emote Controller")]
+    [SerializeField] private PlayerEmoteController emoteController;
+
     [Header("Sleep Controller")]
     [SerializeField] private PlayerIdleSleepController sleepController;
 
@@ -77,6 +80,11 @@ public class PlayerController : MonoBehaviour
         if (blinkController == null)
         {
             blinkController = GetComponent<PlayerBlinkController>();
+        }
+
+        if (emoteController == null)
+        {
+            emoteController = GetComponent<PlayerEmoteController>();
         }
 
         if (sleepController == null)
@@ -170,6 +178,7 @@ public class PlayerController : MonoBehaviour
     {
         // 入力が無効なら停止＆積算リセット
         bool canProcessInput = GlobalInputEnabled && inputEnabled;
+        bool canControlBlink = blinkController != null && (emoteController == null || !emoteController.IsBlinkLocked);
 
         if (!canProcessInput)
         {
@@ -183,7 +192,7 @@ public class PlayerController : MonoBehaviour
             animator?.SetFloat("moveSpeed", 0f);
             distanceAccumulator = 0f;
             prevPosition = rb.position;
-            if (blinkController != null)
+            if (canControlBlink)
             {
                 blinkController.SetBlinkingEnabled(isSeatedIdle);
                 if (isSeatedIdle)
@@ -206,7 +215,10 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        blinkController?.SetBlinkingEnabled(true);
+        if (canControlBlink)
+        {
+            blinkController.SetBlinkingEnabled(true);
+        }
 
         float moveHorizontal = Input.GetAxis("Horizontal");
         float moveVertical = Input.GetAxis("Vertical");
@@ -218,13 +230,19 @@ public class PlayerController : MonoBehaviour
         {
             if (!hadInputLastFrame)
             {
-                blinkController?.NotifyActive();
+                if (canControlBlink)
+                {
+                    blinkController.NotifyActive();
+                }
                 sleepController?.NotifyActive(IsSitting);
             }
         }
         else
         {
-            blinkController?.NotifyInactive(Time.fixedDeltaTime);
+            if (canControlBlink)
+            {
+                blinkController.NotifyInactive(Time.fixedDeltaTime);
+            }
             sleepController?.NotifyInactive(Time.fixedDeltaTime, IsSitting);
         }
 
