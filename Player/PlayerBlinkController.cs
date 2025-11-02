@@ -1,30 +1,22 @@
 using UnityEngine;
 
 /// <summary>
-/// Handles idle blinking and closed-eye states for the player.
+/// Animatorを使った最小構成のまばたき制御。
 /// </summary>
 public class PlayerBlinkController : MonoBehaviour
 {
     [Header("Animator")]
     [SerializeField] private Animator animator;
-    private float defaultAnimatorSpeed = 1f;
 
-    [Header("States")]
-    [SerializeField] private string blinkStateName = "IdleBlink";
-    [SerializeField] private string closedEyesStateName = "IdleClosedEyes";
+    [Header("Animator Parameters")]
+    [SerializeField] private string blinkEnabledBoolName = "BlinkEnabled";
+    [SerializeField] private string idleBoolName = "IsIdle";
 
-    [Header("Timing")]
-    [SerializeField, Tooltip("Idle duration (in seconds) before transitioning to the closed-eyes state.")]
-    private float idleToClosedEyesDelay = 5f;
-    [SerializeField, Tooltip("Cross-fade duration (in seconds) when switching between blink-related states.")]
-    private float crossFadeDuration = 0.1f;
+    private int blinkEnabledBoolHash = -1;
+    private int idleBoolHash = -1;
 
-    private int blinkStateHash = -1;
-    private int closedEyesStateHash = -1;
-
-    private float idleTimer = 0f;
-    private bool isEyesClosed = false;
     private bool blinkingEnabled = true;
+    private bool isIdle = false;
 
     void Awake()
     {
@@ -33,24 +25,22 @@ public class PlayerBlinkController : MonoBehaviour
             animator = GetComponent<Animator>();
         }
 
-        if (animator != null)
+        if (!string.IsNullOrEmpty(blinkEnabledBoolName))
         {
-            defaultAnimatorSpeed = animator.speed;
+            blinkEnabledBoolHash = Animator.StringToHash(blinkEnabledBoolName);
         }
 
-        if (!string.IsNullOrEmpty(blinkStateName))
+        if (!string.IsNullOrEmpty(idleBoolName))
         {
-            blinkStateHash = Animator.StringToHash(blinkStateName);
+            idleBoolHash = Animator.StringToHash(idleBoolName);
         }
 
-        if (!string.IsNullOrEmpty(closedEyesStateName))
-        {
-            closedEyesStateHash = Animator.StringToHash(closedEyesStateName);
-        }
+        ApplyBlinkingEnabled();
+        ApplyIdleState();
     }
 
     /// <summary>
-    /// Enables or disables the blinking logic. When disabled the eyes are forced open.
+    /// まばたきの有効/無効を切り替える。
     /// </summary>
     public void SetBlinkingEnabled(bool enabled)
     {
@@ -60,52 +50,33 @@ public class PlayerBlinkController : MonoBehaviour
         }
 
         blinkingEnabled = enabled;
-
-        if (animator == null)
-        {
-            return;
-        }
+        ApplyBlinkingEnabled();
 
         if (!blinkingEnabled)
         {
-            idleTimer = 0f;
-            isEyesClosed = false;
-
-            if (blinkStateHash != -1)
-            {
-                animator.Play(blinkStateHash, 0, 0f);
-                animator.Update(0f);
-            }
-
-            animator.speed = 0f;
+            SetIdle(false);
         }
         else
         {
-            animator.speed = defaultAnimatorSpeed;
-            ResetBlinkState();
+            ApplyIdleState();
         }
     }
 
     /// <summary>
-    /// Called while the player is idle. Accumulates time until the closed-eyes state should play.
+    /// プレイヤーが操作されていない状態を通知。
     /// </summary>
     public void NotifyInactive(float deltaTime)
     {
-        if (!blinkingEnabled || isEyesClosed)
+        if (!blinkingEnabled)
         {
             return;
         }
 
-        idleTimer += deltaTime;
-        if (idleTimer >= idleToClosedEyesDelay)
-        {
-            CrossFadeToState(closedEyesStateHash);
-            isEyesClosed = true;
-        }
+        SetIdle(true);
     }
 
     /// <summary>
-    /// Called when player input resumes. Resets timers and plays the blink state.
+    /// プレイヤーが再び操作されたことを通知。
     /// </summary>
     public void NotifyActive()
     {
@@ -114,50 +85,46 @@ public class PlayerBlinkController : MonoBehaviour
             return;
         }
 
-        idleTimer = 0f;
-        bool shouldCrossFade = false;
-
-        if (isEyesClosed)
-        {
-            shouldCrossFade = true;
-        }
-
-        isEyesClosed = false;
-
-        if (!shouldCrossFade && animator != null && blinkStateHash != -1)
-        {
-            AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(0);
-            bool isBlinkStateActive = currentState.shortNameHash == blinkStateHash || currentState.IsName(blinkStateName);
-            if (!isBlinkStateActive)
-            {
-                shouldCrossFade = true;
-            }
-        }
-
-        if (shouldCrossFade)
-        {
-            CrossFadeToState(blinkStateHash);
-        }
+        SetIdle(false);
     }
 
     /// <summary>
-    /// Resets the blink timers and ensures the blink state is active.
+    /// まばたき状態をリセット。
     /// </summary>
     public void ResetBlinkState()
     {
-        idleTimer = 0f;
-        if (isEyesClosed)
+        if (!blinkingEnabled)
         {
-            CrossFadeToState(blinkStateHash);
-            isEyesClosed = false;
+            return;
+        }
+
+        SetIdle(false);
+    }
+
+    private void SetIdle(bool value)
+    {
+        if (isIdle == value)
+        {
+            return;
+        }
+
+        isIdle = value;
+        ApplyIdleState();
+    }
+
+    private void ApplyBlinkingEnabled()
+    {
+        if (animator != null && blinkEnabledBoolHash != -1)
+        {
+            animator.SetBool(blinkEnabledBoolHash, blinkingEnabled);
         }
     }
 
-    private void CrossFadeToState(int stateHash)
+    private void ApplyIdleState()
     {
-        if (animator != null && stateHash != -1)
+        if (animator != null && idleBoolHash != -1)
         {
-            animator.CrossFade(stateHash, crossFadeDuration, 0, 0f);
+            animator.SetBool(idleBoolHash, blinkingEnabled && isIdle);
         }
     }
 }
