@@ -63,6 +63,8 @@ public class PlayerEmoteController : MonoBehaviour
     [SerializeField] private PlayerBlinkController blinkController;
     [SerializeField] private PlayerIdleSleepController sleepController;
     [SerializeField] private Animator animator;
+    [SerializeField] private PlayerEyeBlendShapeController eyeBlendShapeController;
+    [SerializeField] private PlayerEmoteEyeSliderPanel eyeSliderPanel;
 
     [Header("Baseline States")]
     [SerializeField, Tooltip("Animator state used when the player is standing idle.")]
@@ -110,6 +112,11 @@ public class PlayerEmoteController : MonoBehaviour
         if (sleepController == null)
         {
             sleepController = GetComponent<PlayerIdleSleepController>();
+        }
+
+        if (eyeBlendShapeController == null)
+        {
+            eyeBlendShapeController = GetComponent<PlayerEyeBlendShapeController>();
         }
 
         CacheBaselineStateHashes();
@@ -194,6 +201,24 @@ public class PlayerEmoteController : MonoBehaviour
             blinkController.SetBlinkingEnabled(false);
             blinkController.ResetBlinkState();
             blinkLockedByEmote = true;
+        }
+
+        if (eyeBlendShapeController != null)
+        {
+            eyeBlendShapeController.SetManualControlActive(true);
+        }
+
+        if (eyeSliderPanel != null)
+        {
+            eyeSliderPanel.SetEmoteModeActive(true);
+            if (eyeBlendShapeController != null)
+            {
+                eyeSliderPanel.RefreshSliderValues(eyeBlendShapeController.LeftEyeWeight, eyeBlendShapeController.RightEyeWeight);
+            }
+            else
+            {
+                eyeSliderPanel.ResetSliders();
+            }
         }
 
         if (sleepController != null)
@@ -284,6 +309,17 @@ public class PlayerEmoteController : MonoBehaviour
             blinkController.NotifyActive();
         }
         blinkLockedByEmote = false;
+
+        if (eyeBlendShapeController != null)
+        {
+            eyeBlendShapeController.SetManualControlActive(false);
+        }
+
+        if (eyeSliderPanel != null)
+        {
+            eyeSliderPanel.SetEmoteModeActive(false);
+            eyeSliderPanel.ResetSliders();
+        }
 
         if (sleepController != null)
         {
