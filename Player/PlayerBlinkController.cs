@@ -7,6 +7,7 @@ public class PlayerBlinkController : MonoBehaviour
 {
     [Header("Animator")]
     [SerializeField] private Animator animator;
+    private float defaultAnimatorSpeed = 1f;
 
     [Header("States")]
     [SerializeField] private string blinkStateName = "IdleBlink";
@@ -32,6 +33,11 @@ public class PlayerBlinkController : MonoBehaviour
             animator = GetComponent<Animator>();
         }
 
+        if (animator != null)
+        {
+            defaultAnimatorSpeed = animator.speed;
+        }
+
         if (!string.IsNullOrEmpty(blinkStateName))
         {
             blinkStateHash = Animator.StringToHash(blinkStateName);
@@ -54,8 +60,28 @@ public class PlayerBlinkController : MonoBehaviour
         }
 
         blinkingEnabled = enabled;
+
+        if (animator == null)
+        {
+            return;
+        }
+
         if (!blinkingEnabled)
         {
+            idleTimer = 0f;
+            isEyesClosed = false;
+
+            if (blinkStateHash != -1)
+            {
+                animator.Play(blinkStateHash, 0, 0f);
+                animator.Update(0f);
+            }
+
+            animator.speed = 0f;
+        }
+        else
+        {
+            animator.speed = defaultAnimatorSpeed;
             ResetBlinkState();
         }
     }
