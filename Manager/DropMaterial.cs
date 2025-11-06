@@ -36,6 +36,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private Transform idleAnimationTarget;
     private Vector3 idleBaseLocalPosition;
     private float idleAnimationStartTime;
+    private float idleBobPhaseOffset;
     private Quaternion idleBaseRotation;
     private bool hasInitializedIdleRotation;
 
@@ -300,7 +301,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
         }
 
         float bobTime = (Time.time - idleAnimationStartTime) * idleBobFrequency * Mathf.PI * 2f;
-        float offset = Mathf.Sin(bobTime) * idleBobAmplitude;
+        float offset = Mathf.Sin(bobTime + idleBobPhaseOffset) * idleBobAmplitude;
         Vector3 targetLocalPosition = idleAnimationTarget.localPosition;
         targetLocalPosition.y = idleBaseLocalPosition.y + offset;
         idleAnimationTarget.localPosition = targetLocalPosition;
@@ -315,6 +316,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
         }
 
         idleBaseLocalPosition = idleAnimationTarget.localPosition;
+        idleBobPhaseOffset = Random.Range(0f, Mathf.PI * 2f);
         if (!hasInitializedIdleRotation)
         {
             idleBaseRotation = idleAnimationTarget.rotation;
