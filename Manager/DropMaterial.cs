@@ -36,6 +36,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private Transform idleAnimationTarget;
     private Vector3 idleBaseLocalPosition;
     private float idleAnimationStartTime;
+    private Quaternion idleBaseRotation;
+    private bool hasInitializedIdleRotation;
 
     /// <summary>
     /// Material identifier associated with this drop.
@@ -313,6 +315,14 @@ public class DropMaterial : MonoBehaviour, IInteractable
         }
 
         idleBaseLocalPosition = idleAnimationTarget.localPosition;
+        if (!hasInitializedIdleRotation)
+        {
+            idleBaseRotation = idleAnimationTarget.rotation;
+            hasInitializedIdleRotation = true;
+        }
+
+        float randomAngle = Random.Range(0f, 360f);
+        idleAnimationTarget.rotation = Quaternion.AngleAxis(randomAngle, Vector3.up) * idleBaseRotation;
         idleAnimationStartTime = Time.time;
     }
 }
