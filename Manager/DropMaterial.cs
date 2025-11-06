@@ -23,12 +23,19 @@ public class DropMaterial : MonoBehaviour, IInteractable
     [SerializeField] private AnimationCurve collectAlphaCurve = new AnimationCurve(
         new Keyframe(0f, 1f),
         new Keyframe(1f, 0f));
+    [Header("Idle Animation")]
+    [SerializeField] private float idleRotationSpeed = 45f;
+    [SerializeField] private float idleBobAmplitude = 0.1f;
+    [SerializeField] private float idleBobFrequency = 1.5f;
 
     private string materialName;
     private Sprite materialIcon;
     private bool isCollecting;
     private SpriteRenderer[] cachedSpriteRenderers = System.Array.Empty<SpriteRenderer>();
     private Color[] initialSpriteColors = System.Array.Empty<Color>();
+    private Transform idleAnimationTarget;
+    private Vector3 idleBaseLocalPosition;
+    private float idleAnimationStartTime;
 
     /// <summary>
     /// Material identifier associated with this drop.
@@ -117,6 +124,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
         {
             collectAnimationRoot = transform;
         }
+
+        ResetIdleAnimationState();
         LoadMaterialInfo();
         CacheSpriteRendererColors();
     }
@@ -134,14 +143,24 @@ public class DropMaterial : MonoBehaviour, IInteractable
         {
             manager.RegisterDrop(sceneName, materialID, transform.position, anchorID);
         }
+
+        ResetIdleAnimationState();
+    }
+
+    void OnEnable()
+    {
+        ResetIdleAnimationState();
     }
 
     void LateUpdate()
     {
-        if (Camera.main != null)
+        if (isCollecting)
         {
-            transform.forward = Camera.main.transform.forward;
+            return;
         }
+
+        AnimateIdleRotation();
+        AnimateIdleBob();
     }
 
     private void LoadMaterialInfo()
@@ -258,6 +277,55 @@ public class DropMaterial : MonoBehaviour, IInteractable
             Color initialColor = initialSpriteColors[i];
             initialColor.a *= clampedAlphaMultiplier;
             renderer.color = initialColor;
+        }
+    }
+
+    private void AnimateIdleRotation()
+    {
+        if (idleAnimationTarget == null || Mathf.Approximately(idleRotationSpeed, 0f))
+        {
+            return;
+        }
+
+        idleAnimationTarget.Rotate(Vector3.up, idleRotationSpeed * Time.deltaTime, Space.World);
+    }
+
+    private void AnimateIdleBob()
+    {
+        if (idleAnimationTarget == null || idleBobAmplitude <= 0f || idleBobFrequency <= 0f)
+        {
+            return;
+        }
+
+        float bobTime = (Time.time - idleAnimationStartTime) * idleBobFrequency * Mathf.PI * 2f;
+        float offset = Mathf.Sin(bobTime) * idleBobAmplitude;
+        Vector3 targetLocalPosition = idleAnimationTarget.localPosition;
+        targetLocalPosition.y = idleBaseLocalPosition.y + offset;
+        idleAnimationTarget.localPosition = targetLocalPosition;
+    }
+
+    private void ResetIdleAnimationState()
+    {
+        idleAnimationTarget = collectAnimationRoot != null ? collectAnimationRoot : transform;
+        if (idleAnimationTarget == null)
+        {
+            return;
+        }
+
+        idleBaseLocalPosition = idleAnimationTarget.localPosition;
+
+        Vector3 currentEulerAngles = idleAnimationTarget.rotation.eulerAngles;
+        float randomStartAngle = Random.Range(0f, 360f);
+        idleAnimationTarget.rotation = Quaternion.Euler(currentEulerAngles.x, randomStartAngle, currentEulerAngles.z);
+
+        if (idleBobFrequency > 0f)
+        {
+            float randomBobOffset = Random.Range(0f, 1f / idleBobFrequency);
+            idleAnimationStartTime = Time.time - randomBobOffset;
+        }
+        else
+        {
+            idleAnimationStartTime = Time.time;
         }
     }
 }
