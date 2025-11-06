@@ -944,6 +944,7 @@ public class FreePlacementSystem : MonoBehaviour
             animator = targetTransform.gameObject.AddComponent<PlacementScaleAnimator>();
         }
 
+        animator.SetOriginalScale(targetTransform.localScale);
         animator.Play();
     }
 
