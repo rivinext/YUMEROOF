@@ -22,6 +22,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
     [SerializeField] private AnimationCurve collectAlphaCurve = new AnimationCurve(
         new Keyframe(0f, 1f),
         new Keyframe(1f, 0f));
+    [Tooltip("Controls the scale during the collect animation. X=time, Y=scale multiplier.")]
+    [SerializeField] private AnimationCurve collectScaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
     [Header("Idle Animation")]
     [SerializeField] private float idleRotationSpeed = 45f;
     [SerializeField] private float idleBobAmplitude = 0.1f;
@@ -113,6 +115,14 @@ public class DropMaterial : MonoBehaviour, IInteractable
         }
 
         StartCoroutine(PlayCollectAnimation());
+    }
+
+    void OnMouseEnter()
+    {
+        if (!isCollecting)
+        {
+            Interact();
+        }
     }
 
     void Awake()
@@ -216,6 +226,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
         float duration = Mathf.Max(collectAnimationDuration, Mathf.Epsilon);
         float fadeDuration = Mathf.Max(collectFadeDuration, Mathf.Epsilon);
         float elapsed = 0f;
+        Vector3 initialLocalScale = targetTransform.localScale;
 
         while (elapsed < duration)
         {
@@ -229,6 +240,9 @@ public class DropMaterial : MonoBehaviour, IInteractable
             float alphaMultiplier = collectAlphaCurve != null ? collectAlphaCurve.Evaluate(normalizedFadeTime) : 1f;
             ApplyAlphaToSpriteRenderers(alphaMultiplier);
 
+            float scaleMultiplier = collectScaleCurve != null ? collectScaleCurve.Evaluate(normalizedTime) : 1f;
+            targetTransform.localScale = initialLocalScale * scaleMultiplier;
+
             elapsed += Time.deltaTime;
             yield return null;
         }
@@ -240,6 +254,9 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
         float finalAlphaMultiplier = collectAlphaCurve != null ? collectAlphaCurve.Evaluate(1f) : 0f;
         ApplyAlphaToSpriteRenderers(finalAlphaMultiplier);
+
+        float finalScaleMultiplier = collectScaleCurve != null ? collectScaleCurve.Evaluate(1f) : 0f;
+        targetTransform.localScale = initialLocalScale * finalScaleMultiplier;
 
         Destroy(gameObject);
     }
