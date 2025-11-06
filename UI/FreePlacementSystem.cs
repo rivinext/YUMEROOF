@@ -59,6 +59,7 @@ public class FreePlacementSystem : MonoBehaviour
     private Vector3 originalPosition;
     private Quaternion originalRotation;
     private PlacedFurniture originalParentFurniture;
+    private Vector3 originalScale = Vector3.one;
 
     public System.Action OnPlacementCompleted;
     public System.Action OnPlacementCancelled;
@@ -230,6 +231,12 @@ public class FreePlacementSystem : MonoBehaviour
         Vector3 localScale = target.localScale;
         localScale.x *= -1f;
         target.localScale = localScale;
+
+        PlacementScaleAnimator animator = target.GetComponent<PlacementScaleAnimator>();
+        if (animator != null)
+        {
+            animator.SetOriginalScale(localScale);
+        }
     }
 
     private void HandleRotationInput()
@@ -351,6 +358,7 @@ public class FreePlacementSystem : MonoBehaviour
             // 元の位置に戻す
             previewObject.transform.position = originalPosition;
             previewObject.transform.rotation = originalRotation;
+            previewObject.transform.localScale = originalScale;
             if (pf != null && originalParentFurniture != null)
                 pf.SetParentFurniture(originalParentFurniture);
             originalParentFurniture = null;
@@ -522,6 +530,8 @@ public class FreePlacementSystem : MonoBehaviour
 
         previewObject = furniture.gameObject;
         currentFurnitureData = furniture.furnitureData;
+
+        originalScale = furniture.transform.localScale;
 
         // 元の位置を保存（Escキーで戻すため）
         originalPosition = furniture.transform.position;
@@ -912,6 +922,7 @@ public class FreePlacementSystem : MonoBehaviour
 
         ghostManager?.DestroyGhost();
         snappedParentFurniture = null;
+        originalScale = Vector3.one;
     }
 
     private void AnimatePlacementScale(PlacedFurniture placed)
@@ -1021,6 +1032,7 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
         originalParentFurniture = null;
+        originalScale = Vector3.one;
 
         UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
 
@@ -1042,6 +1054,11 @@ public class FreePlacementSystem : MonoBehaviour
             if (pf != null)
                 pf.SetParentFurniture(originalParentFurniture);
             originalParentFurniture = null;
+        }
+
+        if (isMovingFurniture && previewObject != null)
+        {
+            previewObject.transform.localScale = originalScale;
         }
 
         UIButtonSoundBinderPersistent.Instance?.SetMuted(false);

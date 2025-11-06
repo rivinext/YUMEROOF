@@ -93,6 +93,12 @@ public class PlacementScaleAnimator : MonoBehaviour
         transform.localScale = originalScale;
     }
 
+    public void SetOriginalScale(Vector3 newScale)
+    {
+        EnsureInitialized();
+        originalScale = newScale;
+    }
+
     private void OnDisable()
     {
         if (animationRoutine != null)
