@@ -184,11 +184,52 @@ public class FreePlacementSystem : MonoBehaviour
             }
         }
 
+        if (isMovingFurniture || isPlacingNewFurniture)
+        {
+            HandleFlipInput();
+        }
+
         // 回転（Q/E）
         if ((isMovingFurniture || isPlacingNewFurniture) && previewObject != null)
         {
             HandleRotationInput();
         }
+    }
+
+    private void HandleFlipInput()
+    {
+        if (!Input.GetKeyDown(KeyCode.O))
+        {
+            return;
+        }
+
+        Transform target = null;
+
+        if (previewObject != null)
+        {
+            target = previewObject.transform;
+        }
+        else if (selectedFurniture != null)
+        {
+            target = selectedFurniture.transform;
+        }
+
+        if (target != null)
+        {
+            FlipTarget(target);
+        }
+    }
+
+    private void FlipTarget(Transform target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        Vector3 localScale = target.localScale;
+        localScale.x *= -1f;
+        target.localScale = localScale;
     }
 
     private void HandleRotationInput()
