@@ -14,12 +14,9 @@ public class DropMaterial : MonoBehaviour, IInteractable
     [SerializeField] private SpriteRenderer iconRenderer;
     [SerializeField] private string anchorID;
     [SerializeField] private Transform collectAnimationRoot;
+    [SerializeField] private Transform playerTransform;
     [SerializeField] private float collectAnimationDuration = 0.5f;
     [SerializeField] private float collectFadeDuration = 0.5f;
-    [SerializeField] private AnimationCurve collectYOffsetCurve = new AnimationCurve(
-        new Keyframe(0f, 0f),
-        new Keyframe(0.3f, -0.05f),
-        new Keyframe(1f, 0.2f));
     [SerializeField] private AnimationCurve collectAlphaCurve = new AnimationCurve(
         new Keyframe(0f, 1f),
         new Keyframe(1f, 0f));
@@ -128,6 +125,23 @@ public class DropMaterial : MonoBehaviour, IInteractable
             collectAnimationRoot = transform;
         }
 
+        if (playerTransform == null)
+        {
+            var playerManager = FindFirstObjectByType<PlayerManager>();
+            if (playerManager != null)
+            {
+                playerTransform = playerManager.transform;
+            }
+            else
+            {
+                var playerObject = GameObject.FindWithTag("Player");
+                if (playerObject != null)
+                {
+                    playerTransform = playerObject.transform;
+                }
+            }
+        }
+
         ResetIdleAnimationState();
         LoadMaterialInfo();
         CacheSpriteRendererColors();
@@ -204,8 +218,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
         while (elapsed < duration)
         {
             float normalizedTime = Mathf.Clamp01(elapsed / duration);
-            float offset = collectYOffsetCurve != null ? collectYOffsetCurve.Evaluate(normalizedTime) : 0f;
-            targetTransform.position = startPosition + Vector3.up * offset;
+            Vector3 destination = playerTransform != null ? playerTransform.position : startPosition;
+            targetTransform.position = Vector3.Lerp(startPosition, destination, normalizedTime);
 
             float normalizedFadeTime = Mathf.Clamp01(elapsed / fadeDuration);
             float alphaMultiplier = collectAlphaCurve != null ? collectAlphaCurve.Evaluate(normalizedFadeTime) : 1f;
@@ -215,8 +229,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
             yield return null;
         }
 
-        float finalOffset = collectYOffsetCurve != null ? collectYOffsetCurve.Evaluate(1f) : 0f;
-        targetTransform.position = startPosition + Vector3.up * finalOffset;
+        Vector3 finalDestination = playerTransform != null ? playerTransform.position : startPosition;
+        targetTransform.position = finalDestination;
 
         float finalAlphaMultiplier = collectAlphaCurve != null ? collectAlphaCurve.Evaluate(1f) : 0f;
         ApplyAlphaToSpriteRenderers(finalAlphaMultiplier);
