@@ -17,6 +17,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
     [SerializeField] private Transform playerTransform;
     [SerializeField] private float collectAnimationDuration = 0.5f;
     [SerializeField] private float collectFadeDuration = 0.5f;
+    [Tooltip("Controls how the collect animation moves from the drop to the player. X=time, Y=movement interpolation.")]
+    [SerializeField] private AnimationCurve collectMovementCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve collectAlphaCurve = new AnimationCurve(
         new Keyframe(0f, 1f),
         new Keyframe(1f, 0f));
@@ -218,8 +220,10 @@ public class DropMaterial : MonoBehaviour, IInteractable
         while (elapsed < duration)
         {
             float normalizedTime = Mathf.Clamp01(elapsed / duration);
+            float movementT = collectMovementCurve != null ? collectMovementCurve.Evaluate(normalizedTime) : normalizedTime;
+            movementT = Mathf.Clamp01(movementT);
             Vector3 destination = playerTransform != null ? playerTransform.position : startPosition;
-            targetTransform.position = Vector3.Lerp(startPosition, destination, normalizedTime);
+            targetTransform.position = Vector3.Lerp(startPosition, destination, movementT);
 
             float normalizedFadeTime = Mathf.Clamp01(elapsed / fadeDuration);
             float alphaMultiplier = collectAlphaCurve != null ? collectAlphaCurve.Evaluate(normalizedFadeTime) : 1f;
@@ -230,7 +234,9 @@ public class DropMaterial : MonoBehaviour, IInteractable
         }
 
         Vector3 finalDestination = playerTransform != null ? playerTransform.position : startPosition;
-        targetTransform.position = finalDestination;
+        float finalMovementT = collectMovementCurve != null ? collectMovementCurve.Evaluate(1f) : 1f;
+        finalMovementT = Mathf.Clamp01(finalMovementT);
+        targetTransform.position = Vector3.Lerp(startPosition, finalDestination, finalMovementT);
 
         float finalAlphaMultiplier = collectAlphaCurve != null ? collectAlphaCurve.Evaluate(1f) : 0f;
         ApplyAlphaToSpriteRenderers(finalAlphaMultiplier);
