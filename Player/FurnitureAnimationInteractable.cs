@@ -4,7 +4,7 @@ using UnityEngine;
 /// 家具などのオブジェクトに割り当てて、プレイヤーがEキーでインタラクトした際に
 /// アニメーションを再生・停止させるためのコンポーネント。
 /// </summary>
-public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
+public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
 {
     public enum InteractionAnimationMode
     {
@@ -25,9 +25,10 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [Tooltip("インタラクト時の挙動タイプ。\nPlayOnce: 1回だけ再生。\nToggleLoop: ループ状態をオン/オフ。")]
     [SerializeField] private InteractionAnimationMode interactionMode = InteractionAnimationMode.PlayOnce;
 
-    [Header("Interaction UI")]
-    [Tooltip("インタラクション用のプロンプトをまとめた GameObject。指定すると開始時に非表示へ切り替えます。")]
-    public GameObject interactionPrompt;
+    [Header("Interaction Prompt")]
+    [SerializeField] private Transform promptAnchor;
+    [SerializeField] private float promptOffset = 1f;
+    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     [Header("Play Once Settings")]
     [SerializeField] private PlayOnceMethod playOnceMethod = PlayOnceMethod.Trigger;
@@ -81,12 +82,9 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         {
             ApplyLoopState();                               //:contentReference[oaicite:3]{index=3}
         }
-    }
 
-    private void Start()
-    {
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+        if (promptAnchor == null)
+            promptAnchor = transform;
     }
 
     private void TryAssignAnimator()
@@ -95,6 +93,13 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         {
             targetAnimator = GetComponentInChildren<Animator>();
         }
+    }
+
+    public bool TryGetInteractionPromptData(out InteractionPromptData data)
+    {
+        var anchor = promptAnchor != null ? promptAnchor : transform;
+        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
+        return true;
     }
 
     public void Interact()

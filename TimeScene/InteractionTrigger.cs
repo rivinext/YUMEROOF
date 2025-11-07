@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public abstract class InteractionTrigger : MonoBehaviour, IInteractable
+public abstract class InteractionTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
 {
     [Header("Interaction Settings")]
     public string interactionName = "Interact";
@@ -9,20 +9,26 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
     public KeyCode interactionKey = KeyCode.E;
 
     [Header("UI Elements")]
-    public GameObject interactionPrompt;  // "Eキーで〇〇"の表示
     public GameObject interactionPanel;   // インタラクション用UIパネル
+    [SerializeField] private Transform promptAnchor;
+    [SerializeField] private float promptOffset = 1f;
+    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     protected GameObject player;
     protected bool isPlayerNearby = false;
     protected bool isPanelOpen = false;
+    protected SharedInteractionPromptController promptController;
 
     protected virtual void Start()
     {
         player = GameObject.FindGameObjectWithTag("Player");
 
+        promptController = SharedInteractionPromptController.Instance;
+
+        if (promptAnchor == null)
+            promptAnchor = transform;
+
         // UIの初期設定
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
     }
@@ -39,8 +45,14 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
         // プロンプト表示切り替え
         if (isPlayerNearby != wasNearby && !isPanelOpen)
         {
-            if (interactionPrompt != null)
-                interactionPrompt.SetActive(isPlayerNearby);
+            if (isPlayerNearby)
+            {
+                ShowPrompt();
+            }
+            else
+            {
+                promptController?.HidePrompt(this);
+            }
         }
 
         // インタラクション処理
@@ -63,8 +75,7 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
     {
         isPanelOpen = true;
 
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+        promptController?.HidePrompt(this);
 
         if (interactionPanel != null)
         {
@@ -85,8 +96,8 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
 
-        if (isPlayerNearby && interactionPrompt != null)
-            interactionPrompt.SetActive(true);
+        if (isPlayerNearby)
+            ShowPrompt();
 
         // プレイヤー操作を有効化
         PlayerController.SetGlobalInputEnabled(true);
@@ -98,5 +109,28 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
     {
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, interactionDistance);
+    }
+
+    protected virtual void OnDisable()
+    {
+        promptController?.HidePrompt(this);
+    }
+
+    protected void ShowPrompt()
+    {
+        if (promptController == null)
+            return;
+
+        if (TryGetInteractionPromptData(out var promptData) && promptData.IsValid)
+        {
+            promptController.ShowPrompt(this, promptData);
+        }
+    }
+
+    public bool TryGetInteractionPromptData(out InteractionPromptData data)
+    {
+        var anchor = promptAnchor != null ? promptAnchor : transform;
+        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
+        return true;
     }
 }

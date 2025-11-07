@@ -10,14 +10,20 @@ using UnityEngine.UI;
 /// A separate sleep-specific event <see cref="GameClock.OnSleepAdvancedDay"/>
 /// is invoked after the day advances so systems can react only to sleeping.
 /// </summary>
-public class BedTrigger : MonoBehaviour, IInteractable
+public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
 {
+    [Header("Interaction Prompt")]
+    [SerializeField] private Transform promptAnchor;
+    [SerializeField] private float promptOffset = 1f;
+    [SerializeField] private string promptLocalizationKey = string.Empty;
+
     [Header("Interaction UI")]
-    public GameObject interactionPrompt;
     public GameObject interactionPanel;
     public bool isPlayerNearby = false;
     bool isPanelOpen = false;
     Canvas cachedPanelCanvas;
+
+    private SharedInteractionPromptController promptController;
 
     [Header("Sleep Settings")]
     public int sleepStartMinutes = 20 * 60; // 8:00 PM
@@ -41,13 +47,16 @@ public class BedTrigger : MonoBehaviour, IInteractable
     {
         clock = GameClock.Instance;
 
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
 
         if (panelContentArea != null)
             cachedPanelCanvas = panelContentArea.GetComponentInParent<Canvas>();
+
+        if (promptAnchor == null)
+            promptAnchor = transform;
+
+        promptController = SharedInteractionPromptController.Instance;
     }
 
     void Update()
@@ -70,8 +79,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
     {
         isPanelOpen = true;
 
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+        promptController?.HidePrompt(this);
 
         if (interactionPanel != null)
         {
@@ -89,8 +97,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
 
-        if (isPlayerNearby && interactionPrompt != null)
-            interactionPrompt.SetActive(true);
+        ShowPromptIfNearby();
 
         PlayerController.SetGlobalInputEnabled(true);
     }
@@ -205,8 +212,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
         }
 
         PlayerController.SetGlobalInputEnabled(false);
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+        promptController?.HidePrompt(this);
 
         if (transitionUI != null)
             yield return new WaitUntil(() => !transitionUI.IsTransitionRunning);
@@ -218,8 +224,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
 
         clock.SetTimeScale(resumeScale);
         PlayerController.SetGlobalInputEnabled(true);
-        if (isPlayerNearby && interactionPrompt != null)
-            interactionPrompt.SetActive(true);
+        ShowPromptIfNearby();
     }
 
     bool CanSleep()
@@ -238,5 +243,26 @@ public class BedTrigger : MonoBehaviour, IInteractable
     {
         // TODO: Implement recipe acquisition based on Cozy/Nature values, day count, and milestones.
         // This placeholder keeps the logic extendable as described in MD/_Concept.md.
+    }
+
+    public bool TryGetInteractionPromptData(out InteractionPromptData data)
+    {
+        var anchor = promptAnchor != null ? promptAnchor : transform;
+        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
+        return true;
+    }
+
+    private void ShowPromptIfNearby()
+    {
+        if (!isPlayerNearby || promptController == null)
+            return;
+
+        if (TryGetInteractionPromptData(out var promptData) && promptData.IsValid)
+            promptController.ShowPrompt(this, promptData);
+    }
+
+    void OnDisable()
+    {
+        promptController?.HidePrompt(this);
     }
 }

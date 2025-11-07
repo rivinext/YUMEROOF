@@ -9,10 +9,13 @@ public class SceneArea : MonoBehaviour
 
     [Header("Trigger Settings")]
     public bool requireKeyPress = false; // Eキーが必要か
-    public GameObject interactionPrompt; // Eキー表示UI（requireKeyPress=trueの場合）
+    [SerializeField] private Transform promptAnchor; // プロンプト表示位置
+    [SerializeField] private float promptOffset = 1f;
+    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     private bool isPlayerInArea = false;
     private BoxCollider areaCollider;
+    private SharedInteractionPromptController promptController;
 
     void Start()
     {
@@ -20,9 +23,10 @@ public class SceneArea : MonoBehaviour
         areaCollider = GetComponent<BoxCollider>();
         areaCollider.isTrigger = true;
 
-        // インタラクションUIを初期非表示
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+        if (promptAnchor == null)
+            promptAnchor = transform;
+
+        promptController = SharedInteractionPromptController.Instance;
 
         // エリアを半透明で表示（デバッグ用）
         SetupDebugVisual();
@@ -68,8 +72,12 @@ public class SceneArea : MonoBehaviour
             if (requireKeyPress)
             {
                 // Eキーが必要な場合はUIを表示
-                if (interactionPrompt != null)
-                    interactionPrompt.SetActive(true);
+                if (promptController != null)
+                {
+                    var data = new InteractionPromptData(promptAnchor != null ? promptAnchor : transform, promptOffset, promptLocalizationKey);
+                    if (data.IsValid)
+                        promptController.ShowPrompt(this, data);
+                }
             }
             else
             {
@@ -88,8 +96,7 @@ public class SceneArea : MonoBehaviour
         {
             isPlayerInArea = false;
 
-            if (interactionPrompt != null)
-                interactionPrompt.SetActive(false);
+            promptController?.HidePrompt(this);
         }
     }
 
@@ -100,9 +107,15 @@ public class SceneArea : MonoBehaviour
         {
             if (!SceneTransitionManager.Instance.IsTransitioning)
             {
+                promptController?.HidePrompt(this);
                 SceneTransitionManager.Instance.TransitionToScene(targetSceneName, spawnPointName, false);
             }
         }
+    }
+
+    void OnDisable()
+    {
+        promptController?.HidePrompt(this);
     }
 
     void OnDrawGizmos()

@@ -4,10 +4,14 @@ using UnityEngine;
 /// Simple interactable that opens the shop UI.
 /// </summary>
 [RequireComponent(typeof(Collider))]
-public class ShopTrigger : MonoBehaviour, IInteractable
+public class ShopTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
 {
     public ShopUIManager shopUIManager;
-    public GameObject pressEHint;
+
+    [Header("Interaction Prompt")]
+    [SerializeField] private Transform promptAnchor;
+    [SerializeField] private float promptOffset = 1f;
+    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     void Start()
     {
@@ -16,12 +20,19 @@ public class ShopTrigger : MonoBehaviour, IInteractable
             shopUIManager = FindFirstObjectByType<ShopUIManager>();
         }
 
-        if (pressEHint != null)
-            pressEHint.SetActive(false);
+        if (promptAnchor == null)
+            promptAnchor = transform;
     }
 
     public void Interact()
     {
         shopUIManager?.OpenShop();
+    }
+
+    public bool TryGetInteractionPromptData(out InteractionPromptData data)
+    {
+        var anchor = promptAnchor != null ? promptAnchor : transform;
+        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
+        return true;
     }
 }

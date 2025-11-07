@@ -19,6 +19,9 @@ public class PlayerRayInteractor : MonoBehaviour
     public float sphereRadius = 0.5f;
     public Vector3 boxHalfExtents = Vector3.one * 0.5f;
 
+    [Header("Interaction Prompt")]
+    [SerializeField] private SharedInteractionPromptController promptController;
+
     private IInteractable currentTarget;
     private RayOutlineHighlighter highlighter;
     private bool skipHideOnce;
@@ -31,6 +34,9 @@ public class PlayerRayInteractor : MonoBehaviour
         playerController = GetComponentInParent<PlayerController>();
         if (playerController == null)
             playerController = FindFirstObjectByType<PlayerController>();
+
+        if (promptController == null)
+            promptController = SharedInteractionPromptController.Instance;
     }
 
 #if UNITY_EDITOR
@@ -142,28 +148,27 @@ public class PlayerRayInteractor : MonoBehaviour
                 highlighter.Clear();
         }
 
-        if (mb == null) return;
+        if (mb == null)
+            return;
 
-        // 以下は既存のインタラクションUIのON/OFF（元のまま）
         var bed = mb.GetComponent<BedTrigger>();
         if (bed != null)
-        {
-            if (bed.interactionPrompt != null)
-                bed.interactionPrompt.SetActive(enabled);
             bed.isPlayerNearby = enabled;
+
+        if (promptController == null)
+            promptController = SharedInteractionPromptController.Instance;
+
+        if (promptController != null)
+        {
+            if (enabled && mb.TryGetComponent<IInteractionPromptDataProvider>(out var promptProvider) && promptProvider.TryGetInteractionPromptData(out var promptData) && promptData.IsValid)
+            {
+                promptController.ShowPrompt(mb, promptData);
+            }
+            else
+            {
+                promptController.HidePrompt(mb);
+            }
         }
-
-        var sit = mb.GetComponent<SitTrigger>();
-        if (sit != null && sit.interactionPrompt != null)
-            sit.interactionPrompt.SetActive(enabled);
-
-        var furniture = mb.GetComponent<FurnitureAnimationInteractable>();
-        if (furniture != null && furniture.interactionPrompt != null)
-            furniture.interactionPrompt.SetActive(enabled);
-
-        var shop = mb.GetComponent<ShopTrigger>();
-        if (shop != null && shop.pressEHint != null)
-            shop.pressEHint.SetActive(enabled);
     }
 
     private void OnDrawGizmosSelected()

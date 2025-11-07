@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class SitTrigger : MonoBehaviour, IInteractable
+public class SitTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
 {
     [SerializeField, Tooltip("List of potential seat anchors. The closest valid anchor to the player will be used when sitting.")]
     private Transform[] seatAnchors;
@@ -8,8 +8,10 @@ public class SitTrigger : MonoBehaviour, IInteractable
     [SerializeField]
     private Transform seatAnchor;
 
-    [Header("Interaction UI")]
-    public GameObject interactionPrompt;
+    [Header("Interaction Prompt")]
+    [SerializeField] private Transform promptAnchor;
+    [SerializeField] private float promptOffset = 1f;
+    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     private PlayerController player;
 
@@ -24,12 +26,9 @@ public class SitTrigger : MonoBehaviour, IInteractable
         {
             seatAnchor = transform;
         }
-    }
 
-    private void Start()
-    {
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+        if (promptAnchor == null)
+            promptAnchor = transform;
     }
 
     public void Interact()
@@ -83,5 +82,11 @@ public class SitTrigger : MonoBehaviour, IInteractable
         }
 
         return closestAnchor != null ? closestAnchor : transform;
+    }
+    public bool TryGetInteractionPromptData(out InteractionPromptData data)
+    {
+        var anchor = promptAnchor != null ? promptAnchor : transform;
+        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
+        return true;
     }
 }
