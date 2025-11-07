@@ -26,6 +26,7 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInt
     [SerializeField] private InteractionAnimationMode interactionMode = InteractionAnimationMode.PlayOnce;
 
     [Header("Interaction Prompt")]
+    [SerializeField] private bool interactionPromptEnabled = false;
     [SerializeField] private Transform promptAnchor;
     [SerializeField] private float promptOffset = 1f;
     [SerializeField] private string promptLocalizationKey = string.Empty;
@@ -57,6 +58,11 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInt
     /// 現在ループ状態かどうかを取得します。
     /// </summary>
     public bool IsLooping => isLooping;
+
+    /// <summary>
+    /// インタラクションプロンプトが有効かどうかを取得します。
+    /// </summary>
+    public bool InteractionPromptEnabled => interactionPromptEnabled;
 
     private void Reset()
     {
@@ -97,9 +103,25 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInt
 
     public bool TryGetInteractionPromptData(out InteractionPromptData data)
     {
+        if (!interactionPromptEnabled)
+        {
+            data = default;
+            return false;
+        }
+
         var anchor = promptAnchor != null ? promptAnchor : transform;
         data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
         return true;
+    }
+
+    public void SetInteractionPromptEnabled(bool enabled)
+    {
+        interactionPromptEnabled = enabled;
+    }
+
+    public void ToggleInteractionPromptEnabled()
+    {
+        SetInteractionPromptEnabled(!interactionPromptEnabled);
     }
 
     public void Interact()
