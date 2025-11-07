@@ -21,7 +21,6 @@ public class PlayerRayInteractor : MonoBehaviour
 
     private IInteractable currentTarget;
     private RayOutlineHighlighter highlighter;
-    [SerializeField] private SpeechBubbleController speechBubbleController;
     private bool skipHideOnce;
     private PlayerController playerController;
 
@@ -32,8 +31,6 @@ public class PlayerRayInteractor : MonoBehaviour
         playerController = GetComponentInParent<PlayerController>();
         if (playerController == null)
             playerController = FindFirstObjectByType<PlayerController>();
-        if (speechBubbleController == null)
-            speechBubbleController = FindFirstObjectByType<SpeechBubbleController>(FindObjectsInactive.Include);
     }
 
 #if UNITY_EDITOR
@@ -143,27 +140,6 @@ public class PlayerRayInteractor : MonoBehaviour
                 highlighter.Highlight(mb.gameObject);
             else
                 highlighter.Clear();
-        }
-
-        if (enabled && mb != null)
-        {
-            // BuildingGhostInteractableの場合：ヒント文字列を使って通常版を表示
-            var ghost = mb.GetComponent<BuildingGhostInteractable>();
-            if (ghost != null && speechBubbleController != null)
-            {
-                speechBubbleController.Show(mb.transform, ghost.GetCachedHintText());
-            }
-            else if (target != null && speechBubbleController != null)
-            {
-                speechBubbleController.Hide();
-            }
-
-        }
-        else if (target != null && speechBubbleController != null)
-        {
-            if (!skipHideOnce)
-                speechBubbleController.Hide();
-            skipHideOnce = false;
         }
 
         if (mb == null) return;
