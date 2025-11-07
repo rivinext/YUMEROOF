@@ -17,6 +17,10 @@ public class SharedInteractionPromptController : MonoBehaviour
     [SerializeField] private CanvasGroup promptCanvasGroup;
     [SerializeField] private DynamicLocalizer promptLocalizer;
     [SerializeField] private string promptLocalizerField = "Prompt";
+    [Header("Sorting")]
+    [SerializeField] private bool overrideSorting;
+    [SerializeField] private string sortingLayerName;
+    [SerializeField] private int sortingOrder;
     [Header("Prompt Foreground Material (Optional)")]
     [Tooltip("When enabled, replaces all Graphics under Prompt Root with a foreground material so the prompt renders on top. Disable to keep the default UI materials for cases where the prompt should blend with the rest of the UI.")]
     [SerializeField] private bool useForegroundMaterial = true;
@@ -27,6 +31,13 @@ public class SharedInteractionPromptController : MonoBehaviour
 
     private Object currentOwner;
     private InteractionPromptData currentData;
+    private Canvas cachedCanvas;
+    private bool hasOriginalCanvasSettings;
+    private bool originalOverrideSorting;
+    private string originalSortingLayerName;
+    private int originalSortingOrder;
+    [SerializeField, HideInInspector] private bool sortingSettingsInitialized;
+    private bool hasLoggedMissingCanvasWarning;
 
     private void Awake()
     {
@@ -44,6 +55,8 @@ public class SharedInteractionPromptController : MonoBehaviour
             promptRoot = promptBillboard.gameObject;
         }
 
+        CacheCanvas(true);
+        ApplyCanvasSorting();
         RefreshForegroundMaterial();
 
         HideImmediate();
@@ -52,6 +65,13 @@ public class SharedInteractionPromptController : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
+        if (promptRoot == null && promptBillboard != null)
+        {
+            promptRoot = promptBillboard.gameObject;
+        }
+
+        CacheCanvas(true);
+        ApplyCanvasSorting();
         RefreshForegroundMaterial();
     }
 #endif
@@ -143,6 +163,8 @@ public class SharedInteractionPromptController : MonoBehaviour
 
     private void SetVisible(bool visible)
     {
+        ApplyCanvasSorting();
+
         if (promptRoot != null)
         {
             promptRoot.SetActive(visible);
@@ -228,6 +250,87 @@ public class SharedInteractionPromptController : MonoBehaviour
         for (int i = 0; i < graphics.Length; i++)
         {
             graphics[i].material = graphics[i].defaultMaterial;
+        }
+    }
+
+    private Canvas CacheCanvas(bool forceRefresh = false)
+    {
+        if (forceRefresh)
+        {
+            cachedCanvas = null;
+            hasOriginalCanvasSettings = false;
+        }
+
+        if (cachedCanvas != null)
+        {
+            return cachedCanvas;
+        }
+
+        if (promptRoot == null && promptBillboard != null)
+        {
+            promptRoot = promptBillboard.gameObject;
+        }
+
+        if (promptRoot != null)
+        {
+            cachedCanvas = promptRoot.GetComponent<Canvas>();
+            if (cachedCanvas == null)
+            {
+                cachedCanvas = promptRoot.GetComponentInChildren<Canvas>(true);
+            }
+        }
+
+        if (cachedCanvas != null)
+        {
+            if (!hasOriginalCanvasSettings)
+            {
+                originalOverrideSorting = cachedCanvas.overrideSorting;
+                originalSortingLayerName = cachedCanvas.sortingLayerName;
+                originalSortingOrder = cachedCanvas.sortingOrder;
+                hasOriginalCanvasSettings = true;
+            }
+
+            if (!sortingSettingsInitialized)
+            {
+                sortingLayerName = cachedCanvas.sortingLayerName;
+                sortingOrder = cachedCanvas.sortingOrder;
+                sortingSettingsInitialized = true;
+            }
+
+            hasLoggedMissingCanvasWarning = false;
+        }
+
+        return cachedCanvas;
+    }
+
+    private void ApplyCanvasSorting()
+    {
+        var canvas = CacheCanvas();
+        if (canvas == null)
+        {
+            if (Application.isPlaying && !hasLoggedMissingCanvasWarning)
+            {
+                Debug.LogWarning($"{nameof(SharedInteractionPromptController)} on {gameObject.name} could not find a Canvas under the assigned {nameof(promptRoot)}.", this);
+                hasLoggedMissingCanvasWarning = true;
+            }
+
+            return;
+        }
+
+        if (overrideSorting)
+        {
+            canvas.overrideSorting = true;
+            if (!string.IsNullOrEmpty(sortingLayerName))
+            {
+                canvas.sortingLayerName = sortingLayerName;
+            }
+            canvas.sortingOrder = sortingOrder;
+        }
+        else if (hasOriginalCanvasSettings)
+        {
+            canvas.overrideSorting = originalOverrideSorting;
+            canvas.sortingLayerName = originalSortingLayerName;
+            canvas.sortingOrder = originalSortingOrder;
         }
     }
 }
