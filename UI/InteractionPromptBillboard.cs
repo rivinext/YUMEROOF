@@ -37,7 +37,20 @@ public class InteractionPromptBillboard : MonoBehaviour
     /// Allows reusing the same billboard by providing a new target to track.
     /// Passing <c>null</c> hides the billboard until another target is set.
     /// </summary>
-    public void SetTarget(Transform newTarget, float? overrideOffset = null)
+    public void SetTarget(Transform newTarget)
+    {
+        SetTargetInternal(newTarget, overrideOffset: null);
+    }
+
+    /// <summary>
+    /// Same as <see cref="SetTarget(Transform)"/> but also overrides the height offset for this billboard.
+    /// </summary>
+    public void SetTarget(Transform newTarget, float overrideOffset)
+    {
+        SetTargetInternal(newTarget, overrideOffset);
+    }
+
+    private void SetTargetInternal(Transform newTarget, float? overrideOffset)
     {
         if (overrideOffset.HasValue)
             heightOffset = overrideOffset.Value;
