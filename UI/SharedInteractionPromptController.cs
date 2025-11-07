@@ -17,6 +17,17 @@ public class SharedInteractionPromptController : MonoBehaviour
     [SerializeField] private CanvasGroup promptCanvasGroup;
     [SerializeField] private DynamicLocalizer promptLocalizer;
     [SerializeField] private string promptLocalizerField = "Prompt";
+    [Header("Hierarchy Order")]
+    [Tooltip("Optional helper that keeps the prompt text/icon container in front of the background.")]
+    [SerializeField] private PromptSiblingOrderController promptSiblingOrderController;
+    [Tooltip("Prompt background container (moved to the first sibling when Move Background First On Show is enabled).")]
+    [SerializeField] private RectTransform promptBackgroundContainer;
+    [Tooltip("Prompt text or icon container that should render in front of the background.")]
+    [SerializeField] private RectTransform promptContentContainer;
+    [Tooltip("When enabled, the prompt content container is moved to the end of its sibling list whenever the prompt is shown, ensuring it renders above the background.")]
+    [SerializeField] private bool reorderContentOnShow = true;
+    [Tooltip("Set this if the prompt background must stay behind the text. It calls SetAsFirstSibling on the background container when the prompt is shown.")]
+    [SerializeField] private bool moveBackgroundFirstOnShow;
     [Header("Sorting")]
     [SerializeField] private bool overrideSorting;
     [SerializeField] private string sortingLayerName;
@@ -58,6 +69,7 @@ public class SharedInteractionPromptController : MonoBehaviour
         CacheCanvas(true);
         ApplyCanvasSorting();
         RefreshForegroundMaterial();
+        ConfigurePromptSiblingOrderController();
 
         HideImmediate();
     }
@@ -73,6 +85,7 @@ public class SharedInteractionPromptController : MonoBehaviour
         CacheCanvas(true);
         ApplyCanvasSorting();
         RefreshForegroundMaterial();
+        ConfigurePromptSiblingOrderController();
     }
 #endif
 
@@ -176,6 +189,56 @@ public class SharedInteractionPromptController : MonoBehaviour
             promptCanvasGroup.interactable = visible;
             promptCanvasGroup.blocksRaycasts = visible;
         }
+
+        if (visible)
+        {
+            EnsurePromptHierarchyOrder();
+        }
+    }
+
+    private void EnsurePromptHierarchyOrder()
+    {
+        if (!reorderContentOnShow && !moveBackgroundFirstOnShow)
+        {
+            return;
+        }
+
+        ConfigurePromptSiblingOrderController();
+
+        if (promptSiblingOrderController != null)
+        {
+            if (moveBackgroundFirstOnShow)
+            {
+                promptSiblingOrderController.MoveBackgroundsToBack();
+            }
+
+            if (reorderContentOnShow)
+            {
+                promptSiblingOrderController.ApplyForegroundOrder();
+            }
+
+            return;
+        }
+
+        if (moveBackgroundFirstOnShow && promptBackgroundContainer != null)
+        {
+            promptBackgroundContainer.SetAsFirstSibling();
+        }
+
+        if (reorderContentOnShow && promptContentContainer != null)
+        {
+            promptContentContainer.SetAsLastSibling();
+        }
+    }
+
+    private void ConfigurePromptSiblingOrderController()
+    {
+        if (promptSiblingOrderController == null)
+        {
+            return;
+        }
+
+        promptSiblingOrderController.ConfigureTargets(promptContentContainer, promptBackgroundContainer);
     }
 
     private void ApplyForegroundMaterial()
