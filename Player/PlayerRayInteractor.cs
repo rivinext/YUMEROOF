@@ -157,6 +157,10 @@ public class PlayerRayInteractor : MonoBehaviour
         if (sit != null && sit.interactionPrompt != null)
             sit.interactionPrompt.SetActive(enabled);
 
+        var furniture = mb.GetComponent<FurnitureAnimationInteractable>();
+        if (furniture != null && furniture.interactionPrompt != null)
+            furniture.interactionPrompt.SetActive(enabled);
+
         var shop = mb.GetComponent<ShopTrigger>();
         if (shop != null && shop.pressEHint != null)
             shop.pressEHint.SetActive(enabled);

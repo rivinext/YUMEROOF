@@ -25,6 +25,10 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [Tooltip("インタラクト時の挙動タイプ。\nPlayOnce: 1回だけ再生。\nToggleLoop: ループ状態をオン/オフ。")]
     [SerializeField] private InteractionAnimationMode interactionMode = InteractionAnimationMode.PlayOnce;
 
+    [Header("Interaction UI")]
+    [Tooltip("インタラクション用のプロンプトをまとめた GameObject。指定すると開始時に非表示へ切り替えます。")]
+    public GameObject interactionPrompt;
+
     [Header("Play Once Settings")]
     [SerializeField] private PlayOnceMethod playOnceMethod = PlayOnceMethod.Trigger;
     [Tooltip("Trigger方式を使用する場合に送信するトリガー名。")]
@@ -77,6 +81,12 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         {
             ApplyLoopState();                               //:contentReference[oaicite:3]{index=3}
         }
+    }
+
+    private void Start()
+    {
+        if (interactionPrompt != null)
+            interactionPrompt.SetActive(false);
     }
 
     private void TryAssignAnimator()
