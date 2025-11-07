@@ -1,10 +1,12 @@
+using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class InteractionBillboardPrompt : MonoBehaviour
 {
-    [Header("Canvas")] 
+    [Header("Canvas")]
     [SerializeField] private Canvas targetCanvas;
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private bool disableCanvasWhenHidden = true;
@@ -15,8 +17,17 @@ public class InteractionBillboardPrompt : MonoBehaviour
     [SerializeField] private TextMeshProUGUI promptLabel;
     [SerializeField] private Image promptIcon;
 
+    [Header("Anchoring")]
+    [SerializeField] private Transform anchorRoot;
+    [SerializeField] private bool autoAnchorToBounds = true;
+    [SerializeField] private bool includeRenderers = true;
+    [SerializeField] private bool includeColliders = true;
+    [SerializeField, Min(0f)] private float verticalOffset = 1f;
+
     private Camera targetCamera;
     private bool targetVisible = true;
+    private Renderer[] cachedAnchorRenderers = Array.Empty<Renderer>();
+    private Collider[] cachedAnchorColliders = Array.Empty<Collider>();
 
     private void Awake()
     {
@@ -30,6 +41,9 @@ public class InteractionBillboardPrompt : MonoBehaviour
             canvasGroup = targetCanvas.GetComponent<CanvasGroup>();
         }
 
+        EnsureAnchorRoot();
+        CacheAnchorTargets();
+
         if (hideOnStart)
         {
             ApplyVisibilityImmediate(false);
@@ -42,11 +56,19 @@ public class InteractionBillboardPrompt : MonoBehaviour
 
     private void OnEnable()
     {
+        EnsureAnchorRoot();
+        CacheAnchorTargets();
         RefreshCameraReference();
     }
 
     private void LateUpdate()
     {
+        if (TryGetAnchorBounds(out Bounds bounds))
+        {
+            Vector3 bottomCenter = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            transform.position = bottomCenter + Vector3.up * verticalOffset;
+        }
+
         EnsureCamera();
 
         if (targetCamera != null)
@@ -126,6 +148,13 @@ public class InteractionBillboardPrompt : MonoBehaviour
         }
     }
 
+    public void SetAnchorRoot(Transform root)
+    {
+        anchorRoot = root != null ? root : transform.parent;
+        EnsureAnchorRoot();
+        CacheAnchorTargets();
+    }
+
     private void ApplyVisibilityImmediate(bool visible)
     {
         targetVisible = visible;
@@ -156,5 +185,150 @@ public class InteractionBillboardPrompt : MonoBehaviour
         }
 
         return targetCamera != null;
+    }
+
+    private void EnsureAnchorRoot()
+    {
+        if (anchorRoot == null)
+        {
+            anchorRoot = transform.parent;
+        }
+    }
+
+    private void CacheAnchorTargets()
+    {
+        if (!autoAnchorToBounds)
+        {
+            cachedAnchorRenderers = Array.Empty<Renderer>();
+            cachedAnchorColliders = Array.Empty<Collider>();
+            return;
+        }
+
+        if (anchorRoot == null)
+        {
+            cachedAnchorRenderers = Array.Empty<Renderer>();
+            cachedAnchorColliders = Array.Empty<Collider>();
+            return;
+        }
+
+        if (includeRenderers)
+        {
+            List<Renderer> renderers = new List<Renderer>();
+            foreach (Renderer renderer in anchorRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Transform rendererTransform = renderer.transform;
+                if (rendererTransform != null && rendererTransform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                renderers.Add(renderer);
+            }
+
+            cachedAnchorRenderers = renderers.ToArray();
+        }
+        else
+        {
+            cachedAnchorRenderers = Array.Empty<Renderer>();
+        }
+
+        if (includeColliders)
+        {
+            List<Collider> colliders = new List<Collider>();
+            foreach (Collider collider in anchorRoot.GetComponentsInChildren<Collider>(true))
+            {
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                Transform colliderTransform = collider.transform;
+                if (colliderTransform != null && colliderTransform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                colliders.Add(collider);
+            }
+
+            cachedAnchorColliders = colliders.ToArray();
+        }
+        else
+        {
+            cachedAnchorColliders = Array.Empty<Collider>();
+        }
+    }
+
+    private bool TryGetAnchorBounds(out Bounds bounds)
+    {
+        bounds = new Bounds();
+
+        if (!autoAnchorToBounds)
+        {
+            return false;
+        }
+
+        bool hasBounds = false;
+
+        if (includeRenderers && cachedAnchorRenderers != null)
+        {
+            foreach (Renderer renderer in cachedAnchorRenderers)
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Transform rendererTransform = renderer.transform;
+                if (rendererTransform != null && rendererTransform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+        }
+
+        if (includeColliders && cachedAnchorColliders != null)
+        {
+            foreach (Collider collider in cachedAnchorColliders)
+            {
+                if (collider == null)
+                {
+                    continue;
+                }
+
+                Transform colliderTransform = collider.transform;
+                if (colliderTransform != null && colliderTransform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = collider.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(collider.bounds);
+                }
+            }
+        }
+
+        return hasBounds;
     }
 }

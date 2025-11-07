@@ -108,6 +108,7 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         if (interactionPrompt != null)
         {
             interactionPrompt.ApplyOverrides(promptTextOverride, overridePromptText, promptIconOverride, overridePromptIcon);
+            interactionPrompt.SetAnchorRoot(transform);
             interactionPrompt.SetVisible(false);
         }
     }
