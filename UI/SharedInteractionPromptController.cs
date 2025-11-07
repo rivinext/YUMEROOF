@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Controls a single shared interaction prompt billboard that can be reused by any interactable.
@@ -15,6 +18,8 @@ public class SharedInteractionPromptController : MonoBehaviour
     [SerializeField] private DynamicLocalizer promptLocalizer;
     [SerializeField] private string promptLocalizerField = "Prompt";
     [SerializeField] private Material foregroundMaterial;
+
+    private const string ForegroundMaterialAssetPath = "Assets/UI/Materials/PromptAlwaysOnTop.mat";
 
     private Object currentOwner;
     private InteractionPromptData currentData;
@@ -35,6 +40,7 @@ public class SharedInteractionPromptController : MonoBehaviour
             promptRoot = promptBillboard.gameObject;
         }
 
+        EnsureForegroundMaterial();
         ApplyForegroundMaterial();
 
         HideImmediate();
@@ -43,6 +49,7 @@ public class SharedInteractionPromptController : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
+        EnsureForegroundMaterial();
         ApplyForegroundMaterial();
     }
 #endif
@@ -157,5 +164,32 @@ public class SharedInteractionPromptController : MonoBehaviour
         {
             graphics[i].material = foregroundMaterial;
         }
+    }
+
+    private void EnsureForegroundMaterial()
+    {
+        if (foregroundMaterial != null)
+        {
+            return;
+        }
+
+#if UNITY_EDITOR
+        foregroundMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(ForegroundMaterialAssetPath);
+        if (foregroundMaterial != null)
+        {
+            return;
+        }
+#endif
+
+        var shader = Shader.Find("UI/UIAlwaysOnTop");
+        if (shader == null)
+        {
+            return;
+        }
+
+        foregroundMaterial = new Material(shader)
+        {
+            name = "PromptAlwaysOnTop (Runtime)"
+        };
     }
 }
