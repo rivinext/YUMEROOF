@@ -87,6 +87,17 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         if (interactionPrompt != null)
         {
             interactionPrompt.SetActive(false);
+
+            InteractionPromptBillboard promptBillboard = interactionPrompt.GetComponent<InteractionPromptBillboard>();
+            if (promptBillboard != null)
+            {
+                if (promptBillboard.Target == null)
+                {
+                    promptBillboard.Target = InteractionPromptTarget;
+                }
+
+                promptBillboard.OffsetY = interactionPromptLocalOffset.y;
+            }
         }
 
         if (targetAnimator != null)
