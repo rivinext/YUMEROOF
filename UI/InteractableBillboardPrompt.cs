@@ -31,6 +31,8 @@ public class InteractableBillboardPrompt : MonoBehaviour
     private Vector3 currentOffset;
     private bool useDynamicAnchor;
     private MonoBehaviour boundsTarget;
+    private bool hasExplicitBounds;
+    private Bounds explicitBounds;
     private AsyncOperationHandle<string> localizedHandle;
     private bool hasLocalizedHandle;
     private string currentFallbackMessage;
@@ -100,8 +102,14 @@ public class InteractableBillboardPrompt : MonoBehaviour
         currentAnchor = request.Anchor != null ? request.Anchor : ResolveDefaultAnchor(request.Interactable);
         currentOffset = request.HasCustomOffset ? request.WorldOffset : defaultWorldOffset;
 
+        hasExplicitBounds = request.HasWorldOffsetBounds;
+        if (hasExplicitBounds)
+        {
+            explicitBounds = request.WorldOffsetBounds;
+        }
+
         useDynamicAnchor = ShouldUseDynamicAnchor(request);
-        boundsTarget = useDynamicAnchor ? currentInteractable : null;
+        boundsTarget = useDynamicAnchor && !hasExplicitBounds ? currentInteractable : null;
 
         ApplyIcon(request.Icon != null ? request.Icon : defaultIcon);
         ApplyMessage(request.LocalizedMessage.IsEmpty ? defaultLocalizedMessage : request.LocalizedMessage,
@@ -126,6 +134,7 @@ public class InteractableBillboardPrompt : MonoBehaviour
         currentFallbackMessage = defaultMessage;
         useDynamicAnchor = false;
         boundsTarget = null;
+        hasExplicitBounds = false;
         SetVisible(false);
     }
 
@@ -139,6 +148,9 @@ public class InteractableBillboardPrompt : MonoBehaviour
 
     private bool ShouldUseDynamicAnchor(in InteractableBillboardPromptRequest request)
     {
+        if (request.HasWorldOffsetBounds)
+            return true;
+
         if (request.Anchor != null || defaultAnchor != null)
             return false;
 
@@ -153,10 +165,18 @@ public class InteractableBillboardPrompt : MonoBehaviour
         Vector3 targetPosition = transform.position;
         bool hasPosition = false;
 
-        if (useDynamicAnchor && boundsTarget != null && TryCalculateCombinedBounds(boundsTarget, out Bounds bounds))
+        if (useDynamicAnchor)
         {
-            targetPosition = CalculateAnchorFromBounds(bounds) + currentOffset;
-            hasPosition = true;
+            if (hasExplicitBounds)
+            {
+                targetPosition = CalculateAnchorFromBounds(explicitBounds) + currentOffset;
+                hasPosition = true;
+            }
+            else if (boundsTarget != null && TryCalculateCombinedBounds(boundsTarget, out Bounds bounds))
+            {
+                targetPosition = CalculateAnchorFromBounds(bounds) + currentOffset;
+                hasPosition = true;
+            }
         }
 
         if (!hasPosition)
@@ -262,7 +282,7 @@ public class InteractableBillboardPrompt : MonoBehaviour
 
     private static Vector3 CalculateAnchorFromBounds(in Bounds bounds)
     {
-        return new Vector3(bounds.center.x, bounds.min.y + 1f, bounds.center.z);
+        return new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
     }
 
     private void ApplyIcon(Sprite sprite)
@@ -368,6 +388,7 @@ public struct InteractableBillboardPromptRequest
     public MonoBehaviour Interactable;
     public Transform Anchor;
     public Vector3 WorldOffset;
+    public Bounds WorldOffsetBounds;
     public LocalizedString LocalizedMessage;
     public string FallbackMessage;
 
@@ -375,6 +396,48 @@ public struct InteractableBillboardPromptRequest
 
     public bool HasCustomOffset;
     public bool HasFallbackMessage;
+    public bool HasWorldOffsetBounds;
+
+    public InteractableBillboardPromptRequest(
+        InteractableBillboardPrompt prompt,
+        MonoBehaviour interactable,
+        Transform anchor,
+        Vector3 worldOffset,
+        LocalizedString localizedMessage,
+        string fallbackMessage,
+        Sprite icon,
+        bool hasCustomOffset,
+        bool hasFallbackMessage)
+    {
+        Prompt = prompt;
+        Interactable = interactable;
+        Anchor = anchor;
+        WorldOffset = worldOffset;
+        WorldOffsetBounds = default;
+        LocalizedMessage = localizedMessage;
+        FallbackMessage = fallbackMessage;
+        Icon = icon;
+        HasCustomOffset = hasCustomOffset;
+        HasFallbackMessage = hasFallbackMessage;
+        HasWorldOffsetBounds = false;
+    }
+
+    public InteractableBillboardPromptRequest(
+        InteractableBillboardPrompt prompt,
+        MonoBehaviour interactable,
+        Transform anchor,
+        Vector3 worldOffset,
+        Bounds worldOffsetBounds,
+        LocalizedString localizedMessage,
+        string fallbackMessage,
+        Sprite icon,
+        bool hasCustomOffset,
+        bool hasFallbackMessage)
+        : this(prompt, interactable, anchor, worldOffset, localizedMessage, fallbackMessage, icon, hasCustomOffset, hasFallbackMessage)
+    {
+        WorldOffsetBounds = worldOffsetBounds;
+        HasWorldOffsetBounds = true;
+    }
 }
 
 /// <summary>
