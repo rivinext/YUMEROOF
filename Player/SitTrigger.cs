@@ -20,6 +20,11 @@ public class SitTrigger : MonoBehaviour, IInteractable
             interactionPrompt = GetComponentInChildren<InteractionBillboardPrompt>(true);
         }
 
+        if (interactionPrompt != null)
+        {
+            interactionPrompt.SetAnchorRoot(transform);
+        }
+
         if ((seatAnchors == null || seatAnchors.Length == 0) && seatAnchor == null)
         {
             seatAnchors = new[] { transform };
