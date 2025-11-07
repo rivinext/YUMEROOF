@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Controls a single shared interaction prompt billboard that can be reused by any interactable.
@@ -13,6 +14,7 @@ public class SharedInteractionPromptController : MonoBehaviour
     [SerializeField] private CanvasGroup promptCanvasGroup;
     [SerializeField] private DynamicLocalizer promptLocalizer;
     [SerializeField] private string promptLocalizerField = "Prompt";
+    [SerializeField] private Material foregroundMaterial;
 
     private Object currentOwner;
     private InteractionPromptData currentData;
@@ -33,8 +35,17 @@ public class SharedInteractionPromptController : MonoBehaviour
             promptRoot = promptBillboard.gameObject;
         }
 
+        ApplyForegroundMaterial();
+
         HideImmediate();
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        ApplyForegroundMaterial();
+    }
+#endif
 
     /// <summary>
     /// Displays the prompt for the provided owner. If a different owner was active, it will be replaced.
@@ -108,6 +119,12 @@ public class SharedInteractionPromptController : MonoBehaviour
         SetVisible(false);
     }
 
+    [ContextMenu("Refresh Foreground Material")]
+    public void RefreshForegroundMaterial()
+    {
+        ApplyForegroundMaterial();
+    }
+
     private void SetVisible(bool visible)
     {
         if (promptRoot != null)
@@ -120,6 +137,25 @@ public class SharedInteractionPromptController : MonoBehaviour
             promptCanvasGroup.alpha = visible ? 1f : 0f;
             promptCanvasGroup.interactable = visible;
             promptCanvasGroup.blocksRaycasts = visible;
+        }
+    }
+
+    private void ApplyForegroundMaterial()
+    {
+        if (promptRoot == null && promptBillboard != null)
+        {
+            promptRoot = promptBillboard.gameObject;
+        }
+
+        if (promptRoot == null || foregroundMaterial == null)
+        {
+            return;
+        }
+
+        var graphics = promptRoot.GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            graphics[i].material = foregroundMaterial;
         }
     }
 }
