@@ -17,6 +17,10 @@ public class SharedInteractionPromptController : MonoBehaviour
     [SerializeField] private CanvasGroup promptCanvasGroup;
     [SerializeField] private DynamicLocalizer promptLocalizer;
     [SerializeField] private string promptLocalizerField = "Prompt";
+    [Header("Prompt Foreground Material (Optional)")]
+    [Tooltip("When enabled, replaces all Graphics under Prompt Root with a foreground material so the prompt renders on top. Disable to keep the default UI materials for cases where the prompt should blend with the rest of the UI.")]
+    [SerializeField] private bool useForegroundMaterial = true;
+    [Tooltip("Material applied to prompt Graphics when foreground rendering is enabled. Ignored when Use Foreground Material is disabled.")]
     [SerializeField] private Material foregroundMaterial;
 
     private const string ForegroundMaterialAssetPath = "Assets/UI/Materials/PromptAlwaysOnTop.mat";
@@ -40,8 +44,7 @@ public class SharedInteractionPromptController : MonoBehaviour
             promptRoot = promptBillboard.gameObject;
         }
 
-        EnsureForegroundMaterial();
-        ApplyForegroundMaterial();
+        RefreshForegroundMaterial();
 
         HideImmediate();
     }
@@ -49,8 +52,7 @@ public class SharedInteractionPromptController : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        EnsureForegroundMaterial();
-        ApplyForegroundMaterial();
+        RefreshForegroundMaterial();
     }
 #endif
 
@@ -129,6 +131,13 @@ public class SharedInteractionPromptController : MonoBehaviour
     [ContextMenu("Refresh Foreground Material")]
     public void RefreshForegroundMaterial()
     {
+        if (!useForegroundMaterial)
+        {
+            ResetForegroundMaterialToDefault();
+            return;
+        }
+
+        EnsureForegroundMaterial();
         ApplyForegroundMaterial();
     }
 
@@ -149,6 +158,11 @@ public class SharedInteractionPromptController : MonoBehaviour
 
     private void ApplyForegroundMaterial()
     {
+        if (!useForegroundMaterial)
+        {
+            return;
+        }
+
         if (promptRoot == null && promptBillboard != null)
         {
             promptRoot = promptBillboard.gameObject;
@@ -168,6 +182,11 @@ public class SharedInteractionPromptController : MonoBehaviour
 
     private void EnsureForegroundMaterial()
     {
+        if (!useForegroundMaterial)
+        {
+            return;
+        }
+
         if (foregroundMaterial != null)
         {
             return;
@@ -191,5 +210,24 @@ public class SharedInteractionPromptController : MonoBehaviour
         {
             name = "PromptAlwaysOnTop (Runtime)"
         };
+    }
+
+    private void ResetForegroundMaterialToDefault()
+    {
+        if (promptRoot == null && promptBillboard != null)
+        {
+            promptRoot = promptBillboard.gameObject;
+        }
+
+        if (promptRoot == null)
+        {
+            return;
+        }
+
+        var graphics = promptRoot.GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            graphics[i].material = graphics[i].defaultMaterial;
+        }
     }
 }
