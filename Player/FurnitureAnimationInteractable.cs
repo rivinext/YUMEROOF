@@ -48,6 +48,10 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
 
     private bool isLooping;
 
+    [Header("Interaction UI")]
+    [Tooltip("インタラクト用のパネルに設定したビルボードコンポーネント。")]
+    [SerializeField] private InteractionPromptBillboard interactionPromptBillboard;
+
     /// <summary>
     /// 現在ループ状態かどうかを取得します。
     /// </summary>
@@ -77,6 +81,13 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         {
             ApplyLoopState();                               //:contentReference[oaicite:3]{index=3}
         }
+
+        SetupInteractionPromptBillboard();
+    }
+
+    private void OnValidate()
+    {
+        SetupInteractionPromptBillboard();
     }
 
     private void TryAssignAnimator()
@@ -84,6 +95,19 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         if (targetAnimator == null)
         {
             targetAnimator = GetComponentInChildren<Animator>();
+        }
+    }
+
+    private void SetupInteractionPromptBillboard()
+    {
+        if (interactionPromptBillboard == null)
+        {
+            interactionPromptBillboard = GetComponentInChildren<InteractionPromptBillboard>(true);
+        }
+
+        if (interactionPromptBillboard != null && interactionPromptBillboard.Target == null)
+        {
+            interactionPromptBillboard.Target = transform;
         }
     }
 
