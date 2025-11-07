@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class ObjectManipulator : MonoBehaviour
+public class FurnitureObjectManipulator : MonoBehaviour
 {
     private Transform selectedObjectTransform;
     public LayerMask groundLayer;

@@ -109,7 +109,7 @@ public class InventoryUI : MonoBehaviour
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
-    private ObjectManipulator cachedObjectManipulator;
+    private FurnitureObjectManipulator cachedObjectManipulator;
     private bool selectionManagerWasEnabled;
     private bool objectManipulatorWasEnabled;
     private bool selectionManagerStateCached;
@@ -678,7 +678,7 @@ public class InventoryUI : MonoBehaviour
 
         if (cachedObjectManipulator == null)
         {
-            cachedObjectManipulator = FindFirstObjectByType<ObjectManipulator>();
+            cachedObjectManipulator = FindFirstObjectByType<FurnitureObjectManipulator>();
             if (cachedObjectManipulator != null)
             {
                 objectManipulatorWasEnabled = cachedObjectManipulator.enabled;
