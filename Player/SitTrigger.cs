@@ -24,12 +24,31 @@ public class SitTrigger : MonoBehaviour, IInteractable
         {
             seatAnchor = transform;
         }
+
+        SetupInteractionPromptBillboard();
     }
 
     private void Start()
     {
         if (interactionPrompt != null)
             interactionPrompt.SetActive(false);
+    }
+
+    private void OnValidate()
+    {
+        SetupInteractionPromptBillboard();
+    }
+
+    private void SetupInteractionPromptBillboard()
+    {
+        if (interactionPrompt == null)
+            return;
+
+        InteractionPromptBillboard billboard = interactionPrompt.GetComponent<InteractionPromptBillboard>();
+        if (billboard != null && billboard.Target == null)
+        {
+            billboard.Target = transform;
+        }
     }
 
     public void Interact()
