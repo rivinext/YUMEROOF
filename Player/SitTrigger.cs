@@ -9,7 +9,8 @@ public class SitTrigger : MonoBehaviour, IInteractable
     private Transform seatAnchor;
 
     [Header("Interaction UI")]
-    public GameObject interactionPrompt;
+    [SerializeField]
+    private GameObject interactionPrompt;
 
     private PlayerController player;
 
@@ -28,8 +29,8 @@ public class SitTrigger : MonoBehaviour, IInteractable
 
     private void Start()
     {
-        if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+        EnsurePromptSetup(interactionPrompt);
+        SetPromptVisible(false);
     }
 
     public void Interact()
@@ -83,5 +84,19 @@ public class SitTrigger : MonoBehaviour, IInteractable
         }
 
         return closestAnchor != null ? closestAnchor : transform;
+    }
+
+    public void SetPromptVisible(bool visible)
+    {
+        interactionPrompt?.SetActive(visible);
+    }
+
+    private static void EnsurePromptSetup(GameObject prompt)
+    {
+        if (prompt == null)
+            return;
+
+        if (prompt.GetComponent<BillboardBubble>() == null)
+            prompt.AddComponent<BillboardBubble>();
     }
 }
