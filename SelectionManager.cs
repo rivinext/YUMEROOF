@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class SelectionManager : MonoBehaviour
 {
     public LayerMask selectableLayers;
-    public FurnitureObjectManipulator objectManipulator;
+    public ObjectManipulator objectManipulator;
 
     private GameObject currentSelectedObject;
     private PlacementPreview currentPlacementPreview;
