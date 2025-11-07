@@ -46,9 +46,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [Tooltip("シーン開始時にループを有効にしたい場合は true。")]
     [SerializeField] private bool startLoopActive = false;
 
-    [Header("Interaction UI")]
-    [SerializeField] private GameObject interactionPrompt;
-
     private bool isLooping;
 
     /// <summary>
@@ -80,9 +77,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         {
             ApplyLoopState();                               //:contentReference[oaicite:3]{index=3}
         }
-
-        interactionPrompt?.SetActive(false);
-        EnsurePromptSetup(interactionPrompt);
     }
 
     private void TryAssignAnimator()
@@ -91,15 +85,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         {
             targetAnimator = GetComponentInChildren<Animator>();
         }
-    }
-
-    private static void EnsurePromptSetup(GameObject prompt)
-    {
-        if (prompt == null)
-            return;
-
-        if (prompt.GetComponent<BillboardBubble>() == null)
-            prompt.AddComponent<BillboardBubble>();
     }
 
     public void Interact()
@@ -171,11 +156,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
 
         isLooping = looping;
         ApplyLoopState();
-    }
-
-    public void SetPromptVisible(bool visible)
-    {
-        interactionPrompt?.SetActive(visible);
     }
 
     private void ApplyLoopState()
