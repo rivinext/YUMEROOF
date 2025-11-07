@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -52,17 +51,8 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
                 continue;
             }
 
-            var sharedMaterials = renderer.sharedMaterials;
-            if (sharedMaterials == null)
-            {
-                originalMaterials.Add(null);
-                occludedMaterials.Add(null);
-                continue;
-            }
-
-            var sharedMaterialsCopy = new Material[sharedMaterials.Length];
-            Array.Copy(sharedMaterials, sharedMaterialsCopy, sharedMaterials.Length);
-            originalMaterials.Add(sharedMaterialsCopy);
+            var runtimeMaterials = renderer.materials;
+            originalMaterials.Add(runtimeMaterials);
 
             if (silhouetteMaterial == null)
             {
@@ -70,26 +60,12 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
                 continue;
             }
 
-            var combined = new Material[sharedMaterialsCopy.Length + 1];
-            Array.Copy(sharedMaterialsCopy, combined, sharedMaterialsCopy.Length);
+            var combined = new Material[runtimeMaterials.Length + 1];
+            runtimeMaterials.CopyTo(combined, 0);
 
-            Material referenceMaterial = null;
-            for (int i = 0; i < sharedMaterialsCopy.Length; i++)
-            {
-                var material = sharedMaterialsCopy[i];
-                if (material == null)
-                {
-                    continue;
-                }
-
-                if (referenceMaterial == null || material.renderQueue > referenceMaterial.renderQueue)
-                {
-                    referenceMaterial = material;
-                }
-            }
-
-            var silhouetteInstance = CreateSilhouetteMaterialInstance(referenceMaterial);
+            var silhouetteInstance = new Material(silhouetteMaterial);
             combined[combined.Length - 1] = silhouetteInstance;
+            createdSilhouetteInstances.Add(silhouetteInstance);
 
             occludedMaterials.Add(combined);
         }
@@ -301,31 +277,10 @@ public class SimplePlayerOcclusionSilhouette : MonoBehaviour
                 continue;
             }
 
-            renderer.sharedMaterials = occluded && occludedMaterials[i] != null
+            renderer.materials = occluded && occludedMaterials[i] != null
                 ? occludedMaterials[i]
                 : originalMaterials[i];
         }
-    }
-
-    private Material CreateSilhouetteMaterialInstance(Material sourceMaterial)
-    {
-        if (silhouetteMaterial == null)
-        {
-            return null;
-        }
-
-        var materialInstance = new Material(silhouetteMaterial);
-
-        int baseRenderQueue = silhouetteMaterial.renderQueue;
-        if (sourceMaterial != null && materialInstance.renderQueue <= sourceMaterial.renderQueue)
-        {
-            baseRenderQueue = sourceMaterial.renderQueue + 1;
-        }
-
-        materialInstance.renderQueue = baseRenderQueue;
-
-        createdSilhouetteInstances.Add(materialInstance);
-        return materialInstance;
     }
 
     private void OnDestroy()

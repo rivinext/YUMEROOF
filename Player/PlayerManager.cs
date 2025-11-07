@@ -35,6 +35,14 @@ public class PlayerManager : MonoBehaviour
         }
     }
 
+    // デバッグ用：現在の位置を表示
+    void OnGUI()
+    {
+        #if UNITY_EDITOR
+        GUI.Label(new Rect(10, 10, 300, 20), $"Player Pos: {transform.position}");
+        #endif
+    }
+
     [System.Serializable]
     public class PlayerData
     {
