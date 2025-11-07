@@ -12,6 +12,7 @@ public class SitTrigger : MonoBehaviour, IInteractable
     public GameObject interactionPrompt;
 
     private PlayerController player;
+    private InteractionPromptBillboard interactionPromptBillboard;
 
     private void Awake()
     {
@@ -23,6 +24,15 @@ public class SitTrigger : MonoBehaviour, IInteractable
         if (seatAnchor == null)
         {
             seatAnchor = transform;
+        }
+
+        if (interactionPrompt != null)
+        {
+            interactionPromptBillboard = interactionPrompt.GetComponent<InteractionPromptBillboard>();
+            if (interactionPromptBillboard != null && interactionPromptBillboard.Target == null)
+            {
+                interactionPromptBillboard.Target = transform;
+            }
         }
     }
 
