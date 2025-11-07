@@ -1,4 +1,6 @@
+using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -18,8 +20,11 @@ public class SharedInteractionPromptController : MonoBehaviour
     [SerializeField] private DynamicLocalizer promptLocalizer;
     [SerializeField] private string promptLocalizerField = "Prompt";
     [SerializeField] private Material foregroundMaterial;
+    [SerializeField] private Material foregroundTMPMaterial;
 
     private const string ForegroundMaterialAssetPath = "Assets/UI/Materials/PromptAlwaysOnTop.mat";
+    private const string ForegroundTMPMaterialAssetPath = "Assets/UI/Materials/PromptTMPAlwaysOnTop.mat";
+    private const string ForegroundTMPShaderName = "TextMeshPro/Distance Field Overlay";
 
     private Object currentOwner;
     private InteractionPromptData currentData;
@@ -41,6 +46,7 @@ public class SharedInteractionPromptController : MonoBehaviour
         }
 
         EnsureForegroundMaterial();
+        EnsureForegroundTMPMaterial();
         ApplyForegroundMaterial();
 
         HideImmediate();
@@ -50,6 +56,7 @@ public class SharedInteractionPromptController : MonoBehaviour
     private void OnValidate()
     {
         EnsureForegroundMaterial();
+        EnsureForegroundTMPMaterial();
         ApplyForegroundMaterial();
     }
 #endif
@@ -154,7 +161,18 @@ public class SharedInteractionPromptController : MonoBehaviour
             promptRoot = promptBillboard.gameObject;
         }
 
-        if (promptRoot == null || foregroundMaterial == null)
+        if (promptRoot == null)
+        {
+            return;
+        }
+
+        var textComponents = promptRoot.GetComponentsInChildren<TextMeshProUGUI>(true);
+        for (int i = 0; i < textComponents.Length; i++)
+        {
+            ApplyTMPForeground(textComponents[i]);
+        }
+
+        if (foregroundMaterial == null)
         {
             return;
         }
@@ -162,6 +180,11 @@ public class SharedInteractionPromptController : MonoBehaviour
         var graphics = promptRoot.GetComponentsInChildren<Graphic>(true);
         for (int i = 0; i < graphics.Length; i++)
         {
+            if (graphics[i] is TextMeshProUGUI || graphics[i] is TMP_SubMeshUI)
+            {
+                continue;
+            }
+
             graphics[i].material = foregroundMaterial;
         }
     }
@@ -191,5 +214,101 @@ public class SharedInteractionPromptController : MonoBehaviour
         {
             name = "PromptAlwaysOnTop (Runtime)"
         };
+    }
+
+    private void EnsureForegroundTMPMaterial()
+    {
+        if (foregroundTMPMaterial != null)
+        {
+            return;
+        }
+
+#if UNITY_EDITOR
+        foregroundTMPMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(ForegroundTMPMaterialAssetPath);
+        if (foregroundTMPMaterial != null)
+        {
+            return;
+        }
+#endif
+
+        var shader = Shader.Find(ForegroundTMPShaderName);
+        if (shader == null)
+        {
+            return;
+        }
+
+        foregroundTMPMaterial = new Material(shader)
+        {
+            name = "PromptTMPAlwaysOnTop (Runtime)"
+        };
+    }
+
+    private void ApplyTMPForeground(TextMeshProUGUI textComponent)
+    {
+        if (textComponent == null)
+        {
+            return;
+        }
+
+        if (foregroundTMPMaterial != null)
+        {
+            textComponent.fontSharedMaterial = foregroundTMPMaterial;
+        }
+        else
+        {
+            var instance = CreateOverlayMaterialInstance(textComponent.fontMaterial);
+            if (instance != null)
+            {
+                textComponent.fontMaterial = instance;
+            }
+        }
+
+        var subMeshes = textComponent.GetComponentsInChildren<TMP_SubMeshUI>(true);
+        for (int i = 0; i < subMeshes.Length; i++)
+        {
+            var subMesh = subMeshes[i];
+            if (subMesh == null)
+            {
+                continue;
+            }
+
+            if (foregroundTMPMaterial != null)
+            {
+                subMesh.fontMaterial = foregroundTMPMaterial;
+            }
+            else
+            {
+                var instance = CreateOverlayMaterialInstance(subMesh.fontMaterial);
+                if (instance != null)
+                {
+                    subMesh.fontMaterial = instance;
+                }
+            }
+        }
+    }
+
+    private Material CreateOverlayMaterialInstance(Material source)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+
+        if (!source.HasProperty(ShaderUtilities.ID_ZTestMode))
+        {
+            return new Material(source);
+        }
+
+        if (source.GetInt(ShaderUtilities.ID_ZTestMode) == (int)CompareFunction.Always)
+        {
+            return source;
+        }
+
+        var overlayInstance = new Material(source)
+        {
+            name = source.name + " (Overlay)"
+        };
+        overlayInstance.SetInt(ShaderUtilities.ID_ZTestMode, (int)CompareFunction.Always);
+        return overlayInstance;
     }
 }
