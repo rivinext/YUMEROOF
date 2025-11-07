@@ -13,48 +13,91 @@ public class InteractionPromptBillboard : MonoBehaviour
     [Tooltip("底面中心から上方向へ加算するオフセット。")]
     [SerializeField] private float heightOffset = 1f;
 
-    private Collider[] cachedColliders;
-    private Renderer[] cachedRenderers;
+    private Transform resolvedTarget;
+    private Transform lastCachedTarget;
+    private bool isDetached;
+
+    private Collider[] cachedColliders = System.Array.Empty<Collider>();
+    private Renderer[] cachedRenderers = System.Array.Empty<Renderer>();
 
     private void Awake()
     {
-        if (target == null)
-            target = transform;
-
-        CacheComponents();
+        InitializeTarget(target);
     }
 
     private void OnValidate()
     {
-        if (target == null)
-            target = transform;
-
         if (!Application.isPlaying)
-            CacheComponents();
+        {
+            InitializeTarget(target);
+        }
     }
 
-    private void CacheComponents()
+    /// <summary>
+    /// Allows reusing the same billboard by providing a new target to track.
+    /// Passing <c>null</c> hides the billboard until another target is set.
+    /// </summary>
+    public void SetTarget(Transform newTarget, float? overrideOffset = null)
     {
-        if (target == null)
+        if (overrideOffset.HasValue)
+            heightOffset = overrideOffset.Value;
+
+        bool detach = newTarget == null;
+        bool detachStateChanged = isDetached != detach;
+
+        isDetached = detach;
+        target = newTarget;
+        resolvedTarget = ResolveTarget(newTarget);
+
+        RefreshCachedComponents(force: detach || detachStateChanged || !ReferenceEquals(resolvedTarget, lastCachedTarget));
+    }
+
+    private void InitializeTarget(Transform initialTarget)
+    {
+        isDetached = false;
+        resolvedTarget = ResolveTarget(initialTarget);
+        cachedColliders = System.Array.Empty<Collider>();
+        cachedRenderers = System.Array.Empty<Renderer>();
+        lastCachedTarget = null;
+
+        RefreshCachedComponents(force: true);
+    }
+
+    private Transform ResolveTarget(Transform candidate)
+    {
+        return candidate != null ? candidate : transform;
+    }
+
+    private void RefreshCachedComponents(bool force = false)
+    {
+        if (isDetached || resolvedTarget == null)
         {
             cachedColliders = System.Array.Empty<Collider>();
             cachedRenderers = System.Array.Empty<Renderer>();
+            lastCachedTarget = null;
             return;
         }
 
-        cachedColliders = target.GetComponentsInChildren<Collider>(true);
-        cachedRenderers = target.GetComponentsInChildren<Renderer>(true);
+        if (!force && ReferenceEquals(resolvedTarget, lastCachedTarget))
+            return;
+
+        cachedColliders = resolvedTarget.GetComponentsInChildren<Collider>(true);
+        cachedRenderers = resolvedTarget.GetComponentsInChildren<Renderer>(true);
+        lastCachedTarget = resolvedTarget;
     }
 
     private void LateUpdate()
     {
+        if (isDetached || resolvedTarget == null)
+            return;
+
         UpdatePosition();
         FaceCamera();
     }
 
     private void UpdatePosition()
     {
-        if (target == null)
+        if (resolvedTarget == null)
             return;
 
         bool hasBounds = false;
@@ -98,7 +141,7 @@ public class InteractionPromptBillboard : MonoBehaviour
             }
         }
 
-        Vector3 basePosition = target.position;
+        Vector3 basePosition = resolvedTarget.position;
         if (hasBounds)
         {
             basePosition = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
