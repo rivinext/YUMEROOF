@@ -29,6 +29,8 @@ public class InteractableBillboardPrompt : MonoBehaviour
     private MonoBehaviour currentInteractable;
     private Transform currentAnchor;
     private Vector3 currentOffset;
+    private bool useDynamicAnchor;
+    private MonoBehaviour boundsTarget;
     private AsyncOperationHandle<string> localizedHandle;
     private bool hasLocalizedHandle;
     private string currentFallbackMessage;
@@ -82,24 +84,8 @@ public class InteractableBillboardPrompt : MonoBehaviour
         if (!isVisible)
             return;
 
-        if (currentAnchor != null)
-        {
-            transform.position = currentAnchor.position + currentOffset;
-        }
-
-        if (mainCamera == null)
-        {
-            mainCamera = Camera.main;
-        }
-
-        if (mainCamera != null)
-        {
-            Vector3 cameraForward = mainCamera.transform.forward;
-            if (cameraForward.sqrMagnitude > 0f)
-            {
-                transform.forward = cameraForward;
-            }
-        }
+        UpdateWorldPosition();
+        UpdateLookAt();
     }
 
     /// <summary>
@@ -114,11 +100,15 @@ public class InteractableBillboardPrompt : MonoBehaviour
         currentAnchor = request.Anchor != null ? request.Anchor : ResolveDefaultAnchor(request.Interactable);
         currentOffset = request.HasCustomOffset ? request.WorldOffset : defaultWorldOffset;
 
+        useDynamicAnchor = ShouldUseDynamicAnchor(request);
+        boundsTarget = useDynamicAnchor ? currentInteractable : null;
+
         ApplyIcon(request.Icon != null ? request.Icon : defaultIcon);
         ApplyMessage(request.LocalizedMessage.IsEmpty ? defaultLocalizedMessage : request.LocalizedMessage,
             request.HasFallbackMessage ? request.FallbackMessage : defaultMessage);
 
         SetVisible(true);
+        UpdateWorldPosition();
     }
 
     /// <summary>
@@ -134,6 +124,8 @@ public class InteractableBillboardPrompt : MonoBehaviour
         currentAnchor = null;
         currentOffset = defaultWorldOffset;
         currentFallbackMessage = defaultMessage;
+        useDynamicAnchor = false;
+        boundsTarget = null;
         SetVisible(false);
     }
 
@@ -142,7 +134,135 @@ public class InteractableBillboardPrompt : MonoBehaviour
         if (defaultAnchor != null)
             return defaultAnchor;
 
-        return interactable != null ? interactable.transform : transform;
+        return interactable != null ? interactable.transform : null;
+    }
+
+    private bool ShouldUseDynamicAnchor(in InteractableBillboardPromptRequest request)
+    {
+        if (request.Anchor != null || defaultAnchor != null)
+            return false;
+
+        if (request.Interactable == null)
+            return false;
+
+        return TryCalculateCombinedBounds(request.Interactable, out _);
+    }
+
+    private void UpdateWorldPosition()
+    {
+        Vector3 targetPosition = transform.position;
+        bool hasPosition = false;
+
+        if (useDynamicAnchor && boundsTarget != null && TryCalculateCombinedBounds(boundsTarget, out Bounds bounds))
+        {
+            targetPosition = CalculateAnchorFromBounds(bounds) + currentOffset;
+            hasPosition = true;
+        }
+
+        if (!hasPosition)
+        {
+            Transform anchorTransform = currentAnchor;
+
+            if (anchorTransform == null)
+            {
+                if (defaultAnchor != null)
+                {
+                    anchorTransform = defaultAnchor;
+                }
+                else if (currentInteractable != null)
+                {
+                    anchorTransform = currentInteractable.transform;
+                }
+            }
+
+            if (anchorTransform != null)
+            {
+                targetPosition = anchorTransform.position + currentOffset;
+                hasPosition = true;
+            }
+            else if (currentInteractable != null)
+            {
+                targetPosition = currentInteractable.transform.position + currentOffset;
+                hasPosition = true;
+            }
+            else if (defaultAnchor != null)
+            {
+                targetPosition = defaultAnchor.position + currentOffset;
+                hasPosition = true;
+            }
+            else
+            {
+                targetPosition = transform.position;
+            }
+        }
+
+        transform.position = targetPosition;
+    }
+
+    private void UpdateLookAt()
+    {
+        if (mainCamera == null)
+        {
+            mainCamera = Camera.main;
+        }
+
+        if (mainCamera == null)
+            return;
+
+        Vector3 toCamera = transform.position - mainCamera.transform.position;
+        if (toCamera.sqrMagnitude <= Mathf.Epsilon)
+            return;
+
+        transform.rotation = Quaternion.LookRotation(toCamera, Vector3.up);
+    }
+
+    private static bool TryCalculateCombinedBounds(MonoBehaviour target, out Bounds combinedBounds)
+    {
+        combinedBounds = default;
+
+        if (target == null)
+            return false;
+
+        var renderers = target.GetComponentsInChildren<Renderer>();
+        var colliders = target.GetComponentsInChildren<Collider>();
+
+        bool hasBounds = false;
+
+        void EncapsulateBounds(Bounds sourceBounds)
+        {
+            if (!hasBounds)
+            {
+                combinedBounds = sourceBounds;
+                hasBounds = true;
+            }
+            else
+            {
+                combinedBounds.Encapsulate(sourceBounds);
+            }
+        }
+
+        foreach (var renderer in renderers)
+        {
+            if (renderer == null)
+                continue;
+
+            EncapsulateBounds(renderer.bounds);
+        }
+
+        foreach (var collider in colliders)
+        {
+            if (collider == null)
+                continue;
+
+            EncapsulateBounds(collider.bounds);
+        }
+
+        return hasBounds;
+    }
+
+    private static Vector3 CalculateAnchorFromBounds(in Bounds bounds)
+    {
+        return new Vector3(bounds.center.x, bounds.min.y + 1f, bounds.center.z);
     }
 
     private void ApplyIcon(Sprite sprite)
