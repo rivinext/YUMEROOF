@@ -137,6 +137,16 @@ public class PlayerRayInteractor : MonoBehaviour
 
         if (mb == null) return;
 
+        var furniture = mb.GetComponent<FurnitureAnimationInteractable>();
+        if (furniture != null)
+        {
+            var prompt = furniture.InteractionPrompt;
+            if (prompt != null)
+            {
+                prompt.SetActive(enabled);
+            }
+        }
+
         // 以下は既存のインタラクションUIのON/OFF（元のまま）
         var bed = mb.GetComponent<BedTrigger>();
         if (bed != null)

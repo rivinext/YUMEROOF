@@ -25,6 +25,14 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [Tooltip("インタラクト時の挙動タイプ。\nPlayOnce: 1回だけ再生。\nToggleLoop: ループ状態をオン/オフ。")]
     [SerializeField] private InteractionAnimationMode interactionMode = InteractionAnimationMode.PlayOnce;
 
+    [Header("Interaction Prompt")]
+    [Tooltip("インタラクト時に表示するUIパネル。")]
+    public GameObject interactionPrompt;
+    [Tooltip("インタラクションパネルを追従させたい対象。未指定の場合は自身を使用します。")]
+    public Transform interactionPromptTarget;
+    [Tooltip("ビルボード／配置コンポーネントで使用するローカルオフセット。")]
+    public Vector3 interactionPromptLocalOffset = Vector3.zero;
+
     [Header("Play Once Settings")]
     [SerializeField] private PlayOnceMethod playOnceMethod = PlayOnceMethod.Trigger;
     [Tooltip("Trigger方式を使用する場合に送信するトリガー名。")]
@@ -53,14 +61,33 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     /// </summary>
     public bool IsLooping => isLooping;
 
+    public GameObject InteractionPrompt => interactionPrompt;
+    public Transform InteractionPromptTarget => interactionPromptTarget != null ? interactionPromptTarget : transform;
+    public Vector3 InteractionPromptLocalOffset => interactionPromptLocalOffset;
+
     private void Reset()
     {
         TryAssignAnimator();
+
+        if (interactionPromptTarget == null)
+        {
+            interactionPromptTarget = transform;
+        }
     }
 
     private void Awake()
     {
         TryAssignAnimator(); // 既存：子から Animator を拾う:contentReference[oaicite:1]{index=1}
+
+        if (interactionPromptTarget == null)
+        {
+            interactionPromptTarget = transform;
+        }
+
+        if (interactionPrompt != null)
+        {
+            interactionPrompt.SetActive(false);
+        }
 
         if (targetAnimator != null)
         {
