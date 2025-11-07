@@ -178,16 +178,12 @@ public class PlayerRayInteractor : MonoBehaviour
         }
 
         var sit = mb.GetComponent<SitTrigger>();
-        if (sit != null)
-            sit.SetPromptVisible(enabled);
+        if (sit != null && sit.interactionPrompt != null)
+            sit.interactionPrompt.SetActive(enabled);
 
         var shop = mb.GetComponent<ShopTrigger>();
         if (shop != null && shop.pressEHint != null)
             shop.pressEHint.SetActive(enabled);
-
-        var furniture = mb.GetComponent<FurnitureAnimationInteractable>();
-        if (furniture != null)
-            furniture.SetPromptVisible(enabled);
     }
 
     private void OnDrawGizmosSelected()
