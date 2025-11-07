@@ -9,12 +9,17 @@ public class SitTrigger : MonoBehaviour, IInteractable
     private Transform seatAnchor;
 
     [Header("Interaction UI")]
-    public GameObject interactionPrompt;
+    public InteractionBillboardPrompt interactionPrompt;
 
     private PlayerController player;
 
     private void Awake()
     {
+        if (interactionPrompt == null)
+        {
+            interactionPrompt = GetComponentInChildren<InteractionBillboardPrompt>(true);
+        }
+
         if ((seatAnchors == null || seatAnchors.Length == 0) && seatAnchor == null)
         {
             seatAnchors = new[] { transform };
@@ -29,7 +34,7 @@ public class SitTrigger : MonoBehaviour, IInteractable
     private void Start()
     {
         if (interactionPrompt != null)
-            interactionPrompt.SetActive(false);
+            interactionPrompt.SetVisible(false);
     }
 
     public void Interact()

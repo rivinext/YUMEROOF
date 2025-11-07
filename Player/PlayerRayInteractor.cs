@@ -166,6 +166,10 @@ public class PlayerRayInteractor : MonoBehaviour
             skipHideOnce = false;
         }
 
+        var prompt = mb != null ? mb.GetComponentInChildren<InteractionBillboardPrompt>(true) : null;
+        if (prompt != null)
+            prompt.SetVisible(enabled);
+
         if (mb == null) return;
 
         // 以下は既存のインタラクションUIのON/OFF（元のまま）
@@ -179,7 +183,7 @@ public class PlayerRayInteractor : MonoBehaviour
 
         var sit = mb.GetComponent<SitTrigger>();
         if (sit != null && sit.interactionPrompt != null)
-            sit.interactionPrompt.SetActive(enabled);
+            sit.interactionPrompt.SetVisible(enabled);
 
         var shop = mb.GetComponent<ShopTrigger>();
         if (shop != null && shop.pressEHint != null)

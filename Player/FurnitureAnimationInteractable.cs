@@ -46,6 +46,15 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [Tooltip("シーン開始時にループを有効にしたい場合は true。")]
     [SerializeField] private bool startLoopActive = false;
 
+    [Header("Interaction UI")]
+    public InteractionBillboardPrompt interactionPrompt;
+    [Tooltip("ビルボードUIの文言を差し替える場合は true にしてテキストを設定します。")]
+    [SerializeField] private bool overridePromptText = false;
+    [SerializeField] private string promptTextOverride = string.Empty;
+    [Tooltip("ビルボードUIのアイコンを差し替える場合は true にしてアイコンを設定します。")]
+    [SerializeField] private bool overridePromptIcon = false;
+    [SerializeField] private Sprite promptIconOverride;
+
     private bool isLooping;
 
     /// <summary>
@@ -61,6 +70,8 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     private void Awake()
     {
         TryAssignAnimator(); // 既存：子から Animator を拾う:contentReference[oaicite:1]{index=1}
+
+        InitializeInteractionPrompt();
 
         if (targetAnimator != null)
         {
@@ -84,6 +95,20 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         if (targetAnimator == null)
         {
             targetAnimator = GetComponentInChildren<Animator>();
+        }
+    }
+
+    private void InitializeInteractionPrompt()
+    {
+        if (interactionPrompt == null)
+        {
+            interactionPrompt = GetComponentInChildren<InteractionBillboardPrompt>(true);
+        }
+
+        if (interactionPrompt != null)
+        {
+            interactionPrompt.ApplyOverrides(promptTextOverride, overridePromptText, promptIconOverride, overridePromptIcon);
+            interactionPrompt.SetVisible(false);
         }
     }
 
