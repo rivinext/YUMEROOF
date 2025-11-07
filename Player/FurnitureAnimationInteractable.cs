@@ -1,10 +1,11 @@
 using UnityEngine;
+using UnityEngine.Localization;
 
 /// <summary>
 /// 家具などのオブジェクトに割り当てて、プレイヤーがEキーでインタラクトした際に
 /// アニメーションを再生・停止させるためのコンポーネント。
 /// </summary>
-public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
+public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInteractableBillboardPromptSource
 {
     public enum InteractionAnimationMode
     {
@@ -46,6 +47,15 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [Tooltip("シーン開始時にループを有効にしたい場合は true。")]
     [SerializeField] private bool startLoopActive = false;
 
+    [Header("Interaction Prompt")]
+    [SerializeField] private InteractableBillboardPrompt prompt;
+    [SerializeField] private Transform promptAnchor;
+    [SerializeField] private LocalizedString interactionMessage = new LocalizedString();
+    [SerializeField, TextArea] private string interactionMessageFallback;
+    [SerializeField] private Sprite interactionIcon;
+    [SerializeField] private bool useCustomPromptOffset;
+    [SerializeField] private Vector3 promptWorldOffset = Vector3.zero;
+
     private bool isLooping;
 
     /// <summary>
@@ -76,6 +86,11 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         if (interactionMode == InteractionAnimationMode.ToggleLoop)
         {
             ApplyLoopState();                               //:contentReference[oaicite:3]{index=3}
+        }
+
+        if (promptAnchor == null)
+        {
+            promptAnchor = transform;
         }
     }
 
@@ -185,5 +200,28 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
 
         targetAnimator.ResetTrigger(triggerName);
         targetAnimator.SetTrigger(triggerName);
+    }
+
+    public bool TryGetPromptRequest(out InteractableBillboardPromptRequest request)
+    {
+        if (prompt != null)
+        {
+            request = new InteractableBillboardPromptRequest
+            {
+                Prompt = prompt,
+                Interactable = this,
+                Anchor = promptAnchor != null ? promptAnchor : transform,
+                WorldOffset = promptWorldOffset,
+                LocalizedMessage = interactionMessage,
+                FallbackMessage = interactionMessageFallback,
+                Icon = interactionIcon,
+                HasCustomOffset = useCustomPromptOffset,
+                HasFallbackMessage = !string.IsNullOrEmpty(interactionMessageFallback)
+            };
+            return true;
+        }
+
+        request = default;
+        return false;
     }
 }
