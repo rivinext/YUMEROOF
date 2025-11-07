@@ -1,6 +1,7 @@
 using UnityEngine;
+using UnityEngine.Localization;
 
-public class SitTrigger : MonoBehaviour, IInteractable
+public class SitTrigger : MonoBehaviour, IInteractable, IInteractableBillboardPromptSource
 {
     [SerializeField, Tooltip("List of potential seat anchors. The closest valid anchor to the player will be used when sitting.")]
     private Transform[] seatAnchors;
@@ -10,6 +11,27 @@ public class SitTrigger : MonoBehaviour, IInteractable
 
     [Header("Interaction UI")]
     public GameObject interactionPrompt;
+
+    [SerializeField]
+    private InteractableBillboardPrompt prompt;
+
+    [SerializeField]
+    private Transform promptAnchor;
+
+    [SerializeField]
+    private LocalizedString interactionMessage = new LocalizedString();
+
+    [SerializeField, TextArea]
+    private string interactionMessageFallback;
+
+    [SerializeField]
+    private Sprite interactionIcon;
+
+    [SerializeField]
+    private bool useCustomPromptOffset;
+
+    [SerializeField]
+    private Vector3 promptWorldOffset = Vector3.zero;
 
     private PlayerController player;
 
@@ -24,12 +46,40 @@ public class SitTrigger : MonoBehaviour, IInteractable
         {
             seatAnchor = transform;
         }
+
+        if (promptAnchor == null)
+        {
+            promptAnchor = seatAnchor != null ? seatAnchor : transform;
+        }
     }
 
     private void Start()
     {
         if (interactionPrompt != null)
             interactionPrompt.SetActive(false);
+    }
+
+    public bool TryGetPromptRequest(out InteractableBillboardPromptRequest request)
+    {
+        if (prompt != null)
+        {
+            request = new InteractableBillboardPromptRequest
+            {
+                Prompt = prompt,
+                Interactable = this,
+                Anchor = promptAnchor != null ? promptAnchor : transform,
+                WorldOffset = promptWorldOffset,
+                LocalizedMessage = interactionMessage,
+                FallbackMessage = interactionMessageFallback,
+                Icon = interactionIcon,
+                HasCustomOffset = useCustomPromptOffset,
+                HasFallbackMessage = !string.IsNullOrEmpty(interactionMessageFallback)
+            };
+            return true;
+        }
+
+        request = default;
+        return false;
     }
 
     public void Interact()

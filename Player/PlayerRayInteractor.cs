@@ -145,6 +145,24 @@ public class PlayerRayInteractor : MonoBehaviour
                 highlighter.Clear();
         }
 
+        if (mb != null && mb.TryGetComponent<IInteractableBillboardPromptSource>(out var promptSource) &&
+            promptSource.TryGetPromptRequest(out var promptRequest) && promptRequest.Prompt != null)
+        {
+            if (promptRequest.Interactable == null)
+            {
+                promptRequest.Interactable = mb;
+            }
+
+            if (enabled)
+            {
+                promptRequest.Prompt.Show(promptRequest);
+            }
+            else
+            {
+                promptRequest.Prompt.Hide(promptRequest.Interactable);
+            }
+        }
+
         if (enabled && mb != null)
         {
             // BuildingGhostInteractableの場合：ヒント文字列を使って通常版を表示
@@ -176,10 +194,6 @@ public class PlayerRayInteractor : MonoBehaviour
                 bed.interactionPrompt.SetActive(enabled);
             bed.isPlayerNearby = enabled;
         }
-
-        var sit = mb.GetComponent<SitTrigger>();
-        if (sit != null && sit.interactionPrompt != null)
-            sit.interactionPrompt.SetActive(enabled);
 
         var shop = mb.GetComponent<ShopTrigger>();
         if (shop != null && shop.pressEHint != null)
