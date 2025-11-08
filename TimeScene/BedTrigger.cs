@@ -96,6 +96,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             sleepAnchor = transform;
         }
 
+        ResolveSleepAnimator();
         ResolvePlayerController();
     }
 
@@ -110,6 +111,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     public void Interact()
     {
+        ResolveSleepAnimator();
+
         if (isWaitingForSleepAnimation || isWaitingForStandUpAnimation)
             return;
 
@@ -140,6 +143,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     void HandleStandUpInteraction()
     {
+        ResolveSleepAnimator();
+
         bool shouldAwaitStandUpAnimation = sleepAnimator != null && !string.IsNullOrEmpty(wakeStateName);
         bool hasTriggered = TryTriggerStandUpAnimation();
 
@@ -287,6 +292,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     bool TryTriggerSleepAnimation()
     {
+        ResolveSleepAnimator();
+
         if (sleepAnimator == null)
             return false;
 
@@ -318,6 +325,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     bool TryTriggerStandUpAnimation()
     {
+        ResolveSleepAnimator();
+
         if (sleepAnimator == null)
             return false;
 
@@ -642,4 +651,40 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         isWaitingForSleepAnimation = false;
         isWaitingForStandUpAnimation = false;
     }
+
+    void ResolveSleepAnimator()
+    {
+        if (sleepAnimator != null)
+            return;
+
+        var bedController = FindFirstObjectByType<BedInteractionController>();
+        if (bedController != null)
+        {
+            sleepAnimator = bedController.GetComponent<Animator>();
+
+            if (sleepAnimator == null)
+                sleepAnimator = bedController.GetComponentInChildren<Animator>();
+        }
+
+        if (sleepAnimator == null)
+            sleepAnimator = GetComponent<Animator>();
+
+        if (sleepAnimator == null)
+            sleepAnimator = GetComponentInChildren<Animator>();
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (sleepAnimator == null)
+        {
+            ResolveSleepAnimator();
+
+            if (sleepAnimator == null)
+            {
+                Debug.LogWarning($"{nameof(BedTrigger)} on '{name}' is missing a sleep animator reference.", this);
+            }
+        }
+    }
+#endif
 }
