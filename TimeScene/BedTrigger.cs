@@ -1,6 +1,6 @@
+using System;
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// Trigger for sleeping in the bed. Allows sleeping only during specified hours
@@ -17,14 +17,12 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField] private float promptOffset = 1f;
     [SerializeField] private string promptLocalizationKey = string.Empty;
 
-    [Header("Interaction UI")]
-    public GameObject interactionPanel;
+    [Header("Interaction State")]
     public bool isPlayerNearby = false;
-    bool isPanelOpen = false;
     bool isWaitingForSleepAnimation = false;
     bool isWaitingForStandUpAnimation = false;
     bool isInBedIdleState = false;
-    Canvas cachedPanelCanvas;
+    Coroutine sleepRoutine;
 
     private PlayerController cachedPlayerController;
     private bool cachedPlayerInputState = true;
@@ -61,30 +59,16 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField, Tooltip("Player anchor used when initiating the sleep animation. Defaults to this transform if unset.")]
     private Transform sleepAnchor;
 
-    [Header("Panel Buttons")]
-    public Button sleepButton;
-    public Button cancelButton;
-
-    [Header("Panel Area")]
-    [Tooltip("Main clickable area of the interaction panel. Clicking outside this area will close the panel.")]
-    public RectTransform panelContentArea;
-    [Tooltip("Optional camera used for UI raycasts. Leave empty for Screen Space Overlay canvases.")]
-    public Camera uiCamera;
-
     [Header("Transition UI")]
     public SleepTransitionUIManager transitionUI;
+
+    BedInteractionController cachedBedInteractionController;
 
     public Transform SleepAnchor => sleepAnchor != null ? sleepAnchor : transform;
 
     void Start()
     {
         clock = GameClock.Instance;
-
-        if (interactionPanel != null)
-            interactionPanel.SetActive(false);
-
-        if (panelContentArea != null)
-            cachedPanelCanvas = panelContentArea.GetComponentInParent<Canvas>();
 
         if (promptAnchor == null)
             promptAnchor = transform;
@@ -100,15 +84,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         ResolvePlayerController();
     }
 
-    void Update()
-    {
-        if (isPanelOpen)
-        {
-            UpdateSleepButtonState();
-            HandlePanelInput();
-        }
-    }
-
     public void Interact()
     {
         ResolveSleepAnimator();
@@ -118,9 +93,20 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         if (isInBedIdleState)
         {
+            if (IsSleepRoutineRunning())
+                return;
+
             HandleStandUpInteraction();
             return;
         }
+
+        if (!CanSleep())
+        {
+            Debug.Log("Cannot sleep right now.");
+            return;
+        }
+
+        TriggerSleepMovementSequence();
 
         bool shouldAwaitSleepAnimation = sleepAnimator != null && !string.IsNullOrEmpty(sleepStateName);
 
@@ -134,16 +120,22 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
                 hasWarnedMissingSleepTrigger = true;
             }
 
+            isWaitingForSleepAnimation = true;
             StartCoroutine(WaitForSleepAnimation());
             return;
         }
 
-        CompleteSleepInteraction();
+        EnterBedIdleState();
     }
 
     void HandleStandUpInteraction()
     {
+        if (IsSleepRoutineRunning())
+            return;
+
         ResolveSleepAnimator();
+
+        promptController?.HidePrompt(this);
 
         bool shouldAwaitStandUpAnimation = sleepAnimator != null && !string.IsNullOrEmpty(wakeStateName);
         bool hasTriggered = TryTriggerStandUpAnimation();
@@ -201,17 +193,12 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         isWaitingForSleepAnimation = false;
         EnterBedIdleState();
-        CompleteSleepInteraction();
     }
 
     public void OnSleepAnimationComplete()
     {
-        if (isPanelOpen)
-            return;
-
         isWaitingForSleepAnimation = false;
         EnterBedIdleState();
-        CompleteSleepInteraction();
     }
 
     IEnumerator WaitForStandUpAnimation()
@@ -363,6 +350,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         isInBedIdleState = true;
         LockPlayerMovement();
+        BeginSleepRoutine();
     }
 
     void ExitBedIdleState()
@@ -419,118 +407,52 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         return cachedPlayerController;
     }
 
-    void CompleteSleepInteraction()
+    BedInteractionController ResolveBedInteractionController()
     {
-        if (isPanelOpen)
-            return;
+        if (cachedBedInteractionController != null && cachedBedInteractionController.isActiveAndEnabled)
+            return cachedBedInteractionController;
 
-        OpenPanel();
-        SetupPanelButtons();
-        UpdateSleepButtonState();
+        cachedBedInteractionController = FindFirstObjectByType<BedInteractionController>();
+        return cachedBedInteractionController;
     }
 
-    void OpenPanel()
+    void TriggerSleepMovementSequence()
     {
-        isPanelOpen = true;
-
         promptController?.HidePrompt(this);
 
-        if (interactionPanel != null)
-        {
-            interactionPanel.SetActive(true);
+        var bedController = ResolveBedInteractionController();
 
-            // Disable player input while panel is open
-            PlayerController.SetGlobalInputEnabled(false);
+        if (transitionUI != null)
+        {
+            transitionUI.BeginSleepSequence(this);
+        }
+        else if (bedController != null)
+        {
+            bedController.BeginSleepSequence(this);
         }
     }
 
-    void ClosePanel()
+    void BeginSleepRoutine()
     {
-        isPanelOpen = false;
-
-        if (interactionPanel != null)
-            interactionPanel.SetActive(false);
-
-        ShowPromptIfNearby();
-
-        PlayerController.SetGlobalInputEnabled(true);
-    }
-
-    void HandlePanelInput()
-    {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            ClosePanel();
+        if (sleepRoutine != null)
             return;
-        }
 
-        if (Input.GetMouseButtonDown(0) && !IsPointerOverPanelContent())
-        {
-            ClosePanel();
+        if (clock == null)
+            clock = GameClock.Instance;
+
+        if (clock == null)
             return;
-        }
 
-        if (Input.touchCount > 0)
-        {
-            Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began && !IsPointerOverPanelContent(touch.position))
-            {
-                ClosePanel();
-            }
-        }
-    }
-
-    bool IsPointerOverPanelContent()
-    {
-        return IsPointerOverPanelContent(Input.mousePosition);
-    }
-
-    bool IsPointerOverPanelContent(Vector2 screenPosition)
-    {
-        if (panelContentArea == null)
-            return true; // Without a defined area we assume the click is valid.
-
-        Camera cameraToUse = uiCamera;
-        if (cachedPanelCanvas != null)
-        {
-            if (cachedPanelCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
-            {
-                cameraToUse = null;
-            }
-            else if (cameraToUse == null)
-            {
-                cameraToUse = cachedPanelCanvas.worldCamera;
-            }
-        }
-
-        return RectTransformUtility.RectangleContainsScreenPoint(panelContentArea, screenPosition, cameraToUse);
-    }
-
-    void SetupPanelButtons()
-    {
-        if (sleepButton != null)
-        {
-            sleepButton.onClick.RemoveAllListeners();
-            sleepButton.onClick.AddListener(StartSleep);
-        }
-        if (cancelButton != null)
-        {
-            cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(ClosePanel);
-        }
-    }
-
-    void StartSleep()
-    {
-        if (clock == null) return;
-        StartCoroutine(SleepRoutine());
+        sleepRoutine = StartCoroutine(SleepRoutine());
     }
 
     IEnumerator SleepRoutine()
     {
         if (!CanSleep())
         {
-            Debug.Log("It's not time to sleep yet.");
+            Debug.Log("Cannot sleep right now.");
+            sleepRoutine = null;
+            ExitBedIdleState();
             yield break;
         }
 
@@ -542,22 +464,21 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         // new drops after this cleanup.
         DropMaterialSaveManager.Instance?.ClearAllDrops();
 
-        ClosePanel();
-        BedInteractionController bedController = null;
+        System.Action onDayShownHandler = null;
 
         if (transitionUI != null)
         {
-            void OnDayShownHandler()
+            void HandleDayShown()
             {
                 // Advance the day and notify sleep-specific listeners.
                 clock.SetTimeAndAdvanceDay(sleepEndMinutes);
                 clock.TriggerSleepAdvancedDay();
                 AcquireRecipes();
-                transitionUI.OnDayShown -= OnDayShownHandler;
+                transitionUI.OnDayShown -= HandleDayShown;
             }
 
-            transitionUI.OnDayShown += OnDayShownHandler;
-            transitionUI.BeginSleepSequence(this);
+            onDayShownHandler = HandleDayShown;
+            transitionUI.OnDayShown += onDayShownHandler;
             transitionUI.PlayTransition(clock.currentDay + 1);
         }
         else
@@ -566,12 +487,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             clock.SetTimeAndAdvanceDay(sleepEndMinutes);
             clock.TriggerSleepAdvancedDay();
             AcquireRecipes();
-
-            bedController = FindFirstObjectByType<BedInteractionController>();
-            if (bedController != null)
-            {
-                bedController.BeginSleepSequence(this);
-            }
         }
 
         PlayerController.SetGlobalInputEnabled(false);
@@ -587,7 +502,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         clock.SetTimeScale(resumeScale);
         PlayerController.SetGlobalInputEnabled(true);
-        ShowPromptIfNearby();
 
         if (transitionUI != null)
         {
@@ -595,25 +509,30 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
         else
         {
+            var bedController = ResolveBedInteractionController();
             if (bedController != null)
-            {
                 bedController.EndSleepSequence(this);
-            }
         }
 
+        if (transitionUI != null && onDayShownHandler != null)
+            transitionUI.OnDayShown -= onDayShownHandler;
+
+        sleepRoutine = null;
         ExitBedIdleState();
     }
 
     bool CanSleep()
     {
+        if (clock == null)
+            return false;
+
         float minutes = clock.currentMinutes;
         return minutes >= sleepStartMinutes || minutes < sleepEndMinutes;
     }
 
-    void UpdateSleepButtonState()
+    bool IsSleepRoutineRunning()
     {
-        if (sleepButton != null)
-            sleepButton.interactable = CanSleep();
+        return sleepRoutine != null;
     }
 
     void AcquireRecipes()
@@ -648,8 +567,16 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             isInBedIdleState = false;
         }
 
+        if (sleepRoutine != null)
+        {
+            StopCoroutine(sleepRoutine);
+            sleepRoutine = null;
+        }
+
         isWaitingForSleepAnimation = false;
         isWaitingForStandUpAnimation = false;
+
+        PlayerController.SetGlobalInputEnabled(true);
     }
 
     void ResolveSleepAnimator()
