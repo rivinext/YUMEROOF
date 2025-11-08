@@ -312,7 +312,11 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             if (!animator.IsInTransition(0))
             {
                 AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-                if (stateInfo.normalizedTime >= 1f)
+                bool reachedIdle = !string.IsNullOrEmpty(bedIdleStateName)
+                    ? stateInfo.IsName(bedIdleStateName)
+                    : stateInfo.normalizedTime >= 1f;
+
+                if (reachedIdle)
                     break;
             }
 
