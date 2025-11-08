@@ -343,9 +343,9 @@ public class PlayerController : MonoBehaviour
         sitStateController?.StartStandUpMove();
     }
 
-    public void BeginBedIdle(Transform bedAnchor, BedAnimationDriver driver)
+    public void BeginBedIdle(Transform bedAnchor, BedAnimationDriver driver, bool forceSnapToAnchor = false)
     {
-        bedStateController?.BeginBedIdle(bedAnchor, driver);
+        bedStateController?.BeginBedIdle(bedAnchor, driver, forceSnapToAnchor);
     }
 
     private void EmitStep(bool isRun)

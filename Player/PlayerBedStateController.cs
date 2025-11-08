@@ -77,7 +77,7 @@ public class PlayerBedStateController : MonoBehaviour
     /// </summary>
     /// <param name="trigger">The trigger that initiated the bed entry.</param>
     /// <param name="onCompleted">Optional callback invoked when entry completes.</param>
-    public void BeginBedEntry(BedTrigger trigger, Action onCompleted = null)
+    public void BeginBedEntry(BedTrigger trigger, Action onCompleted = null, bool forceSnapToAnchor = false)
     {
         if (playerController == null || trigger == null)
         {
@@ -97,7 +97,7 @@ public class PlayerBedStateController : MonoBehaviour
         activeDriver = trigger.AnimationDriver;
         bedAnchor = ResolveBedAnchor(trigger);
 
-        PrepareForBedState();
+        PrepareForBedState(forceSnapToAnchor);
 
         isWaitingForBedInCompletion = true;
 
@@ -122,7 +122,7 @@ public class PlayerBedStateController : MonoBehaviour
     /// </summary>
     /// <param name="bedAnchor">Anchor transform representing the bed idle pose.</param>
     /// <param name="driver">Animation driver responsible for bed in/out animations.</param>
-    public void BeginBedIdle(Transform bedAnchor, BedAnimationDriver driver)
+    public void BeginBedIdle(Transform bedAnchor, BedAnimationDriver driver, bool forceSnapToAnchor = false)
     {
         if (playerController == null || bedAnchor == null)
         {
@@ -135,7 +135,7 @@ public class PlayerBedStateController : MonoBehaviour
         activeDriver = driver;
         activeTrigger = ResolveBedTrigger(driver, bedAnchor);
 
-        PrepareForBedState();
+        PrepareForBedState(forceSnapToAnchor);
         EnterBedIdleState();
     }
 
@@ -280,7 +280,7 @@ public class PlayerBedStateController : MonoBehaviour
         return trigger.transform;
     }
 
-    private void PrepareForBedState()
+    private void PrepareForBedState(bool forceSnapToAnchor)
     {
         if (animator != null)
         {
@@ -296,7 +296,12 @@ public class PlayerBedStateController : MonoBehaviour
         PlayerController.SetGlobalInputEnabled(false);
         playerController.SetInputEnabled(false);
 
-        SnapToAnchor();
+        bool shouldSnapToAnchor = forceSnapToAnchor || activeDriver != null || disableRootMotionDuringBedState;
+
+        if (shouldSnapToAnchor)
+        {
+            SnapToAnchor();
+        }
 
         if (rb != null)
         {
