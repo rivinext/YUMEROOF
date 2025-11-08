@@ -35,6 +35,12 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField] private Animator sleepAnimator;
     [SerializeField] private string sleepStateName = string.Empty;
     [SerializeField, Range(0f, 1f)] private float sleepStateNormalizedTimeThreshold = 0.99f;
+    [SerializeField, Tooltip("Animator trigger name(s) used to start the sleep animation.")]
+    private string sleepTriggerName = string.Empty;
+    [SerializeField, Tooltip("Optional additional animator triggers that should be fired together.")]
+    private string[] additionalSleepTriggerNames = System.Array.Empty<string>();
+
+    private bool hasWarnedMissingSleepTrigger;
 
     [Header("Player Positioning")]
     [SerializeField, Tooltip("Player anchor used when initiating the sleep animation. Defaults to this transform if unset.")]
@@ -87,15 +93,26 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     public void Interact()
     {
-        if (sleepAnimator != null && !string.IsNullOrEmpty(sleepStateName))
+        if (isWaitingForSleepAnimation)
+            return;
+
+        bool shouldAwaitSleepAnimation = sleepAnimator != null && !string.IsNullOrEmpty(sleepStateName);
+
+        if (shouldAwaitSleepAnimation)
         {
-            if (!isWaitingForSleepAnimation)
-                StartCoroutine(WaitForSleepAnimation());
+            bool hasTriggered = TryTriggerSleepAnimation();
+
+            if (!hasTriggered && !HasConfiguredSleepTrigger() && !hasWarnedMissingSleepTrigger)
+            {
+                Debug.LogWarning($"{nameof(BedTrigger)} on '{name}' has a sleep animator configured but no trigger name. The sleep animation will not be started automatically.", this);
+                hasWarnedMissingSleepTrigger = true;
+            }
+
+            StartCoroutine(WaitForSleepAnimation());
+            return;
         }
-        else
-        {
-            CompleteSleepInteraction();
-        }
+
+        CompleteSleepInteraction();
     }
 
     IEnumerator WaitForSleepAnimation()
@@ -138,6 +155,54 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         isWaitingForSleepAnimation = false;
         CompleteSleepInteraction();
+    }
+
+    bool HasConfiguredSleepTrigger()
+    {
+        if (!string.IsNullOrEmpty(sleepTriggerName))
+            return true;
+
+        if (additionalSleepTriggerNames == null)
+            return false;
+
+        for (int i = 0; i < additionalSleepTriggerNames.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(additionalSleepTriggerNames[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    bool TryTriggerSleepAnimation()
+    {
+        if (sleepAnimator == null)
+            return false;
+
+        bool hasTriggered = false;
+
+        if (!string.IsNullOrEmpty(sleepTriggerName))
+        {
+            sleepAnimator.ResetTrigger(sleepTriggerName);
+            sleepAnimator.SetTrigger(sleepTriggerName);
+            hasTriggered = true;
+        }
+
+        if (additionalSleepTriggerNames != null)
+        {
+            for (int i = 0; i < additionalSleepTriggerNames.Length; i++)
+            {
+                string trigger = additionalSleepTriggerNames[i];
+                if (string.IsNullOrEmpty(trigger))
+                    continue;
+
+                sleepAnimator.ResetTrigger(trigger);
+                sleepAnimator.SetTrigger(trigger);
+                hasTriggered = true;
+            }
+        }
+
+        return hasTriggered;
     }
 
     void CompleteSleepInteraction()
