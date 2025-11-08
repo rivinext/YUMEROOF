@@ -66,6 +66,9 @@ public class SleepTransitionUIManager : MonoBehaviour
 
     private void Awake()
     {
+        if (canvas == null)
+            canvas = GetComponentInChildren<Canvas>(true);
+
         if (canvas != null)
             canvas.enabled = false;
         if (unlockPanel != null)
