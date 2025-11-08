@@ -13,8 +13,10 @@ public class PlayerBedStateController : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private Rigidbody rb;
     [Header("Animator Parameters")]
-    [SerializeField] private string bedInTriggerName = "BedIn";
-    [SerializeField] private string bedOutTriggerName = "BedOut";
+    [SerializeField] private string bedInTrigger = "BedIn";
+    [SerializeField] private string bedIdleBool = "BedIdle";
+    [SerializeField] private string bedOutTrigger = "BedOut";
+    [SerializeField] private bool disableRootMotionDuringBedState;
 
     private Transform bedAnchor;
     private BedAnimationDriver activeDriver;
@@ -101,18 +103,13 @@ public class PlayerBedStateController : MonoBehaviour
 
         SubscribeToDriverEvents();
 
-        bool triggeredAnimation = false;
-        if (animator != null && !string.IsNullOrEmpty(bedInTriggerName))
-        {
-            animator.SetTrigger(bedInTriggerName);
-            triggeredAnimation = true;
-        }
-
         if (activeDriver != null)
         {
             activeDriver.PlayBedIn(null);
             return;
         }
+
+        bool triggeredAnimation = TryTriggerBedInAnimation();
 
         if (!triggeredAnimation)
         {
@@ -173,27 +170,23 @@ public class PlayerBedStateController : MonoBehaviour
 
         if (activeDriver != null)
         {
-            if (!string.IsNullOrEmpty(bedOutTriggerName) && animator != null)
-            {
-                animator.SetTrigger(bedOutTriggerName);
-            }
-
             activeDriver.PlayBedOut(null);
             return;
         }
 
-        if (animator != null && !string.IsNullOrEmpty(bedOutTriggerName))
-        {
-            animator.SetTrigger(bedOutTriggerName);
-            return;
-        }
+        bool triggeredAnimation = TryTriggerBedOutAnimation();
 
-        HandleBedOutCompleted();
+        if (!triggeredAnimation)
+        {
+            HandleBedOutCompleted();
+        }
     }
 
     private void HandleBedOutCompleted()
     {
         isBedOutInProgress = false;
+
+        SetBedIdleState(false);
 
         if (!isBedIdle)
         {
@@ -237,6 +230,8 @@ public class PlayerBedStateController : MonoBehaviour
         activeTrigger = null;
         isWaitingForBedInCompletion = false;
         pendingBedInCallback = null;
+
+        ClearAnimatorBedParameters();
     }
 
     private void SnapToAnchor()
@@ -291,7 +286,11 @@ public class PlayerBedStateController : MonoBehaviour
         {
             cachedRootMotionState = animator.applyRootMotion;
             hasCachedRootMotion = true;
-            animator.applyRootMotion = false;
+
+            if (ShouldDisableRootMotionForBedState())
+            {
+                animator.applyRootMotion = false;
+            }
         }
 
         PlayerController.SetGlobalInputEnabled(false);
@@ -316,6 +315,8 @@ public class PlayerBedStateController : MonoBehaviour
         isBedIdle = true;
         isBedOutInProgress = false;
         isWaitingForBedInCompletion = false;
+
+        SetBedIdleState(true);
 
         if (activeDriver != null)
         {
@@ -363,12 +364,14 @@ public class PlayerBedStateController : MonoBehaviour
     /// <summary>
     /// Animation event hook to signal that the bed-in animation finished.
     /// </summary>
-    public void NotifyBedInAnimationCompleted()
+    public void OnBedInAnimationComplete()
     {
-        if (!isWaitingForBedInCompletion)
+        if (!isWaitingForBedInCompletion || activeDriver != null)
         {
             return;
         }
+
+        SetBedIdleState(true);
 
         EnterBedIdleState();
     }
@@ -376,8 +379,101 @@ public class PlayerBedStateController : MonoBehaviour
     /// <summary>
     /// Animation event hook to signal that the bed-out animation finished.
     /// </summary>
-    public void NotifyBedOutAnimationCompleted()
+    public void OnBedOutAnimationComplete()
     {
+        if (activeDriver != null)
+        {
+            return;
+        }
+
+        SetBedIdleState(false);
+
         HandleBedOutCompleted();
+    }
+
+    private bool TryTriggerBedInAnimation()
+    {
+        if (animator == null)
+        {
+            return false;
+        }
+
+        SetBedIdleState(false);
+
+        if (!string.IsNullOrEmpty(bedOutTrigger))
+        {
+            animator.ResetTrigger(bedOutTrigger);
+        }
+
+        if (string.IsNullOrEmpty(bedInTrigger))
+        {
+            return false;
+        }
+
+        animator.SetTrigger(bedInTrigger);
+        return true;
+    }
+
+    private bool TryTriggerBedOutAnimation()
+    {
+        if (animator == null)
+        {
+            return false;
+        }
+
+        SetBedIdleState(false);
+
+        if (!string.IsNullOrEmpty(bedInTrigger))
+        {
+            animator.ResetTrigger(bedInTrigger);
+        }
+
+        if (string.IsNullOrEmpty(bedOutTrigger))
+        {
+            return false;
+        }
+
+        animator.SetTrigger(bedOutTrigger);
+        return true;
+    }
+
+    private void SetBedIdleState(bool isIdle)
+    {
+        if (animator == null || string.IsNullOrEmpty(bedIdleBool))
+        {
+            return;
+        }
+
+        animator.SetBool(bedIdleBool, isIdle);
+    }
+
+    private void ClearAnimatorBedParameters()
+    {
+        SetBedIdleState(false);
+
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(bedInTrigger))
+        {
+            animator.ResetTrigger(bedInTrigger);
+        }
+
+        if (!string.IsNullOrEmpty(bedOutTrigger))
+        {
+            animator.ResetTrigger(bedOutTrigger);
+        }
+    }
+
+    private bool ShouldDisableRootMotionForBedState()
+    {
+        if (disableRootMotionDuringBedState)
+        {
+            return true;
+        }
+
+        return activeDriver != null;
     }
 }
