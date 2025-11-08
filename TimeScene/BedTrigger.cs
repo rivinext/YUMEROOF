@@ -102,6 +102,30 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             UpdateSleepButtonState();
             HandlePanelInput();
         }
+
+        if (!isPlayerInBed || isTransitioning)
+            return;
+
+        if (playerController == null || playerAnimator == null)
+            return;
+
+        if (!string.IsNullOrEmpty(bedIdleStateName))
+        {
+            AnimatorStateInfo stateInfo = playerAnimator.GetCurrentAnimatorStateInfo(0);
+            if (!stateInfo.IsName(bedIdleStateName))
+                return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
+        {
+            if (isPanelOpen)
+                ClosePanel();
+
+            if (!string.IsNullOrEmpty(bedOutTriggerName))
+                playerAnimator.SetTrigger(bedOutTriggerName);
+
+            StartCoroutine(ExitBedSequence(playerController, playerAnimator));
+        }
     }
 
     public void Interact()
