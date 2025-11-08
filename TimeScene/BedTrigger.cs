@@ -32,6 +32,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField] private string bedInTriggerName = "BedIn";
     [SerializeField] private string bedOutTriggerName = "BedOut";
     [SerializeField] private string bedIdleStateName = "BedIdle";
+    [SerializeField] private string movementIdleStateName = "Idle";
 
     private PlayerController playerController;
     private Animator playerAnimator;
@@ -330,15 +331,13 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         while (animator != null)
         {
-            if (!animator.IsInTransition(0))
-            {
-                AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-                bool finishedExit = stateInfo.normalizedTime >= 1f;
-                bool leftBedIdleState = string.IsNullOrEmpty(bedIdleStateName) || !stateInfo.IsName(bedIdleStateName);
+            AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+            bool finishedExit = !animator.IsInTransition(0) && stateInfo.normalizedTime >= 1f;
+            bool leftBedIdleState = string.IsNullOrEmpty(bedIdleStateName) || !stateInfo.IsName(bedIdleStateName);
+            bool reachedMovementIdleState = !string.IsNullOrEmpty(movementIdleStateName) && stateInfo.IsName(movementIdleStateName);
 
-                if (finishedExit && leftBedIdleState)
-                    break;
-            }
+            if ((finishedExit && leftBedIdleState) || reachedMovementIdleState)
+                break;
 
             yield return null;
         }
