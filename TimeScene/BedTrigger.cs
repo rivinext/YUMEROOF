@@ -121,9 +121,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             if (isPanelOpen)
                 ClosePanel();
 
-            if (!string.IsNullOrEmpty(bedOutTriggerName))
-                playerAnimator.SetTrigger(bedOutTriggerName);
-
             StartCoroutine(ExitBedSequence(playerController, playerAnimator));
         }
     }
@@ -336,11 +333,10 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             if (!animator.IsInTransition(0))
             {
                 AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-                bool reachedIdle = !string.IsNullOrEmpty(bedIdleStateName)
-                    ? stateInfo.IsName(bedIdleStateName)
-                    : stateInfo.normalizedTime >= 1f;
+                bool finishedExit = stateInfo.normalizedTime >= 1f;
+                bool leftBedIdleState = string.IsNullOrEmpty(bedIdleStateName) || !stateInfo.IsName(bedIdleStateName);
 
-                if (reachedIdle)
+                if (finishedExit && leftBedIdleState)
                     break;
             }
 
