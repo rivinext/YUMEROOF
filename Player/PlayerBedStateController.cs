@@ -18,6 +18,7 @@ public class PlayerBedStateController : MonoBehaviour
     [SerializeField] private string bedIdleStateName = "BedIdle";
     [SerializeField] private string bedOutCompletedStateName = "Idle";
     [SerializeField] private bool disableRootMotionDuringBedState;
+    [SerializeField] private bool triggerAnimatorWhenUsingDriver = true;
 
     private Transform bedAnchor;
     private BedAnimationDriver activeDriver;
@@ -115,6 +116,10 @@ public class PlayerBedStateController : MonoBehaviour
         if (shouldUseDriver && activeDriver != null)
         {
             SubscribeToDriverEvents();
+            if (triggerAnimatorWhenUsingDriver)
+            {
+                TryTriggerBedInAnimation();
+            }
             activeDriver.PlayBedIn(null);
             return;
         }
@@ -230,6 +235,10 @@ public class PlayerBedStateController : MonoBehaviour
 
         if (activeDriver != null)
         {
+            if (triggerAnimatorWhenUsingDriver)
+            {
+                TryTriggerBedOutAnimation();
+            }
             activeDriver.PlayBedOut(null);
             return;
         }
