@@ -21,6 +21,9 @@ public class BedInteractionController : MonoBehaviour
     [Tooltip("Optional root transform used when aligning the player to a bed anchor. Defaults to this transform.")]
     [SerializeField] private Transform snapRoot;
 
+    [Header("Movement")]
+    [SerializeField] private BedEntryMovementAnimator bedEntryMovementAnimator;
+
     private Rigidbody cachedRigidbody;
     private PlayerController playerController;
     private BedTrigger currentBed;
@@ -52,6 +55,7 @@ public class BedInteractionController : MonoBehaviour
         animator = GetComponent<Animator>();
         cachedRigidbody = GetComponent<Rigidbody>();
         playerController = GetComponent<PlayerController>();
+        bedEntryMovementAnimator = GetComponent<BedEntryMovementAnimator>();
     }
 
     private void Awake()
@@ -70,6 +74,16 @@ public class BedInteractionController : MonoBehaviour
         if (snapRoot == null)
         {
             snapRoot = transform;
+        }
+
+        if (bedEntryMovementAnimator == null)
+        {
+            bedEntryMovementAnimator = GetComponent<BedEntryMovementAnimator>();
+        }
+
+        if (bedEntryMovementAnimator != null && bedEntryMovementAnimator.MovementRoot == null && snapRoot != null)
+        {
+            bedEntryMovementAnimator.MovementRoot = snapRoot;
         }
     }
 
@@ -124,14 +138,30 @@ public class BedInteractionController : MonoBehaviour
             return false;
         }
 
-        AlignWithBedAnchor(currentBed);
-        TriggerAnimator(bedWakeTriggerName, false);
-        TriggerAnimator(bedSleepTriggerName, false);
-        TriggerAnimator(bedEnterTriggerName, true);
-
         isSleeping = true;
         isWakingUp = false;
         DisablePlayerInput();
+
+        BedTrigger entryBed = currentBed;
+        Transform anchor = entryBed.SleepAnchor;
+
+        void CompleteEntry()
+        {
+            AlignWithBedAnchor(entryBed);
+            TriggerAnimator(bedWakeTriggerName, false);
+            TriggerAnimator(bedSleepTriggerName, false);
+            TriggerAnimator(bedEnterTriggerName, true);
+        }
+
+        if (bedEntryMovementAnimator != null && anchor != null)
+        {
+            bedEntryMovementAnimator.PlayMovementSequence(anchor, CompleteEntry);
+        }
+        else
+        {
+            CompleteEntry();
+        }
+
         return true;
     }
 
