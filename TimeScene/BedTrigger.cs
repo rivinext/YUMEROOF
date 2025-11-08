@@ -52,6 +52,10 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     private string wakeStateName = string.Empty;
     [SerializeField, Range(0f, 1f)] private float wakeStateNormalizedTimeThreshold = 0.99f;
 
+    [Header("Sleep Confirmation")]
+    [SerializeField] private ConfirmationPopup sleepConfirmationPopup;
+    [SerializeField] private string sleepConfirmationMessage = "寝ますか？";
+
     private bool hasWarnedMissingSleepTrigger;
     private bool hasWarnedMissingWakeTrigger;
 
@@ -63,6 +67,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     public SleepTransitionUIManager transitionUI;
 
     BedInteractionController cachedBedInteractionController;
+    ConfirmationPopup cachedSleepConfirmationPopup;
+    bool isSleepConfirmationPending;
 
     public Transform SleepAnchor => sleepAnchor != null ? sleepAnchor : transform;
 
@@ -82,6 +88,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         ResolveSleepAnimator();
         ResolvePlayerController();
+        ResolveSleepConfirmationPopup();
     }
 
     public void Interact()
@@ -350,7 +357,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         isInBedIdleState = true;
         LockPlayerMovement();
-        BeginSleepRoutine();
+        ShowSleepConfirmation();
     }
 
     void ExitBedIdleState()
@@ -446,6 +453,27 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         sleepRoutine = StartCoroutine(SleepRoutine());
     }
 
+    void ShowSleepConfirmation()
+    {
+        var popup = ResolveSleepConfirmationPopup();
+
+        if (popup == null)
+        {
+            isSleepConfirmationPending = false;
+            BeginSleepRoutine();
+            return;
+        }
+
+        isSleepConfirmationPending = true;
+        popup.Open(sleepConfirmationMessage, HandleSleepConfirmed);
+    }
+
+    void HandleSleepConfirmed()
+    {
+        isSleepConfirmationPending = false;
+        BeginSleepRoutine();
+    }
+
     IEnumerator SleepRoutine()
     {
         if (!CanSleep())
@@ -535,6 +563,24 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         return sleepRoutine != null;
     }
 
+    void Update()
+    {
+        if (!isSleepConfirmationPending)
+            return;
+
+        var popup = ResolveSleepConfirmationPopup(false);
+        if (popup != null && popup.gameObject.activeInHierarchy)
+            return;
+
+        isSleepConfirmationPending = false;
+
+        if (IsSleepRoutineRunning())
+            return;
+
+        UnlockPlayerMovement();
+        ShowPromptIfNearby();
+    }
+
     void AcquireRecipes()
     {
         // TODO: Implement recipe acquisition based on Cozy/Nature values, day count, and milestones.
@@ -575,6 +621,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         isWaitingForSleepAnimation = false;
         isWaitingForStandUpAnimation = false;
+        isSleepConfirmationPending = false;
 
         PlayerController.SetGlobalInputEnabled(true);
     }
@@ -598,6 +645,25 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         if (sleepAnimator == null)
             sleepAnimator = GetComponentInChildren<Animator>();
+    }
+
+    ConfirmationPopup ResolveSleepConfirmationPopup(bool useFallback = true)
+    {
+        if (sleepConfirmationPopup != null)
+            return sleepConfirmationPopup;
+
+        if (cachedSleepConfirmationPopup != null)
+            return cachedSleepConfirmationPopup;
+
+        if (!useFallback)
+            return null;
+
+        cachedSleepConfirmationPopup = FindFirstObjectByType<ConfirmationPopup>();
+
+        if (cachedSleepConfirmationPopup != null)
+            sleepConfirmationPopup = cachedSleepConfirmationPopup;
+
+        return cachedSleepConfirmationPopup;
     }
 
 #if UNITY_EDITOR
