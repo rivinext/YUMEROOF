@@ -12,7 +12,8 @@ public class BedAnimationDriver : MonoBehaviour
     [Header("Animation Targets")]
     [SerializeField] private Transform animatedTransform;
     [SerializeField] private Transform anchorPoint;
-    [SerializeField] private Transform exitPoint;
+    [SerializeField, Tooltip("Optional exit point. Leave empty to return to the recorded start position.")]
+    private Transform exitPoint;
 
     [Header("Bed In Animation")]
     [SerializeField] private AnimationCurve bedInMovementCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);

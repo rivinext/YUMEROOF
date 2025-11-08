@@ -44,10 +44,13 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     public SleepTransitionUIManager transitionUI;
 
     [Header("Bed Animation")]
-    [SerializeField] private BedAnimationDriver bedAnimationDriver;
+    [SerializeField, Tooltip("Optional animation driver for non-Animator driven beds.")]
+    private BedAnimationDriver bedAnimationDriver;
 
     private PlayerController player;
     private PlayerBedStateController playerBedStateController;
+
+    public BedAnimationDriver AnimationDriver => bedAnimationDriver;
 
     void Start()
     {
@@ -81,25 +84,14 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     {
         EnsurePlayerReference();
 
-        if (bedAnimationDriver != null)
+        if (playerBedStateController == null)
         {
-            void OnBedInCompleted()
-            {
-                BeginBedIdleState();
-                OpenPanel();
-                SetupPanelButtons();
-                UpdateSleepButtonState();
-            }
+            return;
+        }
 
-            bedAnimationDriver.PlayBedIn(OnBedInCompleted);
-        }
-        else
-        {
-            BeginBedIdleState();
-            OpenPanel();
-            SetupPanelButtons();
-            UpdateSleepButtonState();
-        }
+        playerBedStateController.BedInCompleted -= HandleBedInCompleted;
+        playerBedStateController.BedInCompleted += HandleBedInCompleted;
+        playerBedStateController.BeginBedEntry(this);
     }
 
     void OpenPanel()
@@ -131,7 +123,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     void EnsurePlayerReference()
     {
-        if (player != null)
+        if (player != null && playerBedStateController != null)
             return;
 
         GameObject playerObj = GameObject.FindWithTag("Player");
@@ -142,37 +134,18 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
     }
 
-    void BeginBedIdleState()
+    void HandleBedInCompleted()
     {
-        if (player == null)
+        if (playerBedStateController == null || playerBedStateController.ActiveTrigger != this)
         {
             return;
         }
 
-        Transform bedAnchor = null;
-        if (bedAnimationDriver != null && bedAnimationDriver.AnchorPoint != null)
-        {
-            bedAnchor = bedAnimationDriver.AnchorPoint;
-        }
+        playerBedStateController.BedInCompleted -= HandleBedInCompleted;
 
-        if (bedAnchor == null)
-        {
-            bedAnchor = transform;
-        }
-
-        if (playerBedStateController == null)
-        {
-            playerBedStateController = player.GetComponent<PlayerBedStateController>();
-        }
-
-        if (playerBedStateController != null)
-        {
-            playerBedStateController.BeginBedIdle(bedAnchor, bedAnimationDriver);
-        }
-        else
-        {
-            Debug.LogWarning("PlayerBedStateController not found on player when trying to begin bed idle state.");
-        }
+        OpenPanel();
+        SetupPanelButtons();
+        UpdateSleepButtonState();
     }
 
     void HandlePanelInput()
@@ -336,6 +309,11 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     void OnDisable()
     {
+        if (playerBedStateController != null && playerBedStateController.ActiveTrigger == this)
+        {
+            playerBedStateController.BedInCompleted -= HandleBedInCompleted;
+        }
+
         promptController?.HidePrompt(this);
     }
 }
