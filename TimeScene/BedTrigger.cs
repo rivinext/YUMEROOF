@@ -25,6 +25,21 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     private SharedInteractionPromptController promptController;
 
+    [Header("Player Control")]
+    [SerializeField] private Transform bedAnchor;
+    [SerializeField] private AnimationCurve bedInHeightCurve = AnimationCurve.Linear(0f, 0f, 1f, 0f);
+    [SerializeField] private float bedTransitionDuration = 1f;
+    [SerializeField] private string bedInTriggerName = "BedIn";
+    [SerializeField] private string bedOutTriggerName = "BedOut";
+    [SerializeField] private string bedIdleStateName = "BedIdle";
+
+    private PlayerController playerController;
+    private Animator playerAnimator;
+    private Vector3 cachedPlayerPosition;
+    private Quaternion cachedPlayerRotation;
+    private bool isPlayerInBed;
+    private bool isTransitioning;
+
     [Header("Sleep Settings")]
     public int sleepStartMinutes = 20 * 60; // 8:00 PM
     public int sleepEndMinutes = 6 * 60;   // 6:00 AM
@@ -57,6 +72,27 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             promptAnchor = transform;
 
         promptController = SharedInteractionPromptController.Instance;
+
+        GameObject playerObject = GameObject.FindWithTag("Player");
+        if (playerObject != null)
+        {
+            playerController = playerObject.GetComponent<PlayerController>();
+            playerAnimator = playerObject.GetComponent<Animator>();
+            if (playerController == null)
+                Debug.LogWarning("BedTrigger could not find PlayerController on the player object.");
+            if (playerAnimator == null)
+                Debug.LogWarning("BedTrigger could not find Animator on the player object.");
+        }
+        else
+        {
+            Debug.LogWarning("BedTrigger could not find a GameObject with the 'Player' tag.");
+        }
+
+        if (bedAnchor == null)
+            Debug.LogWarning("BedTrigger: bedAnchor is not assigned.");
+
+        if (bedInHeightCurve == null)
+            Debug.LogWarning("BedTrigger: bedInHeightCurve is not assigned. Player movement will not include a height offset.");
     }
 
     void Update()
@@ -70,9 +106,32 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     public void Interact()
     {
-        OpenPanel();
-        SetupPanelButtons();
-        UpdateSleepButtonState();
+        if (isTransitioning)
+            return;
+
+        if (!isPlayerInBed)
+        {
+            if (playerController == null || playerAnimator == null || bedAnchor == null)
+            {
+                Debug.LogWarning("BedTrigger: Missing references required to enter the bed.");
+                return;
+            }
+
+            StartCoroutine(EnterBedSequence(playerController, playerAnimator));
+        }
+        else
+        {
+            if (isPanelOpen)
+                ClosePanel();
+
+            if (playerController == null || playerAnimator == null || bedAnchor == null)
+            {
+                Debug.LogWarning("BedTrigger: Missing references required to exit the bed.");
+                return;
+            }
+
+            StartCoroutine(ExitBedSequence(playerController, playerAnimator));
+        }
     }
 
     void OpenPanel()
@@ -88,31 +147,33 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             // Disable player input while panel is open
             PlayerController.SetGlobalInputEnabled(false);
         }
+
+        SetupPanelButtons();
+        UpdateSleepButtonState();
     }
 
-    void ClosePanel()
+    void ClosePanel(bool triggerExitSequence = false)
     {
         isPanelOpen = false;
 
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
 
-        ShowPromptIfNearby();
-
-        PlayerController.SetGlobalInputEnabled(true);
+        if (triggerExitSequence && isPlayerInBed && !isTransitioning)
+            StartCoroutine(ExitBedSequence(playerController, playerAnimator));
     }
 
     void HandlePanelInput()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            ClosePanel();
+            ClosePanel(true);
             return;
         }
 
         if (Input.GetMouseButtonDown(0) && !IsPointerOverPanelContent())
         {
-            ClosePanel();
+            ClosePanel(true);
             return;
         }
 
@@ -121,7 +182,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             Touch touch = Input.GetTouch(0);
             if (touch.phase == TouchPhase.Began && !IsPointerOverPanelContent(touch.position))
             {
-                ClosePanel();
+                ClosePanel(true);
             }
         }
     }
@@ -162,8 +223,110 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         if (cancelButton != null)
         {
             cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(ClosePanel);
+            cancelButton.onClick.AddListener(() => ClosePanel(true));
         }
+    }
+
+    IEnumerator EnterBedSequence(PlayerController controller, Animator animator)
+    {
+        if (controller == null || animator == null || bedAnchor == null)
+            yield break;
+
+        isTransitioning = true;
+
+        cachedPlayerPosition = controller.transform.position;
+        cachedPlayerRotation = controller.transform.rotation;
+
+        PlayerController.SetGlobalInputEnabled(false);
+
+        if (!string.IsNullOrEmpty(bedInTriggerName))
+            animator.SetTrigger(bedInTriggerName);
+
+        float duration = Mathf.Max(0.01f, bedTransitionDuration);
+        Vector3 targetPosition = bedAnchor.position;
+        Quaternion targetRotation = bedAnchor.rotation;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            float t = Mathf.Clamp01(elapsed / duration);
+            Vector3 basePosition = Vector3.Lerp(cachedPlayerPosition, targetPosition, t);
+            float heightOffset = bedInHeightCurve != null ? bedInHeightCurve.Evaluate(t) : 0f;
+            controller.transform.position = basePosition + Vector3.up * heightOffset;
+            controller.transform.rotation = Quaternion.Slerp(cachedPlayerRotation, targetRotation, t);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        float finalHeightOffset = bedInHeightCurve != null ? bedInHeightCurve.Evaluate(1f) : 0f;
+        controller.transform.position = targetPosition + Vector3.up * finalHeightOffset;
+        controller.transform.rotation = targetRotation;
+
+        while (animator != null)
+        {
+            AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+            bool reachedIdle = !string.IsNullOrEmpty(bedIdleStateName) && stateInfo.IsName(bedIdleStateName);
+            if (reachedIdle || (!animator.IsInTransition(0) && stateInfo.normalizedTime >= 1f))
+                break;
+            yield return null;
+        }
+
+        isPlayerInBed = true;
+        isTransitioning = false;
+
+        OpenPanel();
+    }
+
+    IEnumerator ExitBedSequence(PlayerController controller, Animator animator)
+    {
+        if (controller == null || animator == null || bedAnchor == null)
+            yield break;
+
+        isTransitioning = true;
+
+        if (!string.IsNullOrEmpty(bedOutTriggerName))
+            animator.SetTrigger(bedOutTriggerName);
+
+        Vector3 startPosition = controller.transform.position;
+        Quaternion startRotation = controller.transform.rotation;
+        Vector3 targetPosition = cachedPlayerPosition;
+        Quaternion targetRotation = cachedPlayerRotation;
+        float duration = Mathf.Max(0.01f, bedTransitionDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            float t = Mathf.Clamp01(elapsed / duration);
+            Vector3 basePosition = Vector3.Lerp(startPosition, targetPosition, t);
+            float heightOffset = bedInHeightCurve != null ? bedInHeightCurve.Evaluate(1f - t) : 0f;
+            controller.transform.position = basePosition + Vector3.up * heightOffset;
+            controller.transform.rotation = Quaternion.Slerp(startRotation, targetRotation, t);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        controller.transform.position = targetPosition;
+        controller.transform.rotation = targetRotation;
+
+        while (animator != null)
+        {
+            if (!animator.IsInTransition(0))
+            {
+                AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+                if (stateInfo.normalizedTime >= 1f)
+                    break;
+            }
+
+            yield return null;
+        }
+
+        PlayerController.SetGlobalInputEnabled(true);
+        isPlayerInBed = false;
+        isTransitioning = false;
+
+        ShowPromptIfNearby();
     }
 
     void StartSleep()
@@ -211,9 +374,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             AcquireRecipes();
         }
 
-        PlayerController.SetGlobalInputEnabled(false);
-        promptController?.HidePrompt(this);
-
         if (transitionUI != null)
             yield return new WaitUntil(() => !transitionUI.IsTransitionRunning);
 
@@ -223,8 +383,18 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             resumeScale = clock.timeScales[0];
 
         clock.SetTimeScale(resumeScale);
-        PlayerController.SetGlobalInputEnabled(true);
-        ShowPromptIfNearby();
+
+        if (playerController != null && playerAnimator != null && bedAnchor != null)
+        {
+            yield return ExitBedSequence(playerController, playerAnimator);
+        }
+        else
+        {
+            PlayerController.SetGlobalInputEnabled(true);
+            isPlayerInBed = false;
+            isTransitioning = false;
+            ShowPromptIfNearby();
+        }
     }
 
     bool CanSleep()
