@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Handles player interactions with beds, including tracking when the player enters
@@ -12,16 +13,24 @@ public class BedInteractionController : MonoBehaviour
     [Header("Animator")]
     [SerializeField] private Animator animator;
     [SerializeField] private string bedEnterTriggerName = "BedEnter";
-    [SerializeField] private string bedExitTriggerName = "BedExit";
+    [FormerlySerializedAs("bedExitTriggerName")]
+    [SerializeField] private string bedWakeTriggerName = "BedWake";
+    [SerializeField] private string bedSleepTriggerName = "BedSleep";
 
     [Header("Positioning")]
     [Tooltip("Optional root transform used when aligning the player to a bed anchor. Defaults to this transform.")]
     [SerializeField] private Transform snapRoot;
 
     private Rigidbody cachedRigidbody;
+    private PlayerController playerController;
     private BedTrigger currentBed;
     private bool isPlayerWithinBedRange;
     private bool isSleeping;
+    private bool isWakingUp;
+    private bool cachedGlobalInputState = true;
+    private bool cachedLocalInputState = true;
+    private bool didDisableGlobalInput;
+    private bool didDisableLocalInput;
 
     /// <summary>
     /// True while the player remains inside the trigger volume of the current bed.
@@ -42,6 +51,7 @@ public class BedInteractionController : MonoBehaviour
     {
         animator = GetComponent<Animator>();
         cachedRigidbody = GetComponent<Rigidbody>();
+        playerController = GetComponent<PlayerController>();
     }
 
     private void Awake()
@@ -52,6 +62,10 @@ public class BedInteractionController : MonoBehaviour
         }
 
         cachedRigidbody = GetComponent<Rigidbody>();
+        if (playerController == null)
+        {
+            playerController = GetComponent<PlayerController>();
+        }
 
         if (snapRoot == null)
         {
@@ -111,10 +125,13 @@ public class BedInteractionController : MonoBehaviour
         }
 
         AlignWithBedAnchor(currentBed);
-        TriggerAnimator(bedExitTriggerName, false);
+        TriggerAnimator(bedWakeTriggerName, false);
+        TriggerAnimator(bedSleepTriggerName, false);
         TriggerAnimator(bedEnterTriggerName, true);
 
         isSleeping = true;
+        isWakingUp = false;
+        DisablePlayerInput();
         return true;
     }
 
@@ -135,13 +152,10 @@ public class BedInteractionController : MonoBehaviour
         }
 
         TriggerAnimator(bedEnterTriggerName, false);
-        TriggerAnimator(bedExitTriggerName, true);
+        TriggerAnimator(bedSleepTriggerName, false);
+        TriggerAnimator(bedWakeTriggerName, true);
 
-        isSleeping = false;
-        if (!isPlayerWithinBedRange)
-        {
-            currentBed = null;
-        }
+        isWakingUp = true;
     }
 
     private void AlignWithBedAnchor(BedTrigger bed)
@@ -165,6 +179,91 @@ public class BedInteractionController : MonoBehaviour
 
         Transform root = snapRoot != null ? snapRoot : transform;
         root.SetPositionAndRotation(position, rotation);
+    }
+
+    /// <summary>
+    /// Called via animation event when the bed entry animation has fully transitioned
+    /// into the sleeping pose. Triggers the sleep state within the animator.
+    /// </summary>
+    public void HandleBedEntryCompleted()
+    {
+        if (!isSleeping || isWakingUp)
+        {
+            return;
+        }
+
+        TriggerAnimator(bedEnterTriggerName, false);
+        TriggerAnimator(bedSleepTriggerName, true);
+    }
+
+    /// <summary>
+    /// Called when the wake-up animation has fully finished playing. Restores the
+    /// player's ability to move and clears the sleep state.
+    /// </summary>
+    public void HandleWakeUpCompleted()
+    {
+        if (!isSleeping && !isWakingUp)
+        {
+            return;
+        }
+
+        TriggerAnimator(bedSleepTriggerName, false);
+        TriggerAnimator(bedWakeTriggerName, false);
+
+        isSleeping = false;
+        isWakingUp = false;
+
+        if (!isPlayerWithinBedRange)
+        {
+            currentBed = null;
+        }
+
+        RestorePlayerInput();
+    }
+
+    private void DisablePlayerInput()
+    {
+        cachedGlobalInputState = PlayerController.GlobalInputEnabled;
+        if (cachedGlobalInputState)
+        {
+            PlayerController.SetGlobalInputEnabled(false);
+            didDisableGlobalInput = true;
+        }
+
+        if (playerController == null)
+        {
+            playerController = GetComponent<PlayerController>();
+        }
+
+        if (playerController != null)
+        {
+            cachedLocalInputState = playerController.IsInputEnabled;
+            if (cachedLocalInputState)
+            {
+                playerController.SetInputEnabled(false);
+                didDisableLocalInput = true;
+            }
+        }
+    }
+
+    private void RestorePlayerInput()
+    {
+        if (didDisableGlobalInput)
+        {
+            PlayerController.SetGlobalInputEnabled(cachedGlobalInputState);
+            didDisableGlobalInput = false;
+        }
+
+        if (playerController == null)
+        {
+            playerController = GetComponent<PlayerController>();
+        }
+
+        if (playerController != null && didDisableLocalInput)
+        {
+            playerController.SetInputEnabled(cachedLocalInputState);
+            didDisableLocalInput = false;
+        }
     }
 
     private void TriggerAnimator(string triggerName, bool set)
