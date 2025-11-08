@@ -47,6 +47,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField] private BedAnimationDriver bedAnimationDriver;
 
     private PlayerController player;
+    private PlayerBedStateController playerBedStateController;
 
     void Start()
     {
@@ -137,6 +138,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         if (playerObj != null)
         {
             player = playerObj.GetComponent<PlayerController>();
+            playerBedStateController = playerObj.GetComponent<PlayerBedStateController>();
         }
     }
 
@@ -158,7 +160,19 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             bedAnchor = transform;
         }
 
-        player.BeginBedIdle(bedAnchor, bedAnimationDriver);
+        if (playerBedStateController == null)
+        {
+            playerBedStateController = player.GetComponent<PlayerBedStateController>();
+        }
+
+        if (playerBedStateController != null)
+        {
+            playerBedStateController.BeginBedIdle(bedAnchor, bedAnimationDriver);
+        }
+        else
+        {
+            Debug.LogWarning("PlayerBedStateController not found on player when trying to begin bed idle state.");
+        }
     }
 
     void HandlePanelInput()
