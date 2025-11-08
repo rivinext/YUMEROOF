@@ -56,6 +56,9 @@ public class SleepTransitionUIManager : MonoBehaviour
     [SerializeField] private float cardContainerFadeDuration = 0.5f;
     [SerializeField] private AnimationCurve cardContainerFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
+    [Header("Bed Interaction")]
+    [SerializeField] private BedInteractionController bedInteractionController;
+
     private Coroutine transitionCoroutine;
     public bool IsTransitionRunning => transitionCoroutine != null;
 
@@ -71,8 +74,22 @@ public class SleepTransitionUIManager : MonoBehaviour
             cardContainer.gameObject.SetActive(false);
         if (inventoryUI == null)
             inventoryUI = FindFirstObjectByType<InventoryUI>();
+        if (bedInteractionController == null)
+            bedInteractionController = FindFirstObjectByType<BedInteractionController>();
 
         SetInitialPanelPositions();
+    }
+
+    public void BeginSleepSequence(BedTrigger bed)
+    {
+        var controller = ResolveBedInteractionController();
+        controller?.BeginSleepSequence(bed);
+    }
+
+    public void CompleteSleepSequence(BedTrigger bed)
+    {
+        var controller = ResolveBedInteractionController();
+        controller?.EndSleepSequence(bed);
     }
 
     public void PlayTransition(int nextDay)
@@ -96,6 +113,16 @@ public class SleepTransitionUIManager : MonoBehaviour
             return;
 
         slide.panel.anchoredPosition = new Vector2(slide.anchoredX, positionY);
+    }
+
+    private BedInteractionController ResolveBedInteractionController()
+    {
+        if (bedInteractionController == null)
+        {
+            bedInteractionController = FindFirstObjectByType<BedInteractionController>();
+        }
+
+        return bedInteractionController;
     }
 
     private void UpdateSlidePosition(SlidePanelAnimation slide, float startY, float endY, float displacement)

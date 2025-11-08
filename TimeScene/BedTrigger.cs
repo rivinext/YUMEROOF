@@ -36,6 +36,10 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField] private string sleepStateName = string.Empty;
     [SerializeField, Range(0f, 1f)] private float sleepStateNormalizedTimeThreshold = 0.99f;
 
+    [Header("Player Positioning")]
+    [SerializeField, Tooltip("Player anchor used when initiating the sleep animation. Defaults to this transform if unset.")]
+    private Transform sleepAnchor;
+
     [Header("Panel Buttons")]
     public Button sleepButton;
     public Button cancelButton;
@@ -48,6 +52,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     [Header("Transition UI")]
     public SleepTransitionUIManager transitionUI;
+
+    public Transform SleepAnchor => sleepAnchor != null ? sleepAnchor : transform;
 
     void Start()
     {
@@ -63,6 +69,11 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             promptAnchor = transform;
 
         promptController = SharedInteractionPromptController.Instance;
+
+        if (sleepAnchor == null)
+        {
+            sleepAnchor = transform;
+        }
     }
 
     void Update()
@@ -253,6 +264,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         DropMaterialSaveManager.Instance?.ClearAllDrops();
 
         ClosePanel();
+        BedInteractionController bedController = null;
+
         if (transitionUI != null)
         {
             void OnDayShownHandler()
@@ -265,6 +278,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             }
 
             transitionUI.OnDayShown += OnDayShownHandler;
+            transitionUI.BeginSleepSequence(this);
             transitionUI.PlayTransition(clock.currentDay + 1);
         }
         else
@@ -273,6 +287,12 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             clock.SetTimeAndAdvanceDay(sleepEndMinutes);
             clock.TriggerSleepAdvancedDay();
             AcquireRecipes();
+
+            bedController = FindFirstObjectByType<BedInteractionController>();
+            if (bedController != null)
+            {
+                bedController.BeginSleepSequence(this);
+            }
         }
 
         PlayerController.SetGlobalInputEnabled(false);
@@ -289,6 +309,18 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         clock.SetTimeScale(resumeScale);
         PlayerController.SetGlobalInputEnabled(true);
         ShowPromptIfNearby();
+
+        if (transitionUI != null)
+        {
+            transitionUI.CompleteSleepSequence(this);
+        }
+        else
+        {
+            if (bedController != null)
+            {
+                bedController.EndSleepSequence(this);
+            }
+        }
     }
 
     bool CanSleep()
