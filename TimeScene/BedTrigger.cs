@@ -43,6 +43,9 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [Header("Transition UI")]
     public SleepTransitionUIManager transitionUI;
 
+    [Header("Bed Animation")]
+    [SerializeField] private BedInAnimationDriver bedInAnimationDriver;
+
     void Start()
     {
         clock = GameClock.Instance;
@@ -57,6 +60,9 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             promptAnchor = transform;
 
         promptController = SharedInteractionPromptController.Instance;
+
+        if (bedInAnimationDriver == null)
+            bedInAnimationDriver = GetComponent<BedInAnimationDriver>();
     }
 
     void Update()
@@ -70,9 +76,23 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     public void Interact()
     {
-        OpenPanel();
-        SetupPanelButtons();
-        UpdateSleepButtonState();
+        if (bedInAnimationDriver != null)
+        {
+            void OnBedInCompleted()
+            {
+                OpenPanel();
+                SetupPanelButtons();
+                UpdateSleepButtonState();
+            }
+
+            bedInAnimationDriver.PlayBedIn(OnBedInCompleted);
+        }
+        else
+        {
+            OpenPanel();
+            SetupPanelButtons();
+            UpdateSleepButtonState();
+        }
     }
 
     void OpenPanel()
