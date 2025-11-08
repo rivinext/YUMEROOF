@@ -14,7 +14,6 @@ public class PlayerBedStateController : MonoBehaviour
     [SerializeField] private Rigidbody rb;
     [Header("Animator Parameters")]
     [SerializeField] private string bedInTrigger = "BedIn";
-    [SerializeField] private string bedIdleBool = "BedIdle";
     [SerializeField] private string bedOutTrigger = "BedOut";
     [SerializeField] private bool disableRootMotionDuringBedState;
 
@@ -186,8 +185,6 @@ public class PlayerBedStateController : MonoBehaviour
     {
         isBedOutInProgress = false;
 
-        SetBedIdleState(false);
-
         if (!isBedIdle)
         {
             return;
@@ -321,8 +318,6 @@ public class PlayerBedStateController : MonoBehaviour
         isBedOutInProgress = false;
         isWaitingForBedInCompletion = false;
 
-        SetBedIdleState(true);
-
         if (activeDriver != null)
         {
             activeDriver.BedInCompleted -= HandleDriverBedInCompleted;
@@ -376,8 +371,6 @@ public class PlayerBedStateController : MonoBehaviour
             return;
         }
 
-        SetBedIdleState(true);
-
         EnterBedIdleState();
     }
 
@@ -391,8 +384,6 @@ public class PlayerBedStateController : MonoBehaviour
             return;
         }
 
-        SetBedIdleState(false);
-
         HandleBedOutCompleted();
     }
 
@@ -402,8 +393,6 @@ public class PlayerBedStateController : MonoBehaviour
         {
             return false;
         }
-
-        SetBedIdleState(false);
 
         if (!string.IsNullOrEmpty(bedOutTrigger))
         {
@@ -426,8 +415,6 @@ public class PlayerBedStateController : MonoBehaviour
             return false;
         }
 
-        SetBedIdleState(false);
-
         if (!string.IsNullOrEmpty(bedInTrigger))
         {
             animator.ResetTrigger(bedInTrigger);
@@ -442,20 +429,8 @@ public class PlayerBedStateController : MonoBehaviour
         return true;
     }
 
-    private void SetBedIdleState(bool isIdle)
-    {
-        if (animator == null || string.IsNullOrEmpty(bedIdleBool))
-        {
-            return;
-        }
-
-        animator.SetBool(bedIdleBool, isIdle);
-    }
-
     private void ClearAnimatorBedParameters()
     {
-        SetBedIdleState(false);
-
         if (animator == null)
         {
             return;
