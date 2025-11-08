@@ -15,7 +15,6 @@ public class BedInteractionController : MonoBehaviour
     [SerializeField] private string bedEnterTriggerName = "BedEnter";
     [FormerlySerializedAs("bedExitTriggerName")]
     [SerializeField] private string bedWakeTriggerName = "BedWake";
-    [SerializeField] private string bedSleepTriggerName = "BedSleep";
 
     [Header("Positioning")]
     [Tooltip("Optional root transform used when aligning the player to a bed anchor. Defaults to this transform.")]
@@ -149,7 +148,6 @@ public class BedInteractionController : MonoBehaviour
         {
             AlignWithBedAnchor(entryBed);
             TriggerAnimator(bedWakeTriggerName, false);
-            TriggerAnimator(bedSleepTriggerName, false);
             TriggerAnimator(bedEnterTriggerName, true);
         }
 
@@ -182,7 +180,6 @@ public class BedInteractionController : MonoBehaviour
         }
 
         TriggerAnimator(bedEnterTriggerName, false);
-        TriggerAnimator(bedSleepTriggerName, false);
         TriggerAnimator(bedWakeTriggerName, true);
 
         isWakingUp = true;
@@ -213,7 +210,7 @@ public class BedInteractionController : MonoBehaviour
 
     /// <summary>
     /// Called via animation event when the bed entry animation has fully transitioned
-    /// into the sleeping pose. Triggers the sleep state within the animator.
+    /// into the sleeping pose. Clears the entry trigger so it can be retriggered later.
     /// </summary>
     public void HandleBedEntryCompleted()
     {
@@ -223,7 +220,6 @@ public class BedInteractionController : MonoBehaviour
         }
 
         TriggerAnimator(bedEnterTriggerName, false);
-        TriggerAnimator(bedSleepTriggerName, true);
     }
 
     /// <summary>
@@ -237,7 +233,6 @@ public class BedInteractionController : MonoBehaviour
             return;
         }
 
-        TriggerAnimator(bedSleepTriggerName, false);
         TriggerAnimator(bedWakeTriggerName, false);
 
         isSleeping = false;
