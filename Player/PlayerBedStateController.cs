@@ -15,6 +15,7 @@ public class PlayerBedStateController : MonoBehaviour
     [Header("Animator Parameters")]
     [SerializeField] private string bedInTrigger = "BedIn";
     [SerializeField] private string bedOutTrigger = "BedOut";
+    [SerializeField] private string bedIdleStateName = "BedIdle";
     [SerializeField] private bool disableRootMotionDuringBedState;
 
     private Transform bedAnchor;
@@ -26,6 +27,7 @@ public class PlayerBedStateController : MonoBehaviour
     private bool hasCachedRootMotion;
     private bool isWaitingForBedInCompletion;
     private Action pendingBedInCallback;
+    private int bedIdleStateHash;
 
     public event Action BedInCompleted;
     public event Action BedOutCompleted;
@@ -48,6 +50,13 @@ public class PlayerBedStateController : MonoBehaviour
         {
             rb = GetComponent<Rigidbody>();
         }
+
+        RecalculateBedIdleStateHash();
+    }
+
+    private void OnValidate()
+    {
+        RecalculateBedIdleStateHash();
     }
 
     private void OnDisable()
@@ -153,6 +162,39 @@ public class PlayerBedStateController : MonoBehaviour
         {
             RequestWakeUp();
         }
+    }
+
+    private void Update()
+    {
+        if (!isWaitingForBedInCompletion || activeDriver != null)
+        {
+            return;
+        }
+
+        if (animator == null)
+        {
+            return;
+        }
+
+        if (bedIdleStateHash == 0 && !string.IsNullOrEmpty(bedIdleStateName))
+        {
+            bedIdleStateHash = Animator.StringToHash(bedIdleStateName);
+        }
+
+        AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+
+        if (animator.IsInTransition(0))
+        {
+            return;
+        }
+
+        if (stateInfo.shortNameHash != bedIdleStateHash)
+        {
+            return;
+        }
+
+        isWaitingForBedInCompletion = false;
+        EnterBedIdleState();
     }
 
     /// <summary>
@@ -450,5 +492,10 @@ public class PlayerBedStateController : MonoBehaviour
         }
 
         return activeDriver != null;
+    }
+
+    private void RecalculateBedIdleStateHash()
+    {
+        bedIdleStateHash = Animator.StringToHash(string.IsNullOrEmpty(bedIdleStateName) ? string.Empty : bedIdleStateName);
     }
 }
