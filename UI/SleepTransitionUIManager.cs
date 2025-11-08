@@ -83,10 +83,13 @@ public class SleepTransitionUIManager : MonoBehaviour
         SetInitialPanelPositions();
     }
 
-    public void BeginSleepSequence(BedTrigger bed)
+    public bool BeginSleepSequence(BedTrigger bed)
     {
         var controller = ResolveBedInteractionController();
-        controller?.BeginSleepSequence(bed);
+        if (controller == null)
+            return false;
+
+        return controller.BeginSleepSequence(bed);
     }
 
     public void CompleteSleepSequence(BedTrigger bed)

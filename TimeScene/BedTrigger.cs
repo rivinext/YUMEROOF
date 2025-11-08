@@ -51,6 +51,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField, Tooltip("Animator state that represents the stand-up animation used to determine when the player regains control.")]
     private string wakeStateName = string.Empty;
     [SerializeField, Range(0f, 1f)] private float wakeStateNormalizedTimeThreshold = 0.99f;
+    [SerializeField, Tooltip("Maximum duration to wait for a sleep animation state change before falling back to the bed idle state.")]
+    private float sleepAnimationStateChangeTimeout = 5f;
 
     [Header("Sleep Confirmation")]
     [SerializeField] private ConfirmationPopup sleepConfirmationPopup;
@@ -113,23 +115,34 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             return;
         }
 
-        TriggerSleepMovementSequence();
+        bool hasTriggeredMovement = TriggerSleepMovementSequence();
 
         bool shouldAwaitSleepAnimation = sleepAnimator != null && !string.IsNullOrEmpty(sleepStateName);
+        bool hasTriggeredSleepAnimation = false;
 
         if (shouldAwaitSleepAnimation)
         {
-            bool hasTriggered = TryTriggerSleepAnimation();
+            hasTriggeredSleepAnimation = TryTriggerSleepAnimation();
 
-            if (!hasTriggered && !HasConfiguredSleepTrigger() && !hasWarnedMissingSleepTrigger)
+            if (!hasTriggeredSleepAnimation && !HasConfiguredSleepTrigger() && !hasWarnedMissingSleepTrigger)
             {
                 Debug.LogWarning($"{nameof(BedTrigger)} on '{name}' has a sleep animator configured but no trigger name. The sleep animation will not be started automatically.", this);
                 hasWarnedMissingSleepTrigger = true;
             }
+        }
 
+        bool shouldWaitForSleepAnimation = shouldAwaitSleepAnimation && (hasTriggeredMovement || hasTriggeredSleepAnimation);
+
+        if (shouldWaitForSleepAnimation)
+        {
             isWaitingForSleepAnimation = true;
             StartCoroutine(WaitForSleepAnimation());
             return;
+        }
+
+        if (!hasTriggeredMovement && !hasTriggeredSleepAnimation)
+        {
+            Debug.LogWarning($"{nameof(BedTrigger)} on '{name}' could not start a sleep movement or animation sequence. Entering bed idle state immediately.", this);
         }
 
         EnterBedIdleState();
@@ -175,6 +188,10 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         int layerIndex = 0;
         bool hasReachedState = false;
+        float timeout = sleepAnimationStateChangeTimeout;
+        float lastStateChangeTime = Time.time;
+        int previousStateHash = -1;
+        float previousNormalizedTime = -1f;
 
         while (sleepAnimator != null)
         {
@@ -182,16 +199,42 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
                 break;
 
             var stateInfo = sleepAnimator.GetCurrentAnimatorStateInfo(layerIndex);
+            int currentStateHash = stateInfo.fullPathHash;
+
+            if (previousStateHash != currentStateHash || sleepAnimator.IsInTransition(layerIndex))
+            {
+                previousStateHash = currentStateHash;
+                lastStateChangeTime = Time.time;
+            }
 
             if (stateInfo.IsName(sleepStateName))
             {
                 hasReachedState = true;
 
-                if (!sleepAnimator.IsInTransition(layerIndex) && stateInfo.normalizedTime >= sleepStateNormalizedTimeThreshold)
-                    break;
+                if (!sleepAnimator.IsInTransition(layerIndex))
+                {
+                    if (previousNormalizedTime < 0f || stateInfo.normalizedTime > previousNormalizedTime + Mathf.Epsilon)
+                    {
+                        previousNormalizedTime = stateInfo.normalizedTime;
+                        lastStateChangeTime = Time.time;
+                    }
+
+                    if (stateInfo.normalizedTime >= sleepStateNormalizedTimeThreshold)
+                        break;
+                }
             }
             else if (hasReachedState)
             {
+                break;
+            }
+            else
+            {
+                previousNormalizedTime = -1f;
+            }
+
+            if (timeout > 0f && Time.time - lastStateChangeTime >= timeout)
+            {
+                Debug.LogWarning($"{nameof(BedTrigger)} on '{name}' timed out while waiting for sleep animation state '{sleepStateName}'. Entering bed idle state.", this);
                 break;
             }
 
@@ -423,20 +466,29 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         return cachedBedInteractionController;
     }
 
-    void TriggerSleepMovementSequence()
+    bool TriggerSleepMovementSequence()
     {
         promptController?.HidePrompt(this);
 
         var bedController = ResolveBedInteractionController();
 
+        bool hasTriggered = false;
+
         if (transitionUI != null)
         {
-            transitionUI.BeginSleepSequence(this);
+            hasTriggered |= transitionUI.BeginSleepSequence(this);
+
+            if (!hasTriggered && bedController != null)
+            {
+                hasTriggered |= bedController.BeginSleepSequence(this);
+            }
         }
         else if (bedController != null)
         {
-            bedController.BeginSleepSequence(this);
+            hasTriggered |= bedController.BeginSleepSequence(this);
         }
+
+        return hasTriggered;
     }
 
     void BeginSleepRoutine()
