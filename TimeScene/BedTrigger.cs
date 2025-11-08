@@ -46,11 +46,25 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [Header("Bed Animation")]
     [SerializeField, Tooltip("Optional animation driver for non-Animator driven beds.")]
     private BedAnimationDriver bedAnimationDriver;
+    [SerializeField, Tooltip("Toggles whether the animation driver should be used for bed interactions.")]
+    private bool useAnimationDriver = true;
 
     private PlayerController player;
     private PlayerBedStateController playerBedStateController;
 
-    public BedAnimationDriver AnimationDriver => bedAnimationDriver;
+    public bool ShouldUseAnimationDriver => useAnimationDriver && bedAnimationDriver != null;
+
+    public BedAnimationDriver AnimationDriver => GetAnimationDriver(ignoreUsageFlag: true);
+
+    public BedAnimationDriver GetAnimationDriver(bool ignoreUsageFlag = false)
+    {
+        if (!ignoreUsageFlag && !ShouldUseAnimationDriver)
+        {
+            return null;
+        }
+
+        return bedAnimationDriver;
+    }
 
     void Start()
     {

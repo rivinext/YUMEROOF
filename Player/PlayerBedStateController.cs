@@ -93,17 +93,17 @@ public class PlayerBedStateController : MonoBehaviour
         pendingBedInCallback = onCompleted;
 
         activeTrigger = trigger;
-        activeDriver = trigger.AnimationDriver;
+        bool shouldUseDriver = trigger.ShouldUseAnimationDriver;
+        activeDriver = shouldUseDriver ? trigger.AnimationDriver : null;
         bedAnchor = ResolveBedAnchor(trigger);
 
         PrepareForBedState(forceSnapToAnchor);
 
         isWaitingForBedInCompletion = true;
 
-        SubscribeToDriverEvents();
-
-        if (activeDriver != null)
+        if (shouldUseDriver && activeDriver != null)
         {
+            SubscribeToDriverEvents();
             activeDriver.PlayBedIn(null);
             return;
         }
