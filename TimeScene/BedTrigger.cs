@@ -21,6 +21,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     public GameObject interactionPanel;
     public bool isPlayerNearby = false;
     bool isPanelOpen = false;
+    bool isWaitingForSleepAnimation = false;
     Canvas cachedPanelCanvas;
 
     private SharedInteractionPromptController promptController;
@@ -29,6 +30,11 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     public int sleepStartMinutes = 20 * 60; // 8:00 PM
     public int sleepEndMinutes = 6 * 60;   // 6:00 AM
     public GameClock clock;
+
+    [Header("Sleep Animation")]
+    [SerializeField] private Animator sleepAnimator;
+    [SerializeField] private string sleepStateName = string.Empty;
+    [SerializeField, Range(0f, 1f)] private float sleepStateNormalizedTimeThreshold = 0.99f;
 
     [Header("Panel Buttons")]
     public Button sleepButton;
@@ -70,6 +76,64 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     public void Interact()
     {
+        if (sleepAnimator != null && !string.IsNullOrEmpty(sleepStateName))
+        {
+            if (!isWaitingForSleepAnimation)
+                StartCoroutine(WaitForSleepAnimation());
+        }
+        else
+        {
+            CompleteSleepInteraction();
+        }
+    }
+
+    IEnumerator WaitForSleepAnimation()
+    {
+        isWaitingForSleepAnimation = true;
+
+        int layerIndex = 0;
+        bool hasReachedState = false;
+
+        while (sleepAnimator != null)
+        {
+            if (!sleepAnimator.isActiveAndEnabled)
+                break;
+
+            var stateInfo = sleepAnimator.GetCurrentAnimatorStateInfo(layerIndex);
+
+            if (stateInfo.IsName(sleepStateName))
+            {
+                hasReachedState = true;
+
+                if (!sleepAnimator.IsInTransition(layerIndex) && stateInfo.normalizedTime >= sleepStateNormalizedTimeThreshold)
+                    break;
+            }
+            else if (hasReachedState)
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        isWaitingForSleepAnimation = false;
+        CompleteSleepInteraction();
+    }
+
+    public void OnSleepAnimationComplete()
+    {
+        if (isPanelOpen)
+            return;
+
+        isWaitingForSleepAnimation = false;
+        CompleteSleepInteraction();
+    }
+
+    void CompleteSleepInteraction()
+    {
+        if (isPanelOpen)
+            return;
+
         OpenPanel();
         SetupPanelButtons();
         UpdateSleepButtonState();
