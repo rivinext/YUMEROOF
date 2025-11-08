@@ -29,6 +29,7 @@ public class PlayerController : MonoBehaviour
     public static bool GlobalInputEnabled { get; private set; } = true;
     private bool inputEnabled = true;
     public static void SetGlobalInputEnabled(bool enabled) => GlobalInputEnabled = enabled;
+    public bool IsInputEnabled => inputEnabled;
     public void SetInputEnabled(bool enabled) => inputEnabled = enabled;
 
     private Rigidbody rb;
