@@ -21,7 +21,9 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
 
     private readonly Dictionary<Button, UnityAction> buttonCallbacks = new Dictionary<Button, UnityAction>();
     private readonly Dictionary<Button, bool> buttonOriginalInteractable = new Dictionary<Button, bool>();
+    private readonly Dictionary<Button, bool> temporarilyCachedInteractable = new Dictionary<Button, bool>();
     private bool wasPlayerSitting;
+    private bool buttonsTemporarilyDisabled;
 
     private void Awake()
     {
@@ -172,9 +174,9 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
         return false;
     }
 
-    private void RefreshInteractableCache()
+    private void RefreshInteractableCache(bool ignoreSitting = false)
     {
-        if (playerController != null && playerController.IsSitting)
+        if (!ignoreSitting && playerController != null && playerController.IsSitting)
         {
             return;
         }
@@ -201,6 +203,12 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
                 continue;
             }
 
+            if (buttonsTemporarilyDisabled)
+            {
+                entry.button.interactable = false;
+                continue;
+            }
+
             if (!buttonOriginalInteractable.ContainsKey(entry.button))
             {
                 buttonOriginalInteractable[entry.button] = entry.button.interactable;
@@ -212,6 +220,11 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
 
     private void RestoreButtonInteractableState()
     {
+        if (buttonsTemporarilyDisabled)
+        {
+            return;
+        }
+
         foreach (EmoteButtonEntry entry in buttonEntries)
         {
             if (entry?.button == null)
@@ -227,6 +240,67 @@ public class PlayerEmoteButtonBinder : MonoBehaviour
             {
                 entry.button.interactable = true;
             }
+        }
+    }
+
+    /// <summary>
+    /// Temporarily disables or restores interactivity for all tracked buttons.
+    /// </summary>
+    /// <param name="disabled">True to disable, false to restore.</param>
+    public void SetButtonsTemporarilyDisabled(bool disabled)
+    {
+        if (buttonsTemporarilyDisabled == disabled)
+        {
+            return;
+        }
+
+        buttonsTemporarilyDisabled = disabled;
+
+        if (disabled)
+        {
+            RefreshInteractableCache(ignoreSitting: true);
+            temporarilyCachedInteractable.Clear();
+
+            foreach (EmoteButtonEntry entry in buttonEntries)
+            {
+                if (entry?.button == null)
+                {
+                    continue;
+                }
+
+                temporarilyCachedInteractable[entry.button] = entry.button.interactable;
+                entry.button.interactable = false;
+            }
+
+            return;
+        }
+
+        foreach (EmoteButtonEntry entry in buttonEntries)
+        {
+            if (entry?.button == null)
+            {
+                continue;
+            }
+
+            if (temporarilyCachedInteractable.TryGetValue(entry.button, out bool cachedState))
+            {
+                entry.button.interactable = cachedState;
+            }
+            else if (buttonOriginalInteractable.TryGetValue(entry.button, out bool originalState))
+            {
+                entry.button.interactable = originalState;
+            }
+            else
+            {
+                entry.button.interactable = true;
+            }
+        }
+
+        temporarilyCachedInteractable.Clear();
+
+        if (playerController != null && playerController.IsSitting)
+        {
+            ApplySittingRestrictions();
         }
     }
 }

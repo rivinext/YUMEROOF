@@ -58,6 +58,9 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     public Button sleepButton;
     public Button cancelButton;
 
+    [Header("Emote Controls")]
+    [SerializeField] private PlayerEmoteButtonBinder playerEmoteButtonBinder;
+
     [Header("Panel Area")]
     [Tooltip("Main clickable area of the interaction panel. Clicking outside this area will close the panel.")]
     public RectTransform panelContentArea;
@@ -81,6 +84,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             promptAnchor = transform;
 
         promptController = SharedInteractionPromptController.Instance;
+
+        TryResolveEmoteButtonBinder();
 
         GameObject playerObject = GameObject.FindWithTag("Player");
         if (playerObject != null)
@@ -317,6 +322,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         isTransitioning = true;
         ResetBedIdleSleepTimer(true);
 
+        SetEmoteButtonsTemporarilyDisabled(true);
+
         cachedPlayerPosition = controller.transform.position;
         cachedPlayerRotation = controller.transform.rotation;
 
@@ -371,10 +378,15 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     IEnumerator ExitBedSequence(PlayerController controller, Animator animator)
     {
         if (controller == null || animator == null || bedAnchor == null)
+        {
+            SetEmoteButtonsTemporarilyDisabled(false);
             yield break;
+        }
 
         isTransitioning = true;
         ResetBedIdleSleepTimer(true);
+
+        SetEmoteButtonsTemporarilyDisabled(true);
 
         if (!string.IsNullOrEmpty(bedOutTriggerName))
             animator.SetTrigger(bedOutTriggerName);
@@ -417,6 +429,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         PlayerController.SetGlobalInputEnabled(true);
         isPlayerInBed = false;
         isTransitioning = false;
+
+        SetEmoteButtonsTemporarilyDisabled(false);
 
         ShowPromptIfNearby();
     }
@@ -485,6 +499,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             PlayerController.SetGlobalInputEnabled(true);
             isPlayerInBed = false;
             isTransitioning = false;
+            SetEmoteButtonsTemporarilyDisabled(false);
             ShowPromptIfNearby();
         }
     }
@@ -549,6 +564,25 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     void OnDisable()
     {
+        SetEmoteButtonsTemporarilyDisabled(false);
         promptController?.HidePrompt(this);
+    }
+
+    private void TryResolveEmoteButtonBinder()
+    {
+        if (playerEmoteButtonBinder != null)
+            return;
+
+#if UNITY_2023_1_OR_NEWER
+        playerEmoteButtonBinder = FindFirstObjectByType<PlayerEmoteButtonBinder>();
+#else
+        playerEmoteButtonBinder = FindObjectOfType<PlayerEmoteButtonBinder>();
+#endif
+    }
+
+    private void SetEmoteButtonsTemporarilyDisabled(bool disabled)
+    {
+        TryResolveEmoteButtonBinder();
+        playerEmoteButtonBinder?.SetButtonsTemporarilyDisabled(disabled);
     }
 }
