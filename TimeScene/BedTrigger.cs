@@ -102,6 +102,11 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             UpdateSleepButtonState();
             HandlePanelInput();
         }
+        else if (isPlayerInBed && !isTransitioning)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
+                TryInitiateBedExit();
+        }
     }
 
     public void Interact()
@@ -159,7 +164,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             interactionPanel.SetActive(false);
 
         if (attemptExit)
-            TryStartExitSequence();
+            TryInitiateBedExit();
     }
 
     void HandlePanelInput()
@@ -233,16 +238,30 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     void TryStartExitSequence()
     {
-        if (!isPlayerInBed || isTransitioning)
-            return;
+        TryInitiateBedExit();
+    }
 
+    bool TryInitiateBedExit()
+    {
+        if (!isPlayerInBed || isTransitioning)
+            return false;
+
+        if (!HasExitDependencies())
+            return false;
+
+        StartCoroutine(ExitBedSequence(playerController, playerAnimator));
+        return true;
+    }
+
+    bool HasExitDependencies()
+    {
         if (playerController == null || playerAnimator == null || bedAnchor == null)
         {
             Debug.LogWarning("BedTrigger: Missing references required to exit the bed.");
-            return;
+            return false;
         }
 
-        StartCoroutine(ExitBedSequence(playerController, playerAnimator));
+        return true;
     }
 
     IEnumerator EnterBedSequence(PlayerController controller, Animator animator)
