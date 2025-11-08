@@ -19,6 +19,7 @@ public class PlayerBedStateController : MonoBehaviour
     [SerializeField] private string bedOutCompletedStateName = "Idle";
     [SerializeField] private bool disableRootMotionDuringBedState;
     [SerializeField] private bool triggerAnimatorWhenUsingDriver = true;
+    [SerializeField] private bool snapToAnchorWhenUsingDriver = false;
 
     private Transform bedAnchor;
     private BedAnimationDriver activeDriver;
@@ -364,7 +365,7 @@ public class PlayerBedStateController : MonoBehaviour
         PlayerController.SetGlobalInputEnabled(false);
         playerController.SetInputEnabled(false);
 
-        bool shouldSnapToAnchor = forceSnapToAnchor || activeDriver != null || disableRootMotionDuringBedState;
+        bool shouldSnapToAnchor = forceSnapToAnchor || disableRootMotionDuringBedState || activeDriver == null || snapToAnchorWhenUsingDriver;
 
         if (shouldSnapToAnchor)
         {
