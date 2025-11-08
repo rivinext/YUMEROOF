@@ -22,7 +22,14 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     public bool isPlayerNearby = false;
     bool isPanelOpen = false;
     bool isWaitingForSleepAnimation = false;
+    bool isWaitingForStandUpAnimation = false;
+    bool isInBedIdleState = false;
     Canvas cachedPanelCanvas;
+
+    private PlayerController cachedPlayerController;
+    private bool cachedPlayerInputState = true;
+    private bool hasCachedPlayerInputState;
+    private bool didDisablePlayerInput;
 
     private SharedInteractionPromptController promptController;
 
@@ -39,8 +46,16 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     private string sleepTriggerName = string.Empty;
     [SerializeField, Tooltip("Optional additional animator triggers that should be fired together.")]
     private string[] additionalSleepTriggerNames = System.Array.Empty<string>();
+    [SerializeField, Tooltip("Animator trigger name used to start the stand-up animation once the bed idle pose is active.")]
+    private string wakeTriggerName = string.Empty;
+    [SerializeField, Tooltip("Optional additional animator triggers fired when starting the stand-up animation.")]
+    private string[] additionalWakeTriggerNames = System.Array.Empty<string>();
+    [SerializeField, Tooltip("Animator state that represents the stand-up animation used to determine when the player regains control.")]
+    private string wakeStateName = string.Empty;
+    [SerializeField, Range(0f, 1f)] private float wakeStateNormalizedTimeThreshold = 0.99f;
 
     private bool hasWarnedMissingSleepTrigger;
+    private bool hasWarnedMissingWakeTrigger;
 
     [Header("Player Positioning")]
     [SerializeField, Tooltip("Player anchor used when initiating the sleep animation. Defaults to this transform if unset.")]
@@ -80,6 +95,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         {
             sleepAnchor = transform;
         }
+
+        ResolvePlayerController();
     }
 
     void Update()
@@ -93,8 +110,14 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     public void Interact()
     {
-        if (isWaitingForSleepAnimation)
+        if (isWaitingForSleepAnimation || isWaitingForStandUpAnimation)
             return;
+
+        if (isInBedIdleState)
+        {
+            HandleStandUpInteraction();
+            return;
+        }
 
         bool shouldAwaitSleepAnimation = sleepAnimator != null && !string.IsNullOrEmpty(sleepStateName);
 
@@ -113,6 +136,33 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
 
         CompleteSleepInteraction();
+    }
+
+    void HandleStandUpInteraction()
+    {
+        bool shouldAwaitStandUpAnimation = sleepAnimator != null && !string.IsNullOrEmpty(wakeStateName);
+        bool hasTriggered = TryTriggerStandUpAnimation();
+
+        if (!hasTriggered && !HasConfiguredWakeTrigger() && !hasWarnedMissingWakeTrigger)
+        {
+            Debug.LogWarning($"{nameof(BedTrigger)} on '{name}' has a wake animator configured but no trigger name. The stand-up animation will not be started automatically.", this);
+            hasWarnedMissingWakeTrigger = true;
+        }
+
+        if (hasTriggered)
+        {
+            isWaitingForStandUpAnimation = true;
+            promptController?.HidePrompt(this);
+        }
+
+        if (shouldAwaitStandUpAnimation && hasTriggered)
+        {
+            StartCoroutine(WaitForStandUpAnimation());
+        }
+        else
+        {
+            ExitBedIdleState();
+        }
     }
 
     IEnumerator WaitForSleepAnimation()
@@ -145,6 +195,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
 
         isWaitingForSleepAnimation = false;
+        EnterBedIdleState();
         CompleteSleepInteraction();
     }
 
@@ -154,7 +205,50 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             return;
 
         isWaitingForSleepAnimation = false;
+        EnterBedIdleState();
         CompleteSleepInteraction();
+    }
+
+    IEnumerator WaitForStandUpAnimation()
+    {
+        isWaitingForStandUpAnimation = true;
+
+        int layerIndex = 0;
+        bool hasReachedState = false;
+
+        while (sleepAnimator != null)
+        {
+            if (!sleepAnimator.isActiveAndEnabled)
+                break;
+
+            var stateInfo = sleepAnimator.GetCurrentAnimatorStateInfo(layerIndex);
+
+            if (stateInfo.IsName(wakeStateName))
+            {
+                hasReachedState = true;
+
+                if (!sleepAnimator.IsInTransition(layerIndex) && stateInfo.normalizedTime >= wakeStateNormalizedTimeThreshold)
+                    break;
+            }
+            else if (hasReachedState)
+            {
+                break;
+            }
+
+            yield return null;
+        }
+
+        isWaitingForStandUpAnimation = false;
+        ExitBedIdleState();
+    }
+
+    public void OnStandUpAnimationComplete()
+    {
+        if (!isInBedIdleState)
+            return;
+
+        isWaitingForStandUpAnimation = false;
+        ExitBedIdleState();
     }
 
     bool HasConfiguredSleepTrigger()
@@ -168,6 +262,23 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         for (int i = 0; i < additionalSleepTriggerNames.Length; i++)
         {
             if (!string.IsNullOrEmpty(additionalSleepTriggerNames[i]))
+                return true;
+        }
+
+        return false;
+    }
+
+    bool HasConfiguredWakeTrigger()
+    {
+        if (!string.IsNullOrEmpty(wakeTriggerName))
+            return true;
+
+        if (additionalWakeTriggerNames == null)
+            return false;
+
+        for (int i = 0; i < additionalWakeTriggerNames.Length; i++)
+        {
+            if (!string.IsNullOrEmpty(additionalWakeTriggerNames[i]))
                 return true;
         }
 
@@ -203,6 +314,100 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
 
         return hasTriggered;
+    }
+
+    bool TryTriggerStandUpAnimation()
+    {
+        if (sleepAnimator == null)
+            return false;
+
+        bool hasTriggered = false;
+
+        if (!string.IsNullOrEmpty(wakeTriggerName))
+        {
+            sleepAnimator.ResetTrigger(wakeTriggerName);
+            sleepAnimator.SetTrigger(wakeTriggerName);
+            hasTriggered = true;
+        }
+
+        if (additionalWakeTriggerNames != null)
+        {
+            for (int i = 0; i < additionalWakeTriggerNames.Length; i++)
+            {
+                string trigger = additionalWakeTriggerNames[i];
+                if (string.IsNullOrEmpty(trigger))
+                    continue;
+
+                sleepAnimator.ResetTrigger(trigger);
+                sleepAnimator.SetTrigger(trigger);
+                hasTriggered = true;
+            }
+        }
+
+        return hasTriggered;
+    }
+
+    void EnterBedIdleState()
+    {
+        if (isInBedIdleState)
+            return;
+
+        isInBedIdleState = true;
+        LockPlayerMovement();
+    }
+
+    void ExitBedIdleState()
+    {
+        if (!isInBedIdleState)
+            return;
+
+        isInBedIdleState = false;
+        isWaitingForStandUpAnimation = false;
+        UnlockPlayerMovement();
+        ShowPromptIfNearby();
+    }
+
+    void LockPlayerMovement()
+    {
+        var player = ResolvePlayerController();
+        if (player == null)
+            return;
+
+        if (!hasCachedPlayerInputState)
+        {
+            cachedPlayerInputState = player.IsInputEnabled;
+            hasCachedPlayerInputState = true;
+        }
+
+        didDisablePlayerInput = false;
+
+        if (player.IsInputEnabled)
+        {
+            player.SetInputEnabled(false);
+            didDisablePlayerInput = true;
+        }
+    }
+
+    void UnlockPlayerMovement()
+    {
+        if (!hasCachedPlayerInputState)
+            return;
+
+        var player = ResolvePlayerController();
+        if (player != null && didDisablePlayerInput && cachedPlayerInputState && !player.IsInputEnabled)
+            player.SetInputEnabled(true);
+
+        hasCachedPlayerInputState = false;
+        didDisablePlayerInput = false;
+    }
+
+    PlayerController ResolvePlayerController()
+    {
+        if (cachedPlayerController != null && cachedPlayerController.isActiveAndEnabled)
+            return cachedPlayerController;
+
+        cachedPlayerController = FindFirstObjectByType<PlayerController>();
+        return cachedPlayerController;
     }
 
     void CompleteSleepInteraction()
@@ -386,6 +591,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
                 bedController.EndSleepSequence(this);
             }
         }
+
+        ExitBedIdleState();
     }
 
     bool CanSleep()
@@ -425,5 +632,14 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     void OnDisable()
     {
         promptController?.HidePrompt(this);
+
+        if (isInBedIdleState)
+        {
+            UnlockPlayerMovement();
+            isInBedIdleState = false;
+        }
+
+        isWaitingForSleepAnimation = false;
+        isWaitingForStandUpAnimation = false;
     }
 }
