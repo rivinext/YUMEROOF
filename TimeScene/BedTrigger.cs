@@ -272,7 +272,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             Vector3 basePosition = Vector3.Lerp(cachedPlayerPosition, targetPosition, t);
             float heightOffset = bedInHeightCurve != null ? bedInHeightCurve.Evaluate(t) : 0f;
             Vector3 nextPosition = basePosition + Vector3.up * heightOffset;
-            nextPosition.x = bedAnchor.position.x;
             controller.transform.position = nextPosition;
             controller.transform.rotation = Quaternion.Slerp(cachedPlayerRotation, targetRotation, t);
 
