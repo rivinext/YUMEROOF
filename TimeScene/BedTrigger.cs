@@ -102,11 +102,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             UpdateSleepButtonState();
             HandlePanelInput();
         }
-        else if (isPlayerInBed && !isTransitioning)
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
-                TryInitiateBedExit();
-        }
     }
 
     public void Interact()
@@ -129,7 +124,13 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             if (isPanelOpen)
                 ClosePanel();
 
-            TryStartExitSequence();
+            if (playerController == null || playerAnimator == null || bedAnchor == null)
+            {
+                Debug.LogWarning("BedTrigger: Missing references required to exit the bed.");
+                return;
+            }
+
+            StartCoroutine(ExitBedSequence(playerController, playerAnimator));
         }
     }
 
@@ -153,31 +154,23 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     void ClosePanel()
     {
-        ClosePanel(false);
-    }
-
-    void ClosePanel(bool attemptExit)
-    {
         isPanelOpen = false;
 
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
-
-        if (attemptExit)
-            TryInitiateBedExit();
     }
 
     void HandlePanelInput()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
-            ClosePanel(true);
+            ClosePanel();
             return;
         }
 
         if (Input.GetMouseButtonDown(0) && !IsPointerOverPanelContent())
         {
-            ClosePanel(true);
+            ClosePanel();
             return;
         }
 
@@ -186,7 +179,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             Touch touch = Input.GetTouch(0);
             if (touch.phase == TouchPhase.Began && !IsPointerOverPanelContent(touch.position))
             {
-                ClosePanel(true);
+                ClosePanel();
             }
         }
     }
@@ -227,41 +220,8 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         if (cancelButton != null)
         {
             cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(OnCancelButtonClicked);
+            cancelButton.onClick.AddListener(ClosePanel);
         }
-    }
-
-    void OnCancelButtonClicked()
-    {
-        ClosePanel(true);
-    }
-
-    void TryStartExitSequence()
-    {
-        TryInitiateBedExit();
-    }
-
-    bool TryInitiateBedExit()
-    {
-        if (!isPlayerInBed || isTransitioning)
-            return false;
-
-        if (!HasExitDependencies())
-            return false;
-
-        StartCoroutine(ExitBedSequence(playerController, playerAnimator));
-        return true;
-    }
-
-    bool HasExitDependencies()
-    {
-        if (playerController == null || playerAnimator == null || bedAnchor == null)
-        {
-            Debug.LogWarning("BedTrigger: Missing references required to exit the bed.");
-            return false;
-        }
-
-        return true;
     }
 
     IEnumerator EnterBedSequence(PlayerController controller, Animator animator)
