@@ -34,12 +34,20 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     [SerializeField] private string bedIdleStateName = "BedIdle";
     [SerializeField] private string movementIdleStateName = "Idle";
 
+    [Header("Bed Idle Sleep")]
+    [SerializeField, Tooltip("Delay in seconds before the player's eyes close while idling in bed.")]
+    private float bedIdleSleepDelay = 5f;
+
     private PlayerController playerController;
     private Animator playerAnimator;
+    private PlayerBlinkController playerBlinkController;
     private Vector3 cachedPlayerPosition;
     private Quaternion cachedPlayerRotation;
     private bool isPlayerInBed;
     private bool isTransitioning;
+
+    private float bedIdleSleepTimer;
+    private bool hasClosedEyesInBed;
 
     [Header("Sleep Settings")]
     public int sleepStartMinutes = 20 * 60; // 8:00 PM
@@ -79,10 +87,13 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         {
             playerController = playerObject.GetComponent<PlayerController>();
             playerAnimator = playerObject.GetComponent<Animator>();
+            playerBlinkController = playerObject.GetComponent<PlayerBlinkController>();
             if (playerController == null)
                 Debug.LogWarning("BedTrigger could not find PlayerController on the player object.");
             if (playerAnimator == null)
                 Debug.LogWarning("BedTrigger could not find Animator on the player object.");
+            if (playerBlinkController == null)
+                Debug.LogWarning("BedTrigger could not find PlayerBlinkController on the player object.");
         }
         else
         {
@@ -105,16 +116,30 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
 
         if (!isPlayerInBed || isTransitioning)
+        {
+            ResetBedIdleSleepTimer(true);
             return;
+        }
 
         if (playerController == null || playerAnimator == null)
+        {
+            ResetBedIdleSleepTimer(true);
             return;
+        }
 
         if (!string.IsNullOrEmpty(bedIdleStateName))
         {
             AnimatorStateInfo stateInfo = playerAnimator.GetCurrentAnimatorStateInfo(0);
             if (!stateInfo.IsName(bedIdleStateName))
+            {
+                ResetBedIdleSleepTimer(true);
                 return;
+            }
+            UpdateBedIdleSleep(Time.deltaTime);
+        }
+        else
+        {
+            UpdateBedIdleSleep(Time.deltaTime);
         }
 
         if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
@@ -124,6 +149,44 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
             StartCoroutine(ExitBedSequence(playerController, playerAnimator));
         }
+    }
+
+    private void UpdateBedIdleSleep(float deltaTime)
+    {
+        if (playerBlinkController == null)
+        {
+            return;
+        }
+
+        if (bedIdleSleepDelay <= 0f)
+        {
+            if (!hasClosedEyesInBed)
+            {
+                playerBlinkController.ForceEyesClosed();
+                hasClosedEyesInBed = true;
+            }
+            return;
+        }
+
+        bedIdleSleepTimer += deltaTime;
+
+        if (!hasClosedEyesInBed && bedIdleSleepTimer >= bedIdleSleepDelay)
+        {
+            playerBlinkController.ForceEyesClosed();
+            hasClosedEyesInBed = true;
+        }
+    }
+
+    private void ResetBedIdleSleepTimer(bool reopenEyes)
+    {
+        bedIdleSleepTimer = 0f;
+
+        if (hasClosedEyesInBed && reopenEyes && playerBlinkController != null)
+        {
+            playerBlinkController.NotifyActive();
+        }
+
+        hasClosedEyesInBed = false;
     }
 
     public void Interact()
@@ -252,6 +315,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             yield break;
 
         isTransitioning = true;
+        ResetBedIdleSleepTimer(true);
 
         cachedPlayerPosition = controller.transform.position;
         cachedPlayerRotation = controller.transform.rotation;
@@ -310,6 +374,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             yield break;
 
         isTransitioning = true;
+        ResetBedIdleSleepTimer(true);
 
         if (!string.IsNullOrEmpty(bedOutTriggerName))
             animator.SetTrigger(bedOutTriggerName);
