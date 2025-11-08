@@ -152,28 +152,25 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         UpdateSleepButtonState();
     }
 
-    void ClosePanel(bool triggerExitSequence = false)
+    void ClosePanel()
     {
         isPanelOpen = false;
 
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
-
-        if (triggerExitSequence && isPlayerInBed && !isTransitioning)
-            StartCoroutine(ExitBedSequence(playerController, playerAnimator));
     }
 
     void HandlePanelInput()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            ClosePanel(true);
+            ClosePanel();
             return;
         }
 
         if (Input.GetMouseButtonDown(0) && !IsPointerOverPanelContent())
         {
-            ClosePanel(true);
+            ClosePanel();
             return;
         }
 
@@ -182,7 +179,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             Touch touch = Input.GetTouch(0);
             if (touch.phase == TouchPhase.Began && !IsPointerOverPanelContent(touch.position))
             {
-                ClosePanel(true);
+                ClosePanel();
             }
         }
     }
@@ -223,7 +220,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         if (cancelButton != null)
         {
             cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(() => ClosePanel(true));
+            cancelButton.onClick.AddListener(ClosePanel);
         }
     }
 
