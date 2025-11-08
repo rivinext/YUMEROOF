@@ -124,13 +124,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             if (isPanelOpen)
                 ClosePanel();
 
-            if (playerController == null || playerAnimator == null || bedAnchor == null)
-            {
-                Debug.LogWarning("BedTrigger: Missing references required to exit the bed.");
-                return;
-            }
-
-            StartCoroutine(ExitBedSequence(playerController, playerAnimator));
+            TryStartExitSequence();
         }
     }
 
@@ -154,23 +148,31 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
     void ClosePanel()
     {
+        ClosePanel(false);
+    }
+
+    void ClosePanel(bool attemptExit)
+    {
         isPanelOpen = false;
 
         if (interactionPanel != null)
             interactionPanel.SetActive(false);
+
+        if (attemptExit)
+            TryStartExitSequence();
     }
 
     void HandlePanelInput()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
         {
-            ClosePanel();
+            ClosePanel(true);
             return;
         }
 
         if (Input.GetMouseButtonDown(0) && !IsPointerOverPanelContent())
         {
-            ClosePanel();
+            ClosePanel(true);
             return;
         }
 
@@ -179,7 +181,7 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             Touch touch = Input.GetTouch(0);
             if (touch.phase == TouchPhase.Began && !IsPointerOverPanelContent(touch.position))
             {
-                ClosePanel();
+                ClosePanel(true);
             }
         }
     }
@@ -220,8 +222,27 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         if (cancelButton != null)
         {
             cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(ClosePanel);
+            cancelButton.onClick.AddListener(OnCancelButtonClicked);
         }
+    }
+
+    void OnCancelButtonClicked()
+    {
+        ClosePanel(true);
+    }
+
+    void TryStartExitSequence()
+    {
+        if (!isPlayerInBed || isTransitioning)
+            return;
+
+        if (playerController == null || playerAnimator == null || bedAnchor == null)
+        {
+            Debug.LogWarning("BedTrigger: Missing references required to exit the bed.");
+            return;
+        }
+
+        StartCoroutine(ExitBedSequence(playerController, playerAnimator));
     }
 
     IEnumerator EnterBedSequence(PlayerController controller, Animator animator)
