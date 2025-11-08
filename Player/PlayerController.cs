@@ -25,6 +25,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private PlayerSitStateController sitStateController;
     public bool IsSitting => sitStateController != null && sitStateController.IsSitting;
 
+    [Header("Bed State Controller")]
+    [SerializeField] private PlayerBedStateController bedStateController;
+
     // --- 入力有効/無効 ---
     public static bool GlobalInputEnabled { get; private set; } = true;
     private bool inputEnabled = true;
@@ -59,6 +62,10 @@ public class PlayerController : MonoBehaviour
         if (sitStateController == null)
         {
             sitStateController = GetComponent<PlayerSitStateController>();
+        }
+        if (bedStateController == null)
+        {
+            bedStateController = GetComponent<PlayerBedStateController>();
         }
     }
 
@@ -169,6 +176,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        bedStateController?.Tick();
         sitStateController?.Tick();
 
         if (!GlobalInputEnabled || !inputEnabled)
@@ -333,6 +341,11 @@ public class PlayerController : MonoBehaviour
     public void StartStandUpMove()
     {
         sitStateController?.StartStandUpMove();
+    }
+
+    public void BeginBedIdle(Transform bedAnchor, BedAnimationDriver driver)
+    {
+        bedStateController?.BeginBedIdle(bedAnchor, driver);
     }
 
     private void EmitStep(bool isRun)
