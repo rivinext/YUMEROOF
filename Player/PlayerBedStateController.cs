@@ -16,6 +16,7 @@ public class PlayerBedStateController : MonoBehaviour
     [SerializeField] private string bedInTrigger = "BedIn";
     [SerializeField] private string bedOutTrigger = "BedOut";
     [SerializeField] private string bedIdleStateName = "BedIdle";
+    [SerializeField] private string bedOutCompletedStateName = "Idle";
     [SerializeField] private bool disableRootMotionDuringBedState;
 
     private Transform bedAnchor;
@@ -28,6 +29,7 @@ public class PlayerBedStateController : MonoBehaviour
     private bool isWaitingForBedInCompletion;
     private Action pendingBedInCallback;
     private int bedIdleStateHash;
+    private int bedOutCompletedStateHash;
 
     public event Action BedInCompleted;
     public event Action BedOutCompleted;
@@ -51,12 +53,12 @@ public class PlayerBedStateController : MonoBehaviour
             rb = GetComponent<Rigidbody>();
         }
 
-        RecalculateBedIdleStateHash();
+        RecalculateBedStateHashes();
     }
 
     private void OnValidate()
     {
-        RecalculateBedIdleStateHash();
+        RecalculateBedStateHashes();
     }
 
     private void OnDisable()
@@ -166,12 +168,12 @@ public class PlayerBedStateController : MonoBehaviour
 
     private void Update()
     {
-        if (!isWaitingForBedInCompletion || activeDriver != null)
+        if (animator == null)
         {
             return;
         }
 
-        if (animator == null)
+        if (activeDriver != null)
         {
             return;
         }
@@ -181,6 +183,11 @@ public class PlayerBedStateController : MonoBehaviour
             bedIdleStateHash = Animator.StringToHash(bedIdleStateName);
         }
 
+        if (bedOutCompletedStateHash == 0 && !string.IsNullOrEmpty(bedOutCompletedStateName))
+        {
+            bedOutCompletedStateHash = Animator.StringToHash(bedOutCompletedStateName);
+        }
+
         AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
 
         if (animator.IsInTransition(0))
@@ -188,13 +195,25 @@ public class PlayerBedStateController : MonoBehaviour
             return;
         }
 
-        if (stateInfo.shortNameHash != bedIdleStateHash)
+        if (isWaitingForBedInCompletion && stateInfo.shortNameHash == bedIdleStateHash)
+        {
+            isWaitingForBedInCompletion = false;
+            EnterBedIdleState();
+            return;
+        }
+
+        if (!isBedOutInProgress || bedOutCompletedStateHash == 0)
         {
             return;
         }
 
-        isWaitingForBedInCompletion = false;
-        EnterBedIdleState();
+        if (stateInfo.shortNameHash != bedOutCompletedStateHash)
+        {
+            return;
+        }
+
+        isBedOutInProgress = false;
+        HandleBedOutCompleted();
     }
 
     /// <summary>
@@ -225,12 +244,13 @@ public class PlayerBedStateController : MonoBehaviour
 
     private void HandleBedOutCompleted()
     {
-        isBedOutInProgress = false;
-
         if (!isBedIdle)
         {
+            isBedOutInProgress = false;
             return;
         }
+
+        isBedOutInProgress = false;
 
         if (activeDriver != null)
         {
@@ -494,8 +514,9 @@ public class PlayerBedStateController : MonoBehaviour
         return activeDriver != null;
     }
 
-    private void RecalculateBedIdleStateHash()
+    private void RecalculateBedStateHashes()
     {
         bedIdleStateHash = Animator.StringToHash(string.IsNullOrEmpty(bedIdleStateName) ? string.Empty : bedIdleStateName);
+        bedOutCompletedStateHash = Animator.StringToHash(string.IsNullOrEmpty(bedOutCompletedStateName) ? string.Empty : bedOutCompletedStateName);
     }
 }
