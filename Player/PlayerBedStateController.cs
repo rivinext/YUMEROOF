@@ -366,7 +366,7 @@ public class PlayerBedStateController : MonoBehaviour
     /// </summary>
     public void OnBedInAnimationComplete()
     {
-        if (!isWaitingForBedInCompletion || activeDriver != null)
+        if (!isWaitingForBedInCompletion)
         {
             return;
         }
@@ -379,11 +379,6 @@ public class PlayerBedStateController : MonoBehaviour
     /// </summary>
     public void OnBedOutAnimationComplete()
     {
-        if (activeDriver != null)
-        {
-            return;
-        }
-
         HandleBedOutCompleted();
     }
 
