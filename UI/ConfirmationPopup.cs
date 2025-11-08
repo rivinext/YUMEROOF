@@ -55,12 +55,13 @@ public class ConfirmationPopup : MonoBehaviour
             parentCanvas = backdropImage.canvas;
             if (backdropSprite != null)
                 backdropImage.sprite = backdropSprite;
-            SetBackdropActive(false);
         }
         else
         {
             parentCanvas = GetComponentInParent<Canvas>();
         }
+
+        EnsureClosedState();
     }
 
     private void OnDestroy()
@@ -108,11 +109,8 @@ public class ConfirmationPopup : MonoBehaviour
         if (!isOpen)
             return;
 
-        isOpen = false;
         UnregisterBackdropListener();
-        SetBackdropActive(false);
-
-        gameObject.SetActive(false);
+        EnsureClosedState();
         onYes = null;
     }
 
@@ -192,5 +190,14 @@ public class ConfirmationPopup : MonoBehaviour
         {
             backdropImage.enabled = isActive;
         }
+    }
+
+    private void EnsureClosedState()
+    {
+        isOpen = false;
+        SetBackdropActive(false);
+
+        if (gameObject.activeSelf)
+            gameObject.SetActive(false);
     }
 }
