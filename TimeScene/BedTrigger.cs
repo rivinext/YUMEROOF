@@ -271,7 +271,9 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             float t = Mathf.Clamp01(elapsed / duration);
             Vector3 basePosition = Vector3.Lerp(cachedPlayerPosition, targetPosition, t);
             float heightOffset = bedInHeightCurve != null ? bedInHeightCurve.Evaluate(t) : 0f;
-            controller.transform.position = basePosition + Vector3.up * heightOffset;
+            Vector3 nextPosition = basePosition + Vector3.up * heightOffset;
+            nextPosition.x = bedAnchor.position.x;
+            controller.transform.position = nextPosition;
             controller.transform.rotation = Quaternion.Slerp(cachedPlayerRotation, targetRotation, t);
 
             elapsed += Time.deltaTime;
@@ -279,7 +281,9 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
 
         float finalHeightOffset = bedInHeightCurve != null ? bedInHeightCurve.Evaluate(1f) : 0f;
-        controller.transform.position = targetPosition + Vector3.up * finalHeightOffset;
+        Vector3 finalPosition = targetPosition + Vector3.up * finalHeightOffset;
+        finalPosition.x = bedAnchor.position.x;
+        controller.transform.position = finalPosition;
         controller.transform.rotation = targetRotation;
 
         while (animator != null)
@@ -287,7 +291,11 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
             bool reachedIdle = !string.IsNullOrEmpty(bedIdleStateName) && stateInfo.IsName(bedIdleStateName);
             if (reachedIdle || (!animator.IsInTransition(0) && stateInfo.normalizedTime >= 1f))
+            {
+                AlignPlayerWithBedAnchorX(force: true);
                 break;
+            }
+            AlignPlayerWithBedAnchorX(force: true);
             yield return null;
         }
 
@@ -427,6 +435,30 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     {
         if (sleepButton != null)
             sleepButton.interactable = CanSleep();
+    }
+
+    void LateUpdate()
+    {
+        AlignPlayerWithBedAnchorX();
+    }
+
+    private void AlignPlayerWithBedAnchorX(bool force = false)
+    {
+        if (playerController == null || bedAnchor == null)
+            return;
+
+        if (!force && (!isPlayerInBed || isTransitioning))
+            return;
+
+        Transform playerTransform = playerController.transform;
+        Vector3 position = playerTransform.position;
+        float anchorX = bedAnchor.position.x;
+
+        if (!Mathf.Approximately(position.x, anchorX))
+        {
+            position.x = anchorX;
+            playerTransform.position = position;
+        }
     }
 
     void AcquireRecipes()
