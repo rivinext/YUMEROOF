@@ -16,6 +16,27 @@ public class WallLayerController : MonoBehaviour
     public Wall[] walls;
     public Camera cam;
     public string invisibleLayerName = "InvisibleWall";
+    [SerializeField]
+    private bool visibilityControlEnabled = true;
+
+    public bool VisibilityControlEnabled
+    {
+        get => visibilityControlEnabled;
+        set
+        {
+            if (visibilityControlEnabled == value)
+            {
+                return;
+            }
+
+            visibilityControlEnabled = value;
+
+            if (!visibilityControlEnabled)
+            {
+                RestoreOriginalSettings();
+            }
+        }
+    }
 
     void Start()
     {
@@ -29,6 +50,12 @@ public class WallLayerController : MonoBehaviour
 
     void Update()
     {
+        if (!visibilityControlEnabled)
+        {
+            RestoreOriginalSettings();
+            return;
+        }
+
         float camY = cam.transform.eulerAngles.y;
 
         foreach (var wall in walls)
@@ -49,6 +76,20 @@ public class WallLayerController : MonoBehaviour
                 wall.renderer.gameObject.layer = wall.originalLayer;
                 wall.renderer.shadowCastingMode = wall.originalShadowCastingMode;
             }
+        }
+    }
+
+    public void ToggleVisibilityControl()
+    {
+        VisibilityControlEnabled = !VisibilityControlEnabled;
+    }
+
+    private void RestoreOriginalSettings()
+    {
+        foreach (var wall in walls)
+        {
+            wall.renderer.gameObject.layer = wall.originalLayer;
+            wall.renderer.shadowCastingMode = wall.originalShadowCastingMode;
         }
     }
 }
