@@ -193,6 +193,12 @@ public class PlayerEmoteController : MonoBehaviour
 
     public IReadOnlyDictionary<string, EmoteEntry> GetEmoteLookup() => emoteLookup;
 
+    public void ForceReturnToIdle(float fadeDuration = 0.1f)
+    {
+        StopActiveEmoteImmediate(false);
+        CrossFadeToBaseline(Mathf.Max(0f, fadeDuration));
+    }
+
     private IEnumerator PlayEmoteRoutine(EmoteEntry entry)
     {
         activeEmote = entry;
