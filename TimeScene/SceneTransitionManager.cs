@@ -36,9 +36,11 @@ public class SceneTransitionManager : MonoBehaviour
     private AudioSource audioSource;
     private bool isTransitioning = false;
     private string lastSceneName = "";
+    private string lastSuccessfulSpawnPointName = string.Empty;
 
     // 遷移情報を保持
     public string LastSceneName => lastSceneName;
+    public string LastSpawnPointName => lastSuccessfulSpawnPointName;
     public bool IsTransitioning => isTransitioning;
 
     void Awake()
@@ -189,37 +191,128 @@ public class SceneTransitionManager : MonoBehaviour
         fadeImage.color = new Color(fadeColor.r, fadeColor.g, fadeColor.b, targetAlpha);
     }
 
-    void MovePlayerToSpawnPoint(string spawnPointName)
+    public bool MovePlayerToSpawnPoint(string spawnPointName)
     {
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player == null)
         {
             Debug.LogWarning("Player not found!");
-            return;
+            return false;
         }
 
-        // スポーンポイントを探す
         PlayerSpawnPoint[] spawnPoints = FindObjectsByType<PlayerSpawnPoint>(FindObjectsSortMode.None);
+        PlayerSpawnPoint target = FindSpawnPoint(spawnPoints, spawnPointName);
+        if (target == null)
+        {
+            Debug.LogWarning($"Spawn point '{spawnPointName}' not found!");
+            return false;
+        }
+
+        return ApplySpawnPoint(player, target, false, true, true);
+    }
+
+    public bool ForceReturnPlayerToSpawn(string overrideSpawnPointName = null, float idleCrossFade = 0.1f)
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null)
+        {
+            Debug.LogWarning("Player not found!");
+            return false;
+        }
+
+        PlayerSpawnPoint[] spawnPoints = FindObjectsByType<PlayerSpawnPoint>(FindObjectsSortMode.None);
+        if (spawnPoints == null || spawnPoints.Length == 0)
+        {
+            Debug.LogWarning("No spawn points available in the current scene.");
+            return false;
+        }
+
+        PlayerSpawnPoint target = null;
+        if (!string.IsNullOrEmpty(overrideSpawnPointName))
+        {
+            target = FindSpawnPoint(spawnPoints, overrideSpawnPointName);
+        }
+
+        if (target == null && !string.IsNullOrEmpty(lastSuccessfulSpawnPointName))
+        {
+            target = FindSpawnPoint(spawnPoints, lastSuccessfulSpawnPointName);
+        }
+
+        if (target == null)
+        {
+            target = spawnPoints[0];
+        }
+
+        if (!ApplySpawnPoint(player, target, true, true, true))
+        {
+            Debug.LogWarning("Failed to move player to an emergency return spawn point.");
+            return false;
+        }
+
+        var animator = player.GetComponent<Animator>();
+        if (animator != null)
+        {
+            animator.SetFloat("moveSpeed", 0f);
+        }
+
+        var emoteController = player.GetComponent<PlayerEmoteController>();
+        if (emoteController != null)
+        {
+            emoteController.ForceReturnToIdle(Mathf.Max(0f, idleCrossFade));
+        }
+
+        return true;
+    }
+
+    private PlayerSpawnPoint FindSpawnPoint(PlayerSpawnPoint[] spawnPoints, string spawnPointName)
+    {
+        if (spawnPoints == null || string.IsNullOrEmpty(spawnPointName))
+        {
+            return null;
+        }
+
         foreach (var point in spawnPoints)
         {
-            if (point.spawnPointName == spawnPointName)
+            if (point != null && point.spawnPointName == spawnPointName)
             {
-                player.transform.position = point.transform.position;
-                player.transform.rotation = point.transform.rotation;
-
-                // カメラの位置もリセット（必要に応じて）
-                var cameraController = FindFirstObjectByType<OrthographicCameraController>();
-                if (cameraController != null)
-                {
-                    cameraController.ResetCamera();
-                }
-
-                Debug.Log($"Player moved to spawn point: {spawnPointName}");
-                return;
+                return point;
             }
         }
 
-        Debug.LogWarning($"Spawn point '{spawnPointName}' not found!");
+        return null;
+    }
+
+    private bool ApplySpawnPoint(GameObject player, PlayerSpawnPoint spawnPoint, bool resetVelocity, bool resetCamera, bool updateLastSpawn)
+    {
+        if (player == null || spawnPoint == null)
+        {
+            return false;
+        }
+
+        player.transform.SetPositionAndRotation(spawnPoint.transform.position, spawnPoint.transform.rotation);
+
+        if (resetVelocity && player.TryGetComponent<Rigidbody>(out var rb))
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        if (resetCamera)
+        {
+            var cameraController = FindFirstObjectByType<OrthographicCameraController>();
+            if (cameraController != null)
+            {
+                cameraController.ResetCamera();
+            }
+        }
+
+        if (updateLastSpawn)
+        {
+            lastSuccessfulSpawnPointName = spawnPoint.spawnPointName;
+        }
+
+        Debug.Log($"Player moved to spawn point: {spawnPoint.spawnPointName}");
+        return true;
     }
 
     void DisablePlayerControl(bool disable)
