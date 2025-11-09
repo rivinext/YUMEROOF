@@ -1138,6 +1138,7 @@ public class WardrobeUIController : MonoBehaviour
     private void OnPanelVisibilityChanged(bool visible)
     {
         UpdatePreviewActivation(visible);
+        PlayerController.SetGlobalInputEnabled(!visible);
     }
 
     /// <summary>
