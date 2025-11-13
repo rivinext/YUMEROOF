@@ -305,6 +305,8 @@ public class CSVImporter : EditorWindow
                 return PlacementRule.Floor;
             case "wall":
                 return PlacementRule.Wall;
+            case "ceiling":
+                return PlacementRule.Ceiling;
             case "both":
                 return PlacementRule.Both;
             default:

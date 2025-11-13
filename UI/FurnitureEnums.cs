@@ -5,7 +5,8 @@ public enum PlacementRule
 {
     Floor,      // 床のみ
     Wall,       // 壁のみ
-    Both        // 両方可能
+    Ceiling,    // 天井のみ
+    Both        // 床と壁の両方
 }
 
 // 天候属性
