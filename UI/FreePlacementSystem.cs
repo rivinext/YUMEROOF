@@ -9,6 +9,7 @@ public class FreePlacementSystem : MonoBehaviour
     public Camera mainCamera;
     public LayerMask floorLayer;
     public LayerMask wallLayer;
+    public LayerMask ceilingLayer;
     public LayerMask furnitureLayer;
     public LayerMask anchorLayer;
     public GhostPreviewManager ghostManager;
@@ -575,7 +576,7 @@ public class FreePlacementSystem : MonoBehaviour
 
     void UpdateFurniturePosition()
     {
-        if (previewObject == null) return;
+        if (previewObject == null || currentFurnitureData == null) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
@@ -598,10 +599,12 @@ public class FreePlacementSystem : MonoBehaviour
 
                 snappedAnchor = anchor;
                 var pf = previewObject.GetComponent<PlacedFurniture>();
-                Vector3 offset = pf != null ? pf.GetBottomOffset() : Vector3.zero;
+                Vector3 offset = pf != null ? GetAnchorPlacementOffset(pf, snappedAnchor) : Vector3.zero;
                 Vector3 targetPosition = snappedAnchor.transform.position + offset;
 
                 previewObject.transform.position = targetPosition;
+
+                AlignPreviewToAnchor(snappedAnchor);
 
                 PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
                 if (placedComp != null)
@@ -624,13 +627,20 @@ public class FreePlacementSystem : MonoBehaviour
 
         LayerMask targetLayer = floorLayer;
 
-        if (currentFurnitureData.placementRules == PlacementRule.Wall)
+        switch (currentFurnitureData.placementRules)
         {
-            targetLayer = wallLayer;
-        }
-        else if (currentFurnitureData.placementRules == PlacementRule.Both)
-        {
-            targetLayer = floorLayer | wallLayer;
+            case PlacementRule.Wall:
+                targetLayer = wallLayer;
+                break;
+            case PlacementRule.Ceiling:
+                targetLayer = ceilingLayer;
+                break;
+            case PlacementRule.Both:
+                targetLayer = floorLayer | wallLayer;
+                break;
+            default:
+                targetLayer = floorLayer;
+                break;
         }
 
         if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
@@ -656,8 +666,43 @@ public class FreePlacementSystem : MonoBehaviour
 
                 targetPosition = CalculateWallSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
             }
+            else if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
+            {
+                if (((1 << hit.collider.gameObject.layer) & ceilingLayer) == 0)
+                {
+                    return;
+                }
 
-            CheckStackPlacement(ref targetPosition);
+                Vector3 desiredUp = -hit.normal.normalized;
+                if (desiredUp.sqrMagnitude < Mathf.Epsilon)
+                {
+                    desiredUp = Vector3.up;
+                }
+
+                Vector3 currentForward = previewObject.transform.forward;
+                Vector3 projectedForward = Vector3.ProjectOnPlane(currentForward, desiredUp);
+                if (projectedForward.sqrMagnitude < Mathf.Epsilon)
+                {
+                    projectedForward = Vector3.ProjectOnPlane(Vector3.forward, desiredUp);
+                    if (projectedForward.sqrMagnitude < Mathf.Epsilon)
+                    {
+                        projectedForward = Vector3.Cross(desiredUp, Vector3.right);
+                        if (projectedForward.sqrMagnitude < Mathf.Epsilon)
+                        {
+                            projectedForward = Vector3.Cross(desiredUp, Vector3.forward);
+                        }
+                    }
+                }
+
+                previewObject.transform.rotation = Quaternion.LookRotation(projectedForward.normalized, desiredUp);
+
+                targetPosition = CalculateCeilingSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
+            }
+
+            if (currentFurnitureData.placementRules != PlacementRule.Ceiling)
+            {
+                CheckStackPlacement(ref targetPosition);
+            }
             TrySnapToAnchor(ref targetPosition);
 
             previewObject.transform.position = targetPosition;
@@ -761,6 +806,160 @@ public class FreePlacementSystem : MonoBehaviour
         return targetPosition - normalizedNormal * distanceToPlane;
     }
 
+    Vector3 CalculateCeilingSnapPosition(GameObject preview, Vector3 targetPosition, Vector3 hitPoint, Vector3 ceilingNormal)
+    {
+        if (preview == null)
+        {
+            return targetPosition;
+        }
+
+        Vector3 normalizedNormal = ceilingNormal.normalized;
+        if (normalizedNormal.sqrMagnitude < Mathf.Epsilon)
+        {
+            return targetPosition;
+        }
+
+        Renderer[] renderers = preview.GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+        {
+            return targetPosition;
+        }
+
+        float maxDistance = float.MinValue;
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null) continue;
+
+            Bounds bounds = renderer.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = new Vector3(
+                    (i & 1) == 0 ? bounds.min.x : bounds.max.x,
+                    (i & 2) == 0 ? bounds.min.y : bounds.max.y,
+                    (i & 4) == 0 ? bounds.min.z : bounds.max.z);
+
+                float distance = Vector3.Dot(normalizedNormal, corner - hitPoint);
+                if (distance > maxDistance)
+                {
+                    maxDistance = distance;
+                }
+            }
+        }
+
+        if (maxDistance > 0f)
+        {
+            targetPosition -= normalizedNormal * maxDistance;
+        }
+
+        return targetPosition;
+    }
+
+    private Vector3 GetAnchorPlacementOffset(PlacedFurniture furniture, AnchorPoint anchor)
+    {
+        if (furniture == null)
+        {
+            return Vector3.zero;
+        }
+
+        PlacementRule rule = currentFurnitureData != null
+            ? currentFurnitureData.placementRules
+            : (furniture.furnitureData != null ? furniture.furnitureData.placementRules : PlacementRule.Floor);
+
+        if (rule == PlacementRule.Ceiling)
+        {
+            return CalculateCeilingAttachmentOffset(furniture.gameObject, anchor);
+        }
+
+        return furniture.GetBottomOffset();
+    }
+
+    private Vector3 CalculateCeilingAttachmentOffset(GameObject preview, AnchorPoint anchor)
+    {
+        if (preview == null)
+        {
+            return Vector3.zero;
+        }
+
+        Renderer[] renderers = preview.GetComponentsInChildren<Renderer>(true);
+        if (renderers == null || renderers.Length == 0)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 referenceUp = anchor != null ? anchor.transform.up : Vector3.up;
+        if (referenceUp.sqrMagnitude < Mathf.Epsilon)
+        {
+            referenceUp = Vector3.up;
+        }
+
+        Vector3 normalizedUp = referenceUp.normalized;
+        float maxDistance = 0f;
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null) continue;
+
+            Bounds bounds = renderer.bounds;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = new Vector3(
+                    (i & 1) == 0 ? bounds.min.x : bounds.max.x,
+                    (i & 2) == 0 ? bounds.min.y : bounds.max.y,
+                    (i & 4) == 0 ? bounds.min.z : bounds.max.z);
+
+                float projection = Vector3.Dot(corner - preview.transform.position, normalizedUp);
+                if (projection > maxDistance)
+                {
+                    maxDistance = projection;
+                }
+            }
+        }
+
+        if (maxDistance <= 0f)
+        {
+            return Vector3.zero;
+        }
+
+        return -normalizedUp * maxDistance;
+    }
+
+    private void AlignPreviewToAnchor(AnchorPoint anchor)
+    {
+        if (anchor == null || previewObject == null || currentFurnitureData == null)
+        {
+            return;
+        }
+
+        if (currentFurnitureData.placementRules != PlacementRule.Ceiling)
+        {
+            return;
+        }
+
+        Vector3 desiredUp = -anchor.transform.up;
+        if (desiredUp.sqrMagnitude < Mathf.Epsilon)
+        {
+            desiredUp = Vector3.up;
+        }
+
+        Vector3 currentForward = previewObject.transform.forward;
+        Vector3 projectedForward = Vector3.ProjectOnPlane(currentForward, desiredUp);
+        if (projectedForward.sqrMagnitude < Mathf.Epsilon)
+        {
+            projectedForward = Vector3.ProjectOnPlane(Vector3.forward, desiredUp);
+            if (projectedForward.sqrMagnitude < Mathf.Epsilon)
+            {
+                projectedForward = Vector3.Cross(desiredUp, Vector3.right);
+                if (projectedForward.sqrMagnitude < Mathf.Epsilon)
+                {
+                    projectedForward = Vector3.Cross(desiredUp, Vector3.forward);
+                }
+            }
+        }
+
+        previewObject.transform.rotation = Quaternion.LookRotation(projectedForward.normalized, desiredUp.normalized);
+    }
+
     void CheckStackPlacement(ref Vector3 position)
     {
         snappedParentFurniture = null;
@@ -825,10 +1024,12 @@ public class FreePlacementSystem : MonoBehaviour
         if (nearest != null && previewObject != null)
         {
             var pf = previewObject.GetComponent<PlacedFurniture>();
-            Vector3 offset = pf != null ? pf.GetBottomOffset() : Vector3.zero;
+            Vector3 offset = pf != null ? GetAnchorPlacementOffset(pf, nearest) : Vector3.zero;
             target = nearest.transform.position + offset;
             snappedAnchor = nearest;
             Debug.Log($"TrySnapToAnchor: Snapped to {nearest.name} (distance {nearestDistance:F2})");
+
+            AlignPreviewToAnchor(nearest);
         }
         else
         {
@@ -844,8 +1045,9 @@ public class FreePlacementSystem : MonoBehaviour
         bool anchorUsed = false;
         if (snappedAnchor != null && !snappedAnchor.IsOccupied)
         {
+            Vector3 worldOffset = GetAnchorPlacementOffset(previewObject.GetComponent<PlacedFurniture>(), snappedAnchor);
             previewObject.transform.SetParent(snappedAnchor.transform);
-            previewObject.transform.localPosition = previewObject.GetComponent<PlacedFurniture>().GetBottomOffset();
+            previewObject.transform.localPosition = snappedAnchor.transform.InverseTransformVector(worldOffset);
             anchorUsed = true;
             Debug.Log($"PlaceFurniture: Placed on anchor {snappedAnchor.name}");
         }
@@ -867,7 +1069,6 @@ public class FreePlacementSystem : MonoBehaviour
             {
                 var parentPF = snappedAnchor.GetComponentInParent<PlacedFurniture>();
                 if (parentPF != null) placedComp.SetParentFurniture(parentPF);
-                previewObject.transform.SetParent(snappedAnchor.transform);
                 snappedParentFurniture = null;
             }
             else if (snappedParentFurniture != null)
