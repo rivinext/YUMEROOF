@@ -1358,6 +1358,29 @@ public class FreePlacementSystem : MonoBehaviour
                 marker.SetActive(false);
             }
         }
+        else if (placementRule == PlacementRule.Ceiling)
+        {
+            float markerHeight = bounds.max.y - 0.03f;
+
+            Vector3[] corners = new Vector3[]
+            {
+                new Vector3(bounds.min.x, markerHeight, bounds.min.z),
+                new Vector3(bounds.max.x, markerHeight, bounds.min.z),
+                new Vector3(bounds.max.x, markerHeight, bounds.max.z),
+                new Vector3(bounds.min.x, markerHeight, bounds.max.z)
+            };
+
+            float[] yRotations = { 270f, 180f, 90f, 0f };
+
+            for (int i = 0; i < 4; i++)
+            {
+                Quaternion rotation = Quaternion.Euler(-90f, yRotations[i], 0f);
+                GameObject marker = Instantiate(cornerMarkerPrefab, corners[i], rotation);
+                marker.transform.SetParent(furniture.transform);
+                furniture.cornerMarkers[i] = marker;
+                marker.SetActive(false);
+            }
+        }
         else
         {
             float markerHeight = bounds.min.y + 0.03f;
