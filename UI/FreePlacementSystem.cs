@@ -499,7 +499,7 @@ public class FreePlacementSystem : MonoBehaviour
     void SelectFurniture()
     {
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
+        RaycastHit hit = default;
 
         if (Physics.Raycast(ray, out hit, 600f, GetFurnitureRaycastMask(), QueryTriggerInteraction.Ignore))
         {
@@ -640,17 +640,17 @@ public class FreePlacementSystem : MonoBehaviour
                     snappedAnchor = anchor;
                     var pf = previewObject.GetComponent<PlacedFurniture>();
                     Vector3 offset = pf != null ? GetAnchorPlacementOffset(pf, snappedAnchor) : Vector3.zero;
-                    Vector3 targetPosition = snappedAnchor.transform.position + offset;
+                    Vector3 anchorTargetPosition = snappedAnchor.transform.position + offset;
 
-                    previewObject.transform.position = targetPosition;
+                    previewObject.transform.position = anchorTargetPosition;
 
                     AlignPreviewToAnchor(snappedAnchor);
 
-                    PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
-                    if (placedComp != null)
+                    PlacedFurniture anchorPlacedComp = previewObject.GetComponent<PlacedFurniture>();
+                    if (anchorPlacedComp != null)
                     {
-                        bool canPlace = !placedComp.IsOverlapping();
-                        placedComp.SetPlacementValid(canPlace);
+                        bool canPlace = !anchorPlacedComp.IsOverlapping();
+                        anchorPlacedComp.SetPlacementValid(canPlace);
                     }
 
                     snappedByAnchorRaycast = true;
@@ -1272,7 +1272,7 @@ public class FreePlacementSystem : MonoBehaviour
     void HandleStackPlacement(PlacedFurniture furniture)
     {
         Ray ray = new Ray(furniture.transform.position + Vector3.up * 5f, Vector3.down);
-        RaycastHit hit;
+        RaycastHit hit = default;
 
         if (Physics.Raycast(ray, out hit, 10f, GetFurnitureRaycastMask(), QueryTriggerInteraction.Ignore))
         {
