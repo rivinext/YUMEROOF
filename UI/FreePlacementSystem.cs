@@ -22,6 +22,7 @@ public class FreePlacementSystem : MonoBehaviour
     public float wallSnapDistance = 0.1f;
     [Tooltip("アンカー同士の吸着を許可する距離")]
     [SerializeField] private float anchorSnapDistance = 0.3f;
+    [SerializeField, Range(0f, 90f)] private float maxCeilingAttachAngle = 25f;
     [Header("Rotation Settings")]
     [SerializeField] private float rotationStepDegrees = 5f;
     [SerializeField] private float fastRotationStepDegrees = 90f;
@@ -150,6 +151,17 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         ceilingLayer = ceilingPlacementMask;
+    }
+
+    private bool IsValidCeilingNormal(Vector3 normal)
+    {
+        if (normal.sqrMagnitude < Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        float angle = Vector3.Angle(normal, Vector3.down);
+        return angle <= maxCeilingAttachAngle;
     }
 
     private int GetFurnitureRaycastMask()
@@ -711,6 +723,11 @@ public class FreePlacementSystem : MonoBehaviour
                     return;
                 }
 
+                if (!IsValidCeilingNormal(hit.normal))
+                {
+                    return;
+                }
+
                 Vector3 desiredUp = -hit.normal.normalized;
                 if (desiredUp.sqrMagnitude < Mathf.Epsilon)
                 {
@@ -850,6 +867,11 @@ public class FreePlacementSystem : MonoBehaviour
     Vector3 CalculateCeilingSnapPosition(GameObject preview, Vector3 targetPosition, Vector3 hitPoint, Vector3 ceilingNormal)
     {
         if (preview == null)
+        {
+            return targetPosition;
+        }
+
+        if (!IsValidCeilingNormal(ceilingNormal))
         {
             return targetPosition;
         }
