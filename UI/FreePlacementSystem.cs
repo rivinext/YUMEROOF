@@ -1447,16 +1447,7 @@ public class FreePlacementSystem : MonoBehaviour
                 new Vector3(bounds.min.x, markerHeight, bounds.max.z)
             };
 
-            float[] yRotations = { 270f, 180f, 90f, 0f };
-
-            for (int i = 0; i < 4; i++)
-            {
-                Quaternion rotation = Quaternion.Euler(-90f, yRotations[i], 0f);
-                GameObject marker = Instantiate(cornerMarkerPrefab, corners[i], rotation);
-                marker.transform.SetParent(furniture.transform);
-                furniture.cornerMarkers[i] = marker;
-                marker.SetActive(false);
-            }
+            CreatePlanarCornerMarkers(furniture, corners, 90f);
         }
         else
         {
@@ -1470,16 +1461,21 @@ public class FreePlacementSystem : MonoBehaviour
                 new Vector3(bounds.min.x, markerHeight, bounds.max.z)
             };
 
-            float[] yRotations = { 270f, 180f, 90f, 0f };
+            CreatePlanarCornerMarkers(furniture, corners, 90f);
+        }
+    }
 
-            for (int i = 0; i < 4; i++)
-            {
-                Quaternion rotation = Quaternion.Euler(90f, yRotations[i], 0f);
-                GameObject marker = Instantiate(cornerMarkerPrefab, corners[i], rotation);
-                marker.transform.SetParent(furniture.transform);
-                furniture.cornerMarkers[i] = marker;
-                marker.SetActive(false);
-            }
+    private static readonly float[] PlanarMarkerYRotations = { 270f, 180f, 90f, 0f };
+
+    private void CreatePlanarCornerMarkers(PlacedFurniture furniture, Vector3[] corners, float xRotationDegrees)
+    {
+        for (int i = 0; i < corners.Length && i < furniture.cornerMarkers.Length; i++)
+        {
+            Quaternion rotation = Quaternion.Euler(xRotationDegrees, PlanarMarkerYRotations[i], 0f);
+            GameObject marker = Instantiate(cornerMarkerPrefab, corners[i], rotation);
+            marker.transform.SetParent(furniture.transform);
+            furniture.cornerMarkers[i] = marker;
+            marker.SetActive(false);
         }
     }
 }
