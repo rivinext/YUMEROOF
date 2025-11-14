@@ -154,36 +154,6 @@ public class FreePlacementSystem : MonoBehaviour
         ceilingLayer = ceilingPlacementMask;
     }
 
-    private Quaternion CreateSafeRotation(Vector3 forward, Vector3 up)
-    {
-        Vector3 safeForward = forward;
-        if (safeForward.sqrMagnitude < Mathf.Epsilon)
-        {
-            safeForward = Vector3.forward;
-        }
-
-        Vector3 safeUp = up;
-        if (safeUp.sqrMagnitude < Mathf.Epsilon)
-        {
-            safeUp = Vector3.up;
-        }
-
-        if (Vector3.Cross(safeForward, safeUp).sqrMagnitude < Mathf.Epsilon)
-        {
-            safeUp = Vector3.Cross(safeForward, Vector3.right);
-            if (safeUp.sqrMagnitude < Mathf.Epsilon)
-            {
-                safeUp = Vector3.Cross(safeForward, Vector3.forward);
-                if (safeUp.sqrMagnitude < Mathf.Epsilon)
-                {
-                    safeUp = Vector3.up;
-                }
-            }
-        }
-
-        return Quaternion.LookRotation(safeForward.normalized, safeUp.normalized);
-    }
-
     private bool IsValidCeilingNormal(Vector3 normal)
     {
         if (normal.sqrMagnitude < Mathf.Epsilon)
@@ -782,7 +752,7 @@ public class FreePlacementSystem : MonoBehaviour
                 projected = Vector3.forward;
             }
 
-            Quaternion targetRotation = CreateSafeRotation(projected, Vector3.up);
+            Quaternion targetRotation = Quaternion.LookRotation(projected, Vector3.up);
             previewObject.transform.rotation = targetRotation;
 
             targetPosition = CalculateWallSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
@@ -837,7 +807,7 @@ public class FreePlacementSystem : MonoBehaviour
                 }
             }
 
-            previewObject.transform.rotation = CreateSafeRotation(projectedForward, desiredUp);
+            previewObject.transform.rotation = Quaternion.LookRotation(projectedForward.normalized, desiredUp);
 
             targetPosition = CalculateCeilingSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
         }
@@ -1107,7 +1077,7 @@ public class FreePlacementSystem : MonoBehaviour
             }
         }
 
-        previewObject.transform.rotation = CreateSafeRotation(projectedForward, desiredUp);
+        previewObject.transform.rotation = Quaternion.LookRotation(projectedForward.normalized, desiredUp.normalized);
     }
 
     void CheckStackPlacement(ref Vector3 position)
@@ -1495,7 +1465,7 @@ public class FreePlacementSystem : MonoBehaviour
             };
 
             float[] cornerRotations = { 90f, 0f, 270f, 180f };
-            Quaternion baseRotation = CreateSafeRotation(Vector3.forward, Vector3.up);
+            Quaternion baseRotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
             for (int i = 0; i < localCorners.Length; i++)
             {
