@@ -690,6 +690,7 @@ public class FreePlacementSystem : MonoBehaviour
             return;
         }
 
+        RaycastHit hit = default;
         bool hasHit = false;
 
         if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
