@@ -616,7 +616,7 @@ public class FreePlacementSystem : MonoBehaviour
         if (previewObject == null || currentFurnitureData == null) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
+        RaycastHit hit = default;
 
         // まずアンカーへのレイキャストを行う
         bool snappedByAnchorRaycast = false;
