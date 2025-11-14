@@ -22,9 +22,8 @@ public class FreePlacementSystem : MonoBehaviour
     public float wallSnapDistance = 0.1f;
     [Tooltip("アンカー同士の吸着を許可する距離")]
     [SerializeField] private float anchorSnapDistance = 0.3f;
-    [SerializeField, Range(0f, 90f)] private float maxCeilingAttachAngle = 25f;
-    [Tooltip("天井にヒットした方向ベクトルの上向き成分の最小値")]
-    [SerializeField, Range(-1f, 1f)] private float minCeilingHitUpDot = 0f;
+    private const float MaxCeilingAttachAngle = 25f;
+    private const float MinCeilingHitUpDot = 0f; // 天井ヒット方向の上向き成分の最小値
     [Header("Rotation Settings")]
     [SerializeField] private float rotationStepDegrees = 5f;
     [SerializeField] private float fastRotationStepDegrees = 90f;
@@ -163,7 +162,7 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         float angle = Vector3.Angle(normal, Vector3.down);
-        return angle <= maxCeilingAttachAngle;
+        return angle <= MaxCeilingAttachAngle;
     }
 
     private int GetFurnitureRaycastMask()
@@ -782,7 +781,7 @@ public class FreePlacementSystem : MonoBehaviour
             }
 
             float upDot = Vector3.Dot(toHit.normalized, Vector3.up);
-            if (upDot <= minCeilingHitUpDot)
+            if (upDot <= MinCeilingHitUpDot)
             {
                 return;
             }
