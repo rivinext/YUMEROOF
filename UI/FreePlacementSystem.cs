@@ -162,7 +162,14 @@ public class FreePlacementSystem : MonoBehaviour
             return false;
         }
 
-        float angle = Vector3.Angle(normal, Vector3.down);
+        Vector3 normalized = normal.normalized;
+        float downwardDot = Vector3.Dot(normalized, Vector3.down);
+        if (downwardDot <= 0f)
+        {
+            return false;
+        }
+
+        float angle = Vector3.Angle(normalized, Vector3.down);
         return angle <= maxCeilingAttachAngle;
     }
 
