@@ -23,6 +23,8 @@ public class FreePlacementSystem : MonoBehaviour
     [Tooltip("アンカー同士の吸着を許可する距離")]
     [SerializeField] private float anchorSnapDistance = 0.3f;
     [SerializeField, Range(0f, 90f)] private float maxCeilingAttachAngle = 25f;
+    [Tooltip("天井にヒットした方向ベクトルの上向き成分の最小値")]
+    [SerializeField, Range(-1f, 1f)] private float minCeilingHitUpDot = 0f;
     [Header("Rotation Settings")]
     [SerializeField] private float rotationStepDegrees = 5f;
     [SerializeField] private float fastRotationStepDegrees = 90f;
@@ -724,6 +726,18 @@ public class FreePlacementSystem : MonoBehaviour
                 }
 
                 if (!IsValidCeilingNormal(hit.normal))
+                {
+                    return;
+                }
+
+                Vector3 toHit = hit.point - mainCamera.transform.position;
+                if (toHit.sqrMagnitude < Mathf.Epsilon)
+                {
+                    return;
+                }
+
+                float upDot = Vector3.Dot(toHit.normalized, Vector3.up);
+                if (upDot <= minCeilingHitUpDot)
                 {
                     return;
                 }
