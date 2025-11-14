@@ -909,31 +909,55 @@ public class FreePlacementSystem : MonoBehaviour
             return targetPosition;
         }
 
-        float maxDistance = float.MinValue;
+        Transform previewTransform = preview.transform;
+        Vector3 localNormal = previewTransform.InverseTransformDirection(normalizedNormal);
+        if (localNormal.sqrMagnitude < Mathf.Epsilon)
+        {
+            return targetPosition;
+        }
+
+        localNormal.Normalize();
+
+        float minDistance = float.PositiveInfinity;
 
         foreach (Renderer renderer in renderers)
         {
-            if (renderer == null) continue;
-
-            Bounds bounds = renderer.bounds;
-            for (int i = 0; i < 8; i++)
+            if (renderer == null)
             {
-                Vector3 corner = new Vector3(
-                    (i & 1) == 0 ? bounds.min.x : bounds.max.x,
-                    (i & 2) == 0 ? bounds.min.y : bounds.max.y,
-                    (i & 4) == 0 ? bounds.min.z : bounds.max.z);
+                continue;
+            }
 
-                float distance = Vector3.Dot(normalizedNormal, corner - hitPoint);
-                if (distance > maxDistance)
+            Bounds localBounds = renderer.localBounds;
+            Vector3 center = localBounds.center;
+            Vector3 extents = localBounds.extents;
+
+            for (int x = -1; x <= 1; x += 2)
+            {
+                for (int y = -1; y <= 1; y += 2)
                 {
-                    maxDistance = distance;
+                    for (int z = -1; z <= 1; z += 2)
+                    {
+                        Vector3 cornerLocal = new Vector3(
+                            center.x + extents.x * x,
+                            center.y + extents.y * y,
+                            center.z + extents.z * z);
+
+                        Vector3 worldCorner = renderer.transform.TransformPoint(cornerLocal);
+                        Vector3 previewLocalCorner = previewTransform.InverseTransformPoint(worldCorner);
+                        float distance = Vector3.Dot(localNormal, previewLocalCorner);
+
+                        if (distance < minDistance)
+                        {
+                            minDistance = distance;
+                        }
+                    }
                 }
             }
         }
 
-        if (maxDistance > 0f)
+        if (minDistance < 0f)
         {
-            targetPosition -= normalizedNormal * maxDistance;
+            targetPosition -= normalizedNormal * minDistance;
         }
 
         return targetPosition;
