@@ -130,6 +130,7 @@ public class FreePlacementSystem : MonoBehaviour
     private void InitializeLayerMasks()
     {
         RefreshOutlineLayerMask();
+        RefreshWallLayerMask();
         RefreshCeilingLayerMask();
     }
 
@@ -139,17 +140,38 @@ public class FreePlacementSystem : MonoBehaviour
         outlineLayerMask = layer >= 0 ? 1 << layer : 0;
     }
 
+    private void RefreshWallLayerMask()
+    {
+        int invisibleWallLayer = LayerMask.NameToLayer("InvisibleWall");
+        if (invisibleWallLayer >= 0)
+        {
+            wallLayer.value |= 1 << invisibleWallLayer;
+        }
+    }
+
     private void RefreshCeilingLayerMask()
     {
+        ceilingPlacementMask = 0;
+
         ceilingLayerIndex = LayerMask.NameToLayer("Ceiling");
-        if (ceilingLayerIndex < 0)
+        if (ceilingLayerIndex >= 0)
         {
-            ceilingPlacementMask = 0;
-            Debug.LogWarning("FreePlacementSystem: 'Ceiling' layer not found. Ceiling placement disabled.");
+            ceilingPlacementMask |= 1 << ceilingLayerIndex;
         }
         else
         {
-            ceilingPlacementMask = 1 << ceilingLayerIndex;
+            Debug.LogWarning("FreePlacementSystem: 'Ceiling' layer not found. Ceiling placement disabled.");
+        }
+
+        int invisibleCeilingLayer = LayerMask.NameToLayer("InvisibleCeiling");
+        if (invisibleCeilingLayer >= 0)
+        {
+            ceilingPlacementMask |= 1 << invisibleCeilingLayer;
+        }
+
+        if (ceilingPlacementMask == 0)
+        {
+            Debug.LogWarning("FreePlacementSystem: No ceiling layers found. Ceiling placement disabled.");
         }
 
         ceilingLayer = ceilingPlacementMask;
