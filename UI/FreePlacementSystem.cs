@@ -36,6 +36,8 @@ public class FreePlacementSystem : MonoBehaviour
     private float rotationHoldTimerE;
 
     private int outlineLayerMask;
+    private int ceilingLayerIndex = -1;
+    private int ceilingPlacementMask = 0;
 
     [Header("Player Control")]
     public PlacementPlayerControl playerControl;
@@ -73,7 +75,7 @@ public class FreePlacementSystem : MonoBehaviour
 
     void Awake()
     {
-        RefreshOutlineLayerMask();
+        InitializeLayerMasks();
 
         EnsurePlayerControl(true, "during Awake");
 
@@ -87,7 +89,7 @@ public class FreePlacementSystem : MonoBehaviour
 #if UNITY_EDITOR
     void OnValidate()
     {
-        RefreshOutlineLayerMask();
+        InitializeLayerMasks();
     }
 #endif
 
@@ -122,10 +124,32 @@ public class FreePlacementSystem : MonoBehaviour
         return playerControl != null;
     }
 
+    private void InitializeLayerMasks()
+    {
+        RefreshOutlineLayerMask();
+        RefreshCeilingLayerMask();
+    }
+
     private void RefreshOutlineLayerMask()
     {
         int layer = LayerMask.NameToLayer(outlineLayerName);
         outlineLayerMask = layer >= 0 ? 1 << layer : 0;
+    }
+
+    private void RefreshCeilingLayerMask()
+    {
+        ceilingLayerIndex = LayerMask.NameToLayer("Ceiling");
+        if (ceilingLayerIndex < 0)
+        {
+            ceilingPlacementMask = 0;
+            Debug.LogWarning("FreePlacementSystem: 'Ceiling' layer not found. Ceiling placement disabled.");
+        }
+        else
+        {
+            ceilingPlacementMask = 1 << ceilingLayerIndex;
+        }
+
+        ceilingLayer = ceilingPlacementMask;
     }
 
     private int GetFurnitureRaycastMask()
@@ -637,7 +661,7 @@ public class FreePlacementSystem : MonoBehaviour
                 targetLayer = wallLayer;
                 break;
             case PlacementRule.Ceiling:
-                targetLayer = ceilingLayer;
+                targetLayer = ceilingPlacementMask;
                 break;
             case PlacementRule.Both:
                 targetLayer = floorLayer | wallLayer;
@@ -645,6 +669,11 @@ public class FreePlacementSystem : MonoBehaviour
             default:
                 targetLayer = floorLayer;
                 break;
+        }
+
+        if (currentFurnitureData.placementRules == PlacementRule.Ceiling && ceilingPlacementMask == 0)
+        {
+            return;
         }
 
         if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
@@ -672,7 +701,12 @@ public class FreePlacementSystem : MonoBehaviour
             }
             else if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
             {
-                if (((1 << hit.collider.gameObject.layer) & ceilingLayer) == 0)
+                if (ceilingPlacementMask == 0)
+                {
+                    return;
+                }
+
+                if (((1 << hit.collider.gameObject.layer) & ceilingPlacementMask) == 0)
                 {
                     return;
                 }
