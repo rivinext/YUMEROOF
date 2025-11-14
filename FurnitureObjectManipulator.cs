@@ -3,7 +3,6 @@ using UnityEngine;
 public class ObjectManipulator : MonoBehaviour
 {
     private Transform selectedObjectTransform;
-    private Collider selectedObjectCollider;
     public LayerMask groundLayer;
     public float rotationSpeed = 5f;
 
@@ -14,9 +13,6 @@ public class ObjectManipulator : MonoBehaviour
     public void StartMoving(Transform objTransform)
     {
         selectedObjectTransform = objTransform;
-        selectedObjectCollider = selectedObjectTransform != null
-            ? selectedObjectTransform.GetComponentInChildren<Collider>()
-            : null;
         isMoving = true;
         originalPosition = selectedObjectTransform.position; // 移動開始時に元の位置を保存
     }
@@ -25,7 +21,6 @@ public class ObjectManipulator : MonoBehaviour
     public void DeselectObject()
     {
         selectedObjectTransform = null;
-        selectedObjectCollider = null;
         isMoving = false;
     }
 
@@ -39,20 +34,7 @@ public class ObjectManipulator : MonoBehaviour
 
             if (Physics.Raycast(ray, out hit, Mathf.Infinity, groundLayer))
             {
-                Vector3 targetPosition = hit.point;
-
-                if (selectedObjectCollider != null)
-                {
-                    Vector3 normal = hit.normal.normalized;
-                    Vector3 absNormal = new Vector3(Mathf.Abs(normal.x), Mathf.Abs(normal.y), Mathf.Abs(normal.z));
-                    Vector3 extents = selectedObjectCollider.bounds.extents;
-                    float offsetDistance = Vector3.Dot(extents, absNormal);
-                    Vector3 centerOffset = selectedObjectCollider.bounds.center - selectedObjectTransform.position;
-
-                    targetPosition = hit.point + normal * offsetDistance - centerOffset;
-                }
-
-                selectedObjectTransform.position = targetPosition;
+                selectedObjectTransform.position = new Vector3(hit.point.x, selectedObjectTransform.position.y, hit.point.z);
             }
 
             // オブジェクトの回転
