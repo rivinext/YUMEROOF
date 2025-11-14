@@ -32,7 +32,7 @@ public class ObjectManipulator : MonoBehaviour
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
 
-            if (Physics.Raycast(ray, out hit, Mathf.Infinity, groundLayer))
+            if (Physics.Raycast(ray, out hit, Mathf.Infinity, LayerMaskHelper.ExcludeInvisibleWall(groundLayer)))
             {
                 selectedObjectTransform.position = new Vector3(hit.point.x, selectedObjectTransform.position.y, hit.point.z);
             }
