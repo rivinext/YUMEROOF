@@ -25,7 +25,7 @@ public class MouseHighlighter : MonoBehaviour
 
         Debug.DrawRay(ray.origin, ray.direction * maxDistance, Color.cyan);
 
-        bool hitSomething = Physics.Raycast(ray, out RaycastHit hit, maxDistance, LayerMaskHelper.ExcludeInvisibleWall(dropLayers), QueryTriggerInteraction.Collide);
+        bool hitSomething = Physics.Raycast(ray, out RaycastHit hit, maxDistance, dropLayers, QueryTriggerInteraction.Collide);
 
         if (hitSomething)
         {
@@ -76,7 +76,7 @@ public class MouseHighlighter : MonoBehaviour
             return;
         }
 
-        RaycastHit[] hits = Physics.RaycastAll(ray, maxDistance, LayerMaskHelper.ExcludeInvisibleWall(dropLayers), QueryTriggerInteraction.Collide);
+        RaycastHit[] hits = Physics.RaycastAll(ray, maxDistance, dropLayers, QueryTriggerInteraction.Collide);
         if (hits == null || hits.Length == 0)
         {
             return;
@@ -103,7 +103,7 @@ public class MouseHighlighter : MonoBehaviour
                 continue;
             }
 
-            Collider[] colliders = Physics.OverlapSphere(worldCenter, worldRadius, LayerMaskHelper.ExcludeInvisibleWall(dropLayers), QueryTriggerInteraction.Collide);
+            Collider[] colliders = Physics.OverlapSphere(worldCenter, worldRadius, dropLayers, QueryTriggerInteraction.Collide);
             for (int i = 0; i < colliders.Length; i++)
             {
                 var drop = colliders[i].GetComponentInParent<DropMaterial>();
