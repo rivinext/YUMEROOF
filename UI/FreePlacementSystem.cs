@@ -583,38 +583,42 @@ public class FreePlacementSystem : MonoBehaviour
 
         // まずアンカーへのレイキャストを行う
         bool snappedByAnchorRaycast = false;
-        float sphereRadius = Mathf.Max(anchorSnapDistance, 0.01f);
-        RaycastHit[] anchorHits = Physics.SphereCastAll(ray, sphereRadius, 600f, anchorLayer);
-        if (anchorHits.Length > 0)
+        bool useAnchorSnapping = currentFurnitureData.placementRules != PlacementRule.Ceiling;
+        if (useAnchorSnapping)
         {
-            System.Array.Sort(anchorHits, (a, b) => a.distance.CompareTo(b.distance));
-
-            foreach (var anchorHit in anchorHits)
+            float sphereRadius = Mathf.Max(anchorSnapDistance, 0.01f);
+            RaycastHit[] anchorHits = Physics.SphereCastAll(ray, sphereRadius, 600f, anchorLayer);
+            if (anchorHits.Length > 0)
             {
-                AnchorPoint anchor = anchorHit.collider.GetComponent<AnchorPoint>();
-                if (anchor == null) continue;
-                if (previewObject != null && anchor.transform.IsChildOf(previewObject.transform))
-                    continue;
-                if (anchor.IsOccupied) continue;
+                System.Array.Sort(anchorHits, (a, b) => a.distance.CompareTo(b.distance));
 
-                snappedAnchor = anchor;
-                var pf = previewObject.GetComponent<PlacedFurniture>();
-                Vector3 offset = pf != null ? GetAnchorPlacementOffset(pf, snappedAnchor) : Vector3.zero;
-                Vector3 targetPosition = snappedAnchor.transform.position + offset;
-
-                previewObject.transform.position = targetPosition;
-
-                AlignPreviewToAnchor(snappedAnchor);
-
-                PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
-                if (placedComp != null)
+                foreach (var anchorHit in anchorHits)
                 {
-                    bool canPlace = !placedComp.IsOverlapping();
-                    placedComp.SetPlacementValid(canPlace);
-                }
+                    AnchorPoint anchor = anchorHit.collider.GetComponent<AnchorPoint>();
+                    if (anchor == null) continue;
+                    if (previewObject != null && anchor.transform.IsChildOf(previewObject.transform))
+                        continue;
+                    if (anchor.IsOccupied) continue;
 
-                snappedByAnchorRaycast = true;
-                break;
+                    snappedAnchor = anchor;
+                    var pf = previewObject.GetComponent<PlacedFurniture>();
+                    Vector3 offset = pf != null ? GetAnchorPlacementOffset(pf, snappedAnchor) : Vector3.zero;
+                    Vector3 targetPosition = snappedAnchor.transform.position + offset;
+
+                    previewObject.transform.position = targetPosition;
+
+                    AlignPreviewToAnchor(snappedAnchor);
+
+                    PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
+                    if (placedComp != null)
+                    {
+                        bool canPlace = !placedComp.IsOverlapping();
+                        placedComp.SetPlacementValid(canPlace);
+                    }
+
+                    snappedByAnchorRaycast = true;
+                    break;
+                }
             }
         }
 
@@ -703,7 +707,10 @@ public class FreePlacementSystem : MonoBehaviour
             {
                 CheckStackPlacement(ref targetPosition);
             }
-            TrySnapToAnchor(ref targetPosition);
+            if (useAnchorSnapping)
+            {
+                TrySnapToAnchor(ref targetPosition);
+            }
 
             previewObject.transform.position = targetPosition;
 
