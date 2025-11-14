@@ -9,6 +9,7 @@ public class FreePlacementSystem : MonoBehaviour
     public Camera mainCamera;
     public LayerMask floorLayer;
     public LayerMask wallLayer;
+    [Tooltip("天井配置用のレイヤーマスク（InvisibleCeiling が存在する場合は自動的に含みます）")]
     public LayerMask ceilingLayer;
     public LayerMask furnitureLayer;
     public LayerMask anchorLayer;
@@ -625,25 +626,32 @@ public class FreePlacementSystem : MonoBehaviour
 
         snappedAnchor = null;
 
-        LayerMask targetLayer = floorLayer;
+        int ceilingRaycastMask = ceilingLayer.value;
+        int invisibleCeilingLayer = LayerMask.NameToLayer("InvisibleCeiling");
+        if (invisibleCeilingLayer >= 0)
+        {
+            ceilingRaycastMask |= 1 << invisibleCeilingLayer;
+        }
+
+        int targetLayerMask = floorLayer.value;
 
         switch (currentFurnitureData.placementRules)
         {
             case PlacementRule.Wall:
-                targetLayer = wallLayer;
+                targetLayerMask = wallLayer.value;
                 break;
             case PlacementRule.Ceiling:
-                targetLayer = ceilingLayer;
+                targetLayerMask = ceilingRaycastMask;
                 break;
             case PlacementRule.Both:
-                targetLayer = floorLayer | wallLayer;
+                targetLayerMask = floorLayer.value | wallLayer.value;
                 break;
             default:
-                targetLayer = floorLayer;
+                targetLayerMask = floorLayer.value;
                 break;
         }
 
-        if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(ray, out hit, 300f, targetLayerMask, QueryTriggerInteraction.Ignore))
         {
             Vector3 targetPosition = hit.point;
 
@@ -653,7 +661,7 @@ public class FreePlacementSystem : MonoBehaviour
             }
 
             if (currentFurnitureData.placementRules == PlacementRule.Wall &&
-                ((1 << hit.collider.gameObject.layer) & wallLayer) != 0)
+                ((1 << hit.collider.gameObject.layer) & wallLayer.value) != 0)
             {
                 Vector3 projected = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
                 if (projected.sqrMagnitude < Mathf.Epsilon)
@@ -668,7 +676,7 @@ public class FreePlacementSystem : MonoBehaviour
             }
             else if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
             {
-                if (((1 << hit.collider.gameObject.layer) & ceilingLayer) == 0)
+                if (((1 << hit.collider.gameObject.layer) & ceilingRaycastMask) == 0)
                 {
                     return;
                 }
