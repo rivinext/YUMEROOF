@@ -690,101 +690,145 @@ public class FreePlacementSystem : MonoBehaviour
             return;
         }
 
-        if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
+        bool hasHit = false;
+
+        if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
         {
-            Vector3 targetPosition = hit.point;
-
-            if (isMovingFurniture)
+            RaycastHit[] hits = Physics.RaycastAll(ray, 300f, targetLayer, QueryTriggerInteraction.Ignore);
+            if (hits != null && hits.Length > 0)
             {
-                targetPosition += moveOffset;
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+                foreach (var ceilingHit in hits)
+                {
+                    if (((1 << ceilingHit.collider.gameObject.layer) & ceilingPlacementMask) == 0)
+                    {
+                        continue;
+                    }
+
+                    if (!IsValidCeilingNormal(ceilingHit.normal))
+                    {
+                        continue;
+                    }
+
+                    if (Vector3.Dot(ceilingHit.normal, -ray.direction) <= 0f)
+                    {
+                        continue;
+                    }
+
+                    hit = ceilingHit;
+                    hasHit = true;
+                    break;
+                }
             }
 
-            if (currentFurnitureData.placementRules == PlacementRule.Wall &&
-                ((1 << hit.collider.gameObject.layer) & wallLayer) != 0)
+            if (!hasHit)
             {
-                Vector3 projected = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
-                if (projected.sqrMagnitude < Mathf.Epsilon)
-                {
-                    projected = Vector3.forward;
-                }
-
-                Quaternion targetRotation = Quaternion.LookRotation(projected, Vector3.up);
-                previewObject.transform.rotation = targetRotation;
-
-                targetPosition = CalculateWallSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
+                return;
             }
-            else if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
+        }
+        else if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
+        {
+            hasHit = true;
+        }
+
+        if (!hasHit)
+        {
+            return;
+        }
+
+        Vector3 targetPosition = hit.point;
+
+        if (isMovingFurniture)
+        {
+            targetPosition += moveOffset;
+        }
+
+        if (currentFurnitureData.placementRules == PlacementRule.Wall &&
+            ((1 << hit.collider.gameObject.layer) & wallLayer) != 0)
+        {
+            Vector3 projected = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
+            if (projected.sqrMagnitude < Mathf.Epsilon)
             {
-                if (ceilingPlacementMask == 0)
-                {
-                    return;
-                }
+                projected = Vector3.forward;
+            }
 
-                if (((1 << hit.collider.gameObject.layer) & ceilingPlacementMask) == 0)
-                {
-                    return;
-                }
+            Quaternion targetRotation = Quaternion.LookRotation(projected, Vector3.up);
+            previewObject.transform.rotation = targetRotation;
 
-                if (!IsValidCeilingNormal(hit.normal))
-                {
-                    return;
-                }
+            targetPosition = CalculateWallSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
+        }
+        else if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
+        {
+            if (ceilingPlacementMask == 0)
+            {
+                return;
+            }
 
-                Vector3 toHit = hit.point - mainCamera.transform.position;
-                if (toHit.sqrMagnitude < Mathf.Epsilon)
-                {
-                    return;
-                }
+            if (((1 << hit.collider.gameObject.layer) & ceilingPlacementMask) == 0)
+            {
+                return;
+            }
 
-                float upDot = Vector3.Dot(toHit.normalized, Vector3.up);
-                if (upDot <= minCeilingHitUpDot)
-                {
-                    return;
-                }
+            if (!IsValidCeilingNormal(hit.normal))
+            {
+                return;
+            }
 
-                Vector3 desiredUp = -hit.normal.normalized;
-                if (desiredUp.sqrMagnitude < Mathf.Epsilon)
-                {
-                    desiredUp = Vector3.up;
-                }
+            Vector3 toHit = hit.point - mainCamera.transform.position;
+            if (toHit.sqrMagnitude < Mathf.Epsilon)
+            {
+                return;
+            }
 
-                Vector3 currentForward = previewObject.transform.forward;
-                Vector3 projectedForward = Vector3.ProjectOnPlane(currentForward, desiredUp);
+            float upDot = Vector3.Dot(toHit.normalized, Vector3.up);
+            if (upDot <= minCeilingHitUpDot)
+            {
+                return;
+            }
+
+            Vector3 desiredUp = -hit.normal.normalized;
+            if (desiredUp.sqrMagnitude < Mathf.Epsilon)
+            {
+                desiredUp = Vector3.up;
+            }
+
+            Vector3 currentForward = previewObject.transform.forward;
+            Vector3 projectedForward = Vector3.ProjectOnPlane(currentForward, desiredUp);
+            if (projectedForward.sqrMagnitude < Mathf.Epsilon)
+            {
+                projectedForward = Vector3.ProjectOnPlane(Vector3.forward, desiredUp);
                 if (projectedForward.sqrMagnitude < Mathf.Epsilon)
                 {
-                    projectedForward = Vector3.ProjectOnPlane(Vector3.forward, desiredUp);
+                    projectedForward = Vector3.Cross(desiredUp, Vector3.right);
                     if (projectedForward.sqrMagnitude < Mathf.Epsilon)
                     {
-                        projectedForward = Vector3.Cross(desiredUp, Vector3.right);
-                        if (projectedForward.sqrMagnitude < Mathf.Epsilon)
-                        {
-                            projectedForward = Vector3.Cross(desiredUp, Vector3.forward);
-                        }
+                        projectedForward = Vector3.Cross(desiredUp, Vector3.forward);
                     }
                 }
-
-                previewObject.transform.rotation = Quaternion.LookRotation(projectedForward.normalized, desiredUp);
-
-                targetPosition = CalculateCeilingSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
             }
 
-            if (currentFurnitureData.placementRules != PlacementRule.Ceiling)
-            {
-                CheckStackPlacement(ref targetPosition);
-            }
-            if (useAnchorSnapping)
-            {
-                TrySnapToAnchor(ref targetPosition);
-            }
+            previewObject.transform.rotation = Quaternion.LookRotation(projectedForward.normalized, desiredUp);
 
-            previewObject.transform.position = targetPosition;
+            targetPosition = CalculateCeilingSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
+        }
 
-            PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
-            if (placedComp != null)
-            {
-                bool canPlace = !placedComp.IsOverlapping();
-                placedComp.SetPlacementValid(canPlace);
-            }
+        if (currentFurnitureData.placementRules != PlacementRule.Ceiling)
+        {
+            CheckStackPlacement(ref targetPosition);
+        }
+        if (useAnchorSnapping)
+        {
+            TrySnapToAnchor(ref targetPosition);
+        }
+
+        previewObject.transform.position = targetPosition;
+
+        PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
+        if (placedComp != null)
+        {
+            bool canPlace = !placedComp.IsOverlapping();
+            placedComp.SetPlacementValid(canPlace);
         }
     }
 
