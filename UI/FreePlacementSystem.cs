@@ -690,62 +690,7 @@ public class FreePlacementSystem : MonoBehaviour
             return;
         }
 
-        RaycastHit hit = default;
-        bool hasHit = false;
-
-        if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
-        {
-            if (ceilingPlacementMask == 0)
-            {
-                return;
-            }
-
-            RaycastHit[] ceilingHits = Physics.RaycastAll(ray, 300f, targetLayer, QueryTriggerInteraction.Ignore);
-            if (ceilingHits != null && ceilingHits.Length > 0)
-            {
-                System.Array.Sort(ceilingHits, (a, b) => a.distance.CompareTo(b.distance));
-
-                foreach (var ceilingHit in ceilingHits)
-                {
-                    if (((1 << ceilingHit.collider.gameObject.layer) & ceilingPlacementMask) == 0)
-                    {
-                        continue;
-                    }
-
-                    if (Vector3.Dot(ceilingHit.normal, ray.direction) >= 0f)
-                    {
-                        continue;
-                    }
-
-                    if (!IsValidCeilingNormal(ceilingHit.normal))
-                    {
-                        continue;
-                    }
-
-                    Vector3 toHitFromCamera = ceilingHit.point - mainCamera.transform.position;
-                    if (toHitFromCamera.sqrMagnitude < Mathf.Epsilon)
-                    {
-                        continue;
-                    }
-
-                    float upDot = Vector3.Dot(toHitFromCamera.normalized, Vector3.up);
-                    if (upDot <= minCeilingHitUpDot)
-                    {
-                        continue;
-                    }
-
-                    hit = ceilingHit;
-                    hasHit = true;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            hasHit = Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore);
-        }
-
-        if (hasHit)
+        if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
         {
             Vector3 targetPosition = hit.point;
 
