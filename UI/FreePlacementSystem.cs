@@ -502,7 +502,7 @@ public class FreePlacementSystem : MonoBehaviour
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit, 600f, GetFurnitureRaycastMask(), QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(ray, out hit, 600f, LayerMaskHelper.ExcludeInvisibleWall(GetFurnitureRaycastMask()), QueryTriggerInteraction.Ignore))
         {
             PlacedFurniture furniture = hit.collider.GetComponentInParent<PlacedFurniture>();
 
@@ -521,7 +521,7 @@ public class FreePlacementSystem : MonoBehaviour
                 // 同じレイを床にも飛ばし、床のヒット位置を取得
                 RaycastHit floorHit;
                 Vector3 floorPoint = hit.point;
-                if (Physics.Raycast(ray, out floorHit, 100f, floorLayer, QueryTriggerInteraction.Ignore))
+                if (Physics.Raycast(ray, out floorHit, 100f, LayerMaskHelper.ExcludeInvisibleWall(floorLayer), QueryTriggerInteraction.Ignore))
                 {
                     floorPoint = floorHit.point;
                 }
@@ -690,7 +690,7 @@ public class FreePlacementSystem : MonoBehaviour
             return;
         }
 
-        if (Physics.Raycast(ray, out hit, 300f, targetLayer, QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(ray, out hit, 300f, LayerMaskHelper.ExcludeInvisibleWall(targetLayer), QueryTriggerInteraction.Ignore))
         {
             Vector3 targetPosition = hit.point;
 
@@ -1042,7 +1042,7 @@ public class FreePlacementSystem : MonoBehaviour
         snappedParentFurniture = null;
 
         Ray ray = new Ray(position + Vector3.up * 5f, Vector3.down);
-        RaycastHit[] hits = Physics.RaycastAll(ray, 10f, GetFurnitureRaycastMask(), QueryTriggerInteraction.Ignore);
+        RaycastHit[] hits = Physics.RaycastAll(ray, 10f, LayerMaskHelper.ExcludeInvisibleWall(GetFurnitureRaycastMask()), QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (var hit in hits)
@@ -1231,7 +1231,7 @@ public class FreePlacementSystem : MonoBehaviour
         Ray ray = new Ray(furniture.transform.position + Vector3.up * 5f, Vector3.down);
         RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit, 10f, GetFurnitureRaycastMask(), QueryTriggerInteraction.Ignore))
+        if (Physics.Raycast(ray, out hit, 10f, LayerMaskHelper.ExcludeInvisibleWall(GetFurnitureRaycastMask()), QueryTriggerInteraction.Ignore))
         {
             PlacedFurniture parentFurniture = hit.collider.GetComponentInParent<PlacedFurniture>();
 
