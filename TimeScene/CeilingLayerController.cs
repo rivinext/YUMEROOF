@@ -77,9 +77,9 @@ public class CeilingLayerController : MonoBehaviour
             Vector3 worldNormal = ceiling.renderer.transform.TransformDirection(ceiling.normal).normalized;
             Vector3 toCamera = cam.transform.position - ceiling.renderer.bounds.center;
 
-            bool isCameraOnOppositeSide = Vector3.Dot(toCamera.normalized, worldNormal) < 0f;
+            bool isOnNormalSide = Vector3.Dot(toCamera.normalized, worldNormal) > 0f;
 
-            if (isCameraOnOppositeSide && invisibleLayer != -1)
+            if (isOnNormalSide && invisibleLayer != -1)
             {
                 ceiling.renderer.gameObject.layer = invisibleLayer;
                 ceiling.renderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
