@@ -9,24 +9,15 @@ public class SceneArea : MonoBehaviour
 
     [Header("Trigger Settings")]
     public bool requireKeyPress = false; // Eキーが必要か
-    [SerializeField] private Transform promptAnchor; // プロンプト表示位置
-    [SerializeField] private float promptOffset = 1f;
-    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     private bool isPlayerInArea = false;
     private BoxCollider areaCollider;
-    private SharedInteractionPromptController promptController;
 
     void Start()
     {
         // コライダー設定
         areaCollider = GetComponent<BoxCollider>();
         areaCollider.isTrigger = true;
-
-        if (promptAnchor == null)
-            promptAnchor = transform;
-
-        promptController = SharedInteractionPromptController.Instance;
 
         // エリアを半透明で表示（デバッグ用）
         SetupDebugVisual();
@@ -71,13 +62,7 @@ public class SceneArea : MonoBehaviour
 
             if (requireKeyPress)
             {
-                // Eキーが必要な場合はUIを表示
-                if (promptController != null)
-                {
-                    var data = new InteractionPromptData(promptAnchor != null ? promptAnchor : transform, promptOffset, promptLocalizationKey);
-                    if (data.IsValid)
-                        promptController.ShowPrompt(this, data);
-                }
+                // Eキーが必要な場合は待機状態にするだけ
             }
             else
             {
@@ -95,8 +80,6 @@ public class SceneArea : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             isPlayerInArea = false;
-
-            promptController?.HidePrompt(this);
         }
     }
 
@@ -107,15 +90,9 @@ public class SceneArea : MonoBehaviour
         {
             if (!SceneTransitionManager.Instance.IsTransitioning)
             {
-                promptController?.HidePrompt(this);
                 SceneTransitionManager.Instance.TransitionToScene(targetSceneName, spawnPointName, false);
             }
         }
-    }
-
-    void OnDisable()
-    {
-        promptController?.HidePrompt(this);
     }
 
     void OnDrawGizmos()

@@ -10,20 +10,13 @@ using UnityEngine.UI;
 /// A separate sleep-specific event <see cref="GameClock.OnSleepAdvancedDay"/>
 /// is invoked after the day advances so systems can react only to sleeping.
 /// </summary>
-public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
+public class BedTrigger : MonoBehaviour, IInteractable
 {
-    [Header("Interaction Prompt")]
-    [SerializeField] private Transform promptAnchor;
-    [SerializeField] private float promptOffset = 1f;
-    [SerializeField] private string promptLocalizationKey = string.Empty;
-
     [Header("Interaction UI")]
     public GameObject interactionPanel;
     public bool isPlayerNearby = false;
     bool isPanelOpen = false;
     Canvas cachedPanelCanvas;
-
-    private SharedInteractionPromptController promptController;
 
     [Header("Player Control")]
     [SerializeField] private Transform bedAnchor;
@@ -79,11 +72,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
 
         if (panelContentArea != null)
             cachedPanelCanvas = panelContentArea.GetComponentInParent<Canvas>();
-
-        if (promptAnchor == null)
-            promptAnchor = transform;
-
-        promptController = SharedInteractionPromptController.Instance;
 
         TryResolveEmoteButtonBinder();
 
@@ -227,8 +215,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
     void OpenPanel()
     {
         isPanelOpen = true;
-
-        promptController?.HidePrompt(this);
 
         if (interactionPanel != null)
         {
@@ -431,8 +417,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         isTransitioning = false;
 
         SetEmoteButtonsTemporarilyDisabled(false);
-
-        ShowPromptIfNearby();
     }
 
     void StartSleep()
@@ -500,7 +484,6 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
             isPlayerInBed = false;
             isTransitioning = false;
             SetEmoteButtonsTemporarilyDisabled(false);
-            ShowPromptIfNearby();
         }
     }
 
@@ -546,26 +529,9 @@ public class BedTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         // This placeholder keeps the logic extendable as described in MD/_Concept.md.
     }
 
-    public bool TryGetInteractionPromptData(out InteractionPromptData data)
-    {
-        var anchor = promptAnchor != null ? promptAnchor : transform;
-        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
-        return true;
-    }
-
-    private void ShowPromptIfNearby()
-    {
-        if (!isPlayerNearby || promptController == null)
-            return;
-
-        if (TryGetInteractionPromptData(out var promptData) && promptData.IsValid)
-            promptController.ShowPrompt(this, promptData);
-    }
-
     void OnDisable()
     {
         SetEmoteButtonsTemporarilyDisabled(false);
-        promptController?.HidePrompt(this);
     }
 
     private void TryResolveEmoteButtonBinder()

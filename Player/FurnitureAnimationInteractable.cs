@@ -4,7 +4,7 @@ using UnityEngine;
 /// 家具などのオブジェクトに割り当てて、プレイヤーがEキーでインタラクトした際に
 /// アニメーションを再生・停止させるためのコンポーネント。
 /// </summary>
-public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
+public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
 {
     public enum InteractionAnimationMode
     {
@@ -24,12 +24,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInt
 
     [Tooltip("インタラクト時の挙動タイプ。\nPlayOnce: 1回だけ再生。\nToggleLoop: ループ状態をオン/オフ。")]
     [SerializeField] private InteractionAnimationMode interactionMode = InteractionAnimationMode.PlayOnce;
-
-    [Header("Interaction Prompt")]
-    [SerializeField] private bool interactionPromptEnabled = false;
-    [SerializeField] private Transform promptAnchor;
-    [SerializeField] private float promptOffset = 1f;
-    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     [Header("Play Once Settings")]
     [SerializeField] private PlayOnceMethod playOnceMethod = PlayOnceMethod.Trigger;
@@ -59,11 +53,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInt
     /// </summary>
     public bool IsLooping => isLooping;
 
-    /// <summary>
-    /// インタラクションプロンプトが有効かどうかを取得します。
-    /// </summary>
-    public bool InteractionPromptEnabled => interactionPromptEnabled;
-
     private void Reset()
     {
         TryAssignAnimator();
@@ -88,9 +77,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInt
         {
             ApplyLoopState();                               //:contentReference[oaicite:3]{index=3}
         }
-
-        if (promptAnchor == null)
-            promptAnchor = transform;
     }
 
     private void TryAssignAnimator()
@@ -99,29 +85,6 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable, IInt
         {
             targetAnimator = GetComponentInChildren<Animator>();
         }
-    }
-
-    public bool TryGetInteractionPromptData(out InteractionPromptData data)
-    {
-        if (!interactionPromptEnabled)
-        {
-            data = default;
-            return false;
-        }
-
-        var anchor = promptAnchor != null ? promptAnchor : transform;
-        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
-        return true;
-    }
-
-    public void SetInteractionPromptEnabled(bool enabled)
-    {
-        interactionPromptEnabled = enabled;
-    }
-
-    public void ToggleInteractionPromptEnabled()
-    {
-        SetInteractionPromptEnabled(!interactionPromptEnabled);
     }
 
     public void Interact()
