@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 
 public class CameraControlPanel : MonoBehaviour
 {
@@ -63,6 +64,8 @@ public class CameraControlPanel : MonoBehaviour
 
     private void OnEnable()
     {
+        InitializeReferences();
+        SceneManager.sceneLoaded += HandleSceneLoaded;
         EnsurePanelAnimatorReference();
         RegisterControllerEventHandlers();
         RegisterCallbacks();
@@ -74,10 +77,19 @@ public class CameraControlPanel : MonoBehaviour
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
         UnregisterPanelToggle();
         UnregisterCallbacks();
         UnregisterControllerEventHandlers();
         UnregisterPresetButtons();
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        InitializeReferences();
+        RegisterControllerEventHandlers();
+        UpdateCameraControllerRanges();
+        RefreshUI();
     }
 
     private void InitializeScreenshotButton()
