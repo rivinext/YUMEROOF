@@ -19,9 +19,6 @@ public class PlayerRayInteractor : MonoBehaviour
     public float sphereRadius = 0.5f;
     public Vector3 boxHalfExtents = Vector3.one * 0.5f;
 
-    [Header("Interaction Prompt")]
-    [SerializeField] private SharedInteractionPromptController promptController;
-
     private IInteractable currentTarget;
     private RayOutlineHighlighter highlighter;
     private bool skipHideOnce;
@@ -35,8 +32,6 @@ public class PlayerRayInteractor : MonoBehaviour
         if (playerController == null)
             playerController = FindFirstObjectByType<PlayerController>();
 
-        if (promptController == null)
-            promptController = SharedInteractionPromptController.Instance;
     }
 
 #if UNITY_EDITOR
@@ -155,20 +150,6 @@ public class PlayerRayInteractor : MonoBehaviour
         if (bed != null)
             bed.isPlayerNearby = enabled;
 
-        if (promptController == null)
-            promptController = SharedInteractionPromptController.Instance;
-
-        if (promptController != null)
-        {
-            if (enabled && mb.TryGetComponent<IInteractionPromptDataProvider>(out var promptProvider) && promptProvider.TryGetInteractionPromptData(out var promptData) && promptData.IsValid)
-            {
-                promptController.ShowPrompt(mb, promptData);
-            }
-            else
-            {
-                promptController.HidePrompt(mb);
-            }
-        }
     }
 
     private void OnDrawGizmosSelected()

@@ -1,17 +1,12 @@
 using UnityEngine;
 
-public class SitTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataProvider
+public class SitTrigger : MonoBehaviour, IInteractable
 {
     [SerializeField, Tooltip("List of potential seat anchors. The closest valid anchor to the player will be used when sitting.")]
     private Transform[] seatAnchors;
 
     [SerializeField]
     private Transform seatAnchor;
-
-    [Header("Interaction Prompt")]
-    [SerializeField] private Transform promptAnchor;
-    [SerializeField] private float promptOffset = 1f;
-    [SerializeField] private string promptLocalizationKey = string.Empty;
 
     private PlayerController player;
 
@@ -26,9 +21,6 @@ public class SitTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         {
             seatAnchor = transform;
         }
-
-        if (promptAnchor == null)
-            promptAnchor = transform;
     }
 
     public void Interact()
@@ -82,11 +74,5 @@ public class SitTrigger : MonoBehaviour, IInteractable, IInteractionPromptDataPr
         }
 
         return closestAnchor != null ? closestAnchor : transform;
-    }
-    public bool TryGetInteractionPromptData(out InteractionPromptData data)
-    {
-        var anchor = promptAnchor != null ? promptAnchor : transform;
-        data = new InteractionPromptData(anchor, promptOffset, promptLocalizationKey);
-        return true;
     }
 }
