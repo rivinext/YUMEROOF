@@ -34,11 +34,19 @@ public class AudioManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        bgmVolume = Mathf.Clamp01(initialBgmVolume);
-        sfxVolume = Mathf.Clamp01(initialSfxVolume);
+        bgmVolume = Mathf.Clamp01(ResolveInitialVolume(initialBgmVolume, DefaultBgmVolume));
+        sfxVolume = Mathf.Clamp01(ResolveInitialVolume(initialSfxVolume, DefaultSfxVolume));
 
         ApplyVolumesToListeners();
     }
+
+#if UNITY_EDITOR
+    private void Reset()
+    {
+        initialBgmVolume = DefaultBgmVolume;
+        initialSfxVolume = DefaultSfxVolume;
+    }
+#endif
 
     /// <summary>
     /// 現在のBGM音量を設定する。
@@ -99,5 +107,15 @@ public class AudioManager : MonoBehaviour
 
         sfxVolume = clamped;
         OnSfxVolumeChanged?.Invoke(clamped);
+    }
+
+    private static float ResolveInitialVolume(float value, float fallback)
+    {
+        if (Mathf.Approximately(value, 0f))
+        {
+            return fallback;
+        }
+
+        return value;
     }
 }
