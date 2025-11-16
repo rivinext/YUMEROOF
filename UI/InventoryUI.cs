@@ -26,7 +26,7 @@ public class InventoryUI : MonoBehaviour
         public GameObject content;
     }
 
-    private enum InventoryTabType
+    public enum InventoryTabType
     {
         Material,
         Furniture
