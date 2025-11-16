@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
+using DG.Tweening;
 
 [DisallowMultipleComponent]
 public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
@@ -17,6 +18,12 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
     [SerializeField] private Image iconImage;
     [SerializeField] private Image emptyStateImage;
     [SerializeField] private string itemId;
+
+    [Header("Hover Animation")]
+    [SerializeField] private RectTransform hoverTarget;
+    [SerializeField] private float hoverScale = 1.05f;
+    [SerializeField] private float hoverTilt = 5f;
+    [SerializeField] private float hoverDuration = 0.18f;
 
     [Header("Hover Audio")]
     [SerializeField] private AudioClip hoverSfx;
@@ -33,6 +40,10 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private bool isSelected;
     private float lastHoverSfxTime = -10f;
     private float currentSfxVolume = 1f;
+    private RectTransform resolvedHoverTarget;
+    private Vector3 baseScale = Vector3.one;
+    private Vector3 baseEulerAngles = Vector3.zero;
+    private Tween hoverTween;
 
     public WardrobeTabType Category => category;
     public GameObject WearablePrefab => wearablePrefab;
@@ -82,6 +93,22 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
         UpdateEmptyStateVisuals();
         SetupHoverAudioSource();
+
+        resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
+
+        if (resolvedHoverTarget != null)
+        {
+            baseScale = resolvedHoverTarget.localScale;
+            baseEulerAngles = resolvedHoverTarget.localEulerAngles;
+        }
+        else
+        {
+            baseScale = Vector3.one;
+            baseEulerAngles = Vector3.zero;
+        }
+
+        KillHoverTween();
+        ResetHoverTargetTransform();
     }
 
     private void OnEnable()
@@ -93,6 +120,8 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void OnDisable()
     {
+        KillHoverTween();
+        ResetHoverTargetTransform();
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
@@ -198,6 +227,7 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
         Unbind();
 
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        KillHoverTween();
 
         if (owner != null)
         {
@@ -209,11 +239,39 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
     public void OnPointerEnter(PointerEventData eventData)
     {
         PlayHoverSfx();
+
+        if (resolvedHoverTarget == null)
+        {
+            return;
+        }
+
+        KillHoverTween();
+        ResetHoverTargetTransform();
+
+        Vector3 targetScale = baseScale * hoverScale;
+        Vector3 tiltedRotation = baseEulerAngles + new Vector3(0f, 0f, hoverTilt);
+        float duration = Mathf.Max(hoverDuration, 0.01f);
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.Join(resolvedHoverTarget.DOScale(targetScale, duration).SetEase(Ease.OutQuad));
+        sequence.Join(resolvedHoverTarget.DOLocalRotate(tiltedRotation, duration * 0.5f).SetEase(Ease.OutQuad));
+        sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
+        sequence.OnComplete(() => hoverTween = null);
+        hoverTween = sequence;
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        // Intentionally left blank. We only need the enter event to trigger audio.
+        if (resolvedHoverTarget == null)
+        {
+            return;
+        }
+
+        KillHoverTween();
+        resolvedHoverTarget.localEulerAngles = baseEulerAngles;
+        hoverTween = resolvedHoverTarget.DOScale(baseScale, Mathf.Max(hoverDuration, 0.01f))
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() => hoverTween = null);
     }
 
     private void OnButtonClicked()
@@ -312,5 +370,27 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
         hoverAudioSource.PlayOneShot(hoverSfx, volume);
         lastHoverSfxTime = Time.unscaledTime;
+    }
+
+    private void ResetHoverTargetTransform()
+    {
+        if (resolvedHoverTarget == null)
+        {
+            return;
+        }
+
+        resolvedHoverTarget.localScale = baseScale;
+        resolvedHoverTarget.localEulerAngles = baseEulerAngles;
+    }
+
+    private void KillHoverTween()
+    {
+        if (hoverTween == null)
+        {
+            return;
+        }
+
+        hoverTween.Kill();
+        hoverTween = null;
     }
 }
