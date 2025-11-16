@@ -60,6 +60,7 @@ public class FreePlacementSystem : MonoBehaviour
     private GameObject previewObject;
     private FurnitureData currentFurnitureData;
     private Vector3 moveOffset;
+    private bool uiSoundsMuted;
 
     // 元の位置を記憶（既存配置物の移動用）
     private Vector3 originalPosition;
@@ -386,7 +387,7 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
 
-        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+        SetUiSoundMuted(false);
 
         if (EnsurePlayerControl())
         {
@@ -442,7 +443,7 @@ public class FreePlacementSystem : MonoBehaviour
         previewObject = null;
         currentFurnitureData = null;
 
-        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+        SetUiSoundMuted(false);
 
         if (EnsurePlayerControl())
         {
@@ -500,7 +501,7 @@ public class FreePlacementSystem : MonoBehaviour
         selectedFurniture = null;
         currentFurnitureData = null;
 
-        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+        SetUiSoundMuted(false);
 
         if (EnsurePlayerControl())
         {
@@ -594,7 +595,7 @@ public class FreePlacementSystem : MonoBehaviour
             playerControl.DisableControl();
         }
 
-        UIButtonSoundBinderPersistent.Instance?.SetMuted(true);
+        SetUiSoundMuted(true);
 
         previewObject = furniture.gameObject;
         currentFurnitureData = furniture.furnitureData;
@@ -624,7 +625,7 @@ public class FreePlacementSystem : MonoBehaviour
         isPlacingNewFurniture = true;
         currentFurnitureData = data;
 
-        UIButtonSoundBinderPersistent.Instance?.SetMuted(true);
+        SetUiSoundMuted(true);
 
         previewObject = Instantiate(furniturePrefab);
         previewObject.name = "Preview_" + data.nameID;
@@ -1236,7 +1237,7 @@ public class FreePlacementSystem : MonoBehaviour
             previewObject = null;
             currentFurnitureData = null;
 
-            UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+            SetUiSoundMuted(false);
 
             if (EnsurePlayerControl())
             {
@@ -1338,6 +1339,20 @@ public class FreePlacementSystem : MonoBehaviour
         currentSfxVolume = Mathf.Clamp01(value);
     }
 
+    private void SetUiSoundMuted(bool muted)
+    {
+        if (uiSoundsMuted == muted)
+        {
+            return;
+        }
+
+        uiSoundsMuted = muted;
+
+        // UIButtonSoundBinderPersistent を撤去したため、UI サウンドのミュートは
+        // ここで一元管理する。現時点では UI 操作音は AudioManager 経由で個別に
+        // 再生されるため、ミュート状態は保持のみを行う。
+    }
+
     void RotateFurniture(float angle)
     {
         if (previewObject != null && currentFurnitureData.placementRules != PlacementRule.Wall)
@@ -1366,7 +1381,7 @@ public class FreePlacementSystem : MonoBehaviour
         originalParentFurniture = null;
         originalScale = Vector3.one;
 
-        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+        SetUiSoundMuted(false);
 
         if (EnsurePlayerControl())
         {
@@ -1393,7 +1408,7 @@ public class FreePlacementSystem : MonoBehaviour
             previewObject.transform.localScale = originalScale;
         }
 
-        UIButtonSoundBinderPersistent.Instance?.SetMuted(false);
+        SetUiSoundMuted(false);
     }
 
     public void CreateCornerMarkers(PlacedFurniture furniture)
