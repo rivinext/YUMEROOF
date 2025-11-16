@@ -20,8 +20,9 @@ public class InventoryUI : MonoBehaviour
     [Header("Tab Container")]
     public GameObject tabContainer;
     public GameObject tabContentRoot;
-    public Button materialTabButton; // タブボタン
-    public Button furnitureTabButton; // タブボタン
+    public Toggle materialTabToggle;
+    public Toggle furnitureTabToggle;
+    public ToggleGroup tabToggleGroup;
     public GameObject materialTab; // タブコンテンツ全体
     public GameObject furnitureTab; // タブコンテンツ全体
 
@@ -149,12 +150,25 @@ public class InventoryUI : MonoBehaviour
         SetupCraftButton();
         SetupAutoReopenControl();
         RegisterEvents();
-        SwitchTab(false);
+        InitializeTabState();
 
-        // 初期状態のタブボタン画像を設定
-        UpdateTabButtonVisuals(false);
         CacheSceneInteractionComponents();
         UpdateAutoReopenVisual();
+    }
+
+    void InitializeTabState()
+    {
+        if (materialTabToggle != null)
+        {
+            materialTabToggle.SetIsOnWithoutNotify(true);
+        }
+
+        if (furnitureTabToggle != null)
+        {
+            furnitureTabToggle.SetIsOnWithoutNotify(false);
+        }
+
+        SwitchTab(true);
     }
 
     void InitializeManagers()
@@ -201,8 +215,8 @@ public class InventoryUI : MonoBehaviour
 
     void SetupTabButtons()
     {
-        ConfigureTabButton(materialTabButton, true);
-        ConfigureTabButton(furnitureTabButton, false);
+        ConfigureTabToggle(materialTabToggle, true);
+        ConfigureTabToggle(furnitureTabToggle, false);
     }
 
     private CanvasGroup EnsureTabCanvasGroup()
@@ -248,17 +262,18 @@ public class InventoryUI : MonoBehaviour
         return panelAnimator;
     }
 
-    private void ConfigureTabButton(Button button, bool materialTab)
+    private void ConfigureTabToggle(Toggle toggle, bool materialTab)
     {
-        if (button == null) return;
+        if (toggle == null) return;
 
-        button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() => SwitchTab(materialTab));
-
-        if (button.transition == Selectable.Transition.None)
+        toggle.onValueChanged.RemoveAllListeners();
+        toggle.onValueChanged.AddListener(isOn =>
         {
-            button.transition = Selectable.Transition.ColorTint;
-        }
+            if (isOn)
+            {
+                SwitchTab(materialTab);
+            }
+        });
     }
 
     void ConfigureRarityButton(Button button, bool ascending, string debugLabel)
@@ -751,6 +766,11 @@ public class InventoryUI : MonoBehaviour
         isMaterialTab = material;
         searchQuery = "";  // タブ切り替え時に検索をクリア
 
+        if (materialTabToggle != null)
+            materialTabToggle.SetIsOnWithoutNotify(material);
+        if (furnitureTabToggle != null)
+            furnitureTabToggle.SetIsOnWithoutNotify(!material);
+
         materialManager?.ClearSelection();
 
         // タブコンテンツ全体の表示切り替え（変更点）
@@ -759,79 +779,7 @@ public class InventoryUI : MonoBehaviour
         if (furnitureTab != null)
             furnitureTab.SetActive(!material);
 
-        // タブボタンの視覚的フィードバック（オプション）
-        UpdateTabButtonVisuals(material);
-
-        // 検索フィールドもクリア
-        if (furnitureSearchField != null)
-            furnitureSearchField.text = "";
-        if (materialSearchField != null)
-            materialSearchField.text = "";
-
-        if (craftButton != null && !material)
-        {
-            UpdateCraftButtonState();
-        }
-
         RefreshInventoryDisplay();
-    }
-
-    // タブボタンの視覚的更新（改善版）
-    void UpdateTabButtonVisuals(bool isMaterial)
-    {
-        Button activeButton = isMaterial ? materialTabButton : furnitureTabButton;
-        Button inactiveButton = isMaterial ? furnitureTabButton : materialTabButton;
-
-        GameObject previousSelection = null;
-        if (EventSystem.current != null)
-        {
-            previousSelection = EventSystem.current.currentSelectedGameObject;
-        }
-
-        SetTabButtonInteractableState(activeButton, false);
-        SetTabButtonInteractableState(inactiveButton, true);
-
-        UpdateTabButtonSelection(activeButton, inactiveButton, previousSelection);
-    }
-
-    void SetTabButtonInteractableState(Button button, bool interactable)
-    {
-        if (button == null)
-            return;
-
-        if (button.interactable != interactable)
-        {
-            button.interactable = interactable;
-        }
-    }
-
-    void UpdateTabButtonSelection(Button activeButton, Button inactiveButton, GameObject previousSelection)
-    {
-        if (EventSystem.current == null)
-            return;
-
-        GameObject currentSelection = EventSystem.current.currentSelectedGameObject;
-        bool inactiveSelectable = inactiveButton != null &&
-                                   inactiveButton.gameObject.activeInHierarchy &&
-                                   inactiveButton.interactable;
-
-        if (!inactiveSelectable)
-        {
-            if (activeButton != null && currentSelection == activeButton.gameObject)
-            {
-                EventSystem.current.SetSelectedGameObject(null);
-            }
-            return;
-        }
-
-        bool activeWasSelected = activeButton != null &&
-                                 (previousSelection == activeButton.gameObject ||
-                                  currentSelection == activeButton.gameObject);
-
-        if (activeWasSelected)
-        {
-            EventSystem.current.SetSelectedGameObject(inactiveButton.gameObject);
-        }
     }
 
     public void RefreshInventoryDisplay()
