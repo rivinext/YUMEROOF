@@ -32,7 +32,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     [Header("Audio")]
     [SerializeField] private InventoryCardAudioController audioController;
-    [SerializeField] private InventoryCardAudioProfile audioProfile;
 
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale;
@@ -80,21 +79,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     void Awake()
     {
         resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
-
-        if (audioController == null)
-        {
-            audioController = GetComponent<InventoryCardAudioController>();
-        }
-
-        if (audioController == null)
-        {
-            audioController = gameObject.AddComponent<InventoryCardAudioController>();
-        }
-
-        if (audioController != null && audioController.AudioProfile == null && audioProfile != null)
-        {
-            audioController.AudioProfile = audioProfile;
-        }
 
         if (resolvedHoverTarget != null)
         {
@@ -162,7 +146,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         sequence.OnComplete(() => hoverTween = null);
         hoverTween = sequence;
 
-        PlayHoverSound();
+        audioController?.PlayHover();
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -567,25 +551,9 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
                 }
             }
 
-            PlayClickSound();
+            audioController?.PlayClick();
             OnItemClicked?.Invoke(currentItem);
         }
-    }
-
-    void PlayHoverSound()
-    {
-        if (audioController == null)
-            return;
-
-        audioController.PlayHover();
-    }
-
-    void PlayClickSound()
-    {
-        if (audioController == null)
-            return;
-
-        audioController.PlayClick();
     }
 
     // ドラッグ開始
