@@ -29,6 +29,13 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     [SerializeField] private float hoverScale = 1.05f;
     [SerializeField] private float hoverTilt = 5f;
     [SerializeField] private float hoverDuration = 0.18f;
+    [SerializeField] private bool disableHoverFeedback = false;
+
+    protected bool DisableHoverFeedback
+    {
+        get => disableHoverFeedback;
+        set => disableHoverFeedback = value;
+    }
 
     [Header("Hover Audio")]
     [SerializeField] private AudioClip hoverSfx;
@@ -81,7 +88,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // 選択状態
     private bool isSelected = false;
 
-    void Awake()
+    protected virtual void Awake()
     {
         resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
 
@@ -145,7 +152,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (resolvedHoverTarget == null) return;
+        if (DisableHoverFeedback || resolvedHoverTarget == null) return;
 
         KillHoverTween();
         ResetHoverTargetTransform();
@@ -166,7 +173,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (resolvedHoverTarget == null) return;
+        if (DisableHoverFeedback || resolvedHoverTarget == null) return;
 
         KillHoverTween();
         resolvedHoverTarget.localEulerAngles = baseEulerAngles;
@@ -478,6 +485,11 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     void PlayHoverSfx()
     {
+        if (DisableHoverFeedback)
+        {
+            return;
+        }
+
         if (hoverSfx == null || hoverAudioSource == null)
         {
             return;
