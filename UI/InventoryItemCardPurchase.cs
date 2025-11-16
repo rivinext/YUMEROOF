@@ -10,6 +10,12 @@ public class InventoryItemCardPurchase : InventoryItemCard
     [Header("Purchase Elements")]
     public TMP_Text purchasePriceText;
 
+    protected override void Awake()
+    {
+        DisableHoverFeedback = true;
+        base.Awake();
+    }
+
     /// <summary>
     /// Assign item data and update purchase price display.
     /// </summary>
