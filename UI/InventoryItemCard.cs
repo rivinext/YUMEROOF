@@ -30,9 +30,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     [SerializeField] private float hoverTilt = 5f;
     [SerializeField] private float hoverDuration = 0.18f;
 
-    [Header("Audio")]
-    [SerializeField] private InventoryCardAudioController audioController;
-
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale;
     private Vector3 baseEulerAngles;
@@ -145,8 +142,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
         sequence.OnComplete(() => hoverTween = null);
         hoverTween = sequence;
-
-        audioController?.PlayHover();
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -551,7 +546,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
                 }
             }
 
-            audioController?.PlayClick();
             OnItemClicked?.Invoke(currentItem);
         }
     }
