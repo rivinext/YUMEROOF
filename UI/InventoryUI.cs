@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.EventSystems;
 using System.Linq;
+using UnityEngine.Events;
 
 
 public class InventoryUI : MonoBehaviour
@@ -107,6 +108,7 @@ public class InventoryUI : MonoBehaviour
     private InventoryItem selectedFurnitureItem;
     private bool autoReopenEnabled = false;
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
+    private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -262,18 +264,25 @@ public class InventoryUI : MonoBehaviour
         return panelAnimator;
     }
 
-    private void ConfigureTabToggle(Toggle toggle, bool materialTab)
+    private void ConfigureTabToggle(Toggle toggle, bool isMaterialTab)
     {
         if (toggle == null) return;
 
-        toggle.onValueChanged.RemoveAllListeners();
-        toggle.onValueChanged.AddListener(isOn =>
+        if (tabToggleListeners.TryGetValue(toggle, out var existingListener))
+        {
+            toggle.onValueChanged.RemoveListener(existingListener);
+        }
+
+        UnityAction<bool> listener = isOn =>
         {
             if (isOn)
             {
-                SwitchTab(materialTab);
+                SwitchTab(isMaterialTab);
             }
-        });
+        };
+
+        tabToggleListeners[toggle] = listener;
+        toggle.onValueChanged.AddListener(listener);
     }
 
     void ConfigureRarityButton(Button button, bool ascending, string debugLabel)
@@ -897,5 +906,15 @@ public class InventoryUI : MonoBehaviour
 
         cardManager?.Cleanup();
         materialManager?.Cleanup();
+
+        foreach (var pair in tabToggleListeners)
+        {
+            if (pair.Key != null)
+            {
+                pair.Key.onValueChanged.RemoveListener(pair.Value);
+            }
+        }
+
+        tabToggleListeners.Clear();
     }
 }
