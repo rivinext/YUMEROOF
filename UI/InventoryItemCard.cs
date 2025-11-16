@@ -29,12 +29,12 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     [SerializeField] private float hoverScale = 1.05f;
     [SerializeField] private float hoverTilt = 5f;
     [SerializeField] private float hoverDuration = 0.18f;
-    [SerializeField] private bool disableHoverFeedback = false;
+    [SerializeField] private bool disableHoverAnimation = false;
 
-    protected bool DisableHoverFeedback
+    protected bool DisableHoverAnimation
     {
-        get => disableHoverFeedback;
-        set => disableHoverFeedback = value;
+        get => disableHoverAnimation;
+        set => disableHoverAnimation = value;
     }
 
     [Header("Hover Audio")]
@@ -42,6 +42,13 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     [SerializeField] private AudioSource hoverAudioSource;
     [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
     [SerializeField, Min(0f)] private float hoverSfxCooldown = 0.1f;
+    [SerializeField] private bool disableHoverSfx = false;
+
+    protected bool DisableHoverSfx
+    {
+        get => disableHoverSfx;
+        set => disableHoverSfx = value;
+    }
 
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale;
@@ -159,7 +166,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (DisableHoverFeedback || resolvedHoverTarget == null) return;
+        if (DisableHoverAnimation || resolvedHoverTarget == null) return;
 
         if (skipNextPointerEnter)
         {
@@ -186,7 +193,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (DisableHoverFeedback || resolvedHoverTarget == null) return;
+        if (DisableHoverAnimation || resolvedHoverTarget == null) return;
 
         if (skipNextPointerEnter)
         {
@@ -504,7 +511,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     void PlayHoverSfx()
     {
-        if (DisableHoverFeedback)
+        if (DisableHoverSfx)
         {
             return;
         }
