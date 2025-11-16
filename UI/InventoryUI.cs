@@ -175,7 +175,29 @@ public class InventoryUI : MonoBehaviour
 
     void InitializeTabState()
     {
-        SwitchTab(InventoryTabType.Material);
+        InventoryTabType? initialTab = null;
+
+        foreach (var tab in tabs)
+        {
+            if (tab == null || tab.toggle == null)
+                continue;
+
+            if (tab.toggle.isOn)
+            {
+                initialTab = tab.type;
+                break;
+            }
+        }
+
+        if (!initialTab.HasValue && tabs.Count > 0)
+        {
+            initialTab = tabs[0].type;
+        }
+
+        if (initialTab.HasValue)
+        {
+            SwitchTab(initialTab.Value);
+        }
     }
 
     void InitializeManagers()
