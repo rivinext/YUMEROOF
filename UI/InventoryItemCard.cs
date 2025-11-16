@@ -30,10 +30,18 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     [SerializeField] private float hoverTilt = 5f;
     [SerializeField] private float hoverDuration = 0.18f;
 
+    [Header("Hover Audio")]
+    [SerializeField] private AudioClip hoverSfx;
+    [SerializeField] private AudioSource hoverAudioSource;
+    [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
+    [SerializeField, Min(0f)] private float hoverSfxCooldown = 0.1f;
+
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale;
     private Vector3 baseEulerAngles;
     private Tween hoverTween;
+    private float lastHoverSfxTime = -10f;
+    private float currentSfxVolume = 1f;
 
     [Header("Attributes - Furniture Only")]
     public GameObject cozyContainer;
@@ -91,6 +99,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         KillHoverTween();
         ResetHoverTargetTransform();
 
+        SetupHoverAudioSource();
+
         // Toggleのイベント設定
         if (favoriteToggle != null)
         {
@@ -114,15 +124,23 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
     }
 
+    void OnEnable()
+    {
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
     void OnDisable()
     {
         KillHoverTween();
         ResetHoverTargetTransform();
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     void OnDestroy()
     {
         localizedName.StringChanged -= OnNameChanged;
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -142,6 +160,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
         sequence.OnComplete(() => hoverTween = null);
         hoverTween = sequence;
+
+        PlayHoverSfx();
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -430,6 +450,53 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
         hoverTween.Kill();
         hoverTween = null;
+    }
+
+    void SetupHoverAudioSource()
+    {
+        if (hoverAudioSource == null)
+        {
+            hoverAudioSource = GetComponent<AudioSource>();
+            if (hoverAudioSource == null)
+            {
+                hoverAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (hoverAudioSource != null)
+        {
+            hoverAudioSource.playOnAwake = false;
+            hoverAudioSource.loop = false;
+            hoverAudioSource.spatialBlend = 0f;
+        }
+    }
+
+    void HandleSfxVolumeChanged(float value)
+    {
+        currentSfxVolume = Mathf.Clamp01(value);
+    }
+
+    void PlayHoverSfx()
+    {
+        if (hoverSfx == null || hoverAudioSource == null)
+        {
+            return;
+        }
+
+        float elapsed = Time.unscaledTime - lastHoverSfxTime;
+        if (elapsed < hoverSfxCooldown)
+        {
+            return;
+        }
+
+        float volume = hoverSfxVolume * currentSfxVolume;
+        if (volume <= 0f)
+        {
+            return;
+        }
+
+        hoverAudioSource.PlayOneShot(hoverSfx, volume);
+        lastHoverSfxTime = Time.unscaledTime;
     }
 
     // 素材を表示
