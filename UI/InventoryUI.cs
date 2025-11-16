@@ -27,6 +27,10 @@ public class InventoryUI : MonoBehaviour
     public GameObject materialTab; // タブコンテンツ全体
     public GameObject furnitureTab; // タブコンテンツ全体
 
+    [Header("Tab Visuals")]
+    [SerializeField] private Color activeTabColor = Color.white;
+    [SerializeField] private Color inactiveTabColor = new Color(1f, 1f, 1f, 0.5f);
+
 
     [Header("Material Tab Elements")]
     public GameObject materialSortGroup;
@@ -268,6 +272,11 @@ public class InventoryUI : MonoBehaviour
     {
         if (toggle == null) return;
 
+        if (tabToggleGroup != null)
+        {
+            toggle.group = tabToggleGroup;
+        }
+
         if (tabToggleListeners.TryGetValue(toggle, out var existingListener))
         {
             toggle.onValueChanged.RemoveListener(existingListener);
@@ -283,6 +292,25 @@ public class InventoryUI : MonoBehaviour
 
         tabToggleListeners[toggle] = listener;
         toggle.onValueChanged.AddListener(listener);
+    }
+
+    private void UpdateTabToggleVisuals()
+    {
+        UpdateTabToggleVisual(materialTabToggle, isMaterialTab);
+        UpdateTabToggleVisual(furnitureTabToggle, !isMaterialTab);
+    }
+
+    private void UpdateTabToggleVisual(Toggle toggle, bool isActive)
+    {
+        if (toggle == null)
+            return;
+
+        toggle.SetIsOnWithoutNotify(isActive);
+
+        if (toggle.graphic != null)
+        {
+            toggle.graphic.color = isActive ? activeTabColor : inactiveTabColor;
+        }
     }
 
     void ConfigureRarityButton(Button button, bool ascending, string debugLabel)
@@ -775,10 +803,7 @@ public class InventoryUI : MonoBehaviour
         isMaterialTab = material;
         searchQuery = "";  // タブ切り替え時に検索をクリア
 
-        if (materialTabToggle != null)
-            materialTabToggle.SetIsOnWithoutNotify(material);
-        if (furnitureTabToggle != null)
-            furnitureTabToggle.SetIsOnWithoutNotify(!material);
+        UpdateTabToggleVisuals();
 
         materialManager?.ClearSelection();
 
