@@ -31,10 +31,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     [SerializeField] private float hoverDuration = 0.18f;
 
     [Header("Audio")]
-    [SerializeField] private AudioSource sfxSource;
+    [SerializeField] private InventoryCardAudioController audioController;
     [SerializeField] private InventoryCardAudioProfile audioProfile;
-    private float lastHoverTime;
-    private float currentSfxVolume = 1f;
 
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale;
@@ -83,22 +81,19 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
 
-        if (sfxSource == null)
+        if (audioController == null)
         {
-            sfxSource = GetComponent<AudioSource>();
+            audioController = GetComponent<InventoryCardAudioController>();
         }
 
-        if (sfxSource == null)
+        if (audioController == null)
         {
-            sfxSource = gameObject.AddComponent<AudioSource>();
+            audioController = gameObject.AddComponent<InventoryCardAudioController>();
         }
 
-        if (sfxSource != null)
+        if (audioController != null && audioController.AudioProfile == null && audioProfile != null)
         {
-            sfxSource.playOnAwake = false;
-            sfxSource.loop = false;
-            sfxSource.spatialBlend = 0f;
-            ApplyAudioProfileSettings();
+            audioController.AudioProfile = audioProfile;
         }
 
         if (resolvedHoverTarget != null)
@@ -138,23 +133,10 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
     }
 
-    void OnEnable()
-    {
-        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
-        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
-    }
-
     void OnDisable()
     {
         KillHoverTween();
         ResetHoverTargetTransform();
-
-        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
-
-        if (sfxSource != null && sfxSource.isPlaying)
-        {
-            sfxSource.Stop();
-        }
     }
 
     void OnDestroy()
@@ -590,62 +572,20 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
     }
 
-    void HandleSfxVolumeChanged(float value)
-    {
-        currentSfxVolume = Mathf.Clamp01(value);
-    }
-
     void PlayHoverSound()
     {
-        if (sfxSource == null || audioProfile == null || audioProfile.hoverClip == null)
+        if (audioController == null)
             return;
 
-        float currentTime = Time.unscaledTime;
-        float cooldown = Mathf.Max(0f, audioProfile.cooldownSeconds);
-        if (currentTime - lastHoverTime < cooldown)
-            return;
-
-        lastHoverTime = currentTime;
-        PlayProfileClip(audioProfile.hoverClip);
+        audioController.PlayHover();
     }
 
     void PlayClickSound()
     {
-        if (sfxSource == null || audioProfile == null || audioProfile.clickClip == null)
+        if (audioController == null)
             return;
 
-        PlayProfileClip(audioProfile.clickClip);
-    }
-
-    void ApplyAudioProfileSettings()
-    {
-        if (audioProfile == null || sfxSource == null)
-            return;
-
-        if (audioProfile.outputMixerGroup != null)
-        {
-            sfxSource.outputAudioMixerGroup = audioProfile.outputMixerGroup;
-        }
-
-        sfxSource.rolloffMode = audioProfile.rolloffMode;
-    }
-
-    void PlayProfileClip(AudioClip clip)
-    {
-        if (clip == null || sfxSource == null || audioProfile == null)
-            return;
-
-        float pitchOffset = Mathf.Max(0f, audioProfile.pitchRandomization);
-        float pitch = 1f;
-        if (pitchOffset > 0f)
-        {
-            pitch = UnityEngine.Random.Range(1f - pitchOffset, 1f + pitchOffset);
-        }
-
-        float originalPitch = sfxSource.pitch;
-        sfxSource.pitch = pitch;
-        sfxSource.PlayOneShot(clip, audioProfile.baseVolume * currentSfxVolume);
-        sfxSource.pitch = originalPitch;
+        audioController.PlayClick();
     }
 
     // ドラッグ開始
