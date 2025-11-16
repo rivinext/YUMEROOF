@@ -61,7 +61,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     private Tween hoverTween;
     private float lastHoverSfxTime = -10f;
     private float currentSfxVolume = 1f;
-    private bool skipNextPointerEnter = true;
 
     private float SafeHoverScale => Mathf.Max(hoverScale, MinHoverScaleValue);
     private float SafeHoverDuration => Mathf.Max(hoverDuration, MinHoverDurationValue);
@@ -107,8 +106,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     protected virtual void Awake()
     {
         resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
-
-        skipNextPointerEnter = true;
 
         if (resolvedHoverTarget != null)
         {
@@ -177,8 +174,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
         HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
-
-        skipNextPointerEnter = true;
     }
 
     void OnDisable()
@@ -186,8 +181,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         KillHoverTween();
         ResetHoverTargetTransform();
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
-
-        skipNextPointerEnter = false;
     }
 
     void OnDestroy()
@@ -200,9 +193,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         if (DisableHoverAnimation || resolvedHoverTarget == null) return;
 
-        if (skipNextPointerEnter)
+        if (!IsPointerEnterEventValid(eventData))
         {
-            skipNextPointerEnter = false;
             return;
         }
 
@@ -228,17 +220,21 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         if (DisableHoverAnimation || resolvedHoverTarget == null) return;
 
-        if (skipNextPointerEnter)
-        {
-            skipNextPointerEnter = false;
-            return;
-        }
-
         KillHoverTween();
         resolvedHoverTarget.localEulerAngles = baseEulerAngles;
         hoverTween = resolvedHoverTarget.DOScale(baseScale, SafeHoverDuration)
             .SetEase(Ease.OutQuad)
             .OnComplete(() => hoverTween = null);
+    }
+
+    private bool IsPointerEnterEventValid(PointerEventData eventData)
+    {
+        if (eventData == null)
+        {
+            return true;
+        }
+
+        return eventData.pointerEnter == gameObject;
     }
 
     // アイテムを設定
