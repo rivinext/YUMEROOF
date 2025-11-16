@@ -12,7 +12,7 @@ public class InventoryItemCardSell : InventoryItemCard
 
     protected override void Awake()
     {
-        DisableHoverFeedback = true;
+        DisableHoverSfx = true;
         base.Awake();
     }
 
