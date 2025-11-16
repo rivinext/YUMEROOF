@@ -10,6 +10,11 @@ using DG.Tweening;
 public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler,
     IPointerEnterHandler, IPointerExitHandler
 {
+    private const float MinHoverScaleValue = 0.01f;
+    private const float MinHoverDurationValue = 0.01f;
+    protected const float DefaultHoverScaleValue = 1.05f;
+    protected const float DefaultHoverDurationValue = 0.18f;
+
     [Header("UI Elements")]
     public Image itemImage;
     public TMP_Text itemNameText;
@@ -57,6 +62,9 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     private float lastHoverSfxTime = -10f;
     private float currentSfxVolume = 1f;
     private bool skipNextPointerEnter = true;
+
+    private float SafeHoverScale => Mathf.Max(hoverScale, MinHoverScaleValue);
+    private float SafeHoverDuration => Mathf.Max(hoverDuration, MinHoverDurationValue);
 
     [Header("Attributes - Furniture Only")]
     public GameObject cozyContainer;
@@ -141,6 +149,30 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
     }
 
+    protected virtual void OnValidate()
+    {
+        EnsureHoverScaleMinimum(MinHoverScaleValue);
+        EnsureHoverDurationMinimum(MinHoverDurationValue);
+    }
+
+    protected virtual void Reset()
+    {
+        hoverScale = DefaultHoverScaleValue;
+        hoverDuration = DefaultHoverDurationValue;
+    }
+
+    protected void EnsureHoverScaleMinimum(float minimumScale)
+    {
+        float clampedMinimum = Mathf.Max(minimumScale, MinHoverScaleValue);
+        hoverScale = Mathf.Max(hoverScale, clampedMinimum);
+    }
+
+    protected void EnsureHoverDurationMinimum(float minimumDuration)
+    {
+        float clampedMinimum = Mathf.Max(minimumDuration, MinHoverDurationValue);
+        hoverDuration = Mathf.Max(hoverDuration, clampedMinimum);
+    }
+
     void OnEnable()
     {
         AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
@@ -177,9 +209,10 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         KillHoverTween();
         ResetHoverTargetTransform();
 
-        Vector3 targetScale = baseScale * hoverScale;
+        float safeScale = SafeHoverScale;
+        Vector3 targetScale = baseScale * safeScale;
         Vector3 tiltedRotation = baseEulerAngles + new Vector3(0f, 0f, hoverTilt);
-        float duration = Mathf.Max(hoverDuration, 0.01f);
+        float duration = SafeHoverDuration;
 
         Sequence sequence = DOTween.Sequence();
         sequence.Join(resolvedHoverTarget.DOScale(targetScale, duration).SetEase(Ease.OutQuad));
@@ -203,7 +236,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
         KillHoverTween();
         resolvedHoverTarget.localEulerAngles = baseEulerAngles;
-        hoverTween = resolvedHoverTarget.DOScale(baseScale, Mathf.Max(hoverDuration, 0.01f))
+        hoverTween = resolvedHoverTarget.DOScale(baseScale, SafeHoverDuration)
             .SetEase(Ease.OutQuad)
             .OnComplete(() => hoverTween = null);
     }
