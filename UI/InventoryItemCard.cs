@@ -143,8 +143,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     void OnEnable()
     {
-        AudioVolumeManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
-        HandleSfxVolumeChanged(AudioVolumeManager.SfxVolume);
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
     }
 
     void OnDisable()
@@ -152,7 +152,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         KillHoverTween();
         ResetHoverTargetTransform();
 
-        AudioVolumeManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
 
         if (sfxSource != null && sfxSource.isPlaying)
         {

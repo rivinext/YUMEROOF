@@ -93,8 +93,8 @@ public class SceneTransitionManager : MonoBehaviour
     {
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.playOnAwake = false;
-        AudioVolumeManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
-        HandleSfxVolumeChanged(AudioVolumeManager.SfxVolume);
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
     }
 
     // シーン遷移（ドア用）
@@ -357,7 +357,7 @@ public class SceneTransitionManager : MonoBehaviour
 
     void OnDestroy()
     {
-        AudioVolumeManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     void HandleSfxVolumeChanged(float value)

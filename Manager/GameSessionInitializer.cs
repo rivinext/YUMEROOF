@@ -81,6 +81,7 @@ public class GameSessionInitializer : MonoBehaviour
 #endif
 
         MilestoneManager.CreateIfNeeded(milestoneManagerPrefab);
+        ApplyAudioSettingsToScene();
 
         if (!initialized && !string.IsNullOrEmpty(slotKey))
         {
@@ -144,5 +145,15 @@ public class GameSessionInitializer : MonoBehaviour
 #endif
         initialized = true;
         slotKey = null;
+    }
+
+    private void ApplyAudioSettingsToScene()
+    {
+        if (AudioManager.Instance == null)
+        {
+            return;
+        }
+
+        AudioManager.Instance.ApplyVolumesToListeners();
     }
 }

@@ -83,8 +83,8 @@ public class FreePlacementSystem : MonoBehaviour
         EnsurePlayerControl(true, "during Awake");
 
         SetupPlacementAudioSource();
-        AudioVolumeManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
-        HandleSfxVolumeChanged(AudioVolumeManager.SfxVolume);
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
 
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
@@ -99,7 +99,7 @@ public class FreePlacementSystem : MonoBehaviour
     void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
-        AudioVolumeManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)

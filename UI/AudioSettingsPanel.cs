@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 設定パネルのBGM/SFXスライダーとAudioVolumeManagerを連動させるコンポーネント。
+/// 設定パネルのBGM/SFXスライダーとAudioManagerを連動させるコンポーネント。
 /// </summary>
 public class AudioSettingsPanel : MonoBehaviour
 {
@@ -11,8 +11,8 @@ public class AudioSettingsPanel : MonoBehaviour
 
     private void Awake()
     {
-        InitializeSlider(bgmSlider, AudioVolumeManager.BgmVolume);
-        InitializeSlider(sfxSlider, AudioVolumeManager.SfxVolume);
+        InitializeSlider(bgmSlider, AudioManager.CurrentBgmVolume);
+        InitializeSlider(sfxSlider, AudioManager.CurrentSfxVolume);
     }
 
     private void OnEnable()
@@ -27,8 +27,8 @@ public class AudioSettingsPanel : MonoBehaviour
             sfxSlider.onValueChanged.AddListener(HandleSfxSliderChanged);
         }
 
-        AudioVolumeManager.OnBgmVolumeChanged += HandleBgmVolumeChanged;
-        AudioVolumeManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        AudioManager.OnBgmVolumeChanged += HandleBgmVolumeChanged;
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
 
         SyncSliders();
     }
@@ -45,8 +45,8 @@ public class AudioSettingsPanel : MonoBehaviour
             sfxSlider.onValueChanged.RemoveListener(HandleSfxSliderChanged);
         }
 
-        AudioVolumeManager.OnBgmVolumeChanged -= HandleBgmVolumeChanged;
-        AudioVolumeManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        AudioManager.OnBgmVolumeChanged -= HandleBgmVolumeChanged;
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     private void InitializeSlider(Slider slider, float defaultValue)
@@ -65,23 +65,23 @@ public class AudioSettingsPanel : MonoBehaviour
     {
         if (bgmSlider != null)
         {
-            bgmSlider.SetValueWithoutNotify(AudioVolumeManager.BgmVolume);
+            bgmSlider.SetValueWithoutNotify(AudioManager.CurrentBgmVolume);
         }
 
         if (sfxSlider != null)
         {
-            sfxSlider.SetValueWithoutNotify(AudioVolumeManager.SfxVolume);
+            sfxSlider.SetValueWithoutNotify(AudioManager.CurrentSfxVolume);
         }
     }
 
     private void HandleBgmSliderChanged(float value)
     {
-        AudioVolumeManager.BgmVolume = value;
+        AudioManager.SetBgmVolume(value);
     }
 
     private void HandleSfxSliderChanged(float value)
     {
-        AudioVolumeManager.SfxVolume = value;
+        AudioManager.SetSfxVolume(value);
     }
 
     private void HandleBgmVolumeChanged(float value)
