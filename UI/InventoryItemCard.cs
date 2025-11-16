@@ -32,11 +32,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     [Header("Audio")]
     [SerializeField] private AudioSource sfxSource;
-    [SerializeField] private AudioClip hoverSfx;
-    [SerializeField] private AudioClip clickSfx;
-    [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
-    [SerializeField, Range(0f, 1f)] private float clickSfxVolume = 1f;
-    [SerializeField] private float hoverCooldown = 0.05f;
+    [SerializeField] private InventoryCardAudioProfile audioProfile;
     private float lastHoverTime;
     private float currentSfxVolume = 1f;
 
@@ -102,6 +98,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             sfxSource.playOnAwake = false;
             sfxSource.loop = false;
             sfxSource.spatialBlend = 0f;
+            ApplyAudioProfileSettings();
         }
 
         if (resolvedHoverTarget != null)
@@ -600,23 +597,55 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     void PlayHoverSound()
     {
-        if (sfxSource == null || hoverSfx == null)
+        if (sfxSource == null || audioProfile == null || audioProfile.hoverClip == null)
             return;
 
         float currentTime = Time.unscaledTime;
-        if (currentTime - lastHoverTime < hoverCooldown)
+        float cooldown = Mathf.Max(0f, audioProfile.cooldownSeconds);
+        if (currentTime - lastHoverTime < cooldown)
             return;
 
         lastHoverTime = currentTime;
-        sfxSource.PlayOneShot(hoverSfx, hoverSfxVolume * currentSfxVolume);
+        PlayProfileClip(audioProfile.hoverClip);
     }
 
     void PlayClickSound()
     {
-        if (sfxSource == null || clickSfx == null)
+        if (sfxSource == null || audioProfile == null || audioProfile.clickClip == null)
             return;
 
-        sfxSource.PlayOneShot(clickSfx, clickSfxVolume * currentSfxVolume);
+        PlayProfileClip(audioProfile.clickClip);
+    }
+
+    void ApplyAudioProfileSettings()
+    {
+        if (audioProfile == null || sfxSource == null)
+            return;
+
+        if (audioProfile.outputMixerGroup != null)
+        {
+            sfxSource.outputAudioMixerGroup = audioProfile.outputMixerGroup;
+        }
+
+        sfxSource.rolloffMode = audioProfile.rolloffMode;
+    }
+
+    void PlayProfileClip(AudioClip clip)
+    {
+        if (clip == null || sfxSource == null || audioProfile == null)
+            return;
+
+        float pitchOffset = Mathf.Max(0f, audioProfile.pitchRandomization);
+        float pitch = 1f;
+        if (pitchOffset > 0f)
+        {
+            pitch = UnityEngine.Random.Range(1f - pitchOffset, 1f + pitchOffset);
+        }
+
+        float originalPitch = sfxSource.pitch;
+        sfxSource.pitch = pitch;
+        sfxSource.PlayOneShot(clip, audioProfile.baseVolume * currentSfxVolume);
+        sfxSource.pitch = originalPitch;
     }
 
     // ドラッグ開始
