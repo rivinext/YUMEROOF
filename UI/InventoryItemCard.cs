@@ -5,8 +5,10 @@ using TMPro;
 using System;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization;
+using DG.Tweening;
 
-public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler,
+    IPointerEnterHandler, IPointerExitHandler
 {
     [Header("UI Elements")]
     public Image itemImage;
@@ -21,6 +23,17 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     // Localization
     [SerializeField] private LocalizedString localizedName = new LocalizedString();
+
+    [Header("Hover Animation")]
+    [SerializeField] private RectTransform hoverTarget;
+    [SerializeField] private float hoverScale = 1.05f;
+    [SerializeField] private float hoverTilt = 5f;
+    [SerializeField] private float hoverDuration = 0.18f;
+
+    private RectTransform resolvedHoverTarget;
+    private Vector3 baseScale;
+    private Vector3 baseEulerAngles;
+    private Tween hoverTween;
 
     [Header("Attributes - Furniture Only")]
     public GameObject cozyContainer;
@@ -62,6 +75,22 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     void Awake()
     {
+        resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
+
+        if (resolvedHoverTarget != null)
+        {
+            baseScale = resolvedHoverTarget.localScale;
+            baseEulerAngles = resolvedHoverTarget.localEulerAngles;
+        }
+        else
+        {
+            baseScale = Vector3.one;
+            baseEulerAngles = Vector3.zero;
+        }
+
+        KillHoverTween();
+        ResetHoverTargetTransform();
+
         // Toggleのイベント設定
         if (favoriteToggle != null)
         {
@@ -85,9 +114,45 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
     }
 
+    void OnDisable()
+    {
+        KillHoverTween();
+        ResetHoverTargetTransform();
+    }
+
     void OnDestroy()
     {
         localizedName.StringChanged -= OnNameChanged;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (resolvedHoverTarget == null) return;
+
+        KillHoverTween();
+        ResetHoverTargetTransform();
+
+        Vector3 targetScale = baseScale * hoverScale;
+        Vector3 tiltedRotation = baseEulerAngles + new Vector3(0f, 0f, hoverTilt);
+        float duration = Mathf.Max(hoverDuration, 0.01f);
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.Join(resolvedHoverTarget.DOScale(targetScale, duration).SetEase(Ease.OutQuad));
+        sequence.Join(resolvedHoverTarget.DOLocalRotate(tiltedRotation, duration * 0.5f).SetEase(Ease.OutQuad));
+        sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
+        sequence.OnComplete(() => hoverTween = null);
+        hoverTween = sequence;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (resolvedHoverTarget == null) return;
+
+        KillHoverTween();
+        resolvedHoverTarget.localEulerAngles = baseEulerAngles;
+        hoverTween = resolvedHoverTarget.DOScale(baseScale, Mathf.Max(hoverDuration, 0.01f))
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() => hoverTween = null);
     }
 
     // アイテムを設定
@@ -349,6 +414,22 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         {
             favoriteToggle.transform.SetAsLastSibling();
         }
+    }
+
+    void ResetHoverTargetTransform()
+    {
+        if (resolvedHoverTarget == null) return;
+
+        resolvedHoverTarget.localScale = baseScale;
+        resolvedHoverTarget.localEulerAngles = baseEulerAngles;
+    }
+
+    void KillHoverTween()
+    {
+        if (hoverTween == null) return;
+
+        hoverTween.Kill();
+        hoverTween = null;
     }
 
     // 素材を表示
