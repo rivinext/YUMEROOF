@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
+using DG.Tweening;
 
 [DisallowMultipleComponent]
-public class WardrobeItemView : MonoBehaviour
+public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [SerializeField] private WardrobeTabType category;
     [SerializeField] private GameObject wearablePrefab;
@@ -17,6 +19,18 @@ public class WardrobeItemView : MonoBehaviour
     [SerializeField] private Image emptyStateImage;
     [SerializeField] private string itemId;
 
+    [Header("Hover Animation")]
+    [SerializeField] private RectTransform hoverTarget;
+    [SerializeField] private float hoverScale = 1.05f;
+    [SerializeField] private float hoverTilt = 5f;
+    [SerializeField] private float hoverDuration = 0.18f;
+
+    [Header("Hover Audio")]
+    [SerializeField] private AudioClip hoverSfx;
+    [SerializeField] private AudioSource hoverAudioSource;
+    [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
+    [SerializeField, Min(0f)] private float hoverSfxCooldown = 0.1f;
+
     private string displayName;
     private string nameId;
     private string descriptionId;
@@ -24,6 +38,12 @@ public class WardrobeItemView : MonoBehaviour
 
     private WardrobeUIController owner;
     private bool isSelected;
+    private float lastHoverSfxTime = -10f;
+    private float currentSfxVolume = 1f;
+    private RectTransform resolvedHoverTarget;
+    private Vector3 baseScale;
+    private Vector3 baseEulerAngles;
+    private Tween hoverTween;
 
     public WardrobeTabType Category => category;
     public GameObject WearablePrefab => wearablePrefab;
@@ -71,12 +91,38 @@ public class WardrobeItemView : MonoBehaviour
             tmp.raycastTarget = false; // ← 貫通ON
         }
 
+        resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
+
+        if (resolvedHoverTarget != null)
+        {
+            baseScale = resolvedHoverTarget.localScale;
+            baseEulerAngles = resolvedHoverTarget.localEulerAngles;
+        }
+        else
+        {
+            baseScale = Vector3.one;
+            baseEulerAngles = Vector3.zero;
+        }
+
+        KillHoverTween();
+        ResetHoverTargetTransform();
+
         UpdateEmptyStateVisuals();
+        SetupHoverAudioSource();
     }
 
     private void OnEnable()
     {
         RefreshSelectionState();
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    private void OnDisable()
+    {
+        KillHoverTween();
+        ResetHoverTargetTransform();
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     internal void Initialize(WardrobeUIController wardrobeUIController)
@@ -180,11 +226,52 @@ public class WardrobeItemView : MonoBehaviour
     {
         Unbind();
 
+        KillHoverTween();
+
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+
         if (owner != null)
         {
             owner.HandleItemDestroyed(this);
             owner = null;
         }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (resolvedHoverTarget != null)
+        {
+            KillHoverTween();
+            ResetHoverTargetTransform();
+
+            Vector3 targetScale = baseScale * hoverScale;
+            Vector3 tiltedRotation = baseEulerAngles + new Vector3(0f, 0f, hoverTilt);
+            float duration = Mathf.Max(hoverDuration, 0.01f);
+
+            Sequence sequence = DOTween.Sequence();
+            sequence.Join(resolvedHoverTarget.DOScale(targetScale, duration).SetEase(Ease.OutQuad));
+            sequence.Join(resolvedHoverTarget.DOLocalRotate(tiltedRotation, duration * 0.5f).SetEase(Ease.OutQuad));
+            sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
+            sequence.OnComplete(() => hoverTween = null);
+            hoverTween = sequence;
+        }
+
+        PlayHoverSfx();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (resolvedHoverTarget == null)
+        {
+            return;
+        }
+
+        KillHoverTween();
+        resolvedHoverTarget.localEulerAngles = baseEulerAngles;
+        float duration = Mathf.Max(hoverDuration, 0.01f);
+        hoverTween = resolvedHoverTarget.DOScale(baseScale, duration)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() => hoverTween = null);
     }
 
     private void OnButtonClicked()
@@ -217,6 +304,28 @@ public class WardrobeItemView : MonoBehaviour
         SetSelected(currentSelection == this);
     }
 
+    private void ResetHoverTargetTransform()
+    {
+        if (resolvedHoverTarget == null)
+        {
+            return;
+        }
+
+        resolvedHoverTarget.localScale = baseScale;
+        resolvedHoverTarget.localEulerAngles = baseEulerAngles;
+    }
+
+    private void KillHoverTween()
+    {
+        if (hoverTween == null)
+        {
+            return;
+        }
+
+        hoverTween.Kill();
+        hoverTween = null;
+    }
+
     private void UpdateEmptyStateVisuals()
     {
         bool isEmptyItemId = !string.IsNullOrEmpty(itemId) && itemId.IndexOf("empty", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -236,5 +345,52 @@ public class WardrobeItemView : MonoBehaviour
             iconImage.gameObject.SetActive(!isEmptyItemId);
             iconImage.enabled = !isEmptyItemId && iconImage.sprite != null;
         }
+    }
+
+    private void SetupHoverAudioSource()
+    {
+        if (hoverAudioSource == null)
+        {
+            hoverAudioSource = GetComponent<AudioSource>();
+            if (hoverAudioSource == null)
+            {
+                hoverAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (hoverAudioSource != null)
+        {
+            hoverAudioSource.playOnAwake = false;
+            hoverAudioSource.loop = false;
+            hoverAudioSource.spatialBlend = 0f;
+        }
+    }
+
+    private void HandleSfxVolumeChanged(float value)
+    {
+        currentSfxVolume = Mathf.Clamp01(value);
+    }
+
+    private void PlayHoverSfx()
+    {
+        if (hoverSfx == null || hoverAudioSource == null)
+        {
+            return;
+        }
+
+        float elapsed = Time.unscaledTime - lastHoverSfxTime;
+        if (elapsed < hoverSfxCooldown)
+        {
+            return;
+        }
+
+        float volume = hoverSfxVolume * currentSfxVolume;
+        if (volume <= 0f)
+        {
+            return;
+        }
+
+        hoverAudioSource.PlayOneShot(hoverSfx, volume);
+        lastHoverSfxTime = Time.unscaledTime;
     }
 }
