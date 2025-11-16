@@ -30,6 +30,16 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     [SerializeField] private float hoverTilt = 5f;
     [SerializeField] private float hoverDuration = 0.18f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource sfxSource;
+    [SerializeField] private AudioClip hoverSfx;
+    [SerializeField] private AudioClip clickSfx;
+    [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
+    [SerializeField, Range(0f, 1f)] private float clickSfxVolume = 1f;
+    [SerializeField] private float hoverCooldown = 0.05f;
+    private float lastHoverTime;
+    private float currentSfxVolume = 1f;
+
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale;
     private Vector3 baseEulerAngles;
@@ -77,6 +87,23 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
 
+        if (sfxSource == null)
+        {
+            sfxSource = GetComponent<AudioSource>();
+        }
+
+        if (sfxSource == null)
+        {
+            sfxSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        if (sfxSource != null)
+        {
+            sfxSource.playOnAwake = false;
+            sfxSource.loop = false;
+            sfxSource.spatialBlend = 0f;
+        }
+
         if (resolvedHoverTarget != null)
         {
             baseScale = resolvedHoverTarget.localScale;
@@ -114,10 +141,23 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
     }
 
+    void OnEnable()
+    {
+        AudioVolumeManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioVolumeManager.SfxVolume);
+    }
+
     void OnDisable()
     {
         KillHoverTween();
         ResetHoverTargetTransform();
+
+        AudioVolumeManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+
+        if (sfxSource != null && sfxSource.isPlaying)
+        {
+            sfxSource.Stop();
+        }
     }
 
     void OnDestroy()
@@ -142,6 +182,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
         sequence.OnComplete(() => hoverTween = null);
         hoverTween = sequence;
+
+        PlayHoverSound();
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -546,8 +588,35 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
                 }
             }
 
+            PlayClickSound();
             OnItemClicked?.Invoke(currentItem);
         }
+    }
+
+    void HandleSfxVolumeChanged(float value)
+    {
+        currentSfxVolume = Mathf.Clamp01(value);
+    }
+
+    void PlayHoverSound()
+    {
+        if (sfxSource == null || hoverSfx == null)
+            return;
+
+        float currentTime = Time.unscaledTime;
+        if (currentTime - lastHoverTime < hoverCooldown)
+            return;
+
+        lastHoverTime = currentTime;
+        sfxSource.PlayOneShot(hoverSfx, hoverSfxVolume * currentSfxVolume);
+    }
+
+    void PlayClickSound()
+    {
+        if (sfxSource == null || clickSfx == null)
+            return;
+
+        sfxSource.PlayOneShot(clickSfx, clickSfxVolume * currentSfxVolume);
     }
 
     // ドラッグ開始
