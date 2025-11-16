@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 [DisallowMultipleComponent]
-public class WardrobeItemView : MonoBehaviour
+public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [SerializeField] private WardrobeTabType category;
     [SerializeField] private GameObject wearablePrefab;
@@ -17,6 +18,12 @@ public class WardrobeItemView : MonoBehaviour
     [SerializeField] private Image emptyStateImage;
     [SerializeField] private string itemId;
 
+    [Header("Hover Audio")]
+    [SerializeField] private AudioClip hoverSfx;
+    [SerializeField] private AudioSource hoverAudioSource;
+    [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
+    [SerializeField, Min(0f)] private float hoverSfxCooldown = 0.1f;
+
     private string displayName;
     private string nameId;
     private string descriptionId;
@@ -24,6 +31,8 @@ public class WardrobeItemView : MonoBehaviour
 
     private WardrobeUIController owner;
     private bool isSelected;
+    private float lastHoverSfxTime = -10f;
+    private float currentSfxVolume = 1f;
 
     public WardrobeTabType Category => category;
     public GameObject WearablePrefab => wearablePrefab;
@@ -72,11 +81,19 @@ public class WardrobeItemView : MonoBehaviour
         }
 
         UpdateEmptyStateVisuals();
+        SetupHoverAudioSource();
     }
 
     private void OnEnable()
     {
         RefreshSelectionState();
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    private void OnDisable()
+    {
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     internal void Initialize(WardrobeUIController wardrobeUIController)
@@ -180,11 +197,23 @@ public class WardrobeItemView : MonoBehaviour
     {
         Unbind();
 
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+
         if (owner != null)
         {
             owner.HandleItemDestroyed(this);
             owner = null;
         }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        PlayHoverSfx();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        // Intentionally left blank. We only need the enter event to trigger audio.
     }
 
     private void OnButtonClicked()
@@ -236,5 +265,52 @@ public class WardrobeItemView : MonoBehaviour
             iconImage.gameObject.SetActive(!isEmptyItemId);
             iconImage.enabled = !isEmptyItemId && iconImage.sprite != null;
         }
+    }
+
+    private void SetupHoverAudioSource()
+    {
+        if (hoverAudioSource == null)
+        {
+            hoverAudioSource = GetComponent<AudioSource>();
+            if (hoverAudioSource == null)
+            {
+                hoverAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (hoverAudioSource != null)
+        {
+            hoverAudioSource.playOnAwake = false;
+            hoverAudioSource.loop = false;
+            hoverAudioSource.spatialBlend = 0f;
+        }
+    }
+
+    private void HandleSfxVolumeChanged(float value)
+    {
+        currentSfxVolume = Mathf.Clamp01(value);
+    }
+
+    private void PlayHoverSfx()
+    {
+        if (hoverSfx == null || hoverAudioSource == null)
+        {
+            return;
+        }
+
+        float elapsed = Time.unscaledTime - lastHoverSfxTime;
+        if (elapsed < hoverSfxCooldown)
+        {
+            return;
+        }
+
+        float volume = hoverSfxVolume * currentSfxVolume;
+        if (volume <= 0f)
+        {
+            return;
+        }
+
+        hoverAudioSource.PlayOneShot(hoverSfx, volume);
+        lastHoverSfxTime = Time.unscaledTime;
     }
 }
