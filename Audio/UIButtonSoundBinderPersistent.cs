@@ -47,8 +47,8 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
         sfxSource.loop = false;
         sfxSource.spatialBlend = 0f; // 2D再生
 
-        AudioVolumeManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
-        HandleSfxVolumeChanged(AudioVolumeManager.SfxVolume);
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
     }
 
     void OnEnable()
@@ -65,7 +65,7 @@ public class UIButtonSoundBinderPersistent : MonoBehaviour
     {
         if (Instance == this)
         {
-            AudioVolumeManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+            AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
         }
     }
 

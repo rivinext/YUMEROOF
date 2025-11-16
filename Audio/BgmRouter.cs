@@ -67,8 +67,8 @@ public class BgmRouter : MonoBehaviour
         }
 
         SceneManager.sceneLoaded += HandleSceneLoaded;
-        AudioVolumeManager.OnBgmVolumeChanged += HandleBgmVolumeChanged;
-        HandleBgmVolumeChanged(AudioVolumeManager.BgmVolume);
+        AudioManager.OnBgmVolumeChanged += HandleBgmVolumeChanged;
+        HandleBgmVolumeChanged(AudioManager.CurrentBgmVolume);
     }
 
     private void OnDestroy()
@@ -76,7 +76,7 @@ public class BgmRouter : MonoBehaviour
         if (Instance == this)
         {
             SceneManager.sceneLoaded -= HandleSceneLoaded;
-            AudioVolumeManager.OnBgmVolumeChanged -= HandleBgmVolumeChanged;
+            AudioManager.OnBgmVolumeChanged -= HandleBgmVolumeChanged;
         }
     }
 
