@@ -10,12 +10,6 @@ public class InventoryItemCardSell : InventoryItemCard
     [Header("Sell Elements")]
     public TMP_Text sellPriceText;
 
-    protected override void Awake()
-    {
-        DisableHoverSfx = true;
-        base.Awake();
-    }
-
     /// <summary>
     /// Assign item data and update sell price display.
     /// </summary>
