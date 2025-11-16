@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
-using System.Collections;
 using UnityEngine.EventSystems;
 using System.Linq;
 using UnityEngine.Events;
@@ -44,16 +43,12 @@ public class InventoryUI : MonoBehaviour
 
 
     [Header("Material Tab Elements")]
-    public GameObject materialSortGroup;
-    public GameObject materialScrollView;
     public GameObject materialContent;
     public GameObject materialDescriptionArea;
     public InputField materialSearchField;
 
 
     [Header("Furniture Tab Elements")]
-    public GameObject furnitureSortGroup;
-    public GameObject furnitureScrollView;
     public GameObject furnitureContent;
     public GameObject furnitureDescriptionArea;
     public InputField furnitureSearchField;
@@ -133,20 +128,8 @@ public class InventoryUI : MonoBehaviour
     private bool selectionManagerStateCached;
     private bool objectManipulatorStateCached;
 
-
-    // === 追加部分 ===
-    // 外部からインベントリの開閉状態を取得するためのプロパティ
     public bool IsOpen => isOpen;
-
-
-    // より詳細に制御したい場合
-    public bool IsInventoryOpen
-    {
-    get { return isOpen && inventoryPanel != null && inventoryPanel.activeInHierarchy; }
-    }
-
     public bool AutoReopenEnabled => autoReopenEnabled;
-    // === 追加ここまで ===
 
     void Awake()
     {
