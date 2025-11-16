@@ -49,6 +49,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     private Tween hoverTween;
     private float lastHoverSfxTime = -10f;
     private float currentSfxVolume = 1f;
+    private bool skipNextPointerEnter = true;
 
     [Header("Attributes - Furniture Only")]
     public GameObject cozyContainer;
@@ -91,6 +92,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     protected virtual void Awake()
     {
         resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
+
+        skipNextPointerEnter = true;
 
         if (resolvedHoverTarget != null)
         {
@@ -135,6 +138,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
         HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+
+        skipNextPointerEnter = true;
     }
 
     void OnDisable()
@@ -142,6 +147,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         KillHoverTween();
         ResetHoverTargetTransform();
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+
+        skipNextPointerEnter = false;
     }
 
     void OnDestroy()
@@ -153,6 +160,12 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (DisableHoverFeedback || resolvedHoverTarget == null) return;
+
+        if (skipNextPointerEnter)
+        {
+            skipNextPointerEnter = false;
+            return;
+        }
 
         KillHoverTween();
         ResetHoverTargetTransform();
@@ -174,6 +187,12 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     public void OnPointerExit(PointerEventData eventData)
     {
         if (DisableHoverFeedback || resolvedHoverTarget == null) return;
+
+        if (skipNextPointerEnter)
+        {
+            skipNextPointerEnter = false;
+            return;
+        }
 
         KillHoverTween();
         resolvedHoverTarget.localEulerAngles = baseEulerAngles;
