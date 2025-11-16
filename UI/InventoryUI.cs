@@ -18,14 +18,25 @@ public class InventoryUI : MonoBehaviour
     public Button openButton;
 
 
+    [Serializable]
+    private class InventoryTabBinding
+    {
+        public InventoryTabType type;
+        public Toggle toggle;
+        public GameObject content;
+    }
+
+    private enum InventoryTabType
+    {
+        Material,
+        Furniture
+    }
+
     [Header("Tab Container")]
     public GameObject tabContainer;
     public GameObject tabContentRoot;
-    public Toggle materialTabToggle;
-    public Toggle furnitureTabToggle;
     public ToggleGroup tabToggleGroup;
-    public GameObject materialTab; // タブコンテンツ全体
-    public GameObject furnitureTab; // タブコンテンツ全体
+    [SerializeField] private List<InventoryTabBinding> tabs = new List<InventoryTabBinding>();
 
     [Header("Tab Visuals")]
     [SerializeField] private Color activeTabColor = Color.white;
@@ -149,7 +160,7 @@ public class InventoryUI : MonoBehaviour
 
         InitializeManagers();
         SetupBaseUI();
-        SetupTabButtons();
+        SetupTabs();
         SetupSortButtons();
         SetupSearchFields();
         SetupFilters();
@@ -164,17 +175,7 @@ public class InventoryUI : MonoBehaviour
 
     void InitializeTabState()
     {
-        if (materialTabToggle != null)
-        {
-            materialTabToggle.SetIsOnWithoutNotify(true);
-        }
-
-        if (furnitureTabToggle != null)
-        {
-            furnitureTabToggle.SetIsOnWithoutNotify(false);
-        }
-
-        SwitchTab(true);
+        SwitchTab(InventoryTabType.Material);
     }
 
     void InitializeManagers()
@@ -219,10 +220,35 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    void SetupTabButtons()
+    void SetupTabs()
     {
-        ConfigureTabToggle(materialTabToggle, true);
-        ConfigureTabToggle(furnitureTabToggle, false);
+        foreach (var binding in tabs)
+        {
+            if (binding == null || binding.toggle == null)
+                continue;
+
+            if (tabToggleGroup != null)
+            {
+                binding.toggle.group = tabToggleGroup;
+            }
+
+            if (tabToggleListeners.TryGetValue(binding.toggle, out var existingListener))
+            {
+                binding.toggle.onValueChanged.RemoveListener(existingListener);
+            }
+
+            var targetType = binding.type;
+            UnityAction<bool> listener = isOn =>
+            {
+                if (isOn)
+                {
+                    SwitchTab(targetType);
+                }
+            };
+
+            tabToggleListeners[binding.toggle] = listener;
+            binding.toggle.onValueChanged.AddListener(listener);
+        }
     }
 
     private CanvasGroup EnsureTabCanvasGroup()
@@ -268,48 +294,20 @@ public class InventoryUI : MonoBehaviour
         return panelAnimator;
     }
 
-    private void ConfigureTabToggle(Toggle toggle, bool isMaterialTab)
+    private void UpdateTabToggleVisuals(InventoryTabType targetType)
     {
-        if (toggle == null) return;
-
-        if (tabToggleGroup != null)
+        foreach (var binding in tabs)
         {
-            toggle.group = tabToggleGroup;
-        }
+            if (binding == null || binding.toggle == null)
+                continue;
 
-        if (tabToggleListeners.TryGetValue(toggle, out var existingListener))
-        {
-            toggle.onValueChanged.RemoveListener(existingListener);
-        }
+            bool isActive = binding.type == targetType;
+            binding.toggle.SetIsOnWithoutNotify(isActive);
 
-        UnityAction<bool> listener = isOn =>
-        {
-            if (isOn)
+            if (binding.toggle.graphic != null)
             {
-                SwitchTab(isMaterialTab);
+                binding.toggle.graphic.color = isActive ? activeTabColor : inactiveTabColor;
             }
-        };
-
-        tabToggleListeners[toggle] = listener;
-        toggle.onValueChanged.AddListener(listener);
-    }
-
-    private void UpdateTabToggleVisuals()
-    {
-        UpdateTabToggleVisual(materialTabToggle, isMaterialTab);
-        UpdateTabToggleVisual(furnitureTabToggle, !isMaterialTab);
-    }
-
-    private void UpdateTabToggleVisual(Toggle toggle, bool isActive)
-    {
-        if (toggle == null)
-            return;
-
-        toggle.SetIsOnWithoutNotify(isActive);
-
-        if (toggle.graphic != null)
-        {
-            toggle.graphic.color = isActive ? activeTabColor : inactiveTabColor;
         }
     }
 
@@ -800,18 +798,25 @@ public class InventoryUI : MonoBehaviour
 
     public void SwitchTab(bool material)
     {
-        isMaterialTab = material;
+        SwitchTab(material ? InventoryTabType.Material : InventoryTabType.Furniture);
+    }
+
+    public void SwitchTab(InventoryTabType targetType)
+    {
+        isMaterialTab = targetType == InventoryTabType.Material;
         searchQuery = "";  // タブ切り替え時に検索をクリア
 
-        UpdateTabToggleVisuals();
+        UpdateTabToggleVisuals(targetType);
 
         materialManager?.ClearSelection();
 
-        // タブコンテンツ全体の表示切り替え（変更点）
-        if (materialTab != null)
-            materialTab.SetActive(material);
-        if (furnitureTab != null)
-            furnitureTab.SetActive(!material);
+        foreach (var binding in tabs)
+        {
+            if (binding?.content == null)
+                continue;
+
+            binding.content.SetActive(binding.type == targetType);
+        }
 
         RefreshInventoryDisplay();
     }
