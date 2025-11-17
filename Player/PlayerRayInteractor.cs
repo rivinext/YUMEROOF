@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class PlayerRayInteractor : MonoBehaviour
@@ -23,6 +24,10 @@ public class PlayerRayInteractor : MonoBehaviour
     private RayOutlineHighlighter highlighter;
     private bool skipHideOnce;
     private PlayerController playerController;
+    [Header("UI Hooks")]
+    [SerializeField] private InteractionUIController interactionUIController;
+
+    public event Action<IInteractable> TargetChanged;
 
     void Awake()
     {
@@ -58,6 +63,8 @@ public class PlayerRayInteractor : MonoBehaviour
             {
                 SetHighlight(currentTarget, false);
                 currentTarget = null;
+                interactionUIController?.HandleTargetChanged(null);
+                TargetChanged?.Invoke(null);
             }
             return;
         }
@@ -90,6 +97,13 @@ public class PlayerRayInteractor : MonoBehaviour
                     SetHighlight(currentTarget, true);
                 }
             }
+
+            if (interactionUIController != null)
+            {
+                interactionUIController.HandleTargetChanged(currentTarget);
+            }
+
+            TargetChanged?.Invoke(currentTarget);
         }
 
         if (currentTarget != null && Input.GetKeyDown(KeyCode.E))
