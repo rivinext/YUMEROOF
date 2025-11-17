@@ -14,8 +14,12 @@ public class ShopUIManager : MonoBehaviour
 {
     public static ShopUIManager Instance { get; private set; }
 
+    public event Action ShopOpened;
+    public event Action ShopClosed;
+
     [Header("UI References")]
     public GameObject shopRoot;           // Root panel for the shop UI
+    [SerializeField] private UISlidePanel shopSlidePanel;
     public GameObject purchaseTab;        // Purchase tab object
     public GameObject sellTab;            // Sell tab object
     public Transform purchaseContent;     // Parent for purchase item cards
@@ -51,6 +55,8 @@ public class ShopUIManager : MonoBehaviour
     private int generatedDay = -1;
     private GameClock clock;
     private bool isOpen;
+    private bool inputOwnedExternally;
+    private bool closeEventPending;
     private InventoryItem selectedForSale;
     private ShopItem selectedForPurchase;
 
@@ -59,6 +65,8 @@ public class ShopUIManager : MonoBehaviour
     private bool sellSortAscending = true;
     private bool sellShowOnlyFavorites = false;
     private string sellSearchQuery = "";
+
+    public bool IsOpen => isOpen;
 
     void Awake()
     {
@@ -73,9 +81,19 @@ public class ShopUIManager : MonoBehaviour
         }
         LoadItemData();
         LoadUnlockData();
+        if (shopSlidePanel == null && shopRoot != null)
+        {
+            shopSlidePanel = shopRoot.GetComponent<UISlidePanel>();
+        }
+
         if (shopRoot != null)
         {
             shopRoot.SetActive(false);
+        }
+
+        if (shopSlidePanel != null)
+        {
+            shopSlidePanel.OnSlideOutComplete += HandleShopSlideOutComplete;
         }
     }
 
@@ -112,6 +130,11 @@ public class ShopUIManager : MonoBehaviour
         if (clock != null)
         {
             clock.OnDayChanged -= OnDayChanged;
+        }
+
+        if (shopSlidePanel != null)
+        {
+            shopSlidePanel.OnSlideOutComplete -= HandleShopSlideOutComplete;
         }
     }
 
@@ -191,14 +214,19 @@ public class ShopUIManager : MonoBehaviour
     /// </summary>
     public void OpenShop()
     {
-        PlayerController.SetGlobalInputEnabled(false);
-        if (shopRoot != null) shopRoot.SetActive(true);
-        isOpen = true;
-        selectedForSale = null;
-        selectedForPurchase = null;
-        if (sellButton != null) sellButton.interactable = false;
-        if (purchaseButton != null) purchaseButton.interactable = false;
-        ClearDescriptionPanels();
+        OpenShopInternal(false);
+        ShowSellTab();
+    }
+
+    public void OpenBuyPanel(bool externalInputOwner = false)
+    {
+        OpenShopInternal(externalInputOwner);
+        ShowPurchaseTab();
+    }
+
+    public void OpenSellPanel(bool externalInputOwner = false)
+    {
+        OpenShopInternal(externalInputOwner);
         ShowSellTab();
     }
 
@@ -207,10 +235,31 @@ public class ShopUIManager : MonoBehaviour
     /// </summary>
     public void CloseShop()
     {
-        if (shopRoot != null) shopRoot.SetActive(false);
-        PlayerController.SetGlobalInputEnabled(true);
+        if (!isOpen)
+            return;
+
         isOpen = false;
         ClearDescriptionPanels();
+        bool shouldReleaseInput = !inputOwnedExternally;
+        inputOwnedExternally = false;
+        if (shouldReleaseInput)
+        {
+            PlayerController.SetGlobalInputEnabled(true);
+        }
+
+        if (shopSlidePanel != null)
+        {
+            closeEventPending = true;
+            shopSlidePanel.SlideOut();
+        }
+        else
+        {
+            if (shopRoot != null)
+            {
+                shopRoot.SetActive(false);
+            }
+            NotifyShopClosed();
+        }
     }
 
     /// <summary>
@@ -236,6 +285,48 @@ public class ShopUIManager : MonoBehaviour
         UpdateDescriptionPanel(selectedForSale);
     }
     #endregion
+
+    void OpenShopInternal(bool externalInputOwner)
+    {
+        PlayerController.SetGlobalInputEnabled(false);
+        inputOwnedExternally = externalInputOwner;
+        selectedForSale = null;
+        selectedForPurchase = null;
+        if (sellButton != null) sellButton.interactable = false;
+        if (purchaseButton != null) purchaseButton.interactable = false;
+        ClearDescriptionPanels();
+        isOpen = true;
+
+        if (shopSlidePanel != null)
+        {
+            shopSlidePanel.SlideIn();
+        }
+        else if (shopRoot != null)
+        {
+            shopRoot.SetActive(true);
+        }
+
+        closeEventPending = false;
+        ShopOpened?.Invoke();
+    }
+
+    void HandleShopSlideOutComplete()
+    {
+        if (!closeEventPending)
+            return;
+
+        closeEventPending = false;
+        if (shopRoot != null && shopRoot.activeSelf)
+        {
+            shopRoot.SetActive(false);
+        }
+        NotifyShopClosed();
+    }
+
+    void NotifyShopClosed()
+    {
+        ShopClosed?.Invoke();
+    }
 
     void EnsureDailyItems()
     {
