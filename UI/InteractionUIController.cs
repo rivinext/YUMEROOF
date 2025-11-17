@@ -32,11 +32,17 @@ public class InteractionUIController : MonoBehaviour
     private readonly List<string> displayedLog = new();
     private InteractionLine? currentLine;
     private IInteractable currentTarget;
+    private bool waitForMovementClose;
+    private bool closeOnMovementAfterCompletion;
 
     /// <summary>
     /// 現在パネルが開いているかどうか。
     /// </summary>
     public bool IsPanelOpen => slidePanel != null && slidePanel.IsOpen;
+
+    public IInteractable CurrentTarget => currentTarget;
+
+    public event Action<IInteractable> InteractionClosed;
 
     private void Reset()
     {
@@ -48,13 +54,21 @@ public class InteractionUIController : MonoBehaviour
         if (!IsPanelOpen)
             return;
 
+        if (waitForMovementClose)
+        {
+            if (IsMovementInputTriggered())
+            {
+                CloseInteraction();
+            }
+            return;
+        }
+
         if (allowClickAdvance && Input.GetMouseButtonDown(0))
         {
             AdvanceDialogue();
         }
 
-        if (closeOnMovementInput && (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A) ||
-                                     Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D)))
+        if (closeOnMovementInput && IsMovementInputTriggered())
         {
             CloseInteraction();
         }
@@ -79,10 +93,20 @@ public class InteractionUIController : MonoBehaviour
         }
         displayedLog.Clear();
         currentLine = null;
+        waitForMovementClose = false;
 
         slidePanel?.SlideIn();
         SetBackgroundDimmer(true);
         DisplayNextLine();
+    }
+
+    public void SetCloseOnMovementAfterComplete(bool shouldWait)
+    {
+        closeOnMovementAfterCompletion = shouldWait;
+        if (!shouldWait)
+        {
+            waitForMovementClose = false;
+        }
     }
 
     /// <summary>
@@ -107,6 +131,9 @@ public class InteractionUIController : MonoBehaviour
         if (!IsPanelOpen)
             return;
 
+        if (waitForMovementClose)
+            return;
+
         DisplayNextLine();
     }
 
@@ -115,6 +142,9 @@ public class InteractionUIController : MonoBehaviour
     /// </summary>
     public void CloseInteraction()
     {
+        var closedTarget = currentTarget;
+        waitForMovementClose = false;
+        closeOnMovementAfterCompletion = false;
         queuedLines.Clear();
         currentTarget = null;
 
@@ -130,6 +160,11 @@ public class InteractionUIController : MonoBehaviour
 
         slidePanel?.SlideOut();
         SetBackgroundDimmer(false);
+
+        if (closedTarget != null)
+        {
+            InteractionClosed?.Invoke(closedTarget);
+        }
     }
 
     /// <summary>
@@ -174,7 +209,15 @@ public class InteractionUIController : MonoBehaviour
 
         if (queuedLines.Count == 0)
         {
-            CloseInteraction();
+            if (closeOnMovementAfterCompletion)
+            {
+                waitForMovementClose = true;
+                closeOnMovementAfterCompletion = false;
+            }
+            else
+            {
+                CloseInteraction();
+            }
             return;
         }
 
@@ -276,6 +319,12 @@ public class InteractionUIController : MonoBehaviour
 
         values.Add(currentValue.ToString().Trim());
         return values.ToArray();
+    }
+
+    private bool IsMovementInputTriggered()
+    {
+        return Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.A) ||
+               Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.D);
     }
 
     [Serializable]

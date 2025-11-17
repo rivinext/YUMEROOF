@@ -21,6 +21,7 @@ public class PlayerRayInteractor : MonoBehaviour
     public Vector3 boxHalfExtents = Vector3.one * 0.5f;
 
     private IInteractable currentTarget;
+    private IFocusableInteractable currentFocusable;
     private RayOutlineHighlighter highlighter;
     private bool skipHideOnce;
     private PlayerController playerController;
@@ -28,6 +29,8 @@ public class PlayerRayInteractor : MonoBehaviour
     [SerializeField] private InteractionUIController interactionUIController;
 
     public event Action<IInteractable> TargetChanged;
+
+    public InteractionUIController InteractionUI => interactionUIController;
 
     void Awake()
     {
@@ -62,6 +65,7 @@ public class PlayerRayInteractor : MonoBehaviour
             if (currentTarget != null)
             {
                 SetHighlight(currentTarget, false);
+                NotifyBlur(currentTarget);
                 currentTarget = null;
                 interactionUIController?.HandleTargetChanged(null);
                 TargetChanged?.Invoke(null);
@@ -81,6 +85,7 @@ public class PlayerRayInteractor : MonoBehaviour
             {
                 skipHideOnce = newIsGhost;
                 SetHighlight(currentTarget, false);
+                NotifyBlur(currentTarget);
             }
 
             currentTarget = newTarget;
@@ -95,7 +100,13 @@ public class PlayerRayInteractor : MonoBehaviour
                 else
                 {
                     SetHighlight(currentTarget, true);
+                    NotifyFocus(currentTarget);
                 }
+            }
+            else
+            {
+                skipHideOnce = false;
+                currentFocusable = null;
             }
 
             if (interactionUIController != null)
@@ -164,6 +175,48 @@ public class PlayerRayInteractor : MonoBehaviour
         if (bed != null)
             bed.isPlayerNearby = enabled;
 
+    }
+
+    public void ReleaseHighlightIfCurrent(IInteractable target)
+    {
+        if (currentTarget == target)
+        {
+            SetHighlight(currentTarget, false);
+        }
+    }
+
+    public void ClearFocusIfCurrent(IInteractable target)
+    {
+        if (currentTarget != target)
+            return;
+
+        SetHighlight(currentTarget, false);
+        NotifyBlur(currentTarget);
+        currentTarget = null;
+        currentFocusable = null;
+        interactionUIController?.HandleTargetChanged(null);
+        TargetChanged?.Invoke(null);
+    }
+
+    private void NotifyFocus(IInteractable target)
+    {
+        if (target is IFocusableInteractable focusable)
+        {
+            currentFocusable = focusable;
+            focusable.OnFocus(this);
+        }
+    }
+
+    private void NotifyBlur(IInteractable target)
+    {
+        if (target is IFocusableInteractable focusable)
+        {
+            focusable.OnBlur(this);
+            if (currentFocusable == focusable)
+            {
+                currentFocusable = null;
+            }
+        }
     }
 
     private void OnDrawGizmosSelected()
