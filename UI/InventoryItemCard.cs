@@ -250,7 +250,19 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             return true;
         }
 
-        return eventData.pointerEnter == gameObject;
+        if (eventData.pointerEnter == null)
+        {
+            return false;
+        }
+
+        if (eventData.pointerEnter == gameObject)
+        {
+            return true;
+        }
+
+        // Allow hover events triggered by any child of this card so that overlays
+        // (e.g. the quantity text) do not block the hover animation.
+        return eventData.pointerEnter.transform.IsChildOf(transform);
     }
 
     // アイテムを設定
