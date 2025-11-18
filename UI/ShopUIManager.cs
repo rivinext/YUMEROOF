@@ -66,9 +66,6 @@ public class ShopUIManager : MonoBehaviour
     private InventoryItem selectedForSale;
     private ShopItem selectedForPurchase;
     private UISlidePanel currentTabSlidePanel;
-    private UISlidePanel pendingTabSlidePanel;
-    private Action pendingTabShownCallback;
-    private bool tabTransitionInProgress;
     private readonly Dictionary<string, InventoryItemCardPurchase> activePurchaseCards = new();
     private readonly Stack<InventoryItemCardPurchase> purchaseCardPool = new();
     private readonly Dictionary<string, InventoryItemCardSell> activeSellCards = new();
@@ -110,13 +107,11 @@ public class ShopUIManager : MonoBehaviour
         if (purchaseTabSlidePanel != null)
         {
             purchaseTabSlidePanel.ConfigureCloseBehaviors(false, false);
-            purchaseTabSlidePanel.OnSlideOutComplete += HandlePurchaseTabSlideOutComplete;
         }
 
         if (sellTabSlidePanel != null)
         {
             sellTabSlidePanel.ConfigureCloseBehaviors(false, false);
-            sellTabSlidePanel.OnSlideOutComplete += HandleSellTabSlideOutComplete;
         }
 
         if (shopRoot != null)
@@ -175,15 +170,7 @@ public class ShopUIManager : MonoBehaviour
             clock.OnDayChanged -= OnDayChanged;
         }
 
-        if (purchaseTabSlidePanel != null)
-        {
-            purchaseTabSlidePanel.OnSlideOutComplete -= HandlePurchaseTabSlideOutComplete;
-        }
-
-        if (sellTabSlidePanel != null)
-        {
-            sellTabSlidePanel.OnSlideOutComplete -= HandleSellTabSlideOutComplete;
-        }
+        // No slide panel event subscriptions to clean up.
     }
 
     void OnDayChanged(int day)
@@ -360,9 +347,6 @@ public class ShopUIManager : MonoBehaviour
             if (targetTab != null) targetTab.SetActive(true);
             if (otherTab != null) otherTab.SetActive(false);
             currentTabSlidePanel = targetSlidePanel;
-            pendingTabSlidePanel = null;
-            pendingTabShownCallback = null;
-            tabTransitionInProgress = false;
             onShown?.Invoke();
             return;
         }
@@ -373,20 +357,15 @@ public class ShopUIManager : MonoBehaviour
             return;
         }
 
-        pendingTabSlidePanel = targetSlidePanel;
-        pendingTabShownCallback = onShown;
-
-        if (currentTabSlidePanel != null && (currentTabSlidePanel.IsOpen || tabTransitionInProgress))
+        if (currentTabSlidePanel != null && currentTabSlidePanel != targetSlidePanel && currentTabSlidePanel.IsOpen)
         {
-            if (!tabTransitionInProgress)
-            {
-                tabTransitionInProgress = true;
-                currentTabSlidePanel.SlideOut();
-            }
-            return;
+            currentTabSlidePanel.SlideOut();
         }
 
-        ActivatePendingTab();
+        currentTabSlidePanel = targetSlidePanel;
+        currentTabSlidePanel.SlideIn();
+
+        onShown?.Invoke();
     }
 
     private void HandlePurchaseToggleChanged(bool isOn)
@@ -405,44 +384,6 @@ public class ShopUIManager : MonoBehaviour
         }
     }
 
-    void ActivatePendingTab()
-    {
-        tabTransitionInProgress = false;
-
-        if (pendingTabSlidePanel == null)
-        {
-            pendingTabShownCallback?.Invoke();
-            pendingTabShownCallback = null;
-            return;
-        }
-
-        currentTabSlidePanel = pendingTabSlidePanel;
-        pendingTabSlidePanel = null;
-        currentTabSlidePanel.SlideIn();
-
-        pendingTabShownCallback?.Invoke();
-        pendingTabShownCallback = null;
-    }
-
-    void HandlePurchaseTabSlideOutComplete()
-    {
-        HandleTabSlideOutComplete(purchaseTabSlidePanel);
-    }
-
-    void HandleSellTabSlideOutComplete()
-    {
-        HandleTabSlideOutComplete(sellTabSlidePanel);
-    }
-
-    void HandleTabSlideOutComplete(UISlidePanel panel)
-    {
-        if (currentTabSlidePanel == panel)
-        {
-            currentTabSlidePanel = null;
-        }
-
-        ActivatePendingTab();
-    }
 
     private void SetActiveTabToggle(Toggle targetToggle)
     {
