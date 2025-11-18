@@ -83,8 +83,26 @@ public class UISlidePanel : MonoBehaviour
     /// </summary>
     public void SlideIn()
     {
-        if (isOpen && !IsAnimating)
-            return;
+        var tween = CreateSlideInTween();
+        tween?.Play();
+    }
+
+    /// <summary>
+    /// パネルをスライドアウトで非表示
+    /// </summary>
+    public void SlideOut()
+    {
+        var tween = CreateSlideOutTween();
+        tween?.Play();
+    }
+
+    /// <summary>
+    /// 外部シーケンスと同期させるためのスライドインTweenを生成
+    /// </summary>
+    public Tweener CreateSlideInTween(bool forceRestart = false)
+    {
+        if (!forceRestart && isOpen && !IsAnimating)
+            return null;
 
         bool wasAnimating = IsAnimating;
 
@@ -100,35 +118,50 @@ public class UISlidePanel : MonoBehaviour
         }
 
         // DOTweenでアニメーション
-        activeTween = rectTransform.DOAnchorPos(onScreenPosition, animationDuration)
+        var tween = rectTransform.DOAnchorPos(onScreenPosition, animationDuration)
             .SetEase(slideInCurve)
             .OnComplete(() =>
             {
-                activeTween = null;
+                if (activeTween == tween)
+                {
+                    activeTween = null;
+                }
                 OnSlideInComplete?.Invoke();
-            });
+            })
+            .Pause();
+
+        activeTween = tween;
+        return tween;
     }
 
     /// <summary>
-    /// パネルをスライドアウトで非表示
+    /// 外部シーケンスと同期させるためのスライドアウトTweenを生成
     /// </summary>
-    public void SlideOut()
+    public Tweener CreateSlideOutTween(bool forceRestart = false)
     {
-        if (!isOpen && activeTween == null) return;
+        if (!forceRestart && !isOpen && activeTween == null)
+            return null;
 
         isOpen = false;
 
         KillActiveTween();
 
         // DOTweenでアニメーション
-        activeTween = rectTransform.DOAnchorPos(offScreenPosition, animationDuration)
+        var tween = rectTransform.DOAnchorPos(offScreenPosition, animationDuration)
             .SetEase(slideOutCurve)
             .OnComplete(() =>
             {
                 gameObject.SetActive(false);
-                activeTween = null;
+                if (activeTween == tween)
+                {
+                    activeTween = null;
+                }
                 OnSlideOutComplete?.Invoke();
-            });
+            })
+            .Pause();
+
+        activeTween = tween;
+        return tween;
     }
 
     private void KillActiveTween()
