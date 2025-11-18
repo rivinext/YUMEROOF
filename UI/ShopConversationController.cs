@@ -333,14 +333,14 @@ public class ShopConversationController : MonoBehaviour
 
     private void UpdateChoiceButtonsVisibility()
     {
-        bool visible = awaitingChoice && !shopPanelOpen && !exitSequenceActive && conversationActive;
+        bool shouldShowChoices = awaitingChoice && !exitSequenceActive && conversationActive;
         if (choiceButtonGroup != null)
         {
-            choiceButtonGroup.SetActive(visible);
+            choiceButtonGroup.SetActive(shouldShowChoices);
         }
-        SetChoiceTogglesInteractable(visible);
+        SetChoiceTogglesInteractable(shouldShowChoices);
 
-        if (!visible)
+        if (!shouldShowChoices)
         {
             ResetChoiceToggles();
         }
