@@ -907,11 +907,16 @@ public class InventoryUI : MonoBehaviour
         var list = InventoryManager.Instance?.GetFurnitureList(currentSortType, showOnlyCraftable, showOnlyFavorites, sortAscending)
                    ?? new List<InventoryItem>();
 
-        // デバッグ用：取得したリストの内容を確認
-        foreach (var item in list.Take(3)) // 最初の3つだけログ出力
+        // デバッグ用：取得したリストの内容を確認（エディター専用）
+#if UNITY_EDITOR
+        if (debugMode)
         {
-            if (debugMode) Debug.Log($"  Item: {item.itemID}, Craftable: {item.canCraft}, Favorite: {item.isFavorite}");
+            foreach (var item in list.Take(3)) // 最初の3つだけログ出力
+            {
+                Debug.Log($"  Item: {item.itemID}, Craftable: {item.canCraft}, Favorite: {item.isFavorite}");
+            }
         }
+#endif
 
         return list;
     }

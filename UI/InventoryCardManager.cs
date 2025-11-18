@@ -23,7 +23,12 @@ public class InventoryCardManager : MonoBehaviour
     private GameObject furnitureContent;
 
     // デバッグモード
-    public bool debugMode = true;
+#if UNITY_EDITOR
+    [SerializeField]
+    private bool debugMode = false;
+#else
+    private const bool debugMode = false;
+#endif
 
     public void Initialize(GameObject content)
     {
