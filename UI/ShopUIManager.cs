@@ -221,20 +221,32 @@ public class ShopUIManager : MonoBehaviour
     /// </summary>
     public void OpenShop()
     {
-        OpenShopInternal(false);
-        ShowSellTab();
+        if (OpenShopInternal(false))
+        {
+            ShowSellTab();
+        }
     }
 
-    public void OpenBuyPanel(bool externalInputOwner = false)
+    public bool OpenBuyPanel(bool externalInputOwner = false)
     {
-        OpenShopInternal(externalInputOwner);
+        if (!OpenShopInternal(externalInputOwner))
+        {
+            return false;
+        }
+
         ShowPurchaseTab();
+        return true;
     }
 
-    public void OpenSellPanel(bool externalInputOwner = false)
+    public bool OpenSellPanel(bool externalInputOwner = false)
     {
-        OpenShopInternal(externalInputOwner);
+        if (!OpenShopInternal(externalInputOwner))
+        {
+            return false;
+        }
+
         ShowSellTab();
+        return true;
     }
 
     /// <summary>
@@ -290,8 +302,15 @@ public class ShopUIManager : MonoBehaviour
     }
     #endregion
 
-    void OpenShopInternal(bool externalInputOwner)
+    bool OpenShopInternal(bool externalInputOwner)
     {
+        if (shopRoot == null && purchaseTab == null && sellTab == null &&
+            purchaseTabSlidePanel == null && sellTabSlidePanel == null)
+        {
+            Debug.LogWarning("[ShopUIManager] Cannot open shop because UI references are missing.");
+            return false;
+        }
+
         PlayerController.SetGlobalInputEnabled(false);
         inputOwnedExternally = externalInputOwner;
         selectedForSale = null;
@@ -308,6 +327,7 @@ public class ShopUIManager : MonoBehaviour
         }
 
         ShopOpened?.Invoke();
+        return true;
     }
 
     void NotifyShopClosed()
