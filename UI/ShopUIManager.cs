@@ -22,6 +22,8 @@ public class ShopUIManager : MonoBehaviour
     [SerializeField] private UISlidePanel shopSlidePanel;
     public GameObject purchaseTab;        // Purchase tab object
     public GameObject sellTab;            // Sell tab object
+    [SerializeField] private UISlidePanel purchaseTabSlidePanel; // Slide panel controller for purchase tab
+    [SerializeField] private UISlidePanel sellTabSlidePanel;     // Slide panel controller for sell tab
     public Transform purchaseContent;     // Parent for purchase item cards
     public Transform sellContent;         // Parent for sell item cards
     public GameObject purchaseItemCardPrefab; // Prefab for purchase tab items
@@ -59,6 +61,10 @@ public class ShopUIManager : MonoBehaviour
     private bool closeEventPending;
     private InventoryItem selectedForSale;
     private ShopItem selectedForPurchase;
+    private UISlidePanel currentTabSlidePanel;
+    private UISlidePanel pendingTabSlidePanel;
+    private Action pendingTabShownCallback;
+    private bool tabTransitionInProgress;
 
     // Sell tab filter state
     private string sellSortType = "name";
@@ -84,6 +90,26 @@ public class ShopUIManager : MonoBehaviour
         if (shopSlidePanel == null && shopRoot != null)
         {
             shopSlidePanel = shopRoot.GetComponent<UISlidePanel>();
+        }
+
+        if (purchaseTabSlidePanel == null && purchaseTab != null)
+        {
+            purchaseTabSlidePanel = purchaseTab.GetComponent<UISlidePanel>();
+        }
+
+        if (sellTabSlidePanel == null && sellTab != null)
+        {
+            sellTabSlidePanel = sellTab.GetComponent<UISlidePanel>();
+        }
+
+        if (purchaseTabSlidePanel != null)
+        {
+            purchaseTabSlidePanel.OnSlideOutComplete += HandlePurchaseTabSlideOutComplete;
+        }
+
+        if (sellTabSlidePanel != null)
+        {
+            sellTabSlidePanel.OnSlideOutComplete += HandleSellTabSlideOutComplete;
         }
 
         if (shopRoot != null)
@@ -135,6 +161,16 @@ public class ShopUIManager : MonoBehaviour
         if (shopSlidePanel != null)
         {
             shopSlidePanel.OnSlideOutComplete -= HandleShopSlideOutComplete;
+        }
+
+        if (purchaseTabSlidePanel != null)
+        {
+            purchaseTabSlidePanel.OnSlideOutComplete -= HandlePurchaseTabSlideOutComplete;
+        }
+
+        if (sellTabSlidePanel != null)
+        {
+            sellTabSlidePanel.OnSlideOutComplete -= HandleSellTabSlideOutComplete;
         }
     }
 
@@ -267,11 +303,12 @@ public class ShopUIManager : MonoBehaviour
     /// </summary>
     public void ShowPurchaseTab()
     {
-        if (purchaseTab != null) purchaseTab.SetActive(true);
-        if (sellTab != null) sellTab.SetActive(false);
-        PopulatePurchaseTab();
-        UpdatePurchaseButtonState();
-        UpdatePurchaseDescription(selectedForPurchase);
+        SwitchTab(purchaseTabSlidePanel, sellTabSlidePanel, purchaseTab, sellTab, () =>
+        {
+            PopulatePurchaseTab();
+            UpdatePurchaseButtonState();
+            UpdatePurchaseDescription(selectedForPurchase);
+        });
     }
 
     /// <summary>
@@ -279,10 +316,11 @@ public class ShopUIManager : MonoBehaviour
     /// </summary>
     public void ShowSellTab()
     {
-        if (purchaseTab != null) purchaseTab.SetActive(false);
-        if (sellTab != null) sellTab.SetActive(true);
-        PopulateSellTab();
-        UpdateDescriptionPanel(selectedForSale);
+        SwitchTab(sellTabSlidePanel, purchaseTabSlidePanel, sellTab, purchaseTab, () =>
+        {
+            PopulateSellTab();
+            UpdateDescriptionPanel(selectedForSale);
+        });
     }
     #endregion
 
@@ -326,6 +364,81 @@ public class ShopUIManager : MonoBehaviour
     void NotifyShopClosed()
     {
         ShopClosed?.Invoke();
+    }
+
+    void SwitchTab(UISlidePanel targetSlidePanel, UISlidePanel otherSlidePanel, GameObject targetTab, GameObject otherTab, Action onShown)
+    {
+        if (targetSlidePanel == null || otherSlidePanel == null)
+        {
+            if (targetTab != null) targetTab.SetActive(true);
+            if (otherTab != null) otherTab.SetActive(false);
+            currentTabSlidePanel = targetSlidePanel;
+            pendingTabSlidePanel = null;
+            pendingTabShownCallback = null;
+            tabTransitionInProgress = false;
+            onShown?.Invoke();
+            return;
+        }
+
+        if (currentTabSlidePanel == targetSlidePanel && currentTabSlidePanel != null && currentTabSlidePanel.IsOpen)
+        {
+            onShown?.Invoke();
+            return;
+        }
+
+        pendingTabSlidePanel = targetSlidePanel;
+        pendingTabShownCallback = onShown;
+
+        if (currentTabSlidePanel != null && (currentTabSlidePanel.IsOpen || tabTransitionInProgress))
+        {
+            if (!tabTransitionInProgress)
+            {
+                tabTransitionInProgress = true;
+                currentTabSlidePanel.SlideOut();
+            }
+            return;
+        }
+
+        ActivatePendingTab();
+    }
+
+    void ActivatePendingTab()
+    {
+        tabTransitionInProgress = false;
+
+        if (pendingTabSlidePanel == null)
+        {
+            pendingTabShownCallback?.Invoke();
+            pendingTabShownCallback = null;
+            return;
+        }
+
+        currentTabSlidePanel = pendingTabSlidePanel;
+        pendingTabSlidePanel = null;
+        currentTabSlidePanel.SlideIn();
+
+        pendingTabShownCallback?.Invoke();
+        pendingTabShownCallback = null;
+    }
+
+    void HandlePurchaseTabSlideOutComplete()
+    {
+        HandleTabSlideOutComplete(purchaseTabSlidePanel);
+    }
+
+    void HandleSellTabSlideOutComplete()
+    {
+        HandleTabSlideOutComplete(sellTabSlidePanel);
+    }
+
+    void HandleTabSlideOutComplete(UISlidePanel panel)
+    {
+        if (currentTabSlidePanel == panel)
+        {
+            currentTabSlidePanel = null;
+        }
+
+        ActivatePendingTab();
     }
 
     void EnsureDailyItems()
