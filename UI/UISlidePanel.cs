@@ -30,6 +30,7 @@ public class UISlidePanel : MonoBehaviour
     private Vector2 onScreenPosition;
     private Vector2 offScreenPosition;
     private bool isOpen = false;
+    private Tween activeTween;
 
     // アニメーション完了時のコールバック
     public Action OnSlideInComplete;
@@ -37,6 +38,11 @@ public class UISlidePanel : MonoBehaviour
 
     // パネルが開いているかどうかを取得
     public bool IsOpen => isOpen;
+
+    /// <summary>
+    /// アニメーションが再生中かどうかを取得
+    /// </summary>
+    public bool IsAnimating => activeTween != null && activeTween.IsActive() && activeTween.IsPlaying();
 
     private void Awake()
     {
@@ -77,19 +83,28 @@ public class UISlidePanel : MonoBehaviour
     /// </summary>
     public void SlideIn()
     {
-        if (isOpen) return;
+        if (isOpen && !IsAnimating)
+            return;
+
+        bool wasAnimating = IsAnimating;
 
         gameObject.SetActive(true);
         isOpen = true;
 
-        // 位置を確実に画面外に設定
-        rectTransform.anchoredPosition = offScreenPosition;
+        KillActiveTween();
+
+        if (!wasAnimating)
+        {
+            // 初回表示などアニメーションしていなかった場合のみオフスクリーン位置から開始
+            rectTransform.anchoredPosition = offScreenPosition;
+        }
 
         // DOTweenでアニメーション
-        rectTransform.DOAnchorPos(onScreenPosition, animationDuration)
+        activeTween = rectTransform.DOAnchorPos(onScreenPosition, animationDuration)
             .SetEase(slideInCurve)
             .OnComplete(() =>
             {
+                activeTween = null;
                 OnSlideInComplete?.Invoke();
             });
     }
@@ -99,18 +114,30 @@ public class UISlidePanel : MonoBehaviour
     /// </summary>
     public void SlideOut()
     {
-        if (!isOpen) return;
+        if (!isOpen && activeTween == null) return;
 
         isOpen = false;
 
+        KillActiveTween();
+
         // DOTweenでアニメーション
-        rectTransform.DOAnchorPos(offScreenPosition, animationDuration)
+        activeTween = rectTransform.DOAnchorPos(offScreenPosition, animationDuration)
             .SetEase(slideOutCurve)
             .OnComplete(() =>
             {
                 gameObject.SetActive(false);
+                activeTween = null;
                 OnSlideOutComplete?.Invoke();
             });
+    }
+
+    private void KillActiveTween()
+    {
+        if (activeTween == null)
+            return;
+
+        activeTween.Kill(false);
+        activeTween = null;
     }
 
     private bool IsPointerInsidePanel()
