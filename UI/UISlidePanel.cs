@@ -30,7 +30,6 @@ public class UISlidePanel : MonoBehaviour
     private Vector2 onScreenPosition;
     private Vector2 offScreenPosition;
     private bool isOpen = false;
-    private Tween activeTween;
 
     // アニメーション完了時のコールバック
     public Action OnSlideInComplete;
@@ -38,11 +37,6 @@ public class UISlidePanel : MonoBehaviour
 
     // パネルが開いているかどうかを取得
     public bool IsOpen => isOpen;
-
-    /// <summary>
-    /// アニメーションが再生中かどうかを取得
-    /// </summary>
-    public bool IsAnimating => activeTween != null && activeTween.IsActive() && activeTween.IsPlaying();
 
     private void Awake()
     {
@@ -83,8 +77,21 @@ public class UISlidePanel : MonoBehaviour
     /// </summary>
     public void SlideIn()
     {
-        var tween = CreateSlideInTween();
-        tween?.Play();
+        if (isOpen) return;
+
+        gameObject.SetActive(true);
+        isOpen = true;
+
+        // 位置を確実に画面外に設定
+        rectTransform.anchoredPosition = offScreenPosition;
+
+        // DOTweenでアニメーション
+        rectTransform.DOAnchorPos(onScreenPosition, animationDuration)
+            .SetEase(slideInCurve)
+            .OnComplete(() =>
+            {
+                OnSlideInComplete?.Invoke();
+            });
     }
 
     /// <summary>
@@ -92,85 +99,18 @@ public class UISlidePanel : MonoBehaviour
     /// </summary>
     public void SlideOut()
     {
-        var tween = CreateSlideOutTween();
-        tween?.Play();
-    }
-
-    /// <summary>
-    /// 外部シーケンスと同期させるためのスライドインTweenを生成
-    /// </summary>
-    public Tweener CreateSlideInTween(bool forceRestart = false)
-    {
-        if (!forceRestart && isOpen && !IsAnimating)
-            return null;
-
-        bool wasAnimating = IsAnimating;
-
-        gameObject.SetActive(true);
-        isOpen = true;
-
-        KillActiveTween();
-
-        if (!wasAnimating)
-        {
-            // 初回表示などアニメーションしていなかった場合のみオフスクリーン位置から開始
-            rectTransform.anchoredPosition = offScreenPosition;
-        }
-
-        // DOTweenでアニメーション
-        var tween = rectTransform.DOAnchorPos(onScreenPosition, animationDuration)
-            .SetEase(slideInCurve)
-            .OnComplete(() =>
-            {
-                if (activeTween == tween)
-                {
-                    activeTween = null;
-                }
-                OnSlideInComplete?.Invoke();
-            })
-            .Pause();
-
-        activeTween = tween;
-        return tween;
-    }
-
-    /// <summary>
-    /// 外部シーケンスと同期させるためのスライドアウトTweenを生成
-    /// </summary>
-    public Tweener CreateSlideOutTween(bool forceRestart = false)
-    {
-        if (!forceRestart && !isOpen && activeTween == null)
-            return null;
+        if (!isOpen) return;
 
         isOpen = false;
 
-        KillActiveTween();
-
         // DOTweenでアニメーション
-        var tween = rectTransform.DOAnchorPos(offScreenPosition, animationDuration)
+        rectTransform.DOAnchorPos(offScreenPosition, animationDuration)
             .SetEase(slideOutCurve)
             .OnComplete(() =>
             {
                 gameObject.SetActive(false);
-                if (activeTween == tween)
-                {
-                    activeTween = null;
-                }
                 OnSlideOutComplete?.Invoke();
-            })
-            .Pause();
-
-        activeTween = tween;
-        return tween;
-    }
-
-    private void KillActiveTween()
-    {
-        if (activeTween == null)
-            return;
-
-        activeTween.Kill(false);
-        activeTween = null;
+            });
     }
 
     private bool IsPointerInsidePanel()
