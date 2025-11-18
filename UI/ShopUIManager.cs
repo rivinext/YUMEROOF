@@ -69,6 +69,8 @@ public class ShopUIManager : MonoBehaviour
     private UISlidePanel pendingTabSlidePanel;
     private Action pendingTabShownCallback;
     private bool tabTransitionInProgress;
+    private readonly Dictionary<string, InventoryItemCardPurchase> activePurchaseCards = new();
+    private readonly Stack<InventoryItemCardPurchase> purchaseCardPool = new();
 
     // Sell tab filter state
     private string sellSortType = "name";
@@ -506,24 +508,24 @@ public class ShopUIManager : MonoBehaviour
         EnsureDailyItems();
         if (purchaseContent == null || purchaseItemCardPrefab == null) return;
 
-        foreach (Transform child in purchaseContent)
+        var requiredIds = new HashSet<string>(dailyPurchaseItems.Select(i => i.itemID));
+        var keysToRelease = activePurchaseCards.Keys.Where(id => !requiredIds.Contains(id)).ToList();
+        foreach (var key in keysToRelease)
         {
-            Destroy(child.gameObject);
+            ReleasePurchaseCard(key);
         }
 
-        foreach (var item in dailyPurchaseItems)
+        if (selectedForPurchase != null && !requiredIds.Contains(selectedForPurchase.itemID))
         {
-            var go = Instantiate(purchaseItemCardPrefab, purchaseContent);
-            go.transform.localScale = Vector3.one;
-            var card = go.GetComponent<InventoryItemCardPurchase>();
-            if (card != null)
-            {
-                int owned = InventoryManager.Instance?.GetItemCount(InventoryItem.ItemType.Furniture, item.itemID) ?? 0;
-                var invItem = new InventoryItem(InventoryItem.ItemType.Furniture, item.itemID, owned);
-                card.SetItem(invItem);
-                card.OnItemClicked += _ => SelectItemForPurchase(item);
-                card.SetSelected(selectedForPurchase != null && selectedForPurchase.itemID == item.itemID);
-            }
+            selectedForPurchase = null;
+        }
+
+        for (int i = 0; i < dailyPurchaseItems.Count; i++)
+        {
+            var item = dailyPurchaseItems[i];
+            var card = GetOrCreatePurchaseCard(item);
+            BindPurchaseCard(card, item);
+            card.transform.SetSiblingIndex(i);
         }
 
         UpdatePurchaseDescription(selectedForPurchase);
@@ -665,14 +667,10 @@ public class ShopUIManager : MonoBehaviour
         selectedForPurchase = item;
         UpdatePurchaseButtonState();
 
-        foreach (Transform child in purchaseContent)
+        foreach (var kvp in activePurchaseCards)
         {
-            var card = child.GetComponent<InventoryItemCardPurchase>();
-            if (card != null)
-            {
-                bool isSelected = card.currentItem != null && card.currentItem.itemID == item.itemID;
-                card.SetSelected(isSelected);
-            }
+            bool isSelected = item != null && kvp.Key == item.itemID;
+            kvp.Value.SetSelected(isSelected);
         }
 
         UpdatePurchaseDescription(item);
@@ -690,9 +688,7 @@ public class ShopUIManager : MonoBehaviour
             InventoryManager.Instance?.AddFurniture(selectedForPurchase.itemID, 1);
             Debug.Log($"Purchased {selectedForPurchase.itemID} for {price}");
             purchaseSucceeded = true;
-
-            // Refresh UI but keep the item selected
-            PopulatePurchaseTab();
+            UpdatePurchaseCardDisplay(selectedForPurchase.itemID);
         }
         else
         {
@@ -750,6 +746,102 @@ public class ShopUIManager : MonoBehaviour
 
         UpdatePurchaseButtonState();
         UpdateDescriptionPanel(selectedForSale);
+    }
+
+    InventoryItemCardPurchase GetOrCreatePurchaseCard(ShopItem item)
+    {
+        if (item == null) return null;
+
+        if (activePurchaseCards.TryGetValue(item.itemID, out var existingCard) && existingCard != null)
+        {
+            existingCard.gameObject.SetActive(true);
+            return existingCard;
+        }
+
+        InventoryItemCardPurchase card;
+        if (purchaseCardPool.Count > 0)
+        {
+            card = purchaseCardPool.Pop();
+        }
+        else
+        {
+            var go = Instantiate(purchaseItemCardPrefab, purchaseContent);
+            go.transform.localScale = Vector3.one;
+            card = go.GetComponent<InventoryItemCardPurchase>();
+        }
+
+        if (card == null)
+        {
+            return null;
+        }
+
+        card.transform.SetParent(purchaseContent, false);
+        card.gameObject.SetActive(true);
+        activePurchaseCards[item.itemID] = card;
+        return card;
+    }
+
+    void BindPurchaseCard(InventoryItemCardPurchase card, ShopItem item)
+    {
+        if (card == null || item == null)
+        {
+            return;
+        }
+
+        card.OnItemClicked -= HandlePurchaseCardClicked;
+        card.OnItemClicked += HandlePurchaseCardClicked;
+
+        int owned = InventoryManager.Instance?.GetItemCount(InventoryItem.ItemType.Furniture, item.itemID) ?? 0;
+        var invItem = new InventoryItem(InventoryItem.ItemType.Furniture, item.itemID, owned);
+        card.SetItem(invItem);
+        bool isSelected = selectedForPurchase != null && selectedForPurchase.itemID == item.itemID;
+        card.SetSelected(isSelected);
+    }
+
+    void ReleasePurchaseCard(string itemId)
+    {
+        if (!activePurchaseCards.TryGetValue(itemId, out var card) || card == null)
+        {
+            return;
+        }
+
+        activePurchaseCards.Remove(itemId);
+        card.SetSelected(false);
+        card.gameObject.SetActive(false);
+        purchaseCardPool.Push(card);
+    }
+
+    void HandlePurchaseCardClicked(InventoryItem inventoryItem)
+    {
+        if (inventoryItem == null)
+        {
+            return;
+        }
+
+        var shopItem = dailyPurchaseItems.FirstOrDefault(i => i.itemID == inventoryItem.itemID);
+        if (shopItem != null)
+        {
+            SelectItemForPurchase(shopItem);
+        }
+    }
+
+    void UpdatePurchaseCardDisplay(string itemId)
+    {
+        if (string.IsNullOrEmpty(itemId))
+        {
+            return;
+        }
+
+        if (!activePurchaseCards.TryGetValue(itemId, out var card) || card == null)
+        {
+            return;
+        }
+
+        int owned = InventoryManager.Instance?.GetItemCount(InventoryItem.ItemType.Furniture, itemId) ?? 0;
+        var invItem = new InventoryItem(InventoryItem.ItemType.Furniture, itemId, owned);
+        card.SetItem(invItem);
+        bool isSelected = selectedForPurchase != null && selectedForPurchase.itemID == itemId;
+        card.SetSelected(isSelected);
     }
 
     string[] ParseCSVLine(string line)
