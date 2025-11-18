@@ -109,19 +109,6 @@ public class ShopUIManager : MonoBehaviour
             shopRoot.SetActive(false);
         }
 
-        if (tabToggleGroup != null)
-        {
-            tabToggleGroup.allowSwitchOff = false;
-            if (purchaseTabToggle != null)
-            {
-                purchaseTabToggle.group = tabToggleGroup;
-            }
-            if (sellTabToggle != null)
-            {
-                sellTabToggle.group = tabToggleGroup;
-            }
-        }
-
     }
 
     void Start()
@@ -424,16 +411,6 @@ public class ShopUIManager : MonoBehaviour
         if (targetToggle == null)
             return;
 
-        if (tabToggleGroup != null)
-        {
-            if (targetToggle.group != tabToggleGroup)
-            {
-                targetToggle.group = tabToggleGroup;
-            }
-            targetToggle.SetIsOnWithoutNotify(true);
-            return;
-        }
-
         if (purchaseTabToggle != null && purchaseTabToggle != targetToggle)
         {
             purchaseTabToggle.SetIsOnWithoutNotify(false);
@@ -454,16 +431,17 @@ public class ShopUIManager : MonoBehaviour
             tabToggleGroup.allowSwitchOff = true;
             tabToggleGroup.SetAllTogglesOff();
             tabToggleGroup.allowSwitchOff = previousAllowSwitchOff;
-            return;
         }
-
-        if (purchaseTabToggle != null)
+        else
         {
-            purchaseTabToggle.SetIsOnWithoutNotify(false);
-        }
-        if (sellTabToggle != null)
-        {
-            sellTabToggle.SetIsOnWithoutNotify(false);
+            if (purchaseTabToggle != null)
+            {
+                purchaseTabToggle.SetIsOnWithoutNotify(false);
+            }
+            if (sellTabToggle != null)
+            {
+                sellTabToggle.SetIsOnWithoutNotify(false);
+            }
         }
     }
 
