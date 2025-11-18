@@ -239,9 +239,14 @@ public class ShopConversationController : MonoBehaviour
         if (!awaitingChoice || shopUIManager == null)
             return;
 
-        shopPanelOpen = true;
+        bool opened = shopUIManager.OpenBuyPanel(true);
+        shopPanelOpen = opened && shopUIManager.IsOpen;
         UpdateChoiceButtonsVisibility();
-        shopUIManager.OpenBuyPanel(true);
+
+        if (!shopPanelOpen)
+        {
+            Debug.LogWarning("[ShopConversationController] Failed to open buy panel. Re-enabling choices.");
+        }
     }
 
     private void HandleSellSelected()
@@ -249,9 +254,14 @@ public class ShopConversationController : MonoBehaviour
         if (!awaitingChoice || shopUIManager == null)
             return;
 
-        shopPanelOpen = true;
+        bool opened = shopUIManager.OpenSellPanel(true);
+        shopPanelOpen = opened && shopUIManager.IsOpen;
         UpdateChoiceButtonsVisibility();
-        shopUIManager.OpenSellPanel(true);
+
+        if (!shopPanelOpen)
+        {
+            Debug.LogWarning("[ShopConversationController] Failed to open sell panel. Re-enabling choices.");
+        }
     }
 
     private void HandleExitSelected()
@@ -288,6 +298,15 @@ public class ShopConversationController : MonoBehaviour
             }
         }
         UpdateChoiceButtonsVisibility();
+    }
+
+    private void HandleShopOpened()
+    {
+        shopPanelOpen = true;
+        if (conversationActive)
+        {
+            UpdateChoiceButtonsVisibility();
+        }
     }
 
     private void EndConversation()
@@ -513,7 +532,9 @@ public class ShopConversationController : MonoBehaviour
         if (shopUIManager == null)
             return;
 
+        shopUIManager.ShopOpened -= HandleShopOpened;
         shopUIManager.ShopClosed -= HandleShopClosed;
+        shopUIManager.ShopOpened += HandleShopOpened;
         shopUIManager.ShopClosed += HandleShopClosed;
     }
 
@@ -522,6 +543,7 @@ public class ShopConversationController : MonoBehaviour
         if (shopUIManager == null)
             return;
 
+        shopUIManager.ShopOpened -= HandleShopOpened;
         shopUIManager.ShopClosed -= HandleShopClosed;
     }
 
