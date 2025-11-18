@@ -194,6 +194,12 @@ public class UISlidePanel : MonoBehaviour
         return false;
     }
 
+    public void ConfigureCloseBehaviors(bool allowEscapeClose, bool allowClickOutsideClose)
+    {
+        closeOnEscape = allowEscapeClose;
+        closeOnClickOutside = allowClickOutsideClose;
+    }
+
     private void OnValidate()
     {
         if (exclusionPanels == null)

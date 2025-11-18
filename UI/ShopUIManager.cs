@@ -96,11 +96,13 @@ public class ShopUIManager : MonoBehaviour
 
         if (purchaseTabSlidePanel != null)
         {
+            purchaseTabSlidePanel.ConfigureCloseBehaviors(false, false);
             purchaseTabSlidePanel.OnSlideOutComplete += HandlePurchaseTabSlideOutComplete;
         }
 
         if (sellTabSlidePanel != null)
         {
+            sellTabSlidePanel.ConfigureCloseBehaviors(false, false);
             sellTabSlidePanel.OnSlideOutComplete += HandleSellTabSlideOutComplete;
         }
 
@@ -161,17 +163,6 @@ public class ShopUIManager : MonoBehaviour
     {
         dailyPurchaseItems.Clear();
         generatedDay = -1;
-    }
-
-    void Update()
-    {
-        if (isOpen)
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
-            {
-                CloseShop();
-            }
-        }
     }
 
     #region CSV Loading
