@@ -324,7 +324,7 @@ public class ShopUIManager : MonoBehaviour
 
         if (otherSlidePanel != null)
         {
-            if (otherSlidePanel.IsOpen)
+            if (otherSlidePanel.IsOpen || otherSlidePanel.IsAnimating)
             {
                 otherSlidePanel.SlideOut();
             }
