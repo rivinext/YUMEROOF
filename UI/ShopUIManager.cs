@@ -71,6 +71,9 @@ public class ShopUIManager : MonoBehaviour
     private bool tabTransitionInProgress;
     private readonly Dictionary<string, InventoryItemCardPurchase> activePurchaseCards = new();
     private readonly Stack<InventoryItemCardPurchase> purchaseCardPool = new();
+    private readonly Dictionary<string, InventoryItemCardSell> activeSellCards = new();
+    private readonly Stack<InventoryItemCardSell> sellCardPool = new();
+    private bool inventoryEventsSubscribed;
 
     // Sell tab filter state
     private string sellSortType = "name";
@@ -156,11 +159,13 @@ public class ShopUIManager : MonoBehaviour
     {
         AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
         HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+        SubscribeToInventoryEvents();
     }
 
     void OnDisable()
     {
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        UnsubscribeFromInventoryEvents();
     }
 
     void OnDestroy()
@@ -534,69 +539,350 @@ public class ShopUIManager : MonoBehaviour
     void PopulateSellTab()
     {
         if (sellContent == null || sellItemCardPrefab == null) return;
+        SubscribeToInventoryEvents();
 
-        foreach (Transform child in sellContent)
+        var sellItems = BuildSellItemList();
+        var requiredKeys = new HashSet<string>(sellItems.Select(GetSellCardKey));
+
+        var currentKeys = activeSellCards.Keys.ToList();
+        foreach (var key in currentKeys)
         {
-            Destroy(child.gameObject);
+            if (!requiredKeys.Contains(key))
+            {
+                ReleaseSellCard(key);
+            }
         }
 
-        // Furniture with filters
-        var furniture = InventoryManager.Instance?.GetFurnitureList(sellSortType, false, sellShowOnlyFavorites, sellSortAscending);
+        for (int i = 0; i < sellItems.Count; i++)
+        {
+            var item = sellItems[i];
+            var key = GetSellCardKey(item);
+            var card = GetOrCreateSellCard(key);
+            BindSellCard(card, item);
+            card.transform.SetSiblingIndex(i);
+        }
+
+        if (selectedForSale != null && !requiredKeys.Contains(GetSellCardKey(selectedForSale)))
+        {
+            selectedForSale = null;
+            UpdateDescriptionPanel(null);
+        }
+        else
+        {
+            UpdateDescriptionPanel(selectedForSale);
+        }
+
+        UpdateSellButtonState();
+    }
+
+    List<InventoryItem> BuildSellItemList()
+    {
+        var items = new List<InventoryItem>();
+        var inventory = InventoryManager.Instance;
+        if (inventory == null)
+        {
+            return items;
+        }
+
+        var furniture = inventory.GetFurnitureList(sellSortType, false, sellShowOnlyFavorites, sellSortAscending);
         if (furniture != null)
         {
-            if (!string.IsNullOrEmpty(sellSearchQuery))
-            {
-                furniture = furniture.Where(item =>
-                {
-                    var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
-                    if (data == null) return false;
-                    string locName = LocalizationSettings.StringDatabase.GetLocalizedString("ItemNames", data.nameID);
-                    return !string.IsNullOrEmpty(locName) && locName.ToLower().Contains(sellSearchQuery.ToLower());
-                }).ToList();
-            }
-
             foreach (var item in furniture)
             {
-                var go = Instantiate(sellItemCardPrefab, sellContent);
-                go.transform.localScale = Vector3.one;
-                var card = go.GetComponent<InventoryItemCardSell>();
-                if (card != null)
-                {
-                    card.SetItem(item, false);
-                    card.OnItemClicked += SelectItemForSale;
-                    card.OnFavoriteToggled += _ => PopulateSellTab();
-                    card.SetSelected(selectedForSale != null && card.currentItem == selectedForSale);
-                }
-            }
-        }
-
-        // Materials (filter out any without data)
-        var materials = InventoryManager.Instance?.GetMaterialList();
-        if (materials != null)
-        {
-            foreach (var item in materials)
-            {
-                // Dev materials may not have data; skip any without valid material data
-                var data = InventoryManager.Instance?.GetMaterialData(item.itemID);
-                if (data == null)
+                if (!ShouldDisplayItem(item))
                 {
                     continue;
                 }
 
-                var go = Instantiate(sellItemCardPrefab, sellContent);
-                go.transform.localScale = Vector3.one;
-                var card = go.GetComponent<InventoryItemCardSell>();
-                if (card != null)
-                {
-                    card.SetItem(item, true);
-                    card.OnItemClicked += SelectItemForSale;
-                    card.OnFavoriteToggled += _ => PopulateSellTab();
-                    card.SetSelected(selectedForSale != null && card.currentItem == selectedForSale);
-                }
+                items.Add(item);
             }
         }
 
-        UpdateDescriptionPanel(selectedForSale);
+        var materials = inventory.GetMaterialList(sellSortType, sellShowOnlyFavorites, sellSortAscending);
+        if (materials != null)
+        {
+            foreach (var item in materials)
+            {
+                if (!ShouldDisplayItem(item))
+                {
+                    continue;
+                }
+
+                items.Add(item);
+            }
+        }
+
+        return items;
+    }
+
+    bool ShouldDisplayItem(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return false;
+        }
+
+        if (item.itemType == InventoryItem.ItemType.Furniture)
+        {
+            if (sellShowOnlyFavorites && !item.isFavorite)
+            {
+                return false;
+            }
+
+            return MatchesSellSearch(item);
+        }
+
+        if (item.itemType == InventoryItem.ItemType.Material)
+        {
+            if (sellShowOnlyFavorites && !item.isFavorite)
+            {
+                return false;
+            }
+
+            var data = InventoryManager.Instance?.GetMaterialData(item.itemID);
+            return data != null;
+        }
+
+        return false;
+    }
+
+    bool MatchesSellSearch(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(sellSearchQuery))
+        {
+            return true;
+        }
+
+        var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+        if (data == null)
+        {
+            return false;
+        }
+
+        string locName = LocalizationSettings.StringDatabase.GetLocalizedString("ItemNames", data.nameID);
+        if (string.IsNullOrEmpty(locName))
+        {
+            return false;
+        }
+
+        return locName.IndexOf(sellSearchQuery, StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    string GetSellCardKey(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return string.Empty;
+        }
+
+        return $"{item.itemType}:{item.itemID}";
+    }
+
+    InventoryItemCardSell GetOrCreateSellCard(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return null;
+        }
+
+        if (activeSellCards.TryGetValue(key, out var existingCard) && existingCard != null)
+        {
+            existingCard.gameObject.SetActive(true);
+            return existingCard;
+        }
+
+        InventoryItemCardSell card = null;
+        if (sellCardPool.Count > 0)
+        {
+            card = sellCardPool.Pop();
+        }
+        else
+        {
+            var go = Instantiate(sellItemCardPrefab, sellContent);
+            go.transform.localScale = Vector3.one;
+            card = go.GetComponent<InventoryItemCardSell>();
+        }
+
+        if (card == null)
+        {
+            return null;
+        }
+
+        card.transform.SetParent(sellContent, false);
+        card.gameObject.SetActive(true);
+        activeSellCards[key] = card;
+        return card;
+    }
+
+    void ReleaseSellCard(string key)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            return;
+        }
+
+        if (!activeSellCards.TryGetValue(key, out var card) || card == null)
+        {
+            return;
+        }
+
+        activeSellCards.Remove(key);
+        card.OnItemClicked -= SelectItemForSale;
+        card.OnFavoriteToggled -= HandleSellCardFavoriteToggled;
+        card.SetSelected(false);
+        card.gameObject.SetActive(false);
+        sellCardPool.Push(card);
+
+        if (selectedForSale != null && GetSellCardKey(selectedForSale) == key)
+        {
+            selectedForSale = null;
+            UpdateDescriptionPanel(null);
+            UpdateSellButtonState();
+        }
+    }
+
+    void BindSellCard(InventoryItemCardSell card, InventoryItem item)
+    {
+        if (card == null || item == null)
+        {
+            return;
+        }
+
+        card.OnItemClicked -= SelectItemForSale;
+        card.OnItemClicked += SelectItemForSale;
+        card.OnFavoriteToggled -= HandleSellCardFavoriteToggled;
+        card.OnFavoriteToggled += HandleSellCardFavoriteToggled;
+
+        bool isMaterial = item.itemType == InventoryItem.ItemType.Material;
+        card.SetItem(item, isMaterial);
+        bool isSelected = selectedForSale != null && card.currentItem == selectedForSale;
+        card.SetSelected(isSelected);
+    }
+
+    void UpdateSellCardDisplay(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        if (!ShouldDisplayItem(item))
+        {
+            ReleaseSellCard(GetSellCardKey(item));
+            return;
+        }
+
+        var card = GetOrCreateSellCard(GetSellCardKey(item));
+        BindSellCard(card, item);
+    }
+
+    void UpdateSellButtonState()
+    {
+        if (sellButton == null)
+        {
+            return;
+        }
+
+        bool canSell = selectedForSale != null && selectedForSale.quantity > 0;
+        sellButton.interactable = canSell;
+    }
+
+    void HandleSellCardFavoriteToggled(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        UpdateSellCardDisplay(item);
+    }
+
+    void SubscribeToInventoryEvents()
+    {
+        if (inventoryEventsSubscribed)
+        {
+            return;
+        }
+
+        var inventory = InventoryManager.Instance;
+        if (inventory == null)
+        {
+            return;
+        }
+
+        inventory.OnItemAdded -= HandleInventoryItemAdded;
+        inventory.OnItemAdded += HandleInventoryItemAdded;
+        inventory.OnItemRemoved -= HandleInventoryItemRemoved;
+        inventory.OnItemRemoved += HandleInventoryItemRemoved;
+        inventory.OnItemUpdated -= HandleInventoryItemUpdated;
+        inventory.OnItemUpdated += HandleInventoryItemUpdated;
+        inventoryEventsSubscribed = true;
+    }
+
+    void UnsubscribeFromInventoryEvents()
+    {
+        if (!inventoryEventsSubscribed)
+        {
+            return;
+        }
+
+        var inventory = InventoryManager.Instance;
+        if (inventory == null)
+        {
+            inventoryEventsSubscribed = false;
+            return;
+        }
+
+        inventory.OnItemAdded -= HandleInventoryItemAdded;
+        inventory.OnItemRemoved -= HandleInventoryItemRemoved;
+        inventory.OnItemUpdated -= HandleInventoryItemUpdated;
+        inventoryEventsSubscribed = false;
+    }
+
+    void HandleInventoryItemAdded(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        if (!ShouldDisplayItem(item))
+        {
+            return;
+        }
+
+        PopulateSellTab();
+    }
+
+    void HandleInventoryItemRemoved(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        ReleaseSellCard(GetSellCardKey(item));
+    }
+
+    void HandleInventoryItemUpdated(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        UpdateSellCardDisplay(item);
+
+        if (selectedForSale == item)
+        {
+            UpdateSellButtonState();
+            UpdateDescriptionPanel(item);
+        }
     }
 
     void SetupSellTabFilters()
@@ -647,16 +933,12 @@ public class ShopUIManager : MonoBehaviour
     void SelectItemForSale(InventoryItem item)
     {
         selectedForSale = item;
-        if (sellButton != null) sellButton.interactable = true;
+        UpdateSellButtonState();
 
-        foreach (Transform child in sellContent)
+        foreach (var card in activeSellCards.Values)
         {
-            var card = child.GetComponent<InventoryItemCard>();
-            if (card != null)
-            {
-                bool isSelected = card.currentItem == item;
-                card.SetSelected(isSelected);
-            }
+            bool isSelected = card != null && card.currentItem == item;
+            card?.SetSelected(isSelected);
         }
 
         UpdateDescriptionPanel(item);
@@ -737,13 +1019,7 @@ public class ShopUIManager : MonoBehaviour
             PlayTransactionSfx(sellSfx);
         }
 
-        // Refresh UI while keeping selection
-        PopulateSellTab();
-        if (sellButton != null)
-        {
-            sellButton.interactable = selectedForSale.quantity > 0;
-        }
-
+        UpdateSellButtonState();
         UpdatePurchaseButtonState();
         UpdateDescriptionPanel(selectedForSale);
     }
