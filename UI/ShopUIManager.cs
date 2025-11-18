@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization.Settings;
@@ -59,9 +60,7 @@ public class ShopUIManager : MonoBehaviour
     private InventoryItem selectedForSale;
     private ShopItem selectedForPurchase;
     private UISlidePanel currentTabSlidePanel;
-    private UISlidePanel pendingTabSlidePanel;
-    private Action pendingTabShownCallback;
-    private bool tabTransitionInProgress;
+    private Sequence tabTransitionSequence;
 
     // Sell tab filter state
     private string sellSortType = "name";
@@ -96,12 +95,12 @@ public class ShopUIManager : MonoBehaviour
 
         if (purchaseTabSlidePanel != null)
         {
-            purchaseTabSlidePanel.OnSlideOutComplete += HandlePurchaseTabSlideOutComplete;
+            purchaseTabSlidePanel.ConfigureCloseBehaviors(false, false);
         }
 
         if (sellTabSlidePanel != null)
         {
-            sellTabSlidePanel.OnSlideOutComplete += HandleSellTabSlideOutComplete;
+            sellTabSlidePanel.ConfigureCloseBehaviors(false, false);
         }
 
         if (shopRoot != null)
@@ -146,32 +145,12 @@ public class ShopUIManager : MonoBehaviour
             clock.OnDayChanged -= OnDayChanged;
         }
 
-        if (purchaseTabSlidePanel != null)
-        {
-            purchaseTabSlidePanel.OnSlideOutComplete -= HandlePurchaseTabSlideOutComplete;
-        }
-
-        if (sellTabSlidePanel != null)
-        {
-            sellTabSlidePanel.OnSlideOutComplete -= HandleSellTabSlideOutComplete;
-        }
     }
 
     void OnDayChanged(int day)
     {
         dailyPurchaseItems.Clear();
         generatedDay = -1;
-    }
-
-    void Update()
-    {
-        if (isOpen)
-        {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
-            {
-                CloseShop();
-            }
-        }
     }
 
     #region CSV Loading
@@ -271,6 +250,10 @@ public class ShopUIManager : MonoBehaviour
             shopRoot.SetActive(false);
         }
 
+        currentTabSlidePanel = null;
+        tabTransitionSequence?.Kill();
+        tabTransitionSequence = null;
+
         NotifyShopClosed();
     }
 
@@ -337,38 +320,55 @@ public class ShopUIManager : MonoBehaviour
 
     void SwitchTab(UISlidePanel targetSlidePanel, UISlidePanel otherSlidePanel, GameObject targetTab, GameObject otherTab, Action onShown)
     {
-        if (targetSlidePanel == null || otherSlidePanel == null)
-        {
-            if (targetTab != null) targetTab.SetActive(true);
-            if (otherTab != null) otherTab.SetActive(false);
-            currentTabSlidePanel = targetSlidePanel;
-            pendingTabSlidePanel = null;
-            pendingTabShownCallback = null;
-            tabTransitionInProgress = false;
-            onShown?.Invoke();
-            return;
-        }
-
         if (currentTabSlidePanel == targetSlidePanel && currentTabSlidePanel != null && currentTabSlidePanel.IsOpen)
         {
             onShown?.Invoke();
             return;
         }
 
-        pendingTabSlidePanel = targetSlidePanel;
-        pendingTabShownCallback = onShown;
+        tabTransitionSequence?.Kill();
+        tabTransitionSequence = null;
 
-        if (currentTabSlidePanel != null && (currentTabSlidePanel.IsOpen || tabTransitionInProgress))
+        Tweener outgoingTween = null;
+        if (otherSlidePanel != null)
         {
-            if (!tabTransitionInProgress)
+            if (otherSlidePanel.IsOpen || otherSlidePanel.IsAnimating)
             {
-                tabTransitionInProgress = true;
-                currentTabSlidePanel.SlideOut();
+                outgoingTween = otherSlidePanel.CreateSlideOutTween();
             }
-            return;
+        }
+        else if (otherTab != null)
+        {
+            otherTab.SetActive(false);
         }
 
-        ActivatePendingTab();
+        currentTabSlidePanel = targetSlidePanel;
+
+        Tweener incomingTween = null;
+        if (targetSlidePanel != null)
+        {
+            incomingTween = targetSlidePanel.CreateSlideInTween();
+        }
+        else if (targetTab != null)
+        {
+            targetTab.SetActive(true);
+        }
+
+        if (incomingTween != null || outgoingTween != null)
+        {
+            tabTransitionSequence = DOTween.Sequence();
+            if (outgoingTween != null)
+            {
+                tabTransitionSequence.Join(outgoingTween);
+            }
+            if (incomingTween != null)
+            {
+                tabTransitionSequence.Join(incomingTween);
+            }
+            tabTransitionSequence.Play();
+        }
+
+        onShown?.Invoke();
     }
 
     private void HandlePurchaseToggleChanged(bool isOn)
@@ -385,45 +385,6 @@ public class ShopUIManager : MonoBehaviour
         {
             ShowSellTab();
         }
-    }
-
-    void ActivatePendingTab()
-    {
-        tabTransitionInProgress = false;
-
-        if (pendingTabSlidePanel == null)
-        {
-            pendingTabShownCallback?.Invoke();
-            pendingTabShownCallback = null;
-            return;
-        }
-
-        currentTabSlidePanel = pendingTabSlidePanel;
-        pendingTabSlidePanel = null;
-        currentTabSlidePanel.SlideIn();
-
-        pendingTabShownCallback?.Invoke();
-        pendingTabShownCallback = null;
-    }
-
-    void HandlePurchaseTabSlideOutComplete()
-    {
-        HandleTabSlideOutComplete(purchaseTabSlidePanel);
-    }
-
-    void HandleSellTabSlideOutComplete()
-    {
-        HandleTabSlideOutComplete(sellTabSlidePanel);
-    }
-
-    void HandleTabSlideOutComplete(UISlidePanel panel)
-    {
-        if (currentTabSlidePanel == panel)
-        {
-            currentTabSlidePanel = null;
-        }
-
-        ActivatePendingTab();
     }
 
     private void SetActiveTabToggle(Toggle targetToggle)
