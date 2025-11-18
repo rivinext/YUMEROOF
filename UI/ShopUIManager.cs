@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using UnityEngine.Localization.Settings;
 
 /// <summary>
@@ -19,7 +18,6 @@ public class ShopUIManager : MonoBehaviour
 
     [Header("UI References")]
     public GameObject shopRoot;           // Root panel for the shop UI
-    [SerializeField] private UISlidePanel shopSlidePanel;
     public GameObject purchaseTab;        // Purchase tab object
     public GameObject sellTab;            // Sell tab object
     [SerializeField] private UISlidePanel purchaseTabSlidePanel; // Slide panel controller for purchase tab
@@ -33,7 +31,6 @@ public class ShopUIManager : MonoBehaviour
     public Button purchaseTabButton;      // Button to show purchase tab
     public Button sellTabButton;          // Button to show sell tab
     public Button closeButton;            // Button to close the shop UI
-    public RectTransform shopPanel;       // Main panel for detecting outside clicks
 
     [Header("Description Panels")]
     public GameObject furnitureDescriptionArea;
@@ -58,7 +55,6 @@ public class ShopUIManager : MonoBehaviour
     private GameClock clock;
     private bool isOpen;
     private bool inputOwnedExternally;
-    private bool closeEventPending;
     private InventoryItem selectedForSale;
     private ShopItem selectedForPurchase;
     private UISlidePanel currentTabSlidePanel;
@@ -87,11 +83,6 @@ public class ShopUIManager : MonoBehaviour
         }
         LoadItemData();
         LoadUnlockData();
-        if (shopSlidePanel == null && shopRoot != null)
-        {
-            shopSlidePanel = shopRoot.GetComponent<UISlidePanel>();
-        }
-
         if (purchaseTabSlidePanel == null && purchaseTab != null)
         {
             purchaseTabSlidePanel = purchaseTab.GetComponent<UISlidePanel>();
@@ -117,10 +108,6 @@ public class ShopUIManager : MonoBehaviour
             shopRoot.SetActive(false);
         }
 
-        if (shopSlidePanel != null)
-        {
-            shopSlidePanel.OnSlideOutComplete += HandleShopSlideOutComplete;
-        }
     }
 
     void Start()
@@ -158,11 +145,6 @@ public class ShopUIManager : MonoBehaviour
             clock.OnDayChanged -= OnDayChanged;
         }
 
-        if (shopSlidePanel != null)
-        {
-            shopSlidePanel.OnSlideOutComplete -= HandleShopSlideOutComplete;
-        }
-
         if (purchaseTabSlidePanel != null)
         {
             purchaseTabSlidePanel.OnSlideOutComplete -= HandlePurchaseTabSlideOutComplete;
@@ -187,18 +169,6 @@ public class ShopUIManager : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.E))
             {
                 CloseShop();
-            }
-            else if (Input.GetMouseButtonDown(0) && shopPanel != null)
-            {
-                bool clickedOutside = !RectTransformUtility.RectangleContainsScreenPoint(shopPanel, Input.mousePosition, null);
-                if (clickedOutside)
-                {
-                    bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-                    if (!pointerOverUI)
-                    {
-                        CloseShop();
-                    }
-                }
             }
         }
     }
@@ -283,19 +253,12 @@ public class ShopUIManager : MonoBehaviour
             PlayerController.SetGlobalInputEnabled(true);
         }
 
-        if (shopSlidePanel != null)
+        if (shopRoot != null)
         {
-            closeEventPending = true;
-            shopSlidePanel.SlideOut();
+            shopRoot.SetActive(false);
         }
-        else
-        {
-            if (shopRoot != null)
-            {
-                shopRoot.SetActive(false);
-            }
-            NotifyShopClosed();
-        }
+
+        NotifyShopClosed();
     }
 
     /// <summary>
@@ -335,30 +298,12 @@ public class ShopUIManager : MonoBehaviour
         ClearDescriptionPanels();
         isOpen = true;
 
-        if (shopSlidePanel != null)
-        {
-            shopSlidePanel.SlideIn();
-        }
-        else if (shopRoot != null)
+        if (shopRoot != null)
         {
             shopRoot.SetActive(true);
         }
 
-        closeEventPending = false;
         ShopOpened?.Invoke();
-    }
-
-    void HandleShopSlideOutComplete()
-    {
-        if (!closeEventPending)
-            return;
-
-        closeEventPending = false;
-        if (shopRoot != null && shopRoot.activeSelf)
-        {
-            shopRoot.SetActive(false);
-        }
-        NotifyShopClosed();
     }
 
     void NotifyShopClosed()
