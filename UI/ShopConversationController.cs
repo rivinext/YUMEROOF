@@ -19,8 +19,9 @@ public class ShopConversationController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI dialogueLabel;
     [SerializeField] private Image backgroundDimmer;
     [SerializeField] private GameObject choiceButtonGroup;
-    [SerializeField] private Button buyButton;
-    [SerializeField] private Button sellButton;
+    [SerializeField] private ToggleGroup choiceToggleGroup;
+    [SerializeField] private Toggle buyToggle;
+    [SerializeField] private Toggle sellToggle;
     [SerializeField] private Button exitButton;
 
     [Header("Conversation")]
@@ -64,14 +65,14 @@ public class ShopConversationController : MonoBehaviour
 
         EnsureShopManagerReference();
 
-        if (buyButton != null)
+        if (buyToggle != null)
         {
-            buyButton.onClick.AddListener(HandleBuySelected);
+            buyToggle.onValueChanged.AddListener(HandleBuyToggleChanged);
         }
 
-        if (sellButton != null)
+        if (sellToggle != null)
         {
-            sellButton.onClick.AddListener(HandleSellSelected);
+            sellToggle.onValueChanged.AddListener(HandleSellToggleChanged);
         }
 
         if (exitButton != null)
@@ -130,6 +131,7 @@ public class ShopConversationController : MonoBehaviour
         introLineIndex = -1;
         exitLineIndex = -1;
         activeLineId = null;
+        ResetChoiceToggles();
         PlayerController.SetGlobalInputEnabled(false);
         SetBackgroundDimmer(true);
         conversationPanel?.SlideIn();
@@ -312,11 +314,67 @@ public class ShopConversationController : MonoBehaviour
 
     private void UpdateChoiceButtonsVisibility()
     {
-        if (choiceButtonGroup == null)
-            return;
-
         bool visible = awaitingChoice && !shopPanelOpen && !exitSequenceActive && conversationActive;
-        choiceButtonGroup.SetActive(visible);
+        if (choiceButtonGroup != null)
+        {
+            choiceButtonGroup.SetActive(visible);
+        }
+        SetChoiceTogglesInteractable(visible);
+
+        if (!visible)
+        {
+            ResetChoiceToggles();
+        }
+    }
+
+    private void HandleBuyToggleChanged(bool isOn)
+    {
+        if (isOn)
+        {
+            HandleBuySelected();
+        }
+    }
+
+    private void HandleSellToggleChanged(bool isOn)
+    {
+        if (isOn)
+        {
+            HandleSellSelected();
+        }
+    }
+
+    private void ResetChoiceToggles()
+    {
+        if (choiceToggleGroup != null)
+        {
+            bool previousAllowSwitchOff = choiceToggleGroup.allowSwitchOff;
+            choiceToggleGroup.allowSwitchOff = true;
+            choiceToggleGroup.SetAllTogglesOff();
+            choiceToggleGroup.allowSwitchOff = previousAllowSwitchOff;
+        }
+        else
+        {
+            if (buyToggle != null)
+            {
+                buyToggle.SetIsOnWithoutNotify(false);
+            }
+            if (sellToggle != null)
+            {
+                sellToggle.SetIsOnWithoutNotify(false);
+            }
+        }
+    }
+
+    private void SetChoiceTogglesInteractable(bool interactable)
+    {
+        if (buyToggle != null)
+        {
+            buyToggle.interactable = interactable;
+        }
+        if (sellToggle != null)
+        {
+            sellToggle.interactable = interactable;
+        }
     }
 
     private void SetBackgroundDimmer(bool shouldEnable)

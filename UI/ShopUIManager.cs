@@ -28,8 +28,9 @@ public class ShopUIManager : MonoBehaviour
     public GameObject sellItemCardPrefab;     // Prefab for sell tab items
     public Button sellButton;             // Button to confirm selling
     public Button purchaseButton;         // Button to confirm purchasing
-    public Button purchaseTabButton;      // Button to show purchase tab
-    public Button sellTabButton;          // Button to show sell tab
+    public ToggleGroup tabToggleGroup;    // Toggle group for purchase/sell tabs
+    public Toggle purchaseTabToggle;      // Toggle to show purchase tab
+    public Toggle sellTabToggle;          // Toggle to show sell tab
     public Button closeButton;            // Button to close the shop UI
 
     [Header("Description Panels")]
@@ -122,13 +123,13 @@ public class ShopUIManager : MonoBehaviour
             purchaseButton.onClick.AddListener(PurchaseSelectedItem);
             purchaseButton.interactable = false;
         }
-        if (purchaseTabButton != null)
+        if (purchaseTabToggle != null)
         {
-            purchaseTabButton.onClick.AddListener(ShowPurchaseTab);
+            purchaseTabToggle.onValueChanged.AddListener(HandlePurchaseToggleChanged);
         }
-        if (sellTabButton != null)
+        if (sellTabToggle != null)
         {
-            sellTabButton.onClick.AddListener(ShowSellTab);
+            sellTabToggle.onValueChanged.AddListener(HandleSellToggleChanged);
         }
         if (closeButton != null)
         {
@@ -266,6 +267,7 @@ public class ShopUIManager : MonoBehaviour
     /// </summary>
     public void ShowPurchaseTab()
     {
+        SetActiveTabToggle(purchaseTabToggle);
         SwitchTab(purchaseTabSlidePanel, sellTabSlidePanel, purchaseTab, sellTab, () =>
         {
             PopulatePurchaseTab();
@@ -279,6 +281,7 @@ public class ShopUIManager : MonoBehaviour
     /// </summary>
     public void ShowSellTab()
     {
+        SetActiveTabToggle(sellTabToggle);
         SwitchTab(sellTabSlidePanel, purchaseTabSlidePanel, sellTab, purchaseTab, () =>
         {
             PopulateSellTab();
@@ -296,6 +299,7 @@ public class ShopUIManager : MonoBehaviour
         if (sellButton != null) sellButton.interactable = false;
         if (purchaseButton != null) purchaseButton.interactable = false;
         ClearDescriptionPanels();
+        ResetTabToggles();
         isOpen = true;
 
         if (shopRoot != null)
@@ -347,6 +351,22 @@ public class ShopUIManager : MonoBehaviour
         ActivatePendingTab();
     }
 
+    private void HandlePurchaseToggleChanged(bool isOn)
+    {
+        if (isOn)
+        {
+            ShowPurchaseTab();
+        }
+    }
+
+    private void HandleSellToggleChanged(bool isOn)
+    {
+        if (isOn)
+        {
+            ShowSellTab();
+        }
+    }
+
     void ActivatePendingTab()
     {
         tabTransitionInProgress = false;
@@ -384,6 +404,45 @@ public class ShopUIManager : MonoBehaviour
         }
 
         ActivatePendingTab();
+    }
+
+    private void SetActiveTabToggle(Toggle targetToggle)
+    {
+        if (targetToggle == null)
+            return;
+
+        if (purchaseTabToggle != null && purchaseTabToggle != targetToggle)
+        {
+            purchaseTabToggle.SetIsOnWithoutNotify(false);
+        }
+        if (sellTabToggle != null && sellTabToggle != targetToggle)
+        {
+            sellTabToggle.SetIsOnWithoutNotify(false);
+        }
+
+        targetToggle.SetIsOnWithoutNotify(true);
+    }
+
+    private void ResetTabToggles()
+    {
+        if (tabToggleGroup != null)
+        {
+            bool previousAllowSwitchOff = tabToggleGroup.allowSwitchOff;
+            tabToggleGroup.allowSwitchOff = true;
+            tabToggleGroup.SetAllTogglesOff();
+            tabToggleGroup.allowSwitchOff = previousAllowSwitchOff;
+        }
+        else
+        {
+            if (purchaseTabToggle != null)
+            {
+                purchaseTabToggle.SetIsOnWithoutNotify(false);
+            }
+            if (sellTabToggle != null)
+            {
+                sellTabToggle.SetIsOnWithoutNotify(false);
+            }
+        }
     }
 
     void EnsureDailyItems()
