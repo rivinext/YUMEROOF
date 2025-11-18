@@ -50,6 +50,13 @@ public class ShopUIManager : MonoBehaviour
     [Header("Shop Settings")]
     public string currentMilestoneID = "Milestone_00"; // Current milestone
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip purchaseSfx;
+    [SerializeField] private AudioClip sellSfx;
+    [SerializeField] private AudioSource transactionAudioSource;
+    [SerializeField] private bool autoCreateAudioSource = true;
+    [SerializeField, Range(0f, 1f)] private float transactionSfxVolume = 1f;
+
     private readonly Dictionary<string, ShopItem> allItems = new();
     private readonly List<ShopItem> dailyPurchaseItems = new();
     private int generatedDay = -1;
@@ -70,6 +77,7 @@ public class ShopUIManager : MonoBehaviour
     private string sellSearchQuery = "";
 
     public bool IsOpen => isOpen;
+    private float currentSfxVolume = 1f;
 
     void Awake()
     {
@@ -111,6 +119,7 @@ public class ShopUIManager : MonoBehaviour
             shopRoot.SetActive(false);
         }
 
+        SetupTransactionAudioSource();
     }
 
     void Start()
@@ -139,6 +148,17 @@ public class ShopUIManager : MonoBehaviour
         }
 
         SetupSellTabFilters();
+    }
+
+    void OnEnable()
+    {
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    void OnDisable()
+    {
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     void OnDestroy()
@@ -662,12 +682,14 @@ public class ShopUIManager : MonoBehaviour
     {
         if (selectedForPurchase == null) return;
         int price = GetBuyPrice(selectedForPurchase);
+        bool purchaseSucceeded = false;
         if (MoneyManager.Instance != null && MoneyManager.Instance.CurrentMoney >= price)
         {
             // Reduce player's money and add item to inventory
             MoneyManager.Instance.AddMoney(-price);
             InventoryManager.Instance?.AddFurniture(selectedForPurchase.itemID, 1);
             Debug.Log($"Purchased {selectedForPurchase.itemID} for {price}");
+            purchaseSucceeded = true;
 
             // Refresh UI but keep the item selected
             PopulatePurchaseTab();
@@ -675,6 +697,11 @@ public class ShopUIManager : MonoBehaviour
         else
         {
             Debug.Log("Not enough money to purchase " + selectedForPurchase.itemID);
+        }
+
+        if (purchaseSucceeded)
+        {
+            PlayTransactionSfx(purchaseSfx);
         }
 
         UpdatePurchaseButtonState();
@@ -687,6 +714,7 @@ public class ShopUIManager : MonoBehaviour
 
         var item = selectedForSale;
         int price = 0;
+        bool sellSucceeded = false;
 
         if (item.itemType == InventoryItem.ItemType.Furniture)
         {
@@ -702,7 +730,16 @@ public class ShopUIManager : MonoBehaviour
         }
 
         Debug.Log($"Sold {item.itemID} for {price}");
-        MoneyManager.Instance?.AddMoney(price);
+        if (MoneyManager.Instance != null)
+        {
+            MoneyManager.Instance.AddMoney(price);
+            sellSucceeded = true;
+        }
+
+        if (sellSucceeded)
+        {
+            PlayTransactionSfx(sellSfx);
+        }
 
         // Refresh UI while keeping selection
         PopulateSellTab();
@@ -786,6 +823,46 @@ public class ShopUIManager : MonoBehaviour
         }
 
         return item.buyPrice;
+    }
+
+    void SetupTransactionAudioSource()
+    {
+        if (transactionAudioSource == null)
+        {
+            transactionAudioSource = GetComponent<AudioSource>();
+            if (transactionAudioSource == null && autoCreateAudioSource)
+            {
+                transactionAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (transactionAudioSource != null)
+        {
+            transactionAudioSource.playOnAwake = false;
+            transactionAudioSource.loop = false;
+            transactionAudioSource.spatialBlend = 0f;
+        }
+    }
+
+    void HandleSfxVolumeChanged(float value)
+    {
+        currentSfxVolume = Mathf.Clamp01(value);
+    }
+
+    void PlayTransactionSfx(AudioClip clip)
+    {
+        if (clip == null || transactionAudioSource == null)
+        {
+            return;
+        }
+
+        float volume = transactionSfxVolume * currentSfxVolume;
+        if (volume <= 0f)
+        {
+            return;
+        }
+
+        transactionAudioSource.PlayOneShot(clip, volume);
     }
 
     void UpdatePurchaseDescription(ShopItem item)
