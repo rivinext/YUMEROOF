@@ -26,6 +26,10 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     public Image favoriteOnImage;
     public GameObject uncraftableOverlay;
 
+    [Header("Quantity Animation")]
+    [SerializeField] private float quantityScaleMultiplier = 1.15f;
+    [SerializeField, Min(0.01f)] private float quantityScaleDuration = 0.25f;
+
     // Localization
     [SerializeField] private LocalizedString localizedName = new LocalizedString();
 
@@ -61,6 +65,11 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     private Tween hoverTween;
     private float lastHoverSfxTime = -10f;
     private float currentSfxVolume = 1f;
+    private RectTransform quantityRectTransform;
+    private Vector3 quantityBaseScale = Vector3.one;
+    private Tween quantityScaleTween;
+    private string lastQuantityItemKey = string.Empty;
+    private int lastDisplayedQuantity = -1;
 
     private float SafeHoverScale => Mathf.Max(hoverScale, MinHoverScaleValue);
     private float SafeHoverDuration => Mathf.Max(hoverDuration, MinHoverDurationValue);
@@ -117,6 +126,9 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             baseScale = Vector3.one;
             baseEulerAngles = Vector3.zero;
         }
+
+        quantityRectTransform = quantityText != null ? quantityText.rectTransform : null;
+        quantityBaseScale = quantityRectTransform != null ? quantityRectTransform.localScale : Vector3.one;
 
         KillHoverTween();
         ResetHoverTargetTransform();
@@ -180,6 +192,10 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         KillHoverTween();
         ResetHoverTargetTransform();
+        KillQuantityTween();
+        ResetQuantityTextTransform();
+        lastQuantityItemKey = string.Empty;
+        lastDisplayedQuantity = -1;
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
@@ -405,11 +421,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
 
         // 数量表示（修正：常に表示）
-        if (quantityText != null)
-        {
-            quantityText.gameObject.SetActive(true);
-            quantityText.text = $"×{currentItem.quantity}";
-        }
+        UpdateQuantityDisplay($"×{currentItem.quantity}", currentItem.quantity);
 
         // Cozy/Nature値表示（0の場合も"0"を表示）
         if (cozyContainer != null)
@@ -581,11 +593,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             localizedName.RefreshString();
         }
 
-        if (quantityText != null)
-        {
-            quantityText.gameObject.SetActive(true);
-            quantityText.text = currentItem.quantity.ToString();
-        }
+        UpdateQuantityDisplay(currentItem.quantity.ToString(), currentItem.quantity);
 
         if (cozyContainer != null) cozyContainer.SetActive(false);
         if (natureContainer != null) natureContainer.SetActive(false);
@@ -612,6 +620,88 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
         if (uncraftableOverlay != null)
             uncraftableOverlay.SetActive(false);
+    }
+
+    void UpdateQuantityDisplay(string formattedText, int quantityValue)
+    {
+        if (quantityText == null)
+        {
+            return;
+        }
+
+        quantityText.gameObject.SetActive(true);
+        quantityText.text = formattedText;
+
+        string currentKey = GetQuantityItemKey(currentItem);
+        if (currentKey != lastQuantityItemKey)
+        {
+            lastQuantityItemKey = currentKey;
+            lastDisplayedQuantity = quantityValue;
+            ResetQuantityTextTransform();
+            return;
+        }
+
+        if (lastDisplayedQuantity != quantityValue)
+        {
+            lastDisplayedQuantity = quantityValue;
+            PlayQuantityUpdateAnimation();
+        }
+    }
+
+    string GetQuantityItemKey(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return string.Empty;
+        }
+
+        return $"{item.itemType}:{item.itemID}";
+    }
+
+    protected virtual void PlayQuantityUpdateAnimation()
+    {
+        if (quantityRectTransform == null)
+        {
+            return;
+        }
+
+        KillQuantityTween();
+        ResetQuantityTextTransform();
+
+        Vector3 targetScale = quantityBaseScale * quantityScaleMultiplier;
+        float halfDuration = Mathf.Max(quantityScaleDuration * 0.5f, 0.01f);
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.Append(quantityRectTransform.DOScale(targetScale, halfDuration).SetEase(Ease.OutQuad));
+        sequence.Append(quantityRectTransform.DOScale(quantityBaseScale, halfDuration).SetEase(Ease.OutQuad));
+        sequence.OnComplete(() =>
+        {
+            ResetQuantityTextTransform();
+            quantityScaleTween = null;
+        });
+
+        quantityScaleTween = sequence;
+    }
+
+    void ResetQuantityTextTransform()
+    {
+        if (quantityRectTransform == null)
+        {
+            return;
+        }
+
+        quantityRectTransform.localScale = quantityBaseScale;
+    }
+
+    void KillQuantityTween()
+    {
+        if (quantityScaleTween == null)
+        {
+            return;
+        }
+
+        quantityScaleTween.Kill();
+        quantityScaleTween = null;
     }
 
     void OnNameChanged(string value)
