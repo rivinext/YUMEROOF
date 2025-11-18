@@ -338,9 +338,14 @@ public class ShopConversationController : MonoBehaviour
         {
             choiceButtonGroup.SetActive(shouldShowChoices);
         }
+
         SetChoiceTogglesInteractable(shouldShowChoices);
 
-        if (!shouldShowChoices)
+        if (shouldShowChoices)
+        {
+            UpdateChoiceToggleInteractivity();
+        }
+        else
         {
             ResetChoiceToggles();
         }
@@ -348,6 +353,8 @@ public class ShopConversationController : MonoBehaviour
 
     private void HandleBuyToggleChanged(bool isOn)
     {
+        UpdateChoiceButtonsVisibility();
+
         if (isOn)
         {
             HandleBuySelected();
@@ -356,6 +363,8 @@ public class ShopConversationController : MonoBehaviour
 
     private void HandleSellToggleChanged(bool isOn)
     {
+        UpdateChoiceButtonsVisibility();
+
         if (isOn)
         {
             HandleSellSelected();
@@ -393,6 +402,23 @@ public class ShopConversationController : MonoBehaviour
         if (sellToggle != null)
         {
             sellToggle.interactable = interactable;
+        }
+    }
+
+    private void UpdateChoiceToggleInteractivity()
+    {
+        bool buySelected = buyToggle != null && buyToggle.isOn;
+        bool sellSelected = sellToggle != null && sellToggle.isOn;
+        bool hasSelection = buySelected || sellSelected;
+
+        if (buyToggle != null)
+        {
+            buyToggle.interactable = !hasSelection || !buySelected;
+        }
+
+        if (sellToggle != null)
+        {
+            sellToggle.interactable = !hasSelection || !sellSelected;
         }
     }
 
