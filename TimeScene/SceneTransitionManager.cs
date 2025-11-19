@@ -31,6 +31,9 @@ public class SceneTransitionManager : MonoBehaviour
     public AudioClip doorOpenSound;
     public AudioClip transitionSound;
 
+    [Tooltip("Time to wait after starting a custom door SFX so it isn't cut off by the scene load.")]
+    [SerializeField] private float customSfxLeadTime = 0.05f;
+
     private Canvas fadeCanvas;
     private Image fadeImage;
     private AudioSource audioSource;
@@ -98,26 +101,40 @@ public class SceneTransitionManager : MonoBehaviour
     }
 
     // シーン遷移（ドア用）
-    public void TransitionToScene(string sceneName, string spawnPointName, bool playDoorSound = true)
+    public void TransitionToScene(
+        string sceneName,
+        string spawnPointName,
+        bool playDoorSound = true,
+        AudioClip customSfx = null,
+        float customSfxVolume = 1f)
     {
         if (!isTransitioning)
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
-            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName, playDoorSound));
+            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName, playDoorSound, customSfx, customSfxVolume));
         }
     }
 
     // シーン遷移（エリア用）
-    public void TransitionToSceneInstant(string sceneName, string spawnPointName)
+    public void TransitionToSceneInstant(
+        string sceneName,
+        string spawnPointName,
+        AudioClip customSfx = null,
+        float customSfxVolume = 1f)
     {
         if (!isTransitioning)
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
-            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName, false));
+            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName, false, customSfx, customSfxVolume));
         }
     }
 
-    IEnumerator TransitionCoroutine(string sceneName, string spawnPointName, bool playDoorSound)
+    IEnumerator TransitionCoroutine(
+        string sceneName,
+        string spawnPointName,
+        bool playDoorSound,
+        AudioClip customSfx,
+        float customSfxVolume)
     {
         isTransitioning = true;
 
@@ -126,6 +143,20 @@ public class SceneTransitionManager : MonoBehaviour
 
         // プレイヤー入力を無効化
         DisablePlayerControl(true);
+
+        // ドア固有の効果音を再生
+        if (customSfx != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(customSfx, Mathf.Clamp01(customSfxVolume) * AudioManager.CurrentSfxVolume);
+            if (customSfxLeadTime > 0f)
+            {
+                yield return new WaitForSeconds(customSfxLeadTime);
+            }
+            else
+            {
+                yield return null;
+            }
+        }
 
         // ドア音再生
         if (playDoorSound && doorOpenSound != null && audioSource != null)
