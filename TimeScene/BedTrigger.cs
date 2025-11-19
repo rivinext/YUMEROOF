@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// Trigger for sleeping in the bed. Allows sleeping only during specified hours
@@ -13,10 +12,9 @@ using UnityEngine.UI;
 public class BedTrigger : MonoBehaviour, IInteractable
 {
     [Header("Interaction UI")]
-    public GameObject interactionPanel;
+    [SerializeField] private SleepPromptSlidePanel sleepPrompt;
     public bool isPlayerNearby = false;
     bool isPanelOpen = false;
-    Canvas cachedPanelCanvas;
 
     [Header("Player Control")]
     [SerializeField] private Transform bedAnchor;
@@ -47,18 +45,8 @@ public class BedTrigger : MonoBehaviour, IInteractable
     public int sleepEndMinutes = 6 * 60;   // 6:00 AM
     public GameClock clock;
 
-    [Header("Panel Buttons")]
-    public Button sleepButton;
-    public Button cancelButton;
-
     [Header("Emote Controls")]
     [SerializeField] private PlayerEmoteButtonBinder playerEmoteButtonBinder;
-
-    [Header("Panel Area")]
-    [Tooltip("Main clickable area of the interaction panel. Clicking outside this area will close the panel.")]
-    public RectTransform panelContentArea;
-    [Tooltip("Optional camera used for UI raycasts. Leave empty for Screen Space Overlay canvases.")]
-    public Camera uiCamera;
 
     [Header("Transition UI")]
     public SleepTransitionUIManager transitionUI;
@@ -66,12 +54,6 @@ public class BedTrigger : MonoBehaviour, IInteractable
     void Start()
     {
         clock = GameClock.Instance;
-
-        if (interactionPanel != null)
-            interactionPanel.SetActive(false);
-
-        if (panelContentArea != null)
-            cachedPanelCanvas = panelContentArea.GetComponentInParent<Canvas>();
 
         TryResolveEmoteButtonBinder();
 
@@ -105,7 +87,6 @@ public class BedTrigger : MonoBehaviour, IInteractable
         if (isPanelOpen)
         {
             UpdateSleepButtonState();
-            HandlePanelInput();
         }
 
         if (!isPlayerInBed || isTransitioning)
@@ -214,90 +195,24 @@ public class BedTrigger : MonoBehaviour, IInteractable
 
     void OpenPanel()
     {
-        isPanelOpen = true;
-
-        if (interactionPanel != null)
+        if (sleepPrompt == null)
         {
-            interactionPanel.SetActive(true);
-
-            // Disable player input while panel is open
-            PlayerController.SetGlobalInputEnabled(false);
+            Debug.LogWarning("BedTrigger: SleepPromptSlidePanel is not assigned.");
+            return;
         }
 
-        SetupPanelButtons();
+        isPanelOpen = true;
+        sleepPrompt.ShowPrompt(StartSleep, ClosePanel);
         UpdateSleepButtonState();
     }
 
     void ClosePanel()
     {
+        if (!isPanelOpen)
+            return;
+
         isPanelOpen = false;
-
-        if (interactionPanel != null)
-            interactionPanel.SetActive(false);
-    }
-
-    void HandlePanelInput()
-    {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            ClosePanel();
-            return;
-        }
-
-        if (Input.GetMouseButtonDown(0) && !IsPointerOverPanelContent())
-        {
-            ClosePanel();
-            return;
-        }
-
-        if (Input.touchCount > 0)
-        {
-            Touch touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began && !IsPointerOverPanelContent(touch.position))
-            {
-                ClosePanel();
-            }
-        }
-    }
-
-    bool IsPointerOverPanelContent()
-    {
-        return IsPointerOverPanelContent(Input.mousePosition);
-    }
-
-    bool IsPointerOverPanelContent(Vector2 screenPosition)
-    {
-        if (panelContentArea == null)
-            return true; // Without a defined area we assume the click is valid.
-
-        Camera cameraToUse = uiCamera;
-        if (cachedPanelCanvas != null)
-        {
-            if (cachedPanelCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
-            {
-                cameraToUse = null;
-            }
-            else if (cameraToUse == null)
-            {
-                cameraToUse = cachedPanelCanvas.worldCamera;
-            }
-        }
-
-        return RectTransformUtility.RectangleContainsScreenPoint(panelContentArea, screenPosition, cameraToUse);
-    }
-
-    void SetupPanelButtons()
-    {
-        if (sleepButton != null)
-        {
-            sleepButton.onClick.RemoveAllListeners();
-            sleepButton.onClick.AddListener(StartSleep);
-        }
-        if (cancelButton != null)
-        {
-            cancelButton.onClick.RemoveAllListeners();
-            cancelButton.onClick.AddListener(ClosePanel);
-        }
+        sleepPrompt?.Hide();
     }
 
     IEnumerator EnterBedSequence(PlayerController controller, Animator animator)
@@ -495,8 +410,8 @@ public class BedTrigger : MonoBehaviour, IInteractable
 
     void UpdateSleepButtonState()
     {
-        if (sleepButton != null)
-            sleepButton.interactable = CanSleep();
+        if (sleepPrompt != null)
+            sleepPrompt.SetYesButtonInteractable(CanSleep());
     }
 
     void LateUpdate()
