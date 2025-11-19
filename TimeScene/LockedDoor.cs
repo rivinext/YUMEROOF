@@ -48,6 +48,7 @@ public class LockedDoor : MonoBehaviour, IInteractable
 
     public void Interact()
     {
+        Debug.Log("ロックされたドア: Eキーを受け付けました。");
         TryPlayLockedSfx();
     }
 
@@ -55,15 +56,18 @@ public class LockedDoor : MonoBehaviour, IInteractable
     {
         if (lockedSfx == null || audioSource == null)
         {
+            Debug.LogWarning("ロック音の設定が不足しています。");
             return;
         }
 
         if (sfxCooldown > 0f && Time.time < nextPlayableTime)
         {
+            Debug.Log("ロック音はクールダウン中のため再生されませんでした。");
             return;
         }
 
         audioSource.PlayOneShot(lockedSfx, lockedSfxVolume * AudioManager.CurrentSfxVolume);
+        Debug.Log("ロック音を再生しました。");
         nextPlayableTime = Time.time + Mathf.Max(0f, sfxCooldown);
     }
 
