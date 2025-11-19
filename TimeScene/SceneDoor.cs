@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class SceneDoor : MonoBehaviour, IInteractable
@@ -10,17 +11,90 @@ public class SceneDoor : MonoBehaviour, IInteractable
     [SerializeField] private AudioClip transitionSfx;
     [Range(0f, 1f)]
     [SerializeField] private float transitionSfxVolume = 1f;
+    [Tooltip("シーン遷移前に効果音を再生して待機する時間（秒）。0 で即時遷移。")]
+    [SerializeField] private float transitionLeadTime = 0.05f;
+
+    private AudioSource audioSource;
+    private Coroutine transitionCoroutine;
+
+    private void OnEnable()
+    {
+        SetupAudioSource();
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    private void OnDisable()
+    {
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        if (transitionCoroutine != null)
+        {
+            StopCoroutine(transitionCoroutine);
+            transitionCoroutine = null;
+        }
+    }
+
+    private void SetupAudioSource()
+    {
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        audioSource.playOnAwake = false;
+        audioSource.loop = false;
+        audioSource.spatialBlend = 0f;
+    }
+
+    private void HandleSfxVolumeChanged(float volume)
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        audioSource.volume = Mathf.Clamp01(volume);
+    }
 
     public void Interact()
     {
         if (!SceneTransitionManager.Instance.IsTransitioning)
         {
-            SceneTransitionManager.Instance.TransitionToScene(
-                targetSceneName,
-                spawnPointName,
-                true,
-                transitionSfx,
-                transitionSfxVolume);
+            if (transitionCoroutine == null)
+            {
+                transitionCoroutine = StartCoroutine(TransitionRoutine());
+            }
+        }
+    }
+
+    private IEnumerator TransitionRoutine()
+    {
+        yield return PlayTransitionSfx();
+
+        SceneTransitionManager.Instance.TransitionToScene(
+            targetSceneName,
+            spawnPointName);
+
+        transitionCoroutine = null;
+    }
+
+    private IEnumerator PlayTransitionSfx()
+    {
+        if (transitionSfx == null || audioSource == null)
+        {
+            yield break;
+        }
+
+        audioSource.PlayOneShot(transitionSfx, transitionSfxVolume * AudioManager.CurrentSfxVolume);
+
+        if (transitionLeadTime > 0f)
+        {
+            yield return new WaitForSeconds(transitionLeadTime);
+        }
+        else
+        {
+            yield return null;
         }
     }
 }

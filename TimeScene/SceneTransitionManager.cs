@@ -27,16 +27,8 @@ public class SceneTransitionManager : MonoBehaviour
     public float fadeDuration = 1f;
     public Color fadeColor = Color.black;
 
-    [Header("Audio Settings")]
-    public AudioClip doorOpenSound;
-    public AudioClip transitionSound;
-
-    [Tooltip("Time to wait after starting a custom door SFX so it isn't cut off by the scene load.")]
-    [SerializeField] private float customSfxLeadTime = 0.05f;
-
     private Canvas fadeCanvas;
     private Image fadeImage;
-    private AudioSource audioSource;
     private bool isTransitioning = false;
     private string lastSceneName = "";
     private string lastSuccessfulSpawnPointName = string.Empty;
@@ -53,7 +45,6 @@ public class SceneTransitionManager : MonoBehaviour
             instance = this;
             DontDestroyOnLoad(gameObject);
             CreateFadeCanvas();
-            SetupAudioSource();
         }
         else if (instance != this)
         {
@@ -92,49 +83,33 @@ public class SceneTransitionManager : MonoBehaviour
         rect.anchoredPosition = Vector2.zero;
     }
 
-    void SetupAudioSource()
-    {
-        audioSource = gameObject.AddComponent<AudioSource>();
-        audioSource.playOnAwake = false;
-        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
-        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
-    }
-
     // シーン遷移（ドア用）
     public void TransitionToScene(
         string sceneName,
-        string spawnPointName,
-        bool playDoorSound = true,
-        AudioClip customSfx = null,
-        float customSfxVolume = 1f)
+        string spawnPointName)
     {
         if (!isTransitioning)
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
-            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName, playDoorSound, customSfx, customSfxVolume));
+            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName));
         }
     }
 
     // シーン遷移（エリア用）
     public void TransitionToSceneInstant(
         string sceneName,
-        string spawnPointName,
-        AudioClip customSfx = null,
-        float customSfxVolume = 1f)
+        string spawnPointName)
     {
         if (!isTransitioning)
         {
             SceneManager.sceneLoaded += OnSceneLoaded;
-            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName, false, customSfx, customSfxVolume));
+            StartCoroutine(TransitionCoroutine(sceneName, spawnPointName));
         }
     }
 
     IEnumerator TransitionCoroutine(
         string sceneName,
-        string spawnPointName,
-        bool playDoorSound,
-        AudioClip customSfx,
-        float customSfxVolume)
+        string spawnPointName)
     {
         isTransitioning = true;
 
@@ -143,33 +118,6 @@ public class SceneTransitionManager : MonoBehaviour
 
         // プレイヤー入力を無効化
         DisablePlayerControl(true);
-
-        // ドア固有の効果音を再生
-        if (customSfx != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(customSfx, Mathf.Clamp01(customSfxVolume) * AudioManager.CurrentSfxVolume);
-            if (customSfxLeadTime > 0f)
-            {
-                yield return new WaitForSeconds(customSfxLeadTime);
-            }
-            else
-            {
-                yield return null;
-            }
-        }
-
-        // ドア音再生
-        if (playDoorSound && doorOpenSound != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(doorOpenSound);
-            yield return new WaitForSeconds(0.3f); // ドア音を少し聞かせる
-        }
-
-        // 遷移音再生
-        if (transitionSound != null && audioSource != null)
-        {
-            audioSource.PlayOneShot(transitionSound);
-        }
 
         // フェードアウト
         yield return StartCoroutine(Fade(1f));
@@ -386,16 +334,4 @@ public class SceneTransitionManager : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    void OnDestroy()
-    {
-        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
-    }
-
-    void HandleSfxVolumeChanged(float value)
-    {
-        if (audioSource != null)
-        {
-            audioSource.volume = Mathf.Clamp01(value);
-        }
-    }
 }
