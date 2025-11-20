@@ -114,6 +114,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
             collider.enabled = false;
         }
 
+        EnsurePlayerTransform();
         StartCoroutine(PlayCollectAnimation());
     }
 
@@ -137,22 +138,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
             collectAnimationRoot = transform;
         }
 
-        if (playerTransform == null)
-        {
-            var playerManager = FindFirstObjectByType<PlayerManager>();
-            if (playerManager != null)
-            {
-                playerTransform = playerManager.transform;
-            }
-            else
-            {
-                var playerObject = GameObject.FindWithTag("Player");
-                if (playerObject != null)
-                {
-                    playerTransform = playerObject.transform;
-                }
-            }
-        }
+        EnsurePlayerTransform();
+        SceneManager.sceneLoaded += OnSceneLoaded;
 
         ResetIdleAnimationState();
         LoadMaterialInfo();
@@ -161,6 +148,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
     void Start()
     {
+        EnsurePlayerTransform();
+
         var manager = DropMaterialSaveManager.Instance;
         if (manager == null)
         {
@@ -178,7 +167,13 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
     void OnEnable()
     {
+        EnsurePlayerTransform();
         ResetIdleAnimationState();
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     void LateUpdate()
@@ -221,6 +216,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
     private IEnumerator PlayCollectAnimation()
     {
+        EnsurePlayerTransform();
+
         var targetTransform = collectAnimationRoot != null ? collectAnimationRoot : transform;
         Vector3 startPosition = targetTransform.position;
         float duration = Mathf.Max(collectAnimationDuration, Mathf.Epsilon);
@@ -363,5 +360,31 @@ public class DropMaterial : MonoBehaviour, IInteractable
         float randomAngle = Random.Range(0f, 360f);
         idleAnimationTarget.rotation = Quaternion.AngleAxis(randomAngle, Vector3.up) * idleBaseRotation;
         idleAnimationStartTime = Time.time;
+    }
+
+    private void EnsurePlayerTransform()
+    {
+        if (playerTransform != null)
+        {
+            return;
+        }
+
+        var playerManager = FindFirstObjectByType<PlayerManager>();
+        if (playerManager != null)
+        {
+            playerTransform = playerManager.transform;
+            return;
+        }
+
+        var playerObject = GameObject.FindWithTag("Player");
+        if (playerObject != null)
+        {
+            playerTransform = playerObject.transform;
+        }
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        EnsurePlayerTransform();
     }
 }
