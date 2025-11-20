@@ -31,6 +31,12 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
     [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
     [SerializeField, Min(0f)] private float hoverSfxCooldown = 0.1f;
 
+    [Header("Click Audio")]
+    [SerializeField] private AudioClip clickSfx;
+    [SerializeField] private AudioSource clickAudioSource;
+    [SerializeField, Range(0f, 1f)] private float clickSfxVolume = 1f;
+    [SerializeField, Min(0f)] private float clickSfxCooldown = 0.05f;
+
     private string displayName;
     private string nameId;
     private string descriptionId;
@@ -39,6 +45,7 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private WardrobeUIController owner;
     private bool isSelected;
     private float lastHoverSfxTime = -10f;
+    private float lastClickSfxTime = -10f;
     private float currentSfxVolume = 1f;
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale = Vector3.one;
@@ -92,7 +99,8 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
         }
 
         UpdateEmptyStateVisuals();
-        SetupHoverAudioSource();
+        SetupAudioSource(ref hoverAudioSource);
+        SetupAudioSource(ref clickAudioSource);
 
         resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
 
@@ -276,6 +284,13 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     private void OnButtonClicked()
     {
+        if (isSelected)
+        {
+            return;
+        }
+
+        PlayClickSfx();
+
         if (owner != null)
         {
             owner.HandleItemSelected(this);
@@ -325,22 +340,22 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
         }
     }
 
-    private void SetupHoverAudioSource()
+    private void SetupAudioSource(ref AudioSource audioSource)
     {
-        if (hoverAudioSource == null)
+        if (audioSource == null)
         {
-            hoverAudioSource = GetComponent<AudioSource>();
-            if (hoverAudioSource == null)
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
             {
-                hoverAudioSource = gameObject.AddComponent<AudioSource>();
+                audioSource = gameObject.AddComponent<AudioSource>();
             }
         }
 
-        if (hoverAudioSource != null)
+        if (audioSource != null)
         {
-            hoverAudioSource.playOnAwake = false;
-            hoverAudioSource.loop = false;
-            hoverAudioSource.spatialBlend = 0f;
+            audioSource.playOnAwake = false;
+            audioSource.loop = false;
+            audioSource.spatialBlend = 0f;
         }
     }
 
@@ -370,6 +385,29 @@ public class WardrobeItemView : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
         hoverAudioSource.PlayOneShot(hoverSfx, volume);
         lastHoverSfxTime = Time.unscaledTime;
+    }
+
+    private void PlayClickSfx()
+    {
+        if (clickSfx == null || clickAudioSource == null)
+        {
+            return;
+        }
+
+        float elapsed = Time.unscaledTime - lastClickSfxTime;
+        if (elapsed < clickSfxCooldown)
+        {
+            return;
+        }
+
+        float volume = clickSfxVolume * currentSfxVolume;
+        if (volume <= 0f)
+        {
+            return;
+        }
+
+        clickAudioSource.PlayOneShot(clickSfx, volume);
+        lastClickSfxTime = Time.unscaledTime;
     }
 
     private void ResetHoverTargetTransform()
