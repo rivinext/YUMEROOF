@@ -25,9 +25,9 @@ public class DropMaterial : MonoBehaviour, IInteractable
     [Tooltip("Controls the scale during the collect animation. X=time, Y=scale multiplier.")]
     [SerializeField] private AnimationCurve collectScaleCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
     [Header("Idle Animation")]
-    [SerializeField] private float idleRotationSpeed = 45f;
+    [SerializeField] private float idleRotationSpeed = 30f;
     [SerializeField] private float idleBobAmplitude = 0.1f;
-    [SerializeField] private float idleBobFrequency = 1.5f;
+    [SerializeField] private float idleBobFrequency = 0.5f;
 
     private string materialName;
     private Sprite materialIcon;
@@ -40,11 +40,6 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private float idleBobPhaseOffset;
     private Quaternion idleBaseRotation;
     private bool hasInitializedIdleRotation;
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        ResolvePlayerTransform();
-    }
 
     /// <summary>
     /// Material identifier associated with this drop.
@@ -142,7 +137,22 @@ public class DropMaterial : MonoBehaviour, IInteractable
             collectAnimationRoot = transform;
         }
 
-        ResolvePlayerTransform();
+        if (playerTransform == null)
+        {
+            var playerManager = FindFirstObjectByType<PlayerManager>();
+            if (playerManager != null)
+            {
+                playerTransform = playerManager.transform;
+            }
+            else
+            {
+                var playerObject = GameObject.FindWithTag("Player");
+                if (playerObject != null)
+                {
+                    playerTransform = playerObject.transform;
+                }
+            }
+        }
 
         ResetIdleAnimationState();
         LoadMaterialInfo();
@@ -168,14 +178,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
     void OnEnable()
     {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-        ResolvePlayerTransform();
         ResetIdleAnimationState();
-    }
-
-    void OnDisable()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     void LateUpdate()
@@ -360,26 +363,5 @@ public class DropMaterial : MonoBehaviour, IInteractable
         float randomAngle = Random.Range(0f, 360f);
         idleAnimationTarget.rotation = Quaternion.AngleAxis(randomAngle, Vector3.up) * idleBaseRotation;
         idleAnimationStartTime = Time.time;
-    }
-
-    private void ResolvePlayerTransform()
-    {
-        if (playerTransform != null && playerTransform.gameObject.scene.IsValid())
-        {
-            return;
-        }
-
-        var playerManager = FindFirstObjectByType<PlayerManager>();
-        if (playerManager != null)
-        {
-            playerTransform = playerManager.transform;
-            return;
-        }
-
-        var playerObject = GameObject.FindWithTag("Player");
-        if (playerObject != null)
-        {
-            playerTransform = playerObject.transform;
-        }
     }
 }
