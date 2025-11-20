@@ -41,6 +41,11 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private Quaternion idleBaseRotation;
     private bool hasInitializedIdleRotation;
 
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        ResolvePlayerTransform();
+    }
+
     /// <summary>
     /// Material identifier associated with this drop.
     /// </summary>
@@ -137,22 +142,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
             collectAnimationRoot = transform;
         }
 
-        if (playerTransform == null)
-        {
-            var playerManager = FindFirstObjectByType<PlayerManager>();
-            if (playerManager != null)
-            {
-                playerTransform = playerManager.transform;
-            }
-            else
-            {
-                var playerObject = GameObject.FindWithTag("Player");
-                if (playerObject != null)
-                {
-                    playerTransform = playerObject.transform;
-                }
-            }
-        }
+        ResolvePlayerTransform();
 
         ResetIdleAnimationState();
         LoadMaterialInfo();
@@ -178,7 +168,14 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
     void OnEnable()
     {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        ResolvePlayerTransform();
         ResetIdleAnimationState();
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     void LateUpdate()
@@ -363,5 +360,26 @@ public class DropMaterial : MonoBehaviour, IInteractable
         float randomAngle = Random.Range(0f, 360f);
         idleAnimationTarget.rotation = Quaternion.AngleAxis(randomAngle, Vector3.up) * idleBaseRotation;
         idleAnimationStartTime = Time.time;
+    }
+
+    private void ResolvePlayerTransform()
+    {
+        if (playerTransform != null && playerTransform.gameObject.scene.IsValid())
+        {
+            return;
+        }
+
+        var playerManager = FindFirstObjectByType<PlayerManager>();
+        if (playerManager != null)
+        {
+            playerTransform = playerManager.transform;
+            return;
+        }
+
+        var playerObject = GameObject.FindWithTag("Player");
+        if (playerObject != null)
+        {
+            playerTransform = playerObject.transform;
+        }
     }
 }
