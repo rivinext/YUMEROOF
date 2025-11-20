@@ -40,6 +40,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private float idleBobPhaseOffset;
     private Quaternion idleBaseRotation;
     private bool hasInitializedIdleRotation;
+    private Coroutine playerTransformRetryCoroutine;
 
     /// <summary>
     /// Material identifier associated with this drop.
@@ -185,6 +186,14 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
         AnimateIdleRotation();
         AnimateIdleBob();
+    }
+
+    void Update()
+    {
+        if (playerTransform == null || !playerTransform)
+        {
+            EnsurePlayerTransform();
+        }
     }
 
     private void LoadMaterialInfo()
@@ -364,22 +373,66 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
     private void EnsurePlayerTransform()
     {
-        if (playerTransform != null)
+        if (playerTransform != null && playerTransform)
         {
+            StopPlayerTransformRetry();
             return;
         }
 
+        if (TryAssignPlayerTransform())
+        {
+            StopPlayerTransformRetry();
+            return;
+        }
+
+        if (playerTransformRetryCoroutine == null)
+        {
+            playerTransformRetryCoroutine = StartCoroutine(RetryEnsurePlayerTransform());
+        }
+    }
+
+    private bool TryAssignPlayerTransform()
+    {
         var playerManager = FindFirstObjectByType<PlayerManager>();
         if (playerManager != null)
         {
             playerTransform = playerManager.transform;
-            return;
+            return playerTransform != null && playerTransform;
         }
 
         var playerObject = GameObject.FindWithTag("Player");
         if (playerObject != null)
         {
             playerTransform = playerObject.transform;
+            return playerTransform != null && playerTransform;
+        }
+
+        return false;
+    }
+
+    private IEnumerator RetryEnsurePlayerTransform()
+    {
+        var wait = new WaitForSeconds(0.2f);
+
+        while (playerTransform == null || !playerTransform)
+        {
+            if (TryAssignPlayerTransform())
+            {
+                break;
+            }
+
+            yield return wait;
+        }
+
+        StopPlayerTransformRetry();
+    }
+
+    private void StopPlayerTransformRetry()
+    {
+        if (playerTransformRetryCoroutine != null)
+        {
+            StopCoroutine(playerTransformRetryCoroutine);
+            playerTransformRetryCoroutine = null;
         }
     }
 
