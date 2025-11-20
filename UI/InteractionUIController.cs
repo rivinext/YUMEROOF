@@ -18,7 +18,6 @@ public class InteractionUIController : MonoBehaviour
     [Header("Text Elements")]
     [SerializeField] private TextMeshProUGUI speakerLabel;
     [SerializeField] private TextMeshProUGUI lineLabel;
-    [SerializeField] private TextMeshProUGUI logLabel;
 
     [Header("Background")]
     [SerializeField] private Image backgroundDimmer;
@@ -29,7 +28,6 @@ public class InteractionUIController : MonoBehaviour
     [SerializeField] private bool allowClickAdvance = true;
 
     private readonly Queue<InteractionLine> queuedLines = new();
-    private readonly List<string> displayedLog = new();
     private InteractionLine? currentLine;
     private IInteractable currentTarget;
     private bool waitForMovementClose;
@@ -91,7 +89,6 @@ public class InteractionUIController : MonoBehaviour
         {
             queuedLines.Enqueue(line);
         }
-        displayedLog.Clear();
         currentLine = null;
         waitForMovementClose = false;
 
@@ -150,9 +147,6 @@ public class InteractionUIController : MonoBehaviour
 
         currentLine = null;
 
-        displayedLog.Clear();
-        UpdateLogText();
-
         if (speakerLabel != null)
             speakerLabel.text = string.Empty;
         if (lineLabel != null)
@@ -202,10 +196,7 @@ public class InteractionUIController : MonoBehaviour
     private void DisplayNextLine()
     {
         if (currentLine.HasValue)
-        {
-            AppendToLog(currentLine.Value);
             currentLine = null;
-        }
 
         if (queuedLines.Count == 0)
         {
@@ -230,48 +221,6 @@ public class InteractionUIController : MonoBehaviour
         {
             lineLabel.text = currentLine.Value.Message ?? string.Empty;
         }
-    }
-
-    private void AppendToLog(InteractionLine line)
-    {
-        if (string.IsNullOrEmpty(line.Speaker) && string.IsNullOrEmpty(line.Message))
-            return;
-
-        displayedLog.Add(FormatLogEntry(line));
-        UpdateLogText();
-    }
-
-    private void UpdateLogText()
-    {
-        if (logLabel == null)
-            return;
-
-        if (displayedLog.Count == 0)
-        {
-            logLabel.text = string.Empty;
-            return;
-        }
-
-        var builder = new StringBuilder();
-        for (int i = 0; i < displayedLog.Count; i++)
-        {
-            builder.Append(displayedLog[i]);
-            if (i < displayedLog.Count - 1)
-                builder.Append('\n');
-        }
-
-        logLabel.text = builder.ToString();
-    }
-
-    private string FormatLogEntry(InteractionLine line)
-    {
-        if (string.IsNullOrEmpty(line.Speaker))
-            return line.Message ?? string.Empty;
-
-        if (string.IsNullOrEmpty(line.Message))
-            return line.Speaker;
-
-        return $"{line.Speaker}: {line.Message}";
     }
 
     private void SetBackgroundDimmer(bool shouldEnable)
