@@ -6,6 +6,7 @@ public class MouseHighlighter : MonoBehaviour
     [SerializeField] private float radiusPixels = 24f;
     [SerializeField] private float maxDistance = Mathf.Infinity;
     [SerializeField] private LayerMask dropLayers = ~0;
+    [SerializeField] private LayerMask occluderLayers = ~0;
 
     private HighlightTarget currentTarget;
     private readonly HashSet<DropMaterial> processedDrops = new HashSet<DropMaterial>();
@@ -37,6 +38,8 @@ public class MouseHighlighter : MonoBehaviour
             ClearCurrent();
         }
 
+        UpdateOcclusionState(mainCamera);
+
         // 同一フレーム内での重複処理を防いだ後にクリア
         processedDrops.Clear();
     }
@@ -45,6 +48,7 @@ public class MouseHighlighter : MonoBehaviour
     {
         if (currentTarget != null)
         {
+            currentTarget.ClearSilhouette();
             currentTarget.Unhighlight();
             currentTarget = null;
         }
@@ -67,6 +71,69 @@ public class MouseHighlighter : MonoBehaviour
             // ターゲットがないのでクリア
             ClearCurrent();
         }
+    }
+
+    private void UpdateOcclusionState(Camera mainCamera)
+    {
+        if (mainCamera == null || currentTarget == null)
+        {
+            return;
+        }
+
+        bool occluded = IsOccluded(mainCamera, currentTarget);
+        if (occluded)
+        {
+            currentTarget.ApplySilhouette();
+        }
+        else
+        {
+            currentTarget.ClearSilhouette();
+        }
+    }
+
+    private bool IsOccluded(Camera camera, HighlightTarget target)
+    {
+        var targetRenderer = target.TargetRenderer;
+        Vector3 targetPosition = targetRenderer != null
+            ? targetRenderer.bounds.center
+            : target.transform.position;
+
+        Vector3 cameraPosition = camera.transform.position;
+        Vector3 direction = targetPosition - cameraPosition;
+        float distance = direction.magnitude;
+
+        if (distance <= Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        direction /= distance;
+
+        RaycastHit[] hits = Physics.RaycastAll(cameraPosition, direction, distance, occluderLayers, QueryTriggerInteraction.Ignore);
+        if (hits == null || hits.Length == 0)
+        {
+            return false;
+        }
+
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            var hitCollider = hits[i].collider;
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            if (target.OwnsCollider(hitCollider))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private void ProcessDrops(Camera mainCamera, Ray ray)
