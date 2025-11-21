@@ -82,17 +82,17 @@ Shader "Player/VertexColorWithStencil_URP"
             {
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                DECLARE_LIGHTMAP_OR_SH(float4 lightmapUV, float3 vertexSH, 1);
+                DECLARE_LIGHTMAP_OR_SH(float4 lightmapUV, float3 vertexSH, 3);
                 #if defined(DYNAMICLIGHTMAP_ON)
                     float2 dynamicLightmapUV : TEXCOORD2;
                 #endif
-                half3 normalWS : TEXCOORD3;
-                half4 tangentWS : TEXCOORD4;
-                half3 viewDirWS : TEXCOORD5;
-                half4 shadowCoord : TEXCOORD6;
-                half3 vertexLighting : TEXCOORD7;
-                float fogCoord : TEXCOORD8;
-                float3 positionWS : TEXCOORD9;
+                half3 normalWS : TEXCOORD5;
+                half4 tangentWS : TEXCOORD6;
+                half3 viewDirWS : TEXCOORD7;
+                half4 shadowCoord : TEXCOORD8;
+                half3 vertexLighting : TEXCOORD9;
+                float fogCoord : TEXCOORD10;
+                float3 positionWS : TEXCOORD11;
                 half4 color : COLOR;
             };
 
@@ -110,12 +110,12 @@ Shader "Player/VertexColorWithStencil_URP"
                 output.viewDirWS = GetWorldSpaceViewDir(vertexInput.positionWS);
                 output.positionWS = vertexInput.positionWS;
 
-                OUTPUT_LIGHTMAP_UV(input.staticLightmapUV, unity_LightmapST, output.lightmapUV);
-                OUTPUT_SH(output.normalWS, output.vertexSH);
-
                 #if defined(DYNAMICLIGHTMAP_ON)
                     output.dynamicLightmapUV = input.dynamicLightmapUV * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
                 #endif
+
+                OUTPUT_LIGHTMAP_UV(input.staticLightmapUV, unity_LightmapST, output.lightmapUV);
+                OUTPUT_SH(output.normalWS, output.vertexSH);
 
                 output.shadowCoord = GetShadowCoord(vertexInput);
                 output.fogCoord = ComputeFogFactor(output.positionCS.z);
