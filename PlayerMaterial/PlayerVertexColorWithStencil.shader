@@ -203,6 +203,8 @@ Shader "Player/VertexColorWithStencil_URP"
                 half4 _BaseColor;
                 half4 _BaseMap_ST;
                 half _Cutoff;
+                half _Metallic;
+                half _Smoothness;
             CBUFFER_END
 
             TEXTURE2D(_BaseMap);
@@ -286,6 +288,8 @@ Shader "Player/VertexColorWithStencil_URP"
                 half4 _BaseColor;
                 half4 _BaseMap_ST;
                 half _Cutoff;
+                half _Metallic;
+                half _Smoothness;
             CBUFFER_END
 
             TEXTURE2D(_BaseMap);
