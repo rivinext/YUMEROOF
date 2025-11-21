@@ -22,6 +22,10 @@ namespace Player
         public float checkInterval = 0.1f;
         public bool forceSilhouette = false;
 
+        [SerializeField]
+        [Tooltip("Transforms under which occluder hits should be ignored (e.g., attachments).")]
+        private Transform[] ignoredOccluderRoots;
+
         private readonly List<Material[]> originalMaterials = new List<Material[]>();
         private readonly List<Material[]> silhouetteMaterials = new List<Material[]>();
         private readonly List<MaterialPropertyBlock> propertyBlocks = new List<MaterialPropertyBlock>();
@@ -285,6 +289,11 @@ namespace Player
 
                     Transform hitTransform = hitCollider.transform;
 
+                    if (ShouldIgnoreHit(hitTransform))
+                    {
+                        continue;
+                    }
+
                     if (hitTransform == playerTransform || hitTransform.IsChildOf(playerTransform) || hitTransform.root == playerRoot)
                     {
                         continue;
@@ -391,6 +400,30 @@ namespace Player
             }
 
             return transform.root;
+        }
+
+        private bool ShouldIgnoreHit(Transform hitTransform)
+        {
+            if (ignoredOccluderRoots == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < ignoredOccluderRoots.Length; i++)
+            {
+                Transform ignoredRoot = ignoredOccluderRoots[i];
+                if (ignoredRoot == null)
+                {
+                    continue;
+                }
+
+                if (hitTransform == ignoredRoot || hitTransform.IsChildOf(ignoredRoot))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
