@@ -30,6 +30,12 @@ namespace Player
 
         private Collider playerCollider;
         private Camera targetCamera;
+        [SerializeField]
+        [Tooltip("Player layer to exclude from occlusion checks. Set to -1 to automatically use this GameObject's layer.")]
+        private int playerLayer = -1;
+        [SerializeField]
+        [Tooltip("Optional override for the player root transform when ignoring self-occlusion.")]
+        private Transform playerRootOverride;
         private bool isOccluded;
         private float nextCheckTime;
         private static readonly RaycastHit[] RaycastHits = new RaycastHit[4];
@@ -38,6 +44,7 @@ namespace Player
         {
             playerCollider = GetComponent<Collider>();
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
+            playerRootOverride = playerRootOverride == null ? transform.root : playerRootOverride;
 
             RefreshTargetRenderers();
         }
@@ -239,6 +246,13 @@ namespace Player
 
             Vector3 cameraPosition = targetCamera.transform.position;
             Transform playerTransform = transform;
+            Transform playerRoot = playerRootOverride != null ? playerRootOverride : playerTransform.root;
+            LayerMask occluderMaskWithoutPlayer = occluderMask;
+            int excludedLayer = playerLayer >= 0 ? playerLayer : playerTransform.gameObject.layer;
+            if (excludedLayer >= 0 && excludedLayer < 32)
+            {
+                occluderMaskWithoutPlayer &= ~(1 << excludedLayer);
+            }
 
             for (int i = 0; i < samplePoints.Length; i++)
             {
@@ -251,7 +265,7 @@ namespace Player
                 }
 
                 Vector3 direction = toCamera / distance;
-                int hitCount = Physics.RaycastNonAlloc(point, direction, RaycastHits, distance, occluderMask, QueryTriggerInteraction.Ignore);
+                int hitCount = Physics.RaycastNonAlloc(point, direction, RaycastHits, distance, occluderMaskWithoutPlayer, QueryTriggerInteraction.Ignore);
                 for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
                 {
                     Collider hitCollider = RaycastHits[hitIndex].collider;
@@ -265,7 +279,9 @@ namespace Player
                         continue;
                     }
 
-                    if (hitCollider.transform == playerTransform || hitCollider.transform.IsChildOf(playerTransform))
+                    Transform hitTransform = hitCollider.transform;
+
+                    if (hitTransform == playerTransform || hitTransform.IsChildOf(playerTransform) || hitTransform.root == playerRoot)
                     {
                         continue;
                     }
