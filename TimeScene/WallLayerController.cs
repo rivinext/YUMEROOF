@@ -3,8 +3,6 @@ using UnityEngine.Rendering;
 
 public class WallLayerController : MonoBehaviour
 {
-    private const string PlayerPrefsKey = "wall_visibility_control_enabled";
-
     [System.Serializable]
     public class Wall
     {
@@ -20,8 +18,6 @@ public class WallLayerController : MonoBehaviour
     public string invisibleLayerName = "InvisibleWall";
     [SerializeField]
     private bool visibilityControlEnabled = true;
-
-    private static WallLayerController instance;
 
     public bool VisibilityControlEnabled
     {
@@ -40,19 +36,6 @@ public class WallLayerController : MonoBehaviour
                 RestoreOriginalSettings();
             }
         }
-    }
-
-    private void Awake()
-    {
-        if (instance != null && instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        instance = this;
-        DontDestroyOnLoad(gameObject);
-        visibilityControlEnabled = LoadSavedVisibilityState();
     }
 
     void Start()
@@ -94,16 +77,6 @@ public class WallLayerController : MonoBehaviour
                 wall.renderer.shadowCastingMode = wall.originalShadowCastingMode;
             }
         }
-    }
-
-    private bool LoadSavedVisibilityState()
-    {
-        if (PlayerPrefs.HasKey(PlayerPrefsKey))
-        {
-            return PlayerPrefs.GetInt(PlayerPrefsKey) == 1;
-        }
-
-        return visibilityControlEnabled;
     }
 
     public void ToggleVisibilityControl()
