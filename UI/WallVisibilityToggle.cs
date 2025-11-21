@@ -60,7 +60,7 @@ public class WallVisibilityToggle : MonoBehaviour
     {
         while (wallLayerController == null)
         {
-            wallLayerController = FindFirstObjectByType<WallLayerController>();
+            wallLayerController = FindFirstObjectByType<WallLayerController>(FindObjectsInactive.Include);
 
             if (wallLayerController == null)
             {
