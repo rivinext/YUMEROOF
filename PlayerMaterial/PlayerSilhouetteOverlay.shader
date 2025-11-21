@@ -10,7 +10,8 @@ Shader "Player/PlayerSilhouetteOverlay_URP"
     {
         Tags
         {
-            "Queue"="Geometry+10"
+            // Render after main object so only the occluded silhouette is shown
+            "Queue"="Transparent+10"
             "RenderType"="Transparent"
             "RenderPipeline"="UniversalPipeline"
         }
@@ -23,6 +24,7 @@ Shader "Player/PlayerSilhouetteOverlay_URP"
 
         Stencil
         {
+            // Use the same reference value as the character stencil and draw only when it is absent
             Ref 1
             Comp NotEqual  // プレイヤー自身（ステンシル値=1）は除外
         }
