@@ -2,28 +2,26 @@ Shader "Player/VertexColorWithStencil_URP"
 {
     Properties
     {
-        _Color ("Color", Color) = (1,1,1,1)
-        _MainTex ("Texture", 2D) = "white" {}
-        _AmbientStrength ("Ambient Strength", Range(0, 1)) = 0.6
-        _LightingStrength ("Lighting Strength", Range(0, 1)) = 0.5
-        _ShadowStrength ("Shadow Strength", Range(0, 1)) = 0.75
+        [MainColor] _Color ("Color", Color) = (1,1,1,1)
+        [MainTexture] _MainTex ("Texture", 2D) = "white" {}
+        _Smoothness ("Smoothness", Range(0,1)) = 0.5
+        _SpecColor ("Specular", Color) = (0.2, 0.2, 0.2, 1)
     }
 
     SubShader
     {
         Tags
         {
-            "RenderType"="Opaque"
-            "Queue"="Geometry"
-            "RenderPipeline"="UniversalPipeline"
+            "RenderType" = "Opaque"
+            "Queue" = "Geometry"
+            "RenderPipeline" = "UniversalPipeline"
         }
-        LOD 100
+        LOD 300
 
-        // メインパス
         Pass
         {
             Name "ForwardLit"
-            Tags { "LightMode"="UniversalForward" }
+            Tags { "LightMode" = "UniversalForward" }
 
             Stencil
             {
@@ -35,15 +33,24 @@ Shader "Player/VertexColorWithStencil_URP"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ DOTS_INSTANCING_ON
+
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _MIXED_LIGHTING_SUBTRACTIVE
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 
             struct Attributes
             {
+                UNITY_VERTEX_INPUT_INSTANCE_ID
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
@@ -52,11 +59,17 @@ Shader "Player/VertexColorWithStencil_URP"
 
             struct Varyings
             {
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                float4 color : COLOR;
-                float3 positionWS : TEXCOORD1;
-                float3 normalWS : TEXCOORD2;
+                half4 color : COLOR;
+                half3 normalWS : TEXCOORD1;
+                float3 positionWS : TEXCOORD2;
+                half3 viewDirWS : TEXCOORD3;
+                half4 fogFactorAndVertexLight : TEXCOORD4; // x: fogFactor, yzw: vertex light
+                float4 shadowCoord : TEXCOORD5;
+                float2 normalizedScreenSpaceUV : TEXCOORD6;
             };
 
             TEXTURE2D(_MainTex);
@@ -65,54 +78,87 @@ Shader "Player/VertexColorWithStencil_URP"
             CBUFFER_START(UnityPerMaterial)
                 float4 _MainTex_ST;
                 float4 _Color;
-                float _AmbientStrength;
-                float _LightingStrength;
-                float _ShadowStrength;
+                float _Smoothness;
+                float4 _SpecColor;
             CBUFFER_END
 
             Varyings vert(Attributes input)
             {
                 Varyings output;
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
-                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
-                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
+                VertexPositionInputs positionInputs = GetVertexPositionInputs(input.positionOS.xyz);
+                VertexNormalInputs normalInputs = GetVertexNormalInputs(input.normalOS);
+
+                output.positionCS = positionInputs.positionCS;
+                output.positionWS = positionInputs.positionWS;
+                output.normalWS = normalInputs.normalWS;
+                output.viewDirWS = GetWorldSpaceViewDir(positionInputs.positionWS);
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.color = input.color;
+                output.shadowCoord = TransformWorldToShadowCoord(positionInputs.positionWS);
+
+                #if defined(_ADDITIONAL_LIGHTS_VERTEX)
+                    float3 vertexLight = VertexLighting(positionInputs.positionWS, normalInputs.normalWS);
+                #else
+                    float3 vertexLight = 0;
+                #endif
+
+                output.fogFactorAndVertexLight.x = ComputeFogFactor(positionInputs.positionCS.z);
+                output.fogFactorAndVertexLight.yzw = vertexLight;
+
+                #if defined(UNITY_DOTS_INSTANCING_ENABLED)
+                    output.normalizedScreenSpaceUV = 0;
+                #else
+                    output.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(positionInputs.positionCS);
+                #endif
+
                 return output;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
-                half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
-                col *= input.color * _Color;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                InputData inputData;
+                ZERO_INITIALIZE(InputData, inputData);
+                inputData.positionWS = input.positionWS;
+                inputData.positionCS = input.positionCS;
+                inputData.normalWS = NormalizeNormalPerPixel(input.normalWS);
+                inputData.viewDirectionWS = SafeNormalize(input.viewDirWS);
+                inputData.shadowCoord = input.shadowCoord;
+                inputData.fogCoord = input.fogFactorAndVertexLight.x;
+                inputData.vertexLighting = input.fogFactorAndVertexLight.yzw;
+                inputData.normalizedScreenSpaceUV = input.normalizedScreenSpaceUV;
+                inputData.lightmapUV = 0;
+                inputData.shadowMask = unity_ProbesOcclusion;
+                inputData.bakedGI = SAMPLE_GI(inputData.lightmapUV, inputData.normalWS);
 
-                // 影の計算
-                float4 shadowCoord = TransformWorldToShadowCoord(input.positionWS);
-                Light mainLight = GetMainLight(shadowCoord);
+                half4 baseSample = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                half4 albedoColor = baseSample * _Color * input.color;
 
-                // より明るいランバートライティング
-                half NdotL = saturate(dot(normalize(input.normalWS), mainLight.direction));
+                SurfaceData surfaceData;
+                ZERO_INITIALIZE(SurfaceData, surfaceData);
+                surfaceData.albedo = albedoColor.rgb;
+                surfaceData.specular = _SpecColor.rgb;
+                surfaceData.smoothness = _Smoothness;
+                surfaceData.normalTS = half3(0.0h, 0.0h, 1.0h);
+                surfaceData.occlusion = 1.0h;
+                surfaceData.emission = 0.0h;
+                surfaceData.alpha = albedoColor.a;
 
-                // ライティングの影響を調整（暗くなりすぎないように）
-                half lightingFactor = lerp(1.0, NdotL, _LightingStrength);
-
-                // 影の影響を調整（_ShadowStrength が高いほど影が濃くなる）
-                half shadowFactor = lerp(1.0, mainLight.shadowAttenuation, saturate(_ShadowStrength));
-
-                half3 lighting = mainLight.color * lightingFactor * shadowFactor;
-                lighting += half3(_AmbientStrength, _AmbientStrength, _AmbientStrength); // 環境光を増加
-
-                col.rgb *= lighting;
-                return col;
+                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                color.rgb = MixFog(color.rgb, inputData.fogCoord);
+                return color;
             }
             ENDHLSL
         }
 
-        // シンプルな影を落とすパス（互換性重視）
         Pass
         {
             Name "ShadowCaster"
-            Tags { "LightMode"="ShadowCaster" }
+            Tags { "LightMode" = "ShadowCaster" }
 
             ZWrite On
             ZTest LEqual
@@ -150,7 +196,7 @@ Shader "Player/VertexColorWithStencil_URP"
                     float3 lightDirectionWS = _LightDirection;
                 #endif
 
-                float4 positionCS = TransformWorldToHClip(positionWS);
+                float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, lightDirectionWS));
 
                 #if UNITY_REVERSED_Z
                     positionCS.z = min(positionCS.z, positionCS.w * UNITY_NEAR_CLIP_VALUE);
@@ -175,11 +221,10 @@ Shader "Player/VertexColorWithStencil_URP"
             ENDHLSL
         }
 
-        // 深度パス
         Pass
         {
             Name "DepthOnly"
-            Tags { "LightMode"="DepthOnly" }
+            Tags { "LightMode" = "DepthOnly" }
 
             ZWrite On
             ColorMask 0
