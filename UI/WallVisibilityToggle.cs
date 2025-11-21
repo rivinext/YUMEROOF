@@ -1,5 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class WallVisibilityToggle : MonoBehaviour
 {
@@ -13,6 +15,8 @@ public class WallVisibilityToggle : MonoBehaviour
     [SerializeField] private bool defaultEnabled = true;
 
     private bool currentState;
+    private bool toggleCallbackRegistered;
+    private Coroutine cacheWallControllerRoutine;
 
     private void Awake()
     {
@@ -22,10 +26,11 @@ public class WallVisibilityToggle : MonoBehaviour
     private void OnEnable()
     {
         CacheToggleReference();
-        CacheWallControllerReference();
 
         currentState = LoadState();
         ApplyState(currentState, save: false);
+        StartCachingWallControllerReference();
+        SceneManager.sceneLoaded += HandleSceneLoaded;
         RegisterToggleCallback();
     }
 
@@ -33,6 +38,8 @@ public class WallVisibilityToggle : MonoBehaviour
     {
         UnregisterToggleCallback();
         SaveState(currentState);
+        StopCachingWallControllerReference();
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
     }
 
     private void CacheToggleReference()
@@ -43,27 +50,60 @@ public class WallVisibilityToggle : MonoBehaviour
         }
     }
 
-    private void CacheWallControllerReference()
+    private void StartCachingWallControllerReference()
     {
-        if (wallLayerController == null)
+        StopCachingWallControllerReference();
+        cacheWallControllerRoutine = StartCoroutine(CacheWallControllerReference());
+    }
+
+    private IEnumerator CacheWallControllerReference()
+    {
+        while (wallLayerController == null)
         {
             wallLayerController = FindFirstObjectByType<WallLayerController>();
+
+            if (wallLayerController == null)
+            {
+                yield return null;
+                continue;
+            }
+
+            ApplyState(currentState, save: false);
         }
+
+        cacheWallControllerRoutine = null;
+    }
+
+    private void StopCachingWallControllerReference()
+    {
+        if (cacheWallControllerRoutine != null)
+        {
+            StopCoroutine(cacheWallControllerRoutine);
+            cacheWallControllerRoutine = null;
+        }
+    }
+
+    private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        wallLayerController = null;
+        StartCachingWallControllerReference();
     }
 
     private void RegisterToggleCallback()
     {
-        if (toggle != null)
+        if (toggle != null && !toggleCallbackRegistered)
         {
             toggle.onValueChanged.AddListener(HandleToggleValueChanged);
+            toggleCallbackRegistered = true;
         }
     }
 
     private void UnregisterToggleCallback()
     {
-        if (toggle != null)
+        if (toggle != null && toggleCallbackRegistered)
         {
             toggle.onValueChanged.RemoveListener(HandleToggleValueChanged);
+            toggleCallbackRegistered = false;
         }
     }
 
