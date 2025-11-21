@@ -36,6 +36,7 @@ namespace Player
         [SerializeField]
         [Tooltip("Optional override for the player root transform when ignoring self-occlusion.")]
         private Transform playerRootOverride;
+        private Transform currentPlayerRoot;
         private bool isOccluded;
         private float nextCheckTime;
         private static readonly RaycastHit[] RaycastHits = new RaycastHit[4];
@@ -44,7 +45,8 @@ namespace Player
         {
             playerCollider = GetComponent<Collider>();
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
-            playerRootOverride = playerRootOverride == null ? transform.root : playerRootOverride;
+
+            UpdatePlayerRoot();
 
             RefreshTargetRenderers();
         }
@@ -198,6 +200,8 @@ namespace Player
                 return;
             }
 
+            UpdatePlayerRoot();
+
             if (forceSilhouette)
             {
                 if (!isOccluded)
@@ -246,7 +250,7 @@ namespace Player
 
             Vector3 cameraPosition = targetCamera.transform.position;
             Transform playerTransform = transform;
-            Transform playerRoot = playerRootOverride != null ? playerRootOverride : playerTransform.root;
+            Transform playerRoot = currentPlayerRoot != null ? currentPlayerRoot : ResolvePlayerRoot();
             LayerMask occluderMaskWithoutPlayer = occluderMask;
             int excludedLayer = playerLayer >= 0 ? playerLayer : playerTransform.gameObject.layer;
             if (excludedLayer >= 0 && excludedLayer < 32)
@@ -351,6 +355,16 @@ namespace Player
             }
         }
 
+        private void OnEnable()
+        {
+            UpdatePlayerRoot();
+        }
+
+        private void OnTransformParentChanged()
+        {
+            UpdatePlayerRoot();
+        }
+
         private void OnDestroy()
         {
             for (int i = 0; i < createdSilhouetteMaterials.Count; i++)
@@ -362,6 +376,21 @@ namespace Player
                 }
             }
             createdSilhouetteMaterials.Clear();
+        }
+
+        private void UpdatePlayerRoot()
+        {
+            currentPlayerRoot = ResolvePlayerRoot();
+        }
+
+        private Transform ResolvePlayerRoot()
+        {
+            if (playerRootOverride != null)
+            {
+                return playerRootOverride;
+            }
+
+            return transform.root;
         }
     }
 }
