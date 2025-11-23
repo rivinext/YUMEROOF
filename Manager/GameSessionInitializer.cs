@@ -81,6 +81,7 @@ public class GameSessionInitializer : MonoBehaviour
 #endif
 
         MilestoneManager.CreateIfNeeded(milestoneManagerPrefab);
+        BuildingGhostDialogueManager.CreateIfNeeded();
         ApplyAudioSettingsToScene();
 
         if (!initialized && !string.IsNullOrEmpty(slotKey))
