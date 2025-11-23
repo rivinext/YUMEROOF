@@ -9,6 +9,7 @@ public class SitTrigger : MonoBehaviour, IInteractable
     private Transform seatAnchor;
 
     private PlayerController player;
+    private Collider interactionCollider;
 
     private void Awake()
     {
@@ -21,7 +22,16 @@ public class SitTrigger : MonoBehaviour, IInteractable
         {
             seatAnchor = transform;
         }
+
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 
     public void Interact()
     {

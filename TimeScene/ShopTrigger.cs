@@ -13,6 +13,8 @@ public class ShopTrigger : MonoBehaviour, IInteractable
     [Tooltip("Fallback reference to the shop UI manager if no conversation controller is available.")]
     public ShopUIManager shopUIManager;
 
+    private Collider interactionCollider;
+
     void Start()
     {
         if (conversationController == null)
@@ -24,7 +26,16 @@ public class ShopTrigger : MonoBehaviour, IInteractable
         {
             shopUIManager = FindFirstObjectByType<ShopUIManager>();
         }
+
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
     }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 
     public void Interact()
     {

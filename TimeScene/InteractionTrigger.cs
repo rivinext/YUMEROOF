@@ -13,10 +13,13 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
     protected GameObject player;
     protected bool isPlayerNearby = false;
     protected bool isPanelOpen = false;
+    protected Collider interactionCollider;
 
     protected virtual void Start()
     {
         player = GameObject.FindGameObjectWithTag("Player");
+
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
 
         // UIの初期設定
         if (interactionPanel != null)
@@ -27,16 +30,7 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
     {
         if (player == null) return;
 
-        // 距離チェック
-        float distance = Vector3.Distance(transform.position, player.transform.position);
-        isPlayerNearby = distance <= interactionDistance;
-
-        // インタラクション処理
-        if (isPlayerNearby && Input.GetKeyDown(interactionKey) && !isPanelOpen)
-        {
-            Interact();
-        }
-        else if (isPanelOpen && Input.GetKeyDown(KeyCode.Escape))
+        if (isPanelOpen && Input.GetKeyDown(KeyCode.Escape))
         {
             ClosePanel();
         }
@@ -81,4 +75,11 @@ public abstract class InteractionTrigger : MonoBehaviour, IInteractable
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, interactionDistance);
     }
+
+#if UNITY_EDITOR
+    protected virtual void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 }

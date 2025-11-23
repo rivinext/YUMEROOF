@@ -16,9 +16,11 @@ public class SceneDoor : MonoBehaviour, IInteractable
 
     private AudioSource audioSource;
     private Coroutine transitionCoroutine;
+    private Collider interactionCollider;
 
     private void OnEnable()
     {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
         SetupAudioSource();
         AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
         HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
@@ -56,6 +58,13 @@ public class SceneDoor : MonoBehaviour, IInteractable
 
         audioSource.volume = Mathf.Clamp01(volume);
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 
     public void Interact()
     {

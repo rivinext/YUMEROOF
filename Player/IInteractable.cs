@@ -5,6 +5,6 @@ public interface IInteractable
 
 public interface IFocusableInteractable : IInteractable
 {
-    void OnFocus(PlayerRayInteractor interactor);
-    void OnBlur(PlayerRayInteractor interactor);
+    void OnFocus(PlayerProximityInteractor interactor);
+    void OnBlur(PlayerProximityInteractor interactor);
 }
