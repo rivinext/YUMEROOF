@@ -20,6 +20,22 @@ public static class InteractableTriggerUtility
             cachedCollider = behaviour.gameObject.AddComponent<BoxCollider>();
         }
 
+        Collider triggerCollider = cachedCollider;
+
+        if (triggerCollider is MeshCollider meshCollider)
+        {
+            if (!meshCollider.convex)
+            {
+                meshCollider.convex = true;
+            }
+
+            if (!meshCollider.convex)
+            {
+                triggerCollider = behaviour.gameObject.AddComponent<BoxCollider>();
+            }
+        }
+
+        cachedCollider = triggerCollider;
         cachedCollider.isTrigger = true;
 
         int interactableLayer = LayerMask.NameToLayer(InteractableLayerName);
