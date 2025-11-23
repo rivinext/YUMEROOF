@@ -174,7 +174,7 @@ public class PlayerController : MonoBehaviour
         if (!GlobalInputEnabled || !inputEnabled)
             return;
 
-        // Interaction for sitting is now handled via PlayerRayInteractor.
+        // Interaction for sitting is now handled via PlayerProximityInteractor.
         // The E key will only trigger Sit() when a SitTrigger is focused.
     }
 

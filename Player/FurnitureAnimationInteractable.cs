@@ -47,6 +47,7 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [SerializeField] private bool startLoopActive = false;
 
     private bool isLooping;
+    private Collider interactionCollider;
 
     /// <summary>
     /// 現在ループ状態かどうかを取得します。
@@ -60,6 +61,7 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
 
     private void Awake()
     {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
         TryAssignAnimator(); // 既存：子から Animator を拾う:contentReference[oaicite:1]{index=1}
 
         if (targetAnimator != null)
@@ -78,6 +80,13 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
             ApplyLoopState();                               //:contentReference[oaicite:3]{index=3}
         }
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 
     private void TryAssignAnimator()
     {

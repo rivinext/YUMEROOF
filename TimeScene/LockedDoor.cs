@@ -15,9 +15,11 @@ public class LockedDoor : MonoBehaviour, IInteractable
 
     private AudioSource audioSource;
     private float nextPlayableTime;
+    private Collider interactionCollider;
 
     private void OnEnable()
     {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
         SetupAudioSource();
         AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
         HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
@@ -50,6 +52,13 @@ public class LockedDoor : MonoBehaviour, IInteractable
     {
         TryPlayLockedSfx();
     }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 
     private void TryPlayLockedSfx()
     {

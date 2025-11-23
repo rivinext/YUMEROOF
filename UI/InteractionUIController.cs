@@ -107,7 +107,7 @@ public class InteractionUIController : MonoBehaviour
     }
 
     /// <summary>
-    /// PlayerRayInteractor 等から呼び出し、対象が切り替わった際に同期を取ります。
+    /// PlayerProximityInteractor 等から呼び出し、対象が切り替わった際に同期を取ります。
     /// </summary>
     public void HandleTargetChanged(IInteractable focusedTarget)
     {

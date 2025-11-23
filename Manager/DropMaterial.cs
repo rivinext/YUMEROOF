@@ -41,6 +41,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private Quaternion idleBaseRotation;
     private bool hasInitializedIdleRotation;
     private Coroutine playerTransformRetryCoroutine;
+    private Collider interactionCollider;
 
     /// <summary>
     /// Material identifier associated with this drop.
@@ -145,6 +146,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
         ResetIdleAnimationState();
         LoadMaterialInfo();
         CacheSpriteRendererColors();
+
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
     }
 
     void Start()
@@ -170,6 +173,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
     {
         EnsurePlayerTransform();
         ResetIdleAnimationState();
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
     }
 
     void OnDestroy()
@@ -195,6 +199,13 @@ public class DropMaterial : MonoBehaviour, IInteractable
             EnsurePlayerTransform();
         }
     }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 
     private void LoadMaterialInfo()
     {

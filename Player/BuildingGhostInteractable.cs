@@ -35,15 +35,19 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
 
     private readonly string localizationTableName = "Hints";
 
-    private PlayerRayInteractor currentInteractor;
+    private PlayerProximityInteractor currentInteractor;
     private InteractionUIController cachedInteractionUI;
     private bool isFocused;
     private bool dialogueActive;
+
+    private Collider interactionCollider;
 
     public event Action<string> HintTextLoaded;
 
     void Start()
     {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+
         if (HintSystem.Instance == null)
         {
             Debug.LogError("[BuildingGhostInteractable] HintSystem.Instance is null!");
@@ -65,7 +69,7 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
         }
     }
 
-    public void OnFocus(PlayerRayInteractor interactor)
+    public void OnFocus(PlayerProximityInteractor interactor)
     {
         if (interactor == null)
             return;
@@ -84,7 +88,7 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
         }
     }
 
-    public void OnBlur(PlayerRayInteractor interactor)
+    public void OnBlur(PlayerProximityInteractor interactor)
     {
         if (!isFocused)
             return;
@@ -279,4 +283,11 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
             cachedInteractionUI.InteractionClosed -= HandleInteractionClosed;
         }
     }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 }

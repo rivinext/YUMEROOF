@@ -51,6 +51,8 @@ public class BedTrigger : MonoBehaviour, IInteractable
     [Header("Transition UI")]
     public SleepTransitionUIManager transitionUI;
 
+    private Collider interactionCollider;
+
     void Start()
     {
         clock = GameClock.Instance;
@@ -80,7 +82,16 @@ public class BedTrigger : MonoBehaviour, IInteractable
 
         if (bedInHeightCurve == null)
             Debug.LogWarning("BedTrigger: bedInHeightCurve is not assigned. Player movement will not include a height offset.");
+
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
     }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+    }
+#endif
 
     void Update()
     {
