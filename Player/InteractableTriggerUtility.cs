@@ -50,7 +50,7 @@ public static class InteractableTriggerUtility
         }
     }
 
-    private static bool TagExists(string tag)
+    public static bool TagExists(string tag)
     {
         try
         {

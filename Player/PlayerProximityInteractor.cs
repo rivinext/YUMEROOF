@@ -25,6 +25,9 @@ public class PlayerProximityInteractor : MonoBehaviour, IFocusInteractor
     private PlayerController playerController;
     private bool skipHideOnce;
     private int interactableLayer = -1;
+    private bool isInteractableTagDefined;
+    private bool shouldFilterByTag;
+    private bool hasLoggedMissingTag;
 
     public event Action<IInteractable> TargetChanged;
 
@@ -39,6 +42,7 @@ public class PlayerProximityInteractor : MonoBehaviour, IFocusInteractor
             playerController = FindFirstObjectByType<PlayerController>();
 
         EnsureTriggerCollider();
+        UpdateTagFilterAvailability();
         SceneManager.sceneLoaded += OnSceneLoaded;
         BindInteractionUIController();
     }
@@ -74,6 +78,7 @@ public class PlayerProximityInteractor : MonoBehaviour, IFocusInteractor
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        UpdateTagFilterAvailability();
         BindInteractionUIController();
     }
 
@@ -150,7 +155,7 @@ public class PlayerProximityInteractor : MonoBehaviour, IFocusInteractor
         if (collider == null)
             return null;
 
-        if (filterByTag && !collider.CompareTag(interactableTag))
+        if (shouldFilterByTag && !collider.CompareTag(interactableTag))
             return null;
 
         if (interactableLayer >= 0 && collider.gameObject.layer != interactableLayer)
@@ -289,5 +294,30 @@ public class PlayerProximityInteractor : MonoBehaviour, IFocusInteractor
             return;
 
         ClearCurrentTarget();
+    }
+
+    private void UpdateTagFilterAvailability()
+    {
+        if (!filterByTag)
+        {
+            shouldFilterByTag = false;
+            isInteractableTagDefined = false;
+            hasLoggedMissingTag = false;
+            return;
+        }
+
+        isInteractableTagDefined = !string.IsNullOrEmpty(interactableTag) &&
+                                   InteractableTriggerUtility.TagExists(interactableTag);
+        shouldFilterByTag = isInteractableTagDefined;
+
+        if (!isInteractableTagDefined && !hasLoggedMissingTag)
+        {
+            Debug.LogWarning($"Tag '{interactableTag}' is not defined. Disabling tag filtering on {name}.");
+            hasLoggedMissingTag = true;
+        }
+        else if (isInteractableTagDefined)
+        {
+            hasLoggedMissingTag = false;
+        }
     }
 }
