@@ -145,6 +145,15 @@ public class PlayerRayInteractor : MonoBehaviour
         BindInteractionUIController();
     }
 
+    private struct CastResult
+    {
+        public bool HasHit;
+        public bool IsOverlap;
+        public RaycastHit Hit;
+        public IInteractable Interactable;
+        public float Distance;
+    }
+
     private IInteractable FindBestTarget()
     {
         IInteractable best = null;
@@ -165,21 +174,21 @@ public class PlayerRayInteractor : MonoBehaviour
             {
                 float vAngle = verticalRayCount > 1 ? -verticalFanAngle + vStep * vi : 0f;
                 Vector3 dir = Quaternion.AngleAxis(vAngle, transform.right) * horizDir;
-                if (Cast(origin, dir, out RaycastHit hit, out IInteractable interactable))
+                if (Cast(origin, dir, out CastResult result))
                 {
-                    float score = hit.distance;
+                    float score = result.Distance;
 
-                    if (interactable == currentTarget)
+                    if (result.Interactable == currentTarget)
                     {
                         hasCurrentHit = true;
-                        currentHitDistance = Mathf.Min(currentHitDistance, hit.distance);
+                        currentHitDistance = Mathf.Min(currentHitDistance, result.Distance);
                         score = Mathf.Max(0f, score - currentTargetDistanceBias);
                     }
 
                     if (score < bestScore)
                     {
                         bestScore = score;
-                        best = interactable;
+                        best = result.Interactable;
                     }
                 }
             }
@@ -294,7 +303,7 @@ public class PlayerRayInteractor : MonoBehaviour
         }
     }
 
-    private bool Cast(Vector3 origin, Vector3 direction, out RaycastHit hit, out IInteractable interactable)
+    private bool Cast(Vector3 origin, Vector3 direction, out CastResult result)
     {
         QueryTriggerInteraction triggerInteraction = includeTriggerColliders
             ? QueryTriggerInteraction.Collide
@@ -319,16 +328,89 @@ public class PlayerRayInteractor : MonoBehaviour
         foreach (RaycastHit sortedHit in hits)
         {
             IInteractable candidate = sortedHit.collider.GetComponentInParent<IInteractable>();
-            if (candidate != null)
+            if (candidate != null && !IsOwnCollider(sortedHit.collider))
             {
-                hit = sortedHit;
-                interactable = candidate;
+                result = new CastResult
+                {
+                    HasHit = true,
+                    IsOverlap = false,
+                    Hit = sortedHit,
+                    Interactable = candidate,
+                    Distance = sortedHit.distance
+                };
                 return true;
             }
         }
 
-        hit = default;
-        interactable = null;
+        if (TryGetOverlapFallback(origin, triggerInteraction, out result))
+            return true;
+
+        result = default;
         return false;
+    }
+
+    private bool TryGetOverlapFallback(Vector3 origin, QueryTriggerInteraction triggerInteraction, out CastResult result)
+    {
+        Collider[] overlaps;
+        switch (castMode)
+        {
+            case CastMode.Box:
+                overlaps = Physics.OverlapBox(origin, boxHalfExtents, transform.rotation, interactionLayers, triggerInteraction);
+                break;
+            case CastMode.Sphere:
+            case CastMode.Ray:
+                overlaps = Physics.OverlapSphere(origin, sphereRadius, interactionLayers, triggerInteraction);
+                break;
+            default:
+                overlaps = Array.Empty<Collider>();
+                break;
+        }
+
+        float bestDistance = float.MaxValue;
+        IInteractable bestInteractable = null;
+        foreach (Collider collider in overlaps)
+        {
+            if (collider == null || IsOwnCollider(collider))
+                continue;
+
+            if (!includeTriggerColliders && collider.isTrigger)
+                continue;
+
+            IInteractable candidate = collider.GetComponentInParent<IInteractable>();
+            if (candidate == null)
+                continue;
+
+            Vector3 closestPoint = collider.ClosestPoint(origin);
+            float distance = Vector3.Distance(origin, closestPoint);
+            if (distance > interactionDistance)
+                continue;
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestInteractable = candidate;
+            }
+        }
+
+        if (bestInteractable != null)
+        {
+            result = new CastResult
+            {
+                HasHit = true,
+                IsOverlap = true,
+                Hit = default,
+                Interactable = bestInteractable,
+                Distance = bestDistance
+            };
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
+
+    private bool IsOwnCollider(Collider collider)
+    {
+        return collider != null && (collider.transform == transform || collider.transform.IsChildOf(transform));
     }
 }
