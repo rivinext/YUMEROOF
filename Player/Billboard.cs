@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Billboard component that rotates this object to face a target while optionally
@@ -18,9 +19,23 @@ public class Billboard : MonoBehaviour
     [Tooltip("Allow rotation toward the target around the Z axis (roll). Usually disabled for billboards.")]
     public bool rotateZ = false;
 
+    private bool runtimeReassignAttempted;
+
     void Awake()
     {
         TryAssignPlayerTarget();
+    }
+
+    void OnEnable()
+    {
+        runtimeReassignAttempted = false;
+        SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        TryAssignPlayerTarget();
+    }
+
+    void OnDisable()
+    {
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
     }
 
 #if UNITY_EDITOR
@@ -30,10 +45,24 @@ public class Billboard : MonoBehaviour
     }
 #endif
 
+    void OnActiveSceneChanged(Scene previousScene, Scene newScene)
+    {
+        runtimeReassignAttempted = false;
+        TryAssignPlayerTarget();
+    }
+
     void LateUpdate()
     {
         if (target == null)
+        {
+            if (!runtimeReassignAttempted)
+            {
+                runtimeReassignAttempted = true;
+                TryAssignPlayerTarget();
+            }
+
             return;
+        }
 
         Vector3 direction = target.position - transform.position;
 
@@ -66,6 +95,7 @@ public class Billboard : MonoBehaviour
         if (playerManager != null)
         {
             target = playerManager.transform;
+            runtimeReassignAttempted = false;
             return;
         }
 
@@ -73,11 +103,15 @@ public class Billboard : MonoBehaviour
         if (playerController != null)
         {
             target = playerController.transform;
+            runtimeReassignAttempted = false;
             return;
         }
 
         GameObject taggedPlayer = GameObject.FindWithTag("Player");
         if (taggedPlayer != null)
+        {
             target = taggedPlayer.transform;
+            runtimeReassignAttempted = false;
+        }
     }
 }
