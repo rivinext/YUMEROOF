@@ -13,6 +13,7 @@ public class FreePlacementSystem : MonoBehaviour
     public LayerMask furnitureLayer;
     public LayerMask anchorLayer;
     public GhostPreviewManager ghostManager;
+    [SerializeField] private string interactableTriggerLayerName = "InteractableTrigger";
 
     [Header("Highlight Settings")]
     [SerializeField] private string outlineLayerName = "Outline";
@@ -41,6 +42,7 @@ public class FreePlacementSystem : MonoBehaviour
     private int outlineLayerMask;
     private int ceilingLayerIndex = -1;
     private int ceilingPlacementMask = 0;
+    private int interactableTriggerMask = 0;
 
     [Header("Player Control")]
     public PlacementPlayerControl playerControl;
@@ -133,6 +135,7 @@ public class FreePlacementSystem : MonoBehaviour
         RefreshOutlineLayerMask();
         RefreshWallLayerMask();
         RefreshCeilingLayerMask();
+        RefreshInteractableTriggerMask();
     }
 
     private void RefreshOutlineLayerMask()
@@ -178,6 +181,29 @@ public class FreePlacementSystem : MonoBehaviour
         ceilingLayer = ceilingPlacementMask;
     }
 
+    private void RefreshInteractableTriggerMask()
+    {
+        interactableTriggerMask = 0;
+
+        if (string.IsNullOrEmpty(interactableTriggerLayerName))
+        {
+            return;
+        }
+
+        int layer = LayerMask.NameToLayer(interactableTriggerLayerName);
+        if (layer < 0)
+        {
+            Debug.LogWarning($"FreePlacementSystem: Layer '{interactableTriggerLayerName}' not found. Interactable triggers may be ignored by selection rays.");
+            return;
+        }
+
+        interactableTriggerMask = 1 << layer;
+        if ((furnitureLayer.value & interactableTriggerMask) == 0)
+        {
+            furnitureLayer |= interactableTriggerMask;
+        }
+    }
+
     private bool IsValidCeilingNormal(Vector3 normal)
     {
         if (normal.sqrMagnitude < Mathf.Epsilon)
@@ -198,7 +224,7 @@ public class FreePlacementSystem : MonoBehaviour
 
     private int GetFurnitureRaycastMask()
     {
-        return furnitureLayer.value | outlineLayerMask;
+        return furnitureLayer.value | outlineLayerMask | interactableTriggerMask;
     }
 
     void Update()
