@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Interaction;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]

@@ -1,3 +1,4 @@
+using Interaction;
 using UnityEngine;
 
 public class CylinderInteractable : MonoBehaviour, IInteractable
