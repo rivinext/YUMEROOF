@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -13,7 +12,6 @@ public class PlayerRayInteractor : MonoBehaviour
     public int horizontalRayCount = 5;
     public float verticalFanAngle = 45f;
     public int verticalRayCount = 3;
-    [SerializeField] private float currentTargetDistanceBias = 0.1f;
     [Tooltip("When enabled, trigger colliders will also be considered when casting for interactables.")]
     public bool includeTriggerColliders = true;
     [SerializeField, HideInInspector] private bool triggerInit;
@@ -28,9 +26,6 @@ public class PlayerRayInteractor : MonoBehaviour
     private RayOutlineHighlighter highlighter;
     private bool skipHideOnce;
     private PlayerController playerController;
-    [SerializeField] private float buildingGhostBlurDelay = 0.1f;
-    private Coroutine buildingGhostBlurCoroutine;
-    private IInteractable pendingGhostBlurTarget;
     [Header("UI Hooks")]
     [SerializeField] private InteractionUIController interactionUIController;
 
@@ -90,12 +85,6 @@ public class PlayerRayInteractor : MonoBehaviour
         }
 
         IInteractable newTarget = FindBestTarget();
-
-        if (buildingGhostBlurCoroutine != null && newTarget == pendingGhostBlurTarget)
-        {
-            StopBuildingGhostBlurTimer();
-        }
-
         if (newTarget != currentTarget)
         {
             bool newIsGhost = false;
@@ -103,62 +92,40 @@ public class PlayerRayInteractor : MonoBehaviour
             if (mbNew != null && mbNew.GetComponent<BuildingGhostInteractable>() != null)
                 newIsGhost = true;
 
-            bool currentIsGhost = IsBuildingGhost(currentTarget);
-
-            if (newTarget == null && currentIsGhost)
+            if (currentTarget != null)
             {
-                if (buildingGhostBlurCoroutine == null)
+                skipHideOnce = newIsGhost;
+                SetHighlight(currentTarget, false);
+                NotifyBlur(currentTarget);
+            }
+
+            currentTarget = newTarget;
+            if (currentTarget != null)
+            {
+                if (currentTarget is DropMaterial dropTarget)
                 {
-                    pendingGhostBlurTarget = currentTarget;
-                    buildingGhostBlurCoroutine = StartCoroutine(BuildingGhostBlurCountdown(currentTarget));
+                    SetHighlight(dropTarget, false);
+                    dropTarget.Interact();
+                    currentTarget = null;
+                }
+                else
+                {
+                    SetHighlight(currentTarget, true);
+                    NotifyFocus(currentTarget);
                 }
             }
             else
             {
-                StopBuildingGhostBlurTimer();
-
-                if (currentTarget != null)
-                {
-                    skipHideOnce = newIsGhost;
-                    if (skipHideOnce)
-                    {
-                        skipHideOnce = false;
-                    }
-                    else
-                    {
-                        SetHighlight(currentTarget, false);
-                        NotifyBlur(currentTarget);
-                    }
-                }
-
-                currentTarget = newTarget;
-                if (currentTarget != null)
-                {
-                    if (currentTarget is DropMaterial dropTarget)
-                    {
-                        SetHighlight(dropTarget, false);
-                        dropTarget.Interact();
-                        currentTarget = null;
-                    }
-                    else
-                    {
-                        SetHighlight(currentTarget, true);
-                        NotifyFocus(currentTarget);
-                    }
-                }
-                else
-                {
-                    skipHideOnce = false;
-                    currentFocusable = null;
-                }
-
-                if (interactionUIController != null)
-                {
-                    interactionUIController.HandleTargetChanged(currentTarget);
-                }
-
-                TargetChanged?.Invoke(currentTarget);
+                skipHideOnce = false;
+                currentFocusable = null;
             }
+
+            if (interactionUIController != null)
+            {
+                interactionUIController.HandleTargetChanged(currentTarget);
+            }
+
+            TargetChanged?.Invoke(currentTarget);
         }
 
         if (currentTarget != null && Input.GetKeyDown(KeyCode.E))
@@ -177,21 +144,10 @@ public class PlayerRayInteractor : MonoBehaviour
         BindInteractionUIController();
     }
 
-    private struct CastResult
-    {
-        public bool HasHit;
-        public bool IsOverlap;
-        public RaycastHit Hit;
-        public IInteractable Interactable;
-        public float Distance;
-    }
-
     private IInteractable FindBestTarget()
     {
         IInteractable best = null;
-        float bestScore = float.MaxValue;
-        bool hasCurrentHit = false;
-        float currentHitDistance = float.MaxValue;
+        float bestDist = float.MaxValue;
 
         Vector3 origin = transform.position + originOffset;
         Vector3 forward = transform.forward;
@@ -206,30 +162,16 @@ public class PlayerRayInteractor : MonoBehaviour
             {
                 float vAngle = verticalRayCount > 1 ? -verticalFanAngle + vStep * vi : 0f;
                 Vector3 dir = Quaternion.AngleAxis(vAngle, transform.right) * horizDir;
-                if (Cast(origin, dir, out CastResult result))
+                if (Cast(origin, dir, out RaycastHit hit))
                 {
-                    float score = result.Distance;
-
-                    if (result.Interactable == currentTarget)
+                    IInteractable trig = hit.collider.GetComponentInParent<IInteractable>();
+                    if (trig != null && hit.distance < bestDist)
                     {
-                        hasCurrentHit = true;
-                        currentHitDistance = Mathf.Min(currentHitDistance, result.Distance);
-                        score = Mathf.Max(0f, score - currentTargetDistanceBias);
-                    }
-
-                    if (score < bestScore)
-                    {
-                        bestScore = score;
-                        best = result.Interactable;
+                        bestDist = hit.distance;
+                        best = trig;
                     }
                 }
             }
-        }
-
-        if (best == null && hasCurrentHit)
-        {
-            best = currentTarget;
-            bestScore = currentHitDistance;
         }
 
         return best;
@@ -298,45 +240,6 @@ public class PlayerRayInteractor : MonoBehaviour
         }
     }
 
-    private bool IsBuildingGhost(IInteractable target)
-    {
-        var mono = target as MonoBehaviour;
-        return mono != null && mono.GetComponent<BuildingGhostInteractable>() != null;
-    }
-
-    private void StopBuildingGhostBlurTimer()
-    {
-        if (buildingGhostBlurCoroutine != null)
-        {
-            StopCoroutine(buildingGhostBlurCoroutine);
-            buildingGhostBlurCoroutine = null;
-            pendingGhostBlurTarget = null;
-        }
-    }
-
-    private IEnumerator BuildingGhostBlurCountdown(IInteractable target)
-    {
-        float timer = buildingGhostBlurDelay;
-        while (timer > 0f)
-        {
-            timer -= Time.deltaTime;
-            yield return null;
-        }
-
-        if (currentTarget == target && IsBuildingGhost(target))
-        {
-            SetHighlight(currentTarget, false);
-            NotifyBlur(currentTarget);
-            currentTarget = null;
-            currentFocusable = null;
-            interactionUIController?.HandleTargetChanged(null);
-            TargetChanged?.Invoke(null);
-        }
-
-        buildingGhostBlurCoroutine = null;
-        pendingGhostBlurTarget = null;
-    }
-
     private void OnDrawGizmosSelected()
     {
         Vector3 origin = transform.position + originOffset;
@@ -374,114 +277,20 @@ public class PlayerRayInteractor : MonoBehaviour
         }
     }
 
-    private bool Cast(Vector3 origin, Vector3 direction, out CastResult result)
+    private bool Cast(Vector3 origin, Vector3 direction, out RaycastHit hit)
     {
         QueryTriggerInteraction triggerInteraction = includeTriggerColliders
             ? QueryTriggerInteraction.Collide
             : QueryTriggerInteraction.Ignore;
 
-        RaycastHit[] hits;
         switch (castMode)
         {
             case CastMode.Sphere:
-                hits = Physics.SphereCastAll(origin, sphereRadius, direction, interactionDistance, interactionLayers, triggerInteraction);
-                break;
+                return Physics.SphereCast(origin, sphereRadius, direction, out hit, interactionDistance, interactionLayers, triggerInteraction);
             case CastMode.Box:
-                hits = Physics.BoxCastAll(origin, boxHalfExtents, direction, transform.rotation, interactionDistance, interactionLayers, triggerInteraction);
-                break;
+                return Physics.BoxCast(origin, boxHalfExtents, direction, out hit, transform.rotation, interactionDistance, interactionLayers, triggerInteraction);
             default:
-                hits = Physics.RaycastAll(origin, direction, interactionDistance, interactionLayers, triggerInteraction);
-                break;
+                return Physics.Raycast(origin, direction, out hit, interactionDistance, interactionLayers, triggerInteraction);
         }
-
-        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        foreach (RaycastHit sortedHit in hits)
-        {
-            IInteractable candidate = sortedHit.collider.GetComponentInParent<IInteractable>();
-            if (candidate != null && !IsOwnCollider(sortedHit.collider))
-            {
-                result = new CastResult
-                {
-                    HasHit = true,
-                    IsOverlap = false,
-                    Hit = sortedHit,
-                    Interactable = candidate,
-                    Distance = sortedHit.distance
-                };
-                return true;
-            }
-        }
-
-        if (TryGetOverlapFallback(origin, triggerInteraction, out result))
-            return true;
-
-        result = default;
-        return false;
-    }
-
-    private bool TryGetOverlapFallback(Vector3 origin, QueryTriggerInteraction triggerInteraction, out CastResult result)
-    {
-        Collider[] overlaps;
-        switch (castMode)
-        {
-            case CastMode.Box:
-                overlaps = Physics.OverlapBox(origin, boxHalfExtents, transform.rotation, interactionLayers, triggerInteraction);
-                break;
-            case CastMode.Sphere:
-            case CastMode.Ray:
-                overlaps = Physics.OverlapSphere(origin, sphereRadius, interactionLayers, triggerInteraction);
-                break;
-            default:
-                overlaps = Array.Empty<Collider>();
-                break;
-        }
-
-        float bestDistance = float.MaxValue;
-        IInteractable bestInteractable = null;
-        foreach (Collider collider in overlaps)
-        {
-            if (collider == null || IsOwnCollider(collider))
-                continue;
-
-            if (!includeTriggerColliders && collider.isTrigger)
-                continue;
-
-            IInteractable candidate = collider.GetComponentInParent<IInteractable>();
-            if (candidate == null)
-                continue;
-
-            Vector3 closestPoint = collider.ClosestPoint(origin);
-            float distance = Vector3.Distance(origin, closestPoint);
-            if (distance > interactionDistance)
-                continue;
-
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                bestInteractable = candidate;
-            }
-        }
-
-        if (bestInteractable != null)
-        {
-            result = new CastResult
-            {
-                HasHit = true,
-                IsOverlap = true,
-                Hit = default,
-                Interactable = bestInteractable,
-                Distance = bestDistance
-            };
-            return true;
-        }
-
-        result = default;
-        return false;
-    }
-
-    private bool IsOwnCollider(Collider collider)
-    {
-        return collider != null && (collider.transform == transform || collider.transform.IsChildOf(transform));
     }
 }
