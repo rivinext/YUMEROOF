@@ -10,16 +10,13 @@ public class RayOutlineHighlighter : MonoBehaviour
     public string outlineLayerName = "Outline";
 
     private int outlineLayer;
+    private bool outlineLayerInitialized;
     private GameObject highlightedObject;
     private int originalLayer;
 
     void Awake()
     {
-        outlineLayer = LayerMask.NameToLayer(outlineLayerName);
-        if (outlineLayer == -1)
-        {
-            Debug.LogWarning($"Layer '{outlineLayerName}' not found. Highlighting will be disabled.");
-        }
+        EnsureOutlineLayerCached();
     }
 
     /// <summary>
@@ -59,6 +56,26 @@ public class RayOutlineHighlighter : MonoBehaviour
         foreach (Transform child in obj.transform)
         {
             SetLayerRecursively(child.gameObject, layer);
+        }
+    }
+
+    public bool TryGetOutlineLayer(out int layer)
+    {
+        EnsureOutlineLayerCached();
+        layer = outlineLayer;
+        return outlineLayer != -1;
+    }
+
+    private void EnsureOutlineLayerCached()
+    {
+        if (outlineLayerInitialized)
+            return;
+
+        outlineLayerInitialized = true;
+        outlineLayer = LayerMask.NameToLayer(outlineLayerName);
+        if (outlineLayer == -1)
+        {
+            Debug.LogWarning($"Layer '{outlineLayerName}' not found. Highlighting will be disabled.");
         }
     }
 }
