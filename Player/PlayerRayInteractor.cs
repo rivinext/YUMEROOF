@@ -96,8 +96,15 @@ public class PlayerRayInteractor : MonoBehaviour
             if (currentTarget != null)
             {
                 skipHideOnce = newIsGhost;
-                SetHighlight(currentTarget, false);
-                NotifyBlur(currentTarget);
+                if (skipHideOnce)
+                {
+                    skipHideOnce = false;
+                }
+                else
+                {
+                    SetHighlight(currentTarget, false);
+                    NotifyBlur(currentTarget);
+                }
             }
 
             currentTarget = newTarget;
