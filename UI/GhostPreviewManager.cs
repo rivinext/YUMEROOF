@@ -16,6 +16,7 @@ public class GhostPreviewManager : MonoBehaviour
         }
 
         ghostObject = Instantiate(source, position, rotation);
+        ghostObject.AddComponent<GhostFloatAnimator>();
         PrepareGhostObject(ghostObject);
         return ghostObject;
     }
