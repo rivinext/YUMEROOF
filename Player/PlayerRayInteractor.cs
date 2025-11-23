@@ -15,6 +15,7 @@ public class PlayerRayInteractor : MonoBehaviour
     [Tooltip("When enabled, trigger colliders will also be considered when casting for interactables.")]
     public bool includeTriggerColliders = true;
     [SerializeField, HideInInspector] private bool triggerInit;
+    [SerializeField] private string interactableTriggerLayerName = "InteractableTrigger";
 
     public enum CastMode { Ray, Sphere, Box }
     public CastMode castMode = CastMode.Ray;
@@ -29,6 +30,7 @@ public class PlayerRayInteractor : MonoBehaviour
     [Header("UI Hooks")]
     [SerializeField] private InteractionUIController interactionUIController;
     private bool hasLoggedMissingUI;
+    private bool hasLoggedMissingInteractableLayer;
 
     public event Action<IInteractable> TargetChanged;
 
@@ -39,6 +41,7 @@ public class PlayerRayInteractor : MonoBehaviour
         EnsureTriggerInitialized();
         highlighter = GetComponent<RayOutlineHighlighter>();
         EnsureOutlineLayerIncluded();
+        EnsureInteractableLayerIncluded();
         playerController = GetComponentInParent<PlayerController>();
         if (playerController == null)
             playerController = FindFirstObjectByType<PlayerController>();
@@ -58,6 +61,7 @@ public class PlayerRayInteractor : MonoBehaviour
     {
         EnsureTriggerInitialized();
         EnsureOutlineLayerIncluded();
+        EnsureInteractableLayerIncluded();
     }
 #endif
 
@@ -82,6 +86,31 @@ public class PlayerRayInteractor : MonoBehaviour
             {
                 interactionLayers |= outlineMask;
             }
+        }
+    }
+
+    private void EnsureInteractableLayerIncluded()
+    {
+        if (string.IsNullOrEmpty(interactableTriggerLayerName))
+        {
+            return;
+        }
+
+        int layerIndex = LayerMask.NameToLayer(interactableTriggerLayerName);
+        if (layerIndex < 0)
+        {
+            if (!hasLoggedMissingInteractableLayer)
+            {
+                Debug.LogWarning($"[PlayerRayInteractor] Layer '{interactableTriggerLayerName}' not found. Interaction trigger detection may fail.");
+                hasLoggedMissingInteractableLayer = true;
+            }
+            return;
+        }
+
+        int layerMask = 1 << layerIndex;
+        if ((interactionLayers.value & layerMask) == 0)
+        {
+            interactionLayers |= layerMask;
         }
     }
 

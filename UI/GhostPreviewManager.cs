@@ -10,6 +10,7 @@ public class GhostPreviewManager : MonoBehaviour
     private float maxTriggerFocusDistance = 0f;
 
     private GameObject ghostObject;
+    private int cachedTriggerLayer = int.MinValue;
 
     public GameObject CreateGhost(GameObject source, Vector3 position, Quaternion rotation)
     {
@@ -49,6 +50,8 @@ public class GhostPreviewManager : MonoBehaviour
             collider.enabled = false;
         }
 
+        var triggerObjects = ghost.GetComponentsInChildren<GhostInteractionTrigger>(true);
+
         var placedFurnitureComponents = ghost.GetComponentsInChildren<PlacedFurniture>();
         foreach (var placedFurniture in placedFurnitureComponents)
         {
@@ -82,7 +85,21 @@ public class GhostPreviewManager : MonoBehaviour
         }
 
         ghost.tag = "Untagged";
-        SetLayerRecursively(ghost, LayerMask.NameToLayer("Ignore Raycast"));
+
+        int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+        SetLayerRecursively(ghost, ignoreRaycastLayer);
+
+        int triggerLayer = GetInteractionTriggerLayer();
+        if (triggerLayer >= 0 && triggerObjects != null && triggerObjects.Length > 0)
+        {
+            foreach (var trigger in triggerObjects)
+            {
+                if (trigger != null)
+                {
+                    SetLayerRecursively(trigger.gameObject, triggerLayer);
+                }
+            }
+        }
     }
 
     private void SetupGhostInteractionTrigger(GameObject ghost)
@@ -92,11 +109,7 @@ public class GhostPreviewManager : MonoBehaviour
             return;
         }
 
-        int triggerLayer = LayerMask.NameToLayer(interactionTriggerLayerName);
-        if (triggerLayer < 0)
-        {
-            Debug.LogWarning($"[GhostPreviewManager] Layer '{interactionTriggerLayerName}' not found. Using current layer for triggers.");
-        }
+        int triggerLayer = GetInteractionTriggerLayer();
 
         var interactable = ghost.GetComponentInChildren<BuildingGhostInteractable>();
         var triggers = ghost.GetComponentsInChildren<GhostInteractionTrigger>(true);
@@ -174,8 +187,29 @@ public class GhostPreviewManager : MonoBehaviour
         return Mathf.Max(radius, defaultTriggerRadius);
     }
 
+    private int GetInteractionTriggerLayer()
+    {
+        if (cachedTriggerLayer != int.MinValue)
+        {
+            return cachedTriggerLayer;
+        }
+
+        cachedTriggerLayer = LayerMask.NameToLayer(interactionTriggerLayerName);
+        if (cachedTriggerLayer < 0)
+        {
+            Debug.LogWarning($"[GhostPreviewManager] Layer '{interactionTriggerLayerName}' not found. Using current layer for triggers.");
+        }
+
+        return cachedTriggerLayer;
+    }
+
     private void SetLayerRecursively(GameObject obj, int layer)
     {
+        if (layer < 0)
+        {
+            return;
+        }
+
         obj.layer = layer;
 
         foreach (Transform child in obj.transform)
