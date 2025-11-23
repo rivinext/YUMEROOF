@@ -12,6 +12,7 @@ public class PlayerRayInteractor : MonoBehaviour
     public int horizontalRayCount = 5;
     public float verticalFanAngle = 45f;
     public int verticalRayCount = 3;
+    [SerializeField] private float currentTargetDistanceBias = 0.1f;
     [Tooltip("When enabled, trigger colliders will also be considered when casting for interactables.")]
     public bool includeTriggerColliders = true;
     [SerializeField, HideInInspector] private bool triggerInit;
@@ -147,7 +148,9 @@ public class PlayerRayInteractor : MonoBehaviour
     private IInteractable FindBestTarget()
     {
         IInteractable best = null;
-        float bestDist = float.MaxValue;
+        float bestScore = float.MaxValue;
+        bool hasCurrentHit = false;
+        float currentHitDistance = float.MaxValue;
 
         Vector3 origin = transform.position + originOffset;
         Vector3 forward = transform.forward;
@@ -164,13 +167,28 @@ public class PlayerRayInteractor : MonoBehaviour
                 Vector3 dir = Quaternion.AngleAxis(vAngle, transform.right) * horizDir;
                 if (Cast(origin, dir, out RaycastHit hit, out IInteractable interactable))
                 {
-                    if (hit.distance < bestDist)
+                    float score = hit.distance;
+
+                    if (interactable == currentTarget)
                     {
-                        bestDist = hit.distance;
+                        hasCurrentHit = true;
+                        currentHitDistance = Mathf.Min(currentHitDistance, hit.distance);
+                        score = Mathf.Max(0f, score - currentTargetDistanceBias);
+                    }
+
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
                         best = interactable;
                     }
                 }
             }
+        }
+
+        if (best == null && hasCurrentHit)
+        {
+            best = currentTarget;
+            bestScore = currentHitDistance;
         }
 
         return best;
