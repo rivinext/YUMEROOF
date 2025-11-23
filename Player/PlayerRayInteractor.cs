@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,6 +28,9 @@ public class PlayerRayInteractor : MonoBehaviour
     private RayOutlineHighlighter highlighter;
     private bool skipHideOnce;
     private PlayerController playerController;
+    [SerializeField] private float buildingGhostBlurDelay = 0.1f;
+    private Coroutine buildingGhostBlurCoroutine;
+    private IInteractable pendingGhostBlurTarget;
     [Header("UI Hooks")]
     [SerializeField] private InteractionUIController interactionUIController;
 
@@ -86,6 +90,12 @@ public class PlayerRayInteractor : MonoBehaviour
         }
 
         IInteractable newTarget = FindBestTarget();
+
+        if (buildingGhostBlurCoroutine != null && newTarget == pendingGhostBlurTarget)
+        {
+            StopBuildingGhostBlurTimer();
+        }
+
         if (newTarget != currentTarget)
         {
             bool newIsGhost = false;
@@ -93,47 +103,62 @@ public class PlayerRayInteractor : MonoBehaviour
             if (mbNew != null && mbNew.GetComponent<BuildingGhostInteractable>() != null)
                 newIsGhost = true;
 
-            if (currentTarget != null)
-            {
-                skipHideOnce = newIsGhost;
-                if (skipHideOnce)
-                {
-                    skipHideOnce = false;
-                }
-                else
-                {
-                    SetHighlight(currentTarget, false);
-                    NotifyBlur(currentTarget);
-                }
-            }
+            bool currentIsGhost = IsBuildingGhost(currentTarget);
 
-            currentTarget = newTarget;
-            if (currentTarget != null)
+            if (newTarget == null && currentIsGhost)
             {
-                if (currentTarget is DropMaterial dropTarget)
+                if (buildingGhostBlurCoroutine == null)
                 {
-                    SetHighlight(dropTarget, false);
-                    dropTarget.Interact();
-                    currentTarget = null;
-                }
-                else
-                {
-                    SetHighlight(currentTarget, true);
-                    NotifyFocus(currentTarget);
+                    pendingGhostBlurTarget = currentTarget;
+                    buildingGhostBlurCoroutine = StartCoroutine(BuildingGhostBlurCountdown(currentTarget));
                 }
             }
             else
             {
-                skipHideOnce = false;
-                currentFocusable = null;
-            }
+                StopBuildingGhostBlurTimer();
 
-            if (interactionUIController != null)
-            {
-                interactionUIController.HandleTargetChanged(currentTarget);
-            }
+                if (currentTarget != null)
+                {
+                    skipHideOnce = newIsGhost;
+                    if (skipHideOnce)
+                    {
+                        skipHideOnce = false;
+                    }
+                    else
+                    {
+                        SetHighlight(currentTarget, false);
+                        NotifyBlur(currentTarget);
+                    }
+                }
 
-            TargetChanged?.Invoke(currentTarget);
+                currentTarget = newTarget;
+                if (currentTarget != null)
+                {
+                    if (currentTarget is DropMaterial dropTarget)
+                    {
+                        SetHighlight(dropTarget, false);
+                        dropTarget.Interact();
+                        currentTarget = null;
+                    }
+                    else
+                    {
+                        SetHighlight(currentTarget, true);
+                        NotifyFocus(currentTarget);
+                    }
+                }
+                else
+                {
+                    skipHideOnce = false;
+                    currentFocusable = null;
+                }
+
+                if (interactionUIController != null)
+                {
+                    interactionUIController.HandleTargetChanged(currentTarget);
+                }
+
+                TargetChanged?.Invoke(currentTarget);
+            }
         }
 
         if (currentTarget != null && Input.GetKeyDown(KeyCode.E))
@@ -271,6 +296,45 @@ public class PlayerRayInteractor : MonoBehaviour
                 currentFocusable = null;
             }
         }
+    }
+
+    private bool IsBuildingGhost(IInteractable target)
+    {
+        var mono = target as MonoBehaviour;
+        return mono != null && mono.GetComponent<BuildingGhostInteractable>() != null;
+    }
+
+    private void StopBuildingGhostBlurTimer()
+    {
+        if (buildingGhostBlurCoroutine != null)
+        {
+            StopCoroutine(buildingGhostBlurCoroutine);
+            buildingGhostBlurCoroutine = null;
+            pendingGhostBlurTarget = null;
+        }
+    }
+
+    private IEnumerator BuildingGhostBlurCountdown(IInteractable target)
+    {
+        float timer = buildingGhostBlurDelay;
+        while (timer > 0f)
+        {
+            timer -= Time.deltaTime;
+            yield return null;
+        }
+
+        if (currentTarget == target && IsBuildingGhost(target))
+        {
+            SetHighlight(currentTarget, false);
+            NotifyBlur(currentTarget);
+            currentTarget = null;
+            currentFocusable = null;
+            interactionUIController?.HandleTargetChanged(null);
+            TargetChanged?.Invoke(null);
+        }
+
+        buildingGhostBlurCoroutine = null;
+        pendingGhostBlurTarget = null;
     }
 
     private void OnDrawGizmosSelected()
