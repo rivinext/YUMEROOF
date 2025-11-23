@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerRayInteractor : MonoBehaviour
 {
@@ -40,6 +41,8 @@ public class PlayerRayInteractor : MonoBehaviour
         if (playerController == null)
             playerController = FindFirstObjectByType<PlayerController>();
 
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        BindInteractionUIController();
     }
 
 #if UNITY_EDITOR
@@ -48,6 +51,14 @@ public class PlayerRayInteractor : MonoBehaviour
         EnsureTriggerInitialized();
     }
 #endif
+
+    private void BindInteractionUIController()
+    {
+        if (interactionUIController == null)
+        {
+            interactionUIController = FindFirstObjectByType<InteractionUIController>();
+        }
+    }
 
     private void EnsureTriggerInitialized()
     {
@@ -121,6 +132,16 @@ public class PlayerRayInteractor : MonoBehaviour
         {
             currentTarget.Interact();
         }
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        BindInteractionUIController();
     }
 
     private IInteractable FindBestTarget()
