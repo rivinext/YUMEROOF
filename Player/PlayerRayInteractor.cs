@@ -36,6 +36,7 @@ public class PlayerRayInteractor : MonoBehaviour
     {
         EnsureTriggerInitialized();
         highlighter = GetComponent<RayOutlineHighlighter>();
+        EnsureOutlineLayerIncluded();
         playerController = GetComponentInParent<PlayerController>();
         if (playerController == null)
             playerController = FindFirstObjectByType<PlayerController>();
@@ -46,6 +47,7 @@ public class PlayerRayInteractor : MonoBehaviour
     void OnValidate()
     {
         EnsureTriggerInitialized();
+        EnsureOutlineLayerIncluded();
     }
 #endif
 
@@ -55,6 +57,21 @@ public class PlayerRayInteractor : MonoBehaviour
         {
             includeTriggerColliders = true;
             triggerInit = true;
+        }
+    }
+
+    private void EnsureOutlineLayerIncluded()
+    {
+        if (highlighter == null)
+            highlighter = GetComponent<RayOutlineHighlighter>();
+
+        if (highlighter != null && highlighter.TryGetOutlineLayer(out int outlineLayerIndex))
+        {
+            int outlineMask = 1 << outlineLayerIndex;
+            if ((interactionLayers.value & outlineMask) == 0)
+            {
+                interactionLayers |= outlineMask;
+            }
         }
     }
 
