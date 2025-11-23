@@ -8,16 +8,19 @@ public class BuildingGhostDialogueManager : MonoBehaviour
     public static BuildingGhostDialogueManager Instance { get; private set; }
 
     [SerializeField] private string dialogueCSVPath = "Data/GhostDialogues";
+    [SerializeField] private bool skipIfInstanceExists = true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [SerializeField] private bool logDuplicateInEditor = true;
+#endif
 
     private readonly List<DialogueDefinition> definitions = new List<DialogueDefinition>();
 
     public static BuildingGhostDialogueManager CreateIfNeeded()
     {
+        Instance = Instance ?? FindFirstObjectByType<BuildingGhostDialogueManager>(FindObjectsInactive.Include);
+
         if (Instance == null)
-        {
-            var go = new GameObject(nameof(BuildingGhostDialogueManager));
-            Instance = go.AddComponent<BuildingGhostDialogueManager>();
-        }
+            Instance = new GameObject(nameof(BuildingGhostDialogueManager)).AddComponent<BuildingGhostDialogueManager>();
 
         return Instance;
     }
@@ -26,6 +29,15 @@ public class BuildingGhostDialogueManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (logDuplicateInEditor)
+            {
+                Debug.LogWarning($"[BuildingGhostDialogueManager] Duplicate instance found in scene '{gameObject.scene.name}'. This instance will be skipped because another instance already exists.");
+            }
+#endif
+            if (!skipIfInstanceExists)
+                return;
+
             Destroy(gameObject);
             return;
         }
