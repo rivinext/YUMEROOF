@@ -1,6 +1,7 @@
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditorInternal;
+using UnityEditor;
 #endif
 
 public static class InteractableTriggerUtility
@@ -47,6 +48,10 @@ public static class InteractableTriggerUtility
             behaviour.gameObject.layer = interactableLayer;
         }
 
+#if UNITY_EDITOR
+        EnsureInteractableTagExists();
+#endif
+
         if (TagExists(InteractableTag) && behaviour.gameObject.tag != InteractableTag)
         {
             behaviour.gameObject.tag = InteractableTag;
@@ -73,10 +78,46 @@ public static class InteractableTriggerUtility
             Object.Destroy(temp);
             return exists;
         }
-        catch (UnityException)
+        catch (System.Exception)
         {
             return false;
         }
 #endif
     }
+
+#if UNITY_EDITOR
+    private static void EnsureInteractableTagExists()
+    {
+        if (TagExists(InteractableTag))
+            return;
+
+        Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset");
+        if (assets == null || assets.Length == 0)
+            return;
+
+        SerializedObject tagManager = new SerializedObject(assets[0]);
+        SerializedProperty tagsProp = tagManager.FindProperty("tags");
+        if (tagsProp == null)
+            return;
+
+        for (int i = 0; i < tagsProp.arraySize; i++)
+        {
+            SerializedProperty tagProp = tagsProp.GetArrayElementAtIndex(i);
+            if (tagProp != null && tagProp.stringValue == InteractableTag)
+            {
+                return;
+            }
+        }
+
+        tagsProp.InsertArrayElementAtIndex(tagsProp.arraySize);
+        SerializedProperty newTagProp = tagsProp.GetArrayElementAtIndex(tagsProp.arraySize - 1);
+        if (newTagProp != null)
+        {
+            newTagProp.stringValue = InteractableTag;
+        }
+
+        tagManager.ApplyModifiedPropertiesWithoutUndo();
+        tagManager.Update();
+    }
+#endif
 }
