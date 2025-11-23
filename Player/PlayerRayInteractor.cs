@@ -162,13 +162,12 @@ public class PlayerRayInteractor : MonoBehaviour
             {
                 float vAngle = verticalRayCount > 1 ? -verticalFanAngle + vStep * vi : 0f;
                 Vector3 dir = Quaternion.AngleAxis(vAngle, transform.right) * horizDir;
-                if (Cast(origin, dir, out RaycastHit hit))
+                if (Cast(origin, dir, out RaycastHit hit, out IInteractable interactable))
                 {
-                    IInteractable trig = hit.collider.GetComponentInParent<IInteractable>();
-                    if (trig != null && hit.distance < bestDist)
+                    if (hit.distance < bestDist)
                     {
                         bestDist = hit.distance;
-                        best = trig;
+                        best = interactable;
                     }
                 }
             }
@@ -277,20 +276,41 @@ public class PlayerRayInteractor : MonoBehaviour
         }
     }
 
-    private bool Cast(Vector3 origin, Vector3 direction, out RaycastHit hit)
+    private bool Cast(Vector3 origin, Vector3 direction, out RaycastHit hit, out IInteractable interactable)
     {
         QueryTriggerInteraction triggerInteraction = includeTriggerColliders
             ? QueryTriggerInteraction.Collide
             : QueryTriggerInteraction.Ignore;
 
+        RaycastHit[] hits;
         switch (castMode)
         {
             case CastMode.Sphere:
-                return Physics.SphereCast(origin, sphereRadius, direction, out hit, interactionDistance, interactionLayers, triggerInteraction);
+                hits = Physics.SphereCastAll(origin, sphereRadius, direction, interactionDistance, interactionLayers, triggerInteraction);
+                break;
             case CastMode.Box:
-                return Physics.BoxCast(origin, boxHalfExtents, direction, out hit, transform.rotation, interactionDistance, interactionLayers, triggerInteraction);
+                hits = Physics.BoxCastAll(origin, boxHalfExtents, direction, transform.rotation, interactionDistance, interactionLayers, triggerInteraction);
+                break;
             default:
-                return Physics.Raycast(origin, direction, out hit, interactionDistance, interactionLayers, triggerInteraction);
+                hits = Physics.RaycastAll(origin, direction, interactionDistance, interactionLayers, triggerInteraction);
+                break;
         }
+
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit sortedHit in hits)
+        {
+            IInteractable candidate = sortedHit.collider.GetComponentInParent<IInteractable>();
+            if (candidate != null)
+            {
+                hit = sortedHit;
+                interactable = candidate;
+                return true;
+            }
+        }
+
+        hit = default;
+        interactable = null;
+        return false;
     }
 }
