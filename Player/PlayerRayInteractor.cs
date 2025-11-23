@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerRayInteractor : MonoBehaviour
 {
@@ -27,6 +28,7 @@ public class PlayerRayInteractor : MonoBehaviour
     private PlayerController playerController;
     [Header("UI Hooks")]
     [SerializeField] private InteractionUIController interactionUIController;
+    private bool hasLoggedMissingUI;
 
     public event Action<IInteractable> TargetChanged;
 
@@ -41,6 +43,14 @@ public class PlayerRayInteractor : MonoBehaviour
         if (playerController == null)
             playerController = FindFirstObjectByType<PlayerController>();
 
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        TryFindInteractionUIController();
+
+    }
+
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
 #if UNITY_EDITOR
@@ -84,7 +94,7 @@ public class PlayerRayInteractor : MonoBehaviour
                 SetHighlight(currentTarget, false);
                 NotifyBlur(currentTarget);
                 currentTarget = null;
-                interactionUIController?.HandleTargetChanged(null);
+                NotifyTargetChanged(null);
                 TargetChanged?.Invoke(null);
             }
             return;
@@ -126,10 +136,7 @@ public class PlayerRayInteractor : MonoBehaviour
                 currentFocusable = null;
             }
 
-            if (interactionUIController != null)
-            {
-                interactionUIController.HandleTargetChanged(currentTarget);
-            }
+            NotifyTargetChanged(currentTarget);
 
             TargetChanged?.Invoke(currentTarget);
         }
@@ -211,7 +218,7 @@ public class PlayerRayInteractor : MonoBehaviour
         NotifyBlur(currentTarget);
         currentTarget = null;
         currentFocusable = null;
-        interactionUIController?.HandleTargetChanged(null);
+        NotifyTargetChanged(null);
         TargetChanged?.Invoke(null);
     }
 
@@ -222,6 +229,61 @@ public class PlayerRayInteractor : MonoBehaviour
             currentFocusable = focusable;
             focusable.OnFocus(this);
         }
+    }
+
+    public void SetInteractionUIController(InteractionUIController controller)
+    {
+        interactionUIController = controller;
+        if (interactionUIController == null)
+        {
+            LogMissingUI();
+        }
+        else
+        {
+            hasLoggedMissingUI = false;
+        }
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        TryFindInteractionUIController();
+    }
+
+    private void TryFindInteractionUIController()
+    {
+        if (interactionUIController != null)
+            return;
+
+        var found = FindFirstObjectByType<InteractionUIController>();
+        if (found != null)
+        {
+            SetInteractionUIController(found);
+        }
+        else
+        {
+            LogMissingUI();
+        }
+    }
+
+    private void NotifyTargetChanged(IInteractable target)
+    {
+        if (interactionUIController != null)
+        {
+            interactionUIController.HandleTargetChanged(target);
+        }
+        else
+        {
+            LogMissingUI();
+        }
+    }
+
+    private void LogMissingUI()
+    {
+        if (hasLoggedMissingUI)
+            return;
+
+        Debug.LogWarning("[PlayerRayInteractor] InteractionUIController not found. Interaction UI updates will be skipped until assigned.");
+        hasLoggedMissingUI = true;
     }
 
     private void NotifyBlur(IInteractable target)
