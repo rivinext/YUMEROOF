@@ -10,6 +10,7 @@ using UnityEngine.Localization.Settings;
 /// ビルおばけのインタラクション処理。
 /// フォーカス状態に応じて会話を開始し、HintSystem をフォールバックとして利用します。
 /// </summary>
+[RequireComponent(typeof(InteractableFocusTrigger))]
 public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
 {
     [Header("ヒント設定")]
@@ -35,7 +36,7 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
 
     private readonly string localizationTableName = "Hints";
 
-    private PlayerProximityInteractor currentInteractor;
+    private IFocusInteractor currentInteractor;
     private InteractionUIController cachedInteractionUI;
     private bool isFocused;
     private bool dialogueActive;
@@ -69,7 +70,7 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
         }
     }
 
-    public void OnFocus(PlayerProximityInteractor interactor)
+    public void OnFocus(IFocusInteractor interactor)
     {
         if (interactor == null)
             return;
@@ -88,7 +89,7 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
         }
     }
 
-    public void OnBlur(PlayerProximityInteractor interactor)
+    public void OnBlur(IFocusInteractor interactor)
     {
         if (!isFocused)
             return;

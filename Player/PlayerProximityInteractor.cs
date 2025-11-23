@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Collider))]
-public class PlayerProximityInteractor : MonoBehaviour
+public class PlayerProximityInteractor : MonoBehaviour, IFocusInteractor
 {
     private const string InteractableLayerName = "Interactable";
 
@@ -20,7 +20,6 @@ public class PlayerProximityInteractor : MonoBehaviour
     private readonly Dictionary<IInteractable, Collider> lastKnownCollider = new();
 
     private IInteractable currentTarget;
-    private IFocusableInteractable currentFocusable;
     private RayOutlineHighlighter highlighter;
     private PlayerController playerController;
     private bool skipHideOnce;
@@ -205,7 +204,6 @@ public class PlayerProximityInteractor : MonoBehaviour
         {
             skipHideOnce = false;
             SetHighlight(currentTarget, false);
-            NotifyBlur(currentTarget);
         }
 
         currentTarget = newTarget;
@@ -221,12 +219,7 @@ public class PlayerProximityInteractor : MonoBehaviour
             else
             {
                 SetHighlight(currentTarget, true);
-                NotifyFocus(currentTarget);
             }
-        }
-        else
-        {
-            currentFocusable = null;
         }
 
         if (interactionUIController != null)
@@ -243,9 +236,7 @@ public class PlayerProximityInteractor : MonoBehaviour
             return;
 
         SetHighlight(currentTarget, false);
-        NotifyBlur(currentTarget);
         currentTarget = null;
-        currentFocusable = null;
         interactionUIController?.HandleTargetChanged(null);
         TargetChanged?.Invoke(null);
     }
@@ -297,26 +288,5 @@ public class PlayerProximityInteractor : MonoBehaviour
             return;
 
         ClearCurrentTarget();
-    }
-
-    private void NotifyFocus(IInteractable target)
-    {
-        if (target is IFocusableInteractable focusable)
-        {
-            currentFocusable = focusable;
-            focusable.OnFocus(this);
-        }
-    }
-
-    private void NotifyBlur(IInteractable target)
-    {
-        if (target is IFocusableInteractable focusable)
-        {
-            focusable.OnBlur(this);
-            if (currentFocusable == focusable)
-            {
-                currentFocusable = null;
-            }
-        }
     }
 }

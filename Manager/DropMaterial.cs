@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 /// Implements <see cref="IInteractable"/> so the player can pick up the
 /// material by interacting with it.
 /// </summary>
+[RequireComponent(typeof(InteractableFocusTrigger))]
 public class DropMaterial : MonoBehaviour, IInteractable
 {
     [SerializeField] private string materialID;
@@ -148,6 +149,12 @@ public class DropMaterial : MonoBehaviour, IInteractable
         CacheSpriteRendererColors();
 
         InteractableTriggerUtility.EnsureTriggerCollider(this, ref interactionCollider);
+
+        var focusTrigger = GetComponent<InteractableFocusTrigger>();
+        if (focusTrigger != null)
+        {
+            focusTrigger.AutoInteractOnEnter = true;
+        }
     }
 
     void Start()
