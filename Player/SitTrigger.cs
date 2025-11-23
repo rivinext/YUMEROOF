@@ -1,3 +1,4 @@
+using Interaction;
 using UnityEngine;
 
 public class SitTrigger : MonoBehaviour, IInteractable

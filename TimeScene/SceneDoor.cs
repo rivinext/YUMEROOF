@@ -1,4 +1,5 @@
 using System.Collections;
+using Interaction;
 using UnityEngine;
 
 public class SceneDoor : MonoBehaviour, IInteractable
