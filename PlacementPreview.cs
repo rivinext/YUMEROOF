@@ -200,10 +200,20 @@ public class PlacementPreview : MonoBehaviour
         {
             if (cornerRenderers[i] != null)
             {
-                DestroyImmediate(cornerRenderers[i].gameObject);
+                if (Application.isPlaying)
+                {
+                    Destroy(cornerRenderers[i].gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(cornerRenderers[i].gameObject);
+                }
+
+                cornerRenderers[i] = null;
             }
         }
 
+        cornerRenderers = new SpriteRenderer[4];
         CreateCornerSprites();
         UpdateCornerVisibility();
     }
