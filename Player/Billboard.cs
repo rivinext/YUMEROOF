@@ -37,17 +37,23 @@ public class Billboard : MonoBehaviour
 
         Vector3 direction = target.position - transform.position;
 
+        // Constrain pitch by removing vertical difference.
         if (!rotateX)
-            direction.x = 0f;
-        if (!rotateY)
             direction.y = 0f;
-        if (!rotateZ)
+        // Constrain yaw by ignoring horizontal plane difference.
+        if (!rotateY)
+        {
+            direction.x = 0f;
             direction.z = 0f;
+        }
+
+        // Preserve roll constraints by choosing the appropriate up vector.
+        Vector3 upVector = rotateZ && target != null ? target.up : Vector3.up;
 
         if (direction.sqrMagnitude < 0.0001f)
             return;
 
-        transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        transform.rotation = Quaternion.LookRotation(direction, upVector);
     }
 
     private void TryAssignPlayerTarget()
