@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditorInternal;
+#endif
 
 public static class InteractableTriggerUtility
 {
@@ -52,6 +55,17 @@ public static class InteractableTriggerUtility
 
     public static bool TagExists(string tag)
     {
+#if UNITY_EDITOR
+        foreach (string definedTag in InternalEditorUtility.tags)
+        {
+            if (definedTag == tag)
+            {
+                return true;
+            }
+        }
+
+        return false;
+#else
         try
         {
             GameObject temp = new GameObject();
@@ -63,5 +77,6 @@ public static class InteractableTriggerUtility
         {
             return false;
         }
+#endif
     }
 }
