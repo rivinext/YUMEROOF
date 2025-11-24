@@ -34,7 +34,6 @@ public class CameraControlPanel : MonoBehaviour
     [Header("Panel Controls")]
     [SerializeField] private Button toggleButton;
     [SerializeField] private PanelScaleAnimator panelScaleAnimator;
-    [SerializeField] private CameraControlPanelAnimator panelAnimator;
     [SerializeField] private bool startOpen = false;
 
     [Header("Preset Buttons")]
@@ -59,7 +58,8 @@ public class CameraControlPanel : MonoBehaviour
         InitializeReferences();
         ConfigureSliders();
         CacheDepthOfField();
-        InitializePanelAnimator();
+        EnsurePanelScaleAnimatorReference();
+        SyncPanelOpenState();
         UIPanelExclusionManager.Instance?.Register(this);
         InitializeScreenshotButton();
     }
@@ -68,7 +68,6 @@ public class CameraControlPanel : MonoBehaviour
     {
         InitializeReferences();
         SceneManager.sceneLoaded += HandleSceneLoaded;
-        EnsurePanelAnimatorReference();
         EnsurePanelScaleAnimatorReference();
         SyncPanelOpenState();
         RegisterControllerEventHandlers();
@@ -111,21 +110,6 @@ public class CameraControlPanel : MonoBehaviour
         }
     }
 
-    private void InitializePanelAnimator()
-    {
-        EnsurePanelAnimatorReference();
-        EnsurePanelScaleAnimatorReference();
-        SyncPanelOpenState();
-    }
-
-    private void EnsurePanelAnimatorReference()
-    {
-        if (panelAnimator == null)
-        {
-            panelAnimator = GetComponent<CameraControlPanelAnimator>();
-        }
-    }
-
     private void EnsurePanelScaleAnimatorReference()
     {
         if (panelScaleAnimator == null)
@@ -145,18 +129,6 @@ public class CameraControlPanel : MonoBehaviour
             else
             {
                 panelScaleAnimator.SnapClosed();
-            }
-        }
-
-        if (panelAnimator != null)
-        {
-            if (startOpen)
-            {
-                panelAnimator.SnapOpen();
-            }
-            else
-            {
-                panelAnimator.SnapClosed();
             }
         }
     }
