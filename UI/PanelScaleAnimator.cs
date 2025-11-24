@@ -9,19 +9,29 @@ public class PanelScaleAnimator : MonoBehaviour
     [SerializeField] private float closeDuration = 0.2f;
     [SerializeField] private Vector3 closedScale = Vector3.zero;
     [SerializeField] private Vector3 openedScale = Vector3.one;
+    [SerializeField] private InitialState initialState = InitialState.Unchanged;
+    [SerializeField] private bool applyInitialStateOnEnable = false;
 
     private Coroutine animationRoutine;
     private bool isOpen;
+    private bool hasAppliedInitialState;
+
+    public enum InitialState
+    {
+        Unchanged = 0,
+        Closed = 1,
+        Open = 2
+    }
 
     private void Awake()
     {
-        EnsureTarget();
-        ApplyClosedScale();
+        WarnIfTargetMissing();
+        ApplyInitialState(forceApply: true);
     }
 
     private void OnEnable()
     {
-        ApplyClosedScale();
+        ApplyInitialState(forceApply: applyInitialStateOnEnable);
     }
 
     private void OnDisable()
@@ -34,6 +44,8 @@ public class PanelScaleAnimator : MonoBehaviour
     }
 
     public bool IsOpen => isOpen;
+
+    public RectTransform Target => target;
 
     public void Open()
     {
@@ -126,6 +138,11 @@ public class PanelScaleAnimator : MonoBehaviour
         ApplyClosedScale();
     }
 
+    public void SetTarget(RectTransform targetTransform)
+    {
+        target = targetTransform;
+    }
+
     private void ApplyOpenScale()
     {
         if (target != null)
@@ -144,11 +161,36 @@ public class PanelScaleAnimator : MonoBehaviour
         }
     }
 
-    private void EnsureTarget()
+    private void WarnIfTargetMissing()
     {
         if (target == null)
         {
-            target = GetComponent<RectTransform>();
+            Debug.LogWarning($"PanelScaleAnimator on {name} is missing a target RectTransform reference. Assign the content container in the inspector.");
         }
+    }
+
+    private void ApplyInitialState(bool forceApply)
+    {
+        if (initialState == InitialState.Unchanged)
+        {
+            return;
+        }
+
+        if (!forceApply && hasAppliedInitialState)
+        {
+            return;
+        }
+
+        switch (initialState)
+        {
+            case InitialState.Open:
+                ApplyOpenScale();
+                break;
+            case InitialState.Closed:
+                ApplyClosedScale();
+                break;
+        }
+
+        hasAppliedInitialState = true;
     }
 }

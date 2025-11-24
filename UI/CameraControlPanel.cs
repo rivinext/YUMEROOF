@@ -34,6 +34,7 @@ public class CameraControlPanel : MonoBehaviour
     [Header("Panel Controls")]
     [SerializeField] private Button toggleButton;
     [SerializeField] private PanelScaleAnimator panelScaleAnimator;
+    [SerializeField] private RectTransform panelContent;
     [SerializeField] private bool startOpen = false;
 
     [Header("Preset Buttons")]
@@ -67,6 +68,7 @@ public class CameraControlPanel : MonoBehaviour
         InitializeReferences();
         SceneManager.sceneLoaded += HandleSceneLoaded;
         EnsurePanelScaleAnimatorReference();
+        AssignPanelScaleTarget();
         SyncPanelOpenState();
         RegisterControllerEventHandlers();
         RegisterCallbacks();
@@ -111,6 +113,7 @@ public class CameraControlPanel : MonoBehaviour
     private void InitializePanelScaleAnimator()
     {
         EnsurePanelScaleAnimatorReference();
+        AssignPanelScaleTarget();
         SyncPanelOpenState();
     }
 
@@ -119,6 +122,23 @@ public class CameraControlPanel : MonoBehaviour
         if (panelScaleAnimator == null)
         {
             panelScaleAnimator = GetComponent<PanelScaleAnimator>();
+        }
+    }
+
+    private void AssignPanelScaleTarget()
+    {
+        if (panelScaleAnimator == null)
+        {
+            return;
+        }
+
+        if (panelContent != null)
+        {
+            panelScaleAnimator.SetTarget(panelContent);
+        }
+        else if (panelScaleAnimator.Target == null)
+        {
+            Debug.LogWarning("CameraControlPanel is missing a panel content target for PanelScaleAnimator. Assign a content container so toggle buttons stay outside the scaled transform.");
         }
     }
 

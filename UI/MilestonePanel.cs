@@ -67,6 +67,7 @@ public class MilestonePanel : MonoBehaviour
 
     [Header("Animation")]
     [SerializeField] private PanelScaleAnimator panelScaleAnimator;
+    [SerializeField] private RectTransform panelContent;
 
     private bool isOpen = false;
     private Coroutine progressCoroutine;
@@ -145,6 +146,7 @@ public class MilestonePanel : MonoBehaviour
         lastKnownMilestoneIndex = initialMilestoneIndex;
         hasProcessedInitialProgressUpdate = false;
 
+        InitializePanelAnimation();
         CreateMilestones(MilestoneManager.Instance != null ? MilestoneManager.Instance.MilestoneCount : 0);
         SetProgress(initialMilestoneIndex);
         SetNotificationVisible(false);
@@ -157,6 +159,25 @@ public class MilestonePanel : MonoBehaviour
         {
             MilestoneManager.Instance.OnMilestoneProgress -= HandleMilestoneProgress;
         }
+    }
+
+    private void InitializePanelAnimation()
+    {
+        if (panelScaleAnimator == null)
+        {
+            return;
+        }
+
+        if (panelContent != null)
+        {
+            panelScaleAnimator.SetTarget(panelContent);
+        }
+        else if (panelScaleAnimator.Target == null)
+        {
+            Debug.LogWarning("MilestonePanel is missing a panel content target for PanelScaleAnimator. Assign a content container so toggle buttons stay outside the scaled transform.");
+        }
+
+        panelScaleAnimator.SnapClosed();
     }
 
     public bool IsOpen => isOpen;
