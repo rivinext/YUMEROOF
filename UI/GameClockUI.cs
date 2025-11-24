@@ -88,7 +88,7 @@ public class GameClockUI : MonoBehaviour
     void UpdateDayText(int day)
     {
         if (dayText != null)
-            dayText.text = $"Day {day}";
+            dayText.text = day.ToString();
     }
 
     void InitializeClock()
