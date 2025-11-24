@@ -34,6 +34,7 @@ public class CameraControlPanel : MonoBehaviour
     [Header("Panel Controls")]
     [SerializeField] private Button toggleButton;
     [SerializeField] private PanelScaleAnimator panelScaleAnimator;
+    [SerializeField] private RectTransform panelAnimatedBody;
     [SerializeField] private RectTransform panelContent;
     [SerializeField] private bool startOpen = false;
 
@@ -132,9 +133,11 @@ public class CameraControlPanel : MonoBehaviour
             return;
         }
 
-        if (panelContent != null)
+        RectTransform target = panelAnimatedBody != null ? panelAnimatedBody : panelContent;
+
+        if (target != null)
         {
-            panelScaleAnimator.SetTarget(panelContent);
+            panelScaleAnimator.SetTarget(target);
         }
         else if (panelScaleAnimator.Target == null)
         {
