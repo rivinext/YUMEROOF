@@ -195,6 +195,8 @@ public class WardrobeUIController : MonoBehaviour
             panelAnimator.VisibilityChanged.AddListener(OnPanelVisibilityChanged);
         }
 
+        UIPanelExclusionManager.Instance?.Register(this);
+
         BuildAttachmentLookup();
         BuildGameAttachmentLookup();
         SetupTabs();
@@ -252,6 +254,21 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
+    public bool IsShown
+    {
+        get
+        {
+            if (panelAnimator != null)
+            {
+                return panelAnimator.IsShown;
+            }
+
+            return panelRoot != null && panelRoot.activeSelf;
+        }
+    }
+
+    public bool IsOpen => IsShown;
+
     public void ShowPanel(bool instant = false)
     {
         if (panelAnimator != null)
@@ -261,10 +278,12 @@ public class WardrobeUIController : MonoBehaviour
                 UpdatePreviewActivation(true);
             }
 
+            UIPanelExclusionManager.Instance?.NotifyOpened(this);
             panelAnimator.Show(instant);
         }
         else if (panelRoot != null)
         {
+            UIPanelExclusionManager.Instance?.NotifyOpened(this);
             panelRoot.SetActive(true);
             UpdatePreviewActivation(true);
         }

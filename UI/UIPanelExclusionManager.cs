@@ -25,6 +25,7 @@ public class UIPanelExclusionManager : MonoBehaviour
     [SerializeField] private CameraControlPanel cameraControlPanel;
     [SerializeField] private MilestonePanel milestonePanel;
     [SerializeField] private InventoryUI inventoryPanel;
+    [SerializeField] private WardrobeUIController wardrobePanel;
 
     private void Awake()
     {
@@ -77,6 +78,14 @@ public class UIPanelExclusionManager : MonoBehaviour
         }
     }
 
+    public void Register(WardrobeUIController panel)
+    {
+        if (panel != null)
+        {
+            wardrobePanel = panel;
+        }
+    }
+
     public void NotifyOpened(SettingsPanelAnimator panel)
     {
         Register(panel);
@@ -96,6 +105,12 @@ public class UIPanelExclusionManager : MonoBehaviour
     }
 
     public void NotifyOpened(InventoryUI panel)
+    {
+        Register(panel);
+        CloseOtherPanels(panel);
+    }
+
+    public void NotifyOpened(WardrobeUIController panel)
     {
         Register(panel);
         CloseOtherPanels(panel);
@@ -121,6 +136,11 @@ public class UIPanelExclusionManager : MonoBehaviour
         if (inventoryPanel != null && openedPanel != inventoryPanel && inventoryPanel.IsOpen)
         {
             inventoryPanel.CloseInventory();
+        }
+
+        if (wardrobePanel != null && openedPanel != wardrobePanel && wardrobePanel.IsShown)
+        {
+            wardrobePanel.HidePanel();
         }
     }
 }
