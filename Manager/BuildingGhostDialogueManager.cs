@@ -15,11 +15,22 @@ public class BuildingGhostDialogueManager : MonoBehaviour
     {
         if (Instance == null)
         {
-            var go = new GameObject(nameof(BuildingGhostDialogueManager));
-            Instance = go.AddComponent<BuildingGhostDialogueManager>();
+            Instance = FindFirstObjectByType<BuildingGhostDialogueManager>(FindObjectsInactive.Include);
         }
 
         return Instance;
+    }
+
+    public static void ValidateSceneConfiguration()
+    {
+        var manager = CreateIfNeeded();
+        if (manager != null)
+            return;
+
+        if (FindFirstObjectByType<BuildingGhostInteractable>(FindObjectsInactive.Include) != null)
+        {
+            Debug.LogWarning("[BuildingGhostDialogueManager] No manager found in the scene. Please place a BuildingGhostDialogueManager in scenes containing BuildingGhostInteractable.");
+        }
     }
 
     void Awake()
@@ -31,8 +42,15 @@ public class BuildingGhostDialogueManager : MonoBehaviour
         }
 
         Instance = this;
-        DontDestroyOnLoad(gameObject);
         LoadDefinitions();
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     public bool TrySelectDialogue(out IReadOnlyList<DialogueLine> lines)
