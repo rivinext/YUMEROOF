@@ -245,7 +245,7 @@ public class SleepTransitionUIManager : MonoBehaviour
             Color textColor = dayText.color;
             textColor.a = 0f;
             dayText.color = textColor;
-            dayText.text = nextDay.ToString();
+            dayText.text = $"Day {nextDay}";
         }
 
         if (inventoryUI != null)
