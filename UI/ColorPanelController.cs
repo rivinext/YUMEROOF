@@ -7,14 +7,17 @@ public class ColorPanelController : MonoBehaviour
     [SerializeField] private GameObject panelRoot;
 
     private Coroutine closeRoutine;
+    public bool IsOpen => panelAnimator != null && panelAnimator.IsOpen;
 
     private void Awake()
     {
+        RegisterWithExclusionManager();
         SnapClosed();
     }
 
     private void OnEnable()
     {
+        RegisterWithExclusionManager();
         SnapClosed();
     }
 
@@ -45,6 +48,7 @@ public class ColorPanelController : MonoBehaviour
             panelRoot.SetActive(true);
         }
 
+        UIPanelExclusionManager.Instance?.NotifyOpened(this);
         panelAnimator.Open();
     }
 
@@ -101,6 +105,7 @@ public class ColorPanelController : MonoBehaviour
                 panelRoot.SetActive(true);
             }
 
+            UIPanelExclusionManager.Instance?.NotifyOpened(this);
             panelAnimator.Toggle();
         }
     }
@@ -128,5 +133,10 @@ public class ColorPanelController : MonoBehaviour
         }
 
         closeRoutine = null;
+    }
+
+    private void RegisterWithExclusionManager()
+    {
+        UIPanelExclusionManager.Instance?.Register(this);
     }
 }
