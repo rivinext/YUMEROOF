@@ -65,16 +65,9 @@ public class MilestonePanel : MonoBehaviour
     private bool hasProcessedInitialProgressUpdate;
 
     [Header("Animation")]
-    [SerializeField] private float closedPositionX = 0f;
-    [SerializeField] private float openPositionX = 0f;
-    [SerializeField] private float anchoredY = 0f;
-    [SerializeField]
-    private AnimationCurve slideInXCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-    [SerializeField]
-    private AnimationCurve slideOutXCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    [SerializeField] private PanelScaleAnimator panelScaleAnimator;
 
     private bool isOpen = false;
-    private Coroutine slideCoroutine;
     private Coroutine progressCoroutine;
     private Coroutine tooltipFadeCoroutine;
     private int currentProgressIndex = 0;
@@ -108,12 +101,6 @@ public class MilestonePanel : MonoBehaviour
                 tooltipRewardImage.gameObject.SetActive(false);
             }
         }
-        if (panel != null)
-        {
-            RectTransform rect = panel.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(closedPositionX, anchoredY);
-        }
-
         if (tooltipCanvasGroup != null)
         {
             tooltipCanvasGroup.alpha = 0f;
@@ -179,12 +166,10 @@ public class MilestonePanel : MonoBehaviour
         isOpen = true;
         ClearMilestoneNotification();
 
-        if (slideCoroutine != null)
+        if (panelScaleAnimator != null)
         {
-            StopCoroutine(slideCoroutine);
+            panelScaleAnimator.Open();
         }
-
-        slideCoroutine = StartCoroutine(SlidePanel(true));
     }
 
     public void ClosePanel()
@@ -196,12 +181,10 @@ public class MilestonePanel : MonoBehaviour
 
         isOpen = false;
 
-        if (slideCoroutine != null)
+        if (panelScaleAnimator != null)
         {
-            StopCoroutine(slideCoroutine);
+            panelScaleAnimator.Close();
         }
-
-        slideCoroutine = StartCoroutine(SlidePanel(false));
     }
 
     void TogglePanel()
@@ -214,124 +197,6 @@ public class MilestonePanel : MonoBehaviour
         {
             OpenPanel();
         }
-    }
-
-    IEnumerator SlidePanel(bool open)
-    {
-        if (panel == null) yield break;
-
-        RectTransform rect = panel.GetComponent<RectTransform>();
-        float anchoredYValue = anchoredY;
-
-        AnimationCurve activeCurve = open ? slideInXCurve : slideOutXCurve;
-        bool hasCurve = TryGetSlideParameters(activeCurve, out float duration);
-        float endTime = open ? duration : 0f;
-        float targetX = open ? openPositionX : closedPositionX;
-
-        if (!hasCurve)
-        {
-            rect.anchoredPosition = new Vector2(targetX, anchoredYValue);
-            yield break;
-        }
-
-        float currentTime = Mathf.Clamp(
-            GetTimeForPosition(rect.anchoredPosition.x, closedPositionX, openPositionX, activeCurve, duration),
-            0f,
-            duration);
-        float direction = open ? 1f : -1f;
-
-        rect.anchoredPosition = new Vector2(
-            Mathf.LerpUnclamped(closedPositionX, openPositionX, activeCurve.Evaluate(currentTime)),
-            anchoredYValue);
-
-        while ((direction > 0f && currentTime < endTime) || (direction < 0f && currentTime > endTime))
-        {
-            currentTime += Time.unscaledDeltaTime * direction;
-            currentTime = Mathf.Clamp(currentTime, 0f, duration);
-
-            float normalized = activeCurve.Evaluate(currentTime);
-            float lerpedX = Mathf.LerpUnclamped(closedPositionX, openPositionX, normalized);
-            rect.anchoredPosition = new Vector2(lerpedX, anchoredYValue);
-            yield return null;
-        }
-
-        rect.anchoredPosition = new Vector2(
-            Mathf.LerpUnclamped(closedPositionX, openPositionX, activeCurve.Evaluate(endTime)),
-            anchoredYValue);
-    }
-
-    private bool TryGetSlideParameters(AnimationCurve curve, out float duration)
-    {
-        duration = 0f;
-
-        if (curve == null)
-        {
-            return false;
-        }
-
-        int keyCount = curve.length;
-        if (keyCount == 0)
-        {
-            return false;
-        }
-
-        duration = curve.keys[keyCount - 1].time;
-        if (duration <= 0f)
-        {
-            return false;
-        }
-
-        return keyCount >= 2;
-    }
-
-    private float GetTimeForPosition(float positionX, float closedX, float openX, AnimationCurve curve, float duration)
-    {
-        if (curve == null)
-        {
-            return 0f;
-        }
-
-        int keyCount = curve.length;
-        if (keyCount == 0)
-        {
-            return 0f;
-        }
-
-        Keyframe[] keys = curve.keys;
-        if (keyCount == 1)
-        {
-            return keys[0].time;
-        }
-
-        float denominator = openX - closedX;
-        float normalized = denominator != 0f ? (positionX - closedX) / denominator : 0f;
-
-        for (int i = 0; i < keyCount - 1; i++)
-        {
-            float startValue = keys[i].value;
-            float endValue = keys[i + 1].value;
-
-            if (Mathf.Approximately(startValue, endValue))
-            {
-                if (Mathf.Approximately(normalized, startValue))
-                {
-                    return Mathf.Lerp(keys[i].time, keys[i + 1].time, 0.5f);
-                }
-                continue;
-            }
-
-            bool between = (normalized >= startValue && normalized <= endValue) ||
-                           (normalized <= startValue && normalized >= endValue);
-            if (between)
-            {
-                float segmentProgress = (normalized - startValue) / (endValue - startValue);
-                return Mathf.Lerp(keys[i].time, keys[i + 1].time, segmentProgress);
-            }
-        }
-
-        float startValueAtZero = curve.Evaluate(0f);
-        float endValueAtDuration = curve.Evaluate(duration);
-        return Mathf.Abs(normalized - startValueAtZero) <= Mathf.Abs(normalized - endValueAtDuration) ? 0f : duration;
     }
 
     public void CreateMilestones(int count)
