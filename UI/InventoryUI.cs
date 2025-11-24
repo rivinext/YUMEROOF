@@ -84,21 +84,7 @@ public class InventoryUI : MonoBehaviour
 
 
     [Header("Panel Animation")]
-    [SerializeField] private float closedPositionX = 0f;
-    [SerializeField] private float openPositionX = 0f;
-    [SerializeField] private float anchoredY = 0f;
-    [SerializeField] private float slideDuration = 1f;
-    [SerializeField]
-    private AnimationCurve slideInCurve = new AnimationCurve(
-        new Keyframe(0f, 0f, 0f, 2f),
-        new Keyframe(0.6f, 1.15f, 0f, 0f),
-        new Keyframe(1f, 1f, 0f, 0f));
-    [SerializeField]
-    private AnimationCurve slideOutCurve = new AnimationCurve(
-        new Keyframe(0f, 0f, 0f, 0.5f),
-        new Keyframe(0.5f, 0.85f, 0f, 0f),
-        new Keyframe(1f, 1f, 0f, 0f));
-    private InventoryPanelAnimator panelAnimator;
+    [SerializeField] private PanelScaleAnimator panelScaleAnimator;
 
 
     // マネージャー
@@ -204,9 +190,9 @@ public class InventoryUI : MonoBehaviour
             inventoryPanel.SetActive(true);
         }
 
-        // タブコンテナの初期位置をオフスクリーンへ移動
-        var animator = EnsurePanelAnimator();
-        animator?.SnapToInitialPosition();
+        // パネルをスケール0の初期状態に設定
+        EnsurePanelScaleAnimator();
+        panelScaleAnimator?.SnapClosed();
 
         // ボタン設定
         if (openButton != null)
@@ -256,47 +242,12 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    private CanvasGroup EnsureTabCanvasGroup()
+    private void EnsurePanelScaleAnimator()
     {
-        GameObject canvasGroupOwner = tabContentRoot != null ? tabContentRoot : tabContainer;
-        if (canvasGroupOwner == null)
+        if (panelScaleAnimator == null)
         {
-            return null;
+            panelScaleAnimator = GetComponent<PanelScaleAnimator>();
         }
-
-        CanvasGroup canvasGroup = canvasGroupOwner.GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-        {
-            canvasGroup = canvasGroupOwner.AddComponent<CanvasGroup>();
-        }
-
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
-
-        return canvasGroup;
-    }
-
-    private InventoryPanelAnimator EnsurePanelAnimator()
-    {
-        if (panelAnimator == null)
-        {
-            panelAnimator = GetComponent<InventoryPanelAnimator>();
-            if (panelAnimator == null)
-            {
-                panelAnimator = gameObject.AddComponent<InventoryPanelAnimator>();
-            }
-        }
-
-        RectTransform rectTransform = null;
-        if (tabContainer != null)
-        {
-            rectTransform = tabContainer.GetComponent<RectTransform>();
-        }
-
-        CanvasGroup canvasGroup = EnsureTabCanvasGroup();
-        panelAnimator.Initialize(rectTransform, canvasGroup, closedPositionX, openPositionX, anchoredY, slideDuration, slideInCurve, slideOutCurve);
-
-        return panelAnimator;
     }
 
     private void UpdateTabToggleVisuals(InventoryTabType targetType)
@@ -668,7 +619,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (isOpen) return;
 
-        var animator = EnsurePanelAnimator();
+        EnsurePanelScaleAnimator();
 
         isOpen = true;
         UIPanelExclusionManager.Instance?.NotifyOpened(this);
@@ -683,7 +634,7 @@ public class InventoryUI : MonoBehaviour
             tabContainer.SetActive(true);
         }
 
-        animator?.PlayOpen();
+        panelScaleAnimator?.Open();
         RefreshInventoryDisplay();
 
         DisablePlayerControl(true);
@@ -695,11 +646,11 @@ public class InventoryUI : MonoBehaviour
     {
         if (!isOpen) return;
 
-        var animator = EnsurePanelAnimator();
+        EnsurePanelScaleAnimator();
 
         isOpen = false;
 
-        animator?.PlayClose();
+        panelScaleAnimator?.Close();
         DisablePlayerControl(false);
         NotifyCameraController(false);
 
