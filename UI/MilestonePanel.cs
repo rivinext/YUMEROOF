@@ -9,6 +9,7 @@ public class MilestonePanel : MonoBehaviour
     [Header("UI References")]
     public GameObject panel;
     public Button toggleButton;
+    [SerializeField] private Button openButton;
 #if UNITY_EDITOR
     [SerializeField] private Button advanceButton;
 #endif
@@ -119,6 +120,11 @@ public class MilestonePanel : MonoBehaviour
         if (toggleButton != null)
         {
             toggleButton.onClick.AddListener(TogglePanel);
+        }
+
+        if (openButton != null)
+        {
+            openButton.onClick.AddListener(OpenPanel);
         }
 
 #if UNITY_EDITOR
