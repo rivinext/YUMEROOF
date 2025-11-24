@@ -45,6 +45,18 @@ public class PanelScaleAnimator : MonoBehaviour
         StartScaleRoutine(false);
     }
 
+    public void Toggle()
+    {
+        if (isOpen)
+        {
+            Close();
+        }
+        else
+        {
+            Open();
+        }
+    }
+
     private void StartScaleRoutine(bool opening)
     {
         if (target == null)
@@ -101,6 +113,25 @@ public class PanelScaleAnimator : MonoBehaviour
         if (target != null)
         {
             target.localScale = scale;
+        }
+    }
+
+    public void SnapOpen()
+    {
+        ApplyOpenScale();
+    }
+
+    public void SnapClosed()
+    {
+        ApplyClosedScale();
+    }
+
+    private void ApplyOpenScale()
+    {
+        if (target != null)
+        {
+            target.localScale = openedScale;
+            isOpen = true;
         }
     }
 

@@ -33,6 +33,7 @@ public class CameraControlPanel : MonoBehaviour
 
     [Header("Panel Controls")]
     [SerializeField] private Button toggleButton;
+    [SerializeField] private PanelScaleAnimator panelScaleAnimator;
     [SerializeField] private CameraControlPanelAnimator panelAnimator;
     [SerializeField] private bool startOpen = false;
 
@@ -67,6 +68,8 @@ public class CameraControlPanel : MonoBehaviour
         InitializeReferences();
         SceneManager.sceneLoaded += HandleSceneLoaded;
         EnsurePanelAnimatorReference();
+        EnsurePanelScaleAnimatorReference();
+        SyncPanelOpenState();
         RegisterControllerEventHandlers();
         RegisterCallbacks();
         RegisterPanelToggle();
@@ -110,20 +113,8 @@ public class CameraControlPanel : MonoBehaviour
     private void InitializePanelAnimator()
     {
         EnsurePanelAnimatorReference();
-
-        if (panelAnimator == null)
-        {
-            return;
-        }
-
-        if (startOpen)
-        {
-            panelAnimator.SnapOpen();
-        }
-        else
-        {
-            panelAnimator.SnapClosed();
-        }
+        EnsurePanelScaleAnimatorReference();
+        SyncPanelOpenState();
     }
 
     private void EnsurePanelAnimatorReference()
@@ -134,24 +125,69 @@ public class CameraControlPanel : MonoBehaviour
         }
     }
 
+    private void EnsurePanelScaleAnimatorReference()
+    {
+        if (panelScaleAnimator == null)
+        {
+            panelScaleAnimator = GetComponent<PanelScaleAnimator>();
+        }
+    }
+
+    private void SyncPanelOpenState()
+    {
+        if (panelScaleAnimator != null)
+        {
+            if (startOpen)
+            {
+                panelScaleAnimator.SnapOpen();
+            }
+            else
+            {
+                panelScaleAnimator.SnapClosed();
+            }
+        }
+
+        if (panelAnimator != null)
+        {
+            if (startOpen)
+            {
+                panelAnimator.SnapOpen();
+            }
+            else
+            {
+                panelAnimator.SnapClosed();
+            }
+        }
+    }
+
     private void RegisterPanelToggle()
     {
-        if (toggleButton == null || panelAnimator == null)
+        if (toggleButton == null || panelScaleAnimator == null)
         {
             return;
         }
 
-        toggleButton.onClick.AddListener(panelAnimator.TogglePanel);
+        toggleButton.onClick.AddListener(HandlePanelToggleClicked);
     }
 
     private void UnregisterPanelToggle()
     {
-        if (toggleButton == null || panelAnimator == null)
+        if (toggleButton == null)
         {
             return;
         }
 
-        toggleButton.onClick.RemoveListener(panelAnimator.TogglePanel);
+        toggleButton.onClick.RemoveListener(HandlePanelToggleClicked);
+    }
+
+    private void HandlePanelToggleClicked()
+    {
+        if (panelScaleAnimator == null)
+        {
+            return;
+        }
+
+        panelScaleAnimator.Toggle();
     }
 
     private void RegisterPresetButtons()
