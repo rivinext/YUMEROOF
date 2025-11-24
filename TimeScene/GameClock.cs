@@ -121,7 +121,7 @@ public class GameClock : MonoBehaviour
 
     /// <summary>
     /// Returns the current time as a string in 12-hour format rounded up to 5 minutes.
-    /// Day starts at 6:00 AM and ends at 8:00 PM.
+    /// Day starts at 6:00 am and ends at 8:00 pm.
     /// </summary>
     public string GetFormattedTime()
     {
@@ -130,7 +130,7 @@ public class GameClock : MonoBehaviour
         int hours = totalMinutes / 60;
         int minutes = totalMinutes % 60;
 
-        string ampm = hours >= 12 ? "PM" : "AM";
+        string ampm = hours >= 12 ? "pm" : "am";
         int displayHour = hours % 12;
         if (displayHour == 0) displayHour = 12;
 
