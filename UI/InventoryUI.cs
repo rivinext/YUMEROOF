@@ -637,7 +637,6 @@ public class InventoryUI : MonoBehaviour
         panelScaleAnimator?.Open();
         RefreshInventoryDisplay();
 
-        DisablePlayerControl(true);
         NotifyCameraController(true);
         SetSceneInteractionActive(false);
     }
@@ -651,22 +650,11 @@ public class InventoryUI : MonoBehaviour
         isOpen = false;
 
         panelScaleAnimator?.Close();
-        DisablePlayerControl(false);
         NotifyCameraController(false);
 
         if (!isPlacingItem)
         {
             SetSceneInteractionActive(true);
-        }
-    }
-
-    void DisablePlayerControl(bool disable)
-    {
-        var player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-        {
-            var controller = player.GetComponent<PlayerController>();
-            if (controller != null) controller.enabled = !disable;
         }
     }
 
