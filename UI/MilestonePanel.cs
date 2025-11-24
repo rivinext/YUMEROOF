@@ -168,6 +168,8 @@ public class MilestonePanel : MonoBehaviour
             return;
         }
 
+        EnsurePanelContentReference();
+
         if (panelContent != null)
         {
             panelScaleAnimator.SetTarget(panelContent);
@@ -178,6 +180,52 @@ public class MilestonePanel : MonoBehaviour
         }
 
         panelScaleAnimator.SnapClosed();
+    }
+
+    private void EnsurePanelContentReference()
+    {
+        if (panelContent != null)
+        {
+            return;
+        }
+
+        RectTransform discoveredContent = FindContentContainer();
+        if (discoveredContent != null)
+        {
+            panelContent = discoveredContent;
+        }
+    }
+
+    private RectTransform FindContentContainer()
+    {
+        RectTransform root = panel != null ? panel.GetComponent<RectTransform>() : GetComponent<RectTransform>();
+        if (root == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            RectTransform child = root.GetChild(i) as RectTransform;
+            if (child == null)
+            {
+                continue;
+            }
+
+            if (toggleButton != null && child == toggleButton.transform)
+            {
+                continue;
+            }
+
+            if (openButton != null && child == openButton.transform)
+            {
+                continue;
+            }
+
+            return child;
+        }
+
+        return null;
     }
 
     public bool IsOpen => isOpen;
