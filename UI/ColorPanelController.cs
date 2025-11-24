@@ -1,10 +1,12 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ColorPanelController : MonoBehaviour
 {
     [SerializeField] private PanelScaleAnimator panelAnimator;
     [SerializeField] private GameObject panelRoot;
+    [SerializeField] private Button openButton;
 
     private Coroutine closeRoutine;
     public bool IsOpen => panelAnimator != null && panelAnimator.IsOpen;
@@ -12,12 +14,14 @@ public class ColorPanelController : MonoBehaviour
     private void Awake()
     {
         RegisterWithExclusionManager();
+        RegisterOpenButton();
         SnapClosed();
     }
 
     private void OnEnable()
     {
         RegisterWithExclusionManager();
+        RegisterOpenButton();
         SnapClosed();
     }
 
@@ -28,6 +32,8 @@ public class ColorPanelController : MonoBehaviour
             StopCoroutine(closeRoutine);
             closeRoutine = null;
         }
+
+        UnregisterOpenButton();
     }
 
     public void OpenPanel()
@@ -138,5 +144,31 @@ public class ColorPanelController : MonoBehaviour
     private void RegisterWithExclusionManager()
     {
         UIPanelExclusionManager.Instance?.Register(this);
+    }
+
+    private void RegisterOpenButton()
+    {
+        if (openButton == null)
+        {
+            return;
+        }
+
+        openButton.onClick.RemoveListener(OnOpenButtonClicked);
+        openButton.onClick.AddListener(OnOpenButtonClicked);
+    }
+
+    private void UnregisterOpenButton()
+    {
+        if (openButton == null)
+        {
+            return;
+        }
+
+        openButton.onClick.RemoveListener(OnOpenButtonClicked);
+    }
+
+    private void OnOpenButtonClicked()
+    {
+        TogglePanel();
     }
 }
