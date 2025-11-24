@@ -34,8 +34,7 @@ public class CameraControlPanel : MonoBehaviour
     [Header("Panel Controls")]
     [SerializeField] private Button toggleButton;
     [SerializeField] private PanelScaleAnimator panelScaleAnimator;
-    [SerializeField] private RectTransform panelAnimatedBody;
-    [SerializeField] private RectTransform panelContent;
+    [SerializeField] private CameraControlPanelAnimator panelAnimator;
     [SerializeField] private bool startOpen = false;
 
     [Header("Preset Buttons")]
@@ -60,7 +59,7 @@ public class CameraControlPanel : MonoBehaviour
         InitializeReferences();
         ConfigureSliders();
         CacheDepthOfField();
-        InitializePanelScaleAnimator();
+        InitializePanelAnimator();
         InitializeScreenshotButton();
     }
 
@@ -68,8 +67,8 @@ public class CameraControlPanel : MonoBehaviour
     {
         InitializeReferences();
         SceneManager.sceneLoaded += HandleSceneLoaded;
+        EnsurePanelAnimatorReference();
         EnsurePanelScaleAnimatorReference();
-        AssignPanelScaleTarget();
         SyncPanelOpenState();
         RegisterControllerEventHandlers();
         RegisterCallbacks();
@@ -111,11 +110,19 @@ public class CameraControlPanel : MonoBehaviour
         }
     }
 
-    private void InitializePanelScaleAnimator()
+    private void InitializePanelAnimator()
     {
+        EnsurePanelAnimatorReference();
         EnsurePanelScaleAnimatorReference();
-        AssignPanelScaleTarget();
         SyncPanelOpenState();
+    }
+
+    private void EnsurePanelAnimatorReference()
+    {
+        if (panelAnimator == null)
+        {
+            panelAnimator = GetComponent<CameraControlPanelAnimator>();
+        }
     }
 
     private void EnsurePanelScaleAnimatorReference()
@@ -123,25 +130,6 @@ public class CameraControlPanel : MonoBehaviour
         if (panelScaleAnimator == null)
         {
             panelScaleAnimator = GetComponent<PanelScaleAnimator>();
-        }
-    }
-
-    private void AssignPanelScaleTarget()
-    {
-        if (panelScaleAnimator == null)
-        {
-            return;
-        }
-
-        RectTransform target = panelAnimatedBody != null ? panelAnimatedBody : panelContent;
-
-        if (target != null)
-        {
-            panelScaleAnimator.SetTarget(target);
-        }
-        else if (panelScaleAnimator.Target == null)
-        {
-            Debug.LogWarning("CameraControlPanel is missing a panel content target for PanelScaleAnimator. Assign a content container so toggle buttons stay outside the scaled transform.");
         }
     }
 
@@ -156,6 +144,18 @@ public class CameraControlPanel : MonoBehaviour
             else
             {
                 panelScaleAnimator.SnapClosed();
+            }
+        }
+
+        if (panelAnimator != null)
+        {
+            if (startOpen)
+            {
+                panelAnimator.SnapOpen();
+            }
+            else
+            {
+                panelAnimator.SnapClosed();
             }
         }
     }
