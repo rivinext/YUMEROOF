@@ -22,7 +22,7 @@ public class UIPanelExclusionManager : MonoBehaviour
     }
 
     [SerializeField] private SettingsPanelAnimator settingsPanel;
-    [SerializeField] private CameraControlPanelAnimator cameraControlPanel;
+    [SerializeField] private CameraControlPanel cameraControlPanel;
     [SerializeField] private MilestonePanel milestonePanel;
     [SerializeField] private InventoryUI inventoryPanel;
 
@@ -53,7 +53,7 @@ public class UIPanelExclusionManager : MonoBehaviour
         }
     }
 
-    public void Register(CameraControlPanelAnimator panel)
+    public void Register(CameraControlPanel panel)
     {
         if (panel != null)
         {
@@ -83,7 +83,7 @@ public class UIPanelExclusionManager : MonoBehaviour
         CloseOtherPanels(panel);
     }
 
-    public void NotifyOpened(CameraControlPanelAnimator panel)
+    public void NotifyOpened(CameraControlPanel panel)
     {
         Register(panel);
         CloseOtherPanels(panel);

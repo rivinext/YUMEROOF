@@ -60,6 +60,7 @@ public class CameraControlPanel : MonoBehaviour
         ConfigureSliders();
         CacheDepthOfField();
         InitializePanelAnimator();
+        UIPanelExclusionManager.Instance?.Register(this);
         InitializeScreenshotButton();
     }
 
@@ -187,7 +188,32 @@ public class CameraControlPanel : MonoBehaviour
             return;
         }
 
-        panelScaleAnimator.Toggle();
+        if (panelScaleAnimator.IsOpen)
+        {
+            ClosePanel();
+        }
+        else
+        {
+            OpenPanel();
+        }
+    }
+
+    public bool IsOpen => panelScaleAnimator != null && panelScaleAnimator.IsOpen;
+
+    public void OpenPanel()
+    {
+        if (panelScaleAnimator == null)
+        {
+            return;
+        }
+
+        UIPanelExclusionManager.Instance?.NotifyOpened(this);
+        panelScaleAnimator.Open();
+    }
+
+    public void ClosePanel()
+    {
+        panelScaleAnimator?.Close();
     }
 
     private void RegisterPresetButtons()
