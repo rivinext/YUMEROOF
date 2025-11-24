@@ -90,7 +90,14 @@ public class UIInteractionManager : MonoBehaviour
 
         bool isInside = bgRect.rect.Contains(localMousePosition);
 
-        return isInside;
+        if (!isInside)
+            return false;
+
+        // CanvasGroupのblocksRaycastsが有効か確認
+        if (!IsRaycastEnabled(backgroundImage.transform))
+            return false;
+
+        return true;
     }
 
     /// <summary>
@@ -113,13 +120,16 @@ public class UIInteractionManager : MonoBehaviour
 
             if (rect.rect.Contains(localMousePosition))
             {
-                #if UNITY_EDITOR
-                if (debugMode)
+                if (IsRaycastEnabled(rect.transform))
                 {
-                    Debug.Log($"[UIInteractionManager] Mouse over additional blocking area: {rect.name}");
+                    #if UNITY_EDITOR
+                    if (debugMode)
+                    {
+                        Debug.Log($"[UIInteractionManager] Mouse over additional blocking area: {rect.name}");
+                    }
+                    #endif
+                    return true;
                 }
-                #endif
-                return true;
             }
         }
 
@@ -170,6 +180,20 @@ public class UIInteractionManager : MonoBehaviour
         }
 
         return mainCamera;
+    }
+
+    private bool IsRaycastEnabled(Transform target)
+    {
+        var canvasGroups = target.GetComponentsInParent<CanvasGroup>(true);
+        foreach (var canvasGroup in canvasGroups)
+        {
+            if (!canvasGroup.blocksRaycasts)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
