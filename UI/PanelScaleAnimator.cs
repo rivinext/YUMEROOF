@@ -9,6 +9,7 @@ public class PanelScaleAnimator : MonoBehaviour
     [SerializeField] private float closeDuration = 0.2f;
     [SerializeField] private Vector3 closedScale = Vector3.zero;
     [SerializeField] private Vector3 openedScale = Vector3.one;
+    [SerializeField] private CanvasGroup canvasGroup;
 
     private Coroutine animationRoutine;
     private bool isOpen;
@@ -16,6 +17,7 @@ public class PanelScaleAnimator : MonoBehaviour
     private void Awake()
     {
         EnsureTarget();
+        EnsureCanvasGroup();
         ApplyClosedScale();
     }
 
@@ -64,6 +66,9 @@ public class PanelScaleAnimator : MonoBehaviour
             return;
         }
 
+        EnsureCanvasGroup();
+        ApplyCanvasGroupState(opening);
+
         if (animationRoutine != null)
         {
             StopCoroutine(animationRoutine);
@@ -82,6 +87,7 @@ public class PanelScaleAnimator : MonoBehaviour
         {
             ApplyScale(endScale);
             isOpen = opening;
+            ApplyCanvasGroupState(opening);
             animationRoutine = null;
             yield break;
         }
@@ -105,6 +111,7 @@ public class PanelScaleAnimator : MonoBehaviour
 
         ApplyScale(endScale);
         isOpen = opening;
+        ApplyCanvasGroupState(opening);
         animationRoutine = null;
     }
 
@@ -150,5 +157,34 @@ public class PanelScaleAnimator : MonoBehaviour
         {
             target = GetComponent<RectTransform>();
         }
+    }
+
+    private void EnsureCanvasGroup()
+    {
+        if (canvasGroup != null)
+        {
+            return;
+        }
+
+        if (target != null)
+        {
+            canvasGroup = target.GetComponent<CanvasGroup>();
+        }
+
+        if (canvasGroup == null)
+        {
+            canvasGroup = GetComponent<CanvasGroup>();
+        }
+    }
+
+    private void ApplyCanvasGroupState(bool opening)
+    {
+        if (canvasGroup == null)
+        {
+            return;
+        }
+
+        canvasGroup.interactable = opening;
+        canvasGroup.blocksRaycasts = opening;
     }
 }
