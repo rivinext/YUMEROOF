@@ -17,21 +17,13 @@ public class ShopConversationController : MonoBehaviour
     [Serializable]
     private struct DialogueLineReference
     {
-        [Tooltip("Localization table key used for CSV lookup and fallback dictionaries.")]
+        [Tooltip("Localization table key used for CSV lookup and localization table resolution.")]
         public string id;
-        [Tooltip("LocalizedString that can resolve directly without CSV/fallback lookup.")]
+        [Tooltip("LocalizedString that can resolve directly without CSV/lookup indirection.")]
         public LocalizedString localizedString;
 
         public bool HasKey => !string.IsNullOrEmpty(id);
         public bool HasLocalizedString => localizedString != null && !localizedString.IsEmpty;
-    }
-
-    [Serializable]
-    private struct DialogueFallbackEntry
-    {
-        public string id;
-        [TextArea]
-        public string text;
     }
 
     [Header("UI")]
@@ -46,19 +38,19 @@ public class ShopConversationController : MonoBehaviour
     [SerializeField] private Button exitButton;
 
     [Header("Conversation")]
+    [SerializeField, Tooltip("Localization table that stores the default shop conversation entries.")] private string defaultLocalizationTable = "ShopConversation";
     [SerializeField] private string dialogueCSVPath = "Data/ShopDialogue";
     [SerializeField, Tooltip("Optional TextAsset override for the dialogue CSV. If assigned, this is used instead of Resources.Load.")] private TextAsset dialogueCsvAsset;
-    [SerializeField, Tooltip("Ordered intro lines. Each entry can use a LocalizedString or a plain ID for CSV/fallback lookup.")] private List<DialogueLineReference> introLines = new()
+    [SerializeField, Tooltip("Ordered intro lines. Each entry can use a LocalizedString or a plain ID for CSV/localization table lookup.")] private List<DialogueLineReference> introLines = new()
     {
-        new DialogueLineReference { id = "greeting" },
-        new DialogueLineReference { id = "askPurpose" }
+        new DialogueLineReference { id = "greeting", localizedString = new LocalizedString("ShopConversation", "greeting") },
+        new DialogueLineReference { id = "askPurpose", localizedString = new LocalizedString("ShopConversation", "askPurpose") }
     };
-    [SerializeField, Tooltip("Line that should be redisplayed when returning from the shop or when toggling choices.")] private DialogueLineReference choiceTriggerLine = new() { id = "askPurpose" };
-    [SerializeField, Tooltip("Ordered exit lines. Each entry can use a LocalizedString or a plain ID for CSV/fallback lookup.")] private List<DialogueLineReference> exitLines = new()
+    [SerializeField, Tooltip("Line that should be redisplayed when returning from the shop or when toggling choices.")] private DialogueLineReference choiceTriggerLine = new() { id = "askPurpose", localizedString = new LocalizedString("ShopConversation", "askPurpose") };
+    [SerializeField, Tooltip("Ordered exit lines. Each entry can use a LocalizedString or a plain ID for CSV/localization table lookup.")] private List<DialogueLineReference> exitLines = new()
     {
-        new DialogueLineReference { id = "farewell" }
+        new DialogueLineReference { id = "farewell", localizedString = new LocalizedString("ShopConversation", "farewell") }
     };
-    [SerializeField, Tooltip("Optional explicit fallback localization to use when a key cannot be resolved from CSV or LocalizedString.")] private List<DialogueFallbackEntry> fallbackLocalization = new();
 
     [Header("Dependencies")]
     [SerializeField] private ShopUIManager shopUIManager;
@@ -469,9 +461,6 @@ public class ShopConversationController : MonoBehaviour
         fallbackLocalizedLines.Clear();
         localizationLoaded = true;
 
-        Locale locale = LocalizationSettings.SelectedLocale;
-        BuildFallbackLocalization(locale);
-
         TextAsset csv = dialogueCsvAsset;
         if (csv == null && !string.IsNullOrEmpty(dialogueCSVPath))
         {
@@ -480,24 +469,30 @@ public class ShopConversationController : MonoBehaviour
 
         if (csv == null)
         {
-            Debug.LogWarning("[ShopConversationController] Dialogue CSV not found. Using fallback localization.");
-            return;
+            Debug.LogWarning("[ShopConversationController] Dialogue CSV not found. Using localization tables for resolution.");
         }
-
-        string[] rows = csv.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-        if (rows.Length == 0)
-            return;
-
-        string[] header = ParseCsvLine(rows[0]);
-        int textColumnIndex = DetermineTextColumnIndex(header);
-        for (int i = 1; i < rows.Length; i++)
+        else
         {
-            string[] cells = ParseCsvLine(rows[i]);
-            if (cells.Length <= textColumnIndex || string.IsNullOrEmpty(cells[0]))
-                continue;
+            string[] rows = csv.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            if (rows.Length == 0)
+            {
+                BuildFallbackLocalization();
+                return;
+            }
 
-            localizedLines[cells[0]] = cells[textColumnIndex];
+            string[] header = ParseCsvLine(rows[0]);
+            int textColumnIndex = DetermineTextColumnIndex(header);
+            for (int i = 1; i < rows.Length; i++)
+            {
+                string[] cells = ParseCsvLine(rows[i]);
+                if (cells.Length <= textColumnIndex || string.IsNullOrEmpty(cells[0]))
+                    continue;
+
+                localizedLines[cells[0]] = cells[textColumnIndex];
+            }
         }
+
+        BuildFallbackLocalization();
     }
 
     private int DetermineTextColumnIndex(string[] header)
@@ -528,7 +523,7 @@ public class ShopConversationController : MonoBehaviour
         if (line.HasLocalizedString)
         {
             string localizedText = line.localizedString.GetLocalizedString();
-            if (!string.IsNullOrEmpty(localizedText))
+            if (!string.IsNullOrEmpty(localizedText) && (!line.HasKey || !string.Equals(localizedText, line.id, StringComparison.Ordinal)))
             {
                 return localizedText;
             }
@@ -553,52 +548,39 @@ public class ShopConversationController : MonoBehaviour
         return string.Empty;
     }
 
-    private void BuildFallbackLocalization(Locale locale)
+    private void BuildFallbackLocalization()
     {
         HashSet<string> requiredKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         AddKeysFromLines(requiredKeys, introLines);
         AddKeyIfPresent(requiredKeys, choiceTriggerLine);
         AddKeysFromLines(requiredKeys, exitLines);
-        AddKeysFromFallbackEntries(requiredKeys, fallbackLocalization);
 
-        Dictionary<string, string> baseFallback = GetFallbackLinesForLocale(locale);
         foreach (string key in requiredKeys)
         {
-            if (baseFallback.TryGetValue(key, out string text))
-            {
-                fallbackLocalizedLines[key] = text;
-            }
-        }
-
-        foreach (DialogueFallbackEntry entry in fallbackLocalization)
-        {
-            if (!string.IsNullOrEmpty(entry.id))
-            {
-                fallbackLocalizedLines[entry.id] = entry.text;
-            }
+            TryAddTableLocalization(key);
         }
     }
 
-    private Dictionary<string, string> GetFallbackLinesForLocale(Locale locale)
+    private void TryAddTableLocalization(string key)
     {
-        string localeCode = locale != null ? locale.Identifier.Code : string.Empty;
+        if (string.IsNullOrEmpty(key))
+            return;
 
-        if (!string.IsNullOrEmpty(localeCode) && localeCode.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(defaultLocalizationTable))
         {
-            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            LocalizedString localizedString = new LocalizedString(defaultLocalizationTable, key);
+            string localizedText = localizedString.GetLocalizedString();
+            if (!string.IsNullOrEmpty(localizedText) && !string.Equals(localizedText, key, StringComparison.Ordinal))
             {
-                { "greeting", "いらっしゃいませ。今日は何をお探しですか？" },
-                { "askPurpose", "購入と販売、どちらになさいますか？" },
-                { "farewell", "またのご来店をお待ちしています。" }
-            };
+                fallbackLocalizedLines[key] = localizedText;
+                return;
+            }
         }
 
-        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        if (localizedLines.TryGetValue(key, out string csvText))
         {
-            { "greeting", "Welcome! What can I help you find today?" },
-            { "askPurpose", "Are you here to buy or to sell?" },
-            { "farewell", "Thank you for stopping by. See you again soon!" }
-        };
+            fallbackLocalizedLines[key] = csvText;
+        }
     }
 
     private void HandleLocaleChanged(Locale locale)
@@ -718,20 +700,6 @@ public class ShopConversationController : MonoBehaviour
         }
     }
 
-    private void AddKeysFromFallbackEntries(HashSet<string> keys, IEnumerable<DialogueFallbackEntry> entries)
-    {
-        if (entries == null)
-            return;
-
-        foreach (DialogueFallbackEntry entry in entries)
-        {
-            if (!string.IsNullOrEmpty(entry.id))
-            {
-                keys.Add(entry.id);
-            }
-        }
-    }
-
     private void AddKeyIfPresent(HashSet<string> keys, DialogueLineReference line)
     {
         if (!string.IsNullOrEmpty(line.id))
@@ -757,7 +725,6 @@ public class ShopConversationController : MonoBehaviour
     {
         ValidateLines(introLines, "Intro line");
         ValidateLines(exitLines, "Exit line");
-        ValidateFallbackEntries();
 
         if (choiceTriggerLine.HasKey && HasDuplicateKey(choiceTriggerLine.id, introLines.Concat(exitLines)))
         {
@@ -776,11 +743,11 @@ public class ShopConversationController : MonoBehaviour
         {
             if (!line.HasKey && !line.HasLocalizedString)
             {
-                Debug.LogWarning($"[ShopConversationController] {labelPrefix} at index {index} has an empty key. CSV/fallback lookup will be skipped.", this);
+                Debug.LogWarning($"[ShopConversationController] {labelPrefix} at index {index} has an empty key. CSV/localization table lookup will be skipped.", this);
             }
             else if (line.HasKey && !seenKeys.Add(line.id))
             {
-                Debug.LogWarning($"[ShopConversationController] {labelPrefix} key '{line.id}' is duplicated. Only the first occurrence will be used for fallback lookup.", this);
+                Debug.LogWarning($"[ShopConversationController] {labelPrefix} key '{line.id}' is duplicated. Only the first occurrence will be used for localization lookup.", this);
             }
 
             index++;
@@ -793,25 +760,5 @@ public class ShopConversationController : MonoBehaviour
             return false;
 
         return lines.Any(line => line.HasKey && string.Equals(line.id, key, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void ValidateFallbackEntries()
-    {
-        if (fallbackLocalization == null)
-            return;
-
-        HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        for (int i = 0; i < fallbackLocalization.Count; i++)
-        {
-            DialogueFallbackEntry entry = fallbackLocalization[i];
-            if (string.IsNullOrEmpty(entry.id))
-            {
-                Debug.LogWarning($"[ShopConversationController] Fallback entry at index {i} has an empty key. It will be ignored.", this);
-            }
-            else if (!seen.Add(entry.id))
-            {
-                Debug.LogWarning($"[ShopConversationController] Fallback entry key '{entry.id}' is duplicated. Later entries are ignored.", this);
-            }
-        }
     }
 }
