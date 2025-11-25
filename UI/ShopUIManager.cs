@@ -34,7 +34,8 @@ public class ShopUIManager : MonoBehaviour
     public Button closeButton;            // Button to close the shop UI
 
     [Header("Description Panels")]
-    public GameObject furnitureDescriptionArea;
+    public GameObject purchaseDescriptionArea;
+    public GameObject sellDescriptionArea;
 
     [Header("Sell Tab Filters")]
     public Button sellRarityUpButton;
@@ -1155,9 +1156,11 @@ public class ShopUIManager : MonoBehaviour
 
     void UpdatePurchaseDescription(ShopItem item)
     {
+        var furniturePanel = GetPurchaseDescriptionPanel();
+
         if (item == null)
         {
-            ClearDescriptionPanels();
+            if (furniturePanel != null) furniturePanel.ClearDescription();
             return;
         }
 
@@ -1169,12 +1172,15 @@ public class ShopUIManager : MonoBehaviour
             invItem = new InventoryItem(InventoryItem.ItemType.Furniture, item.itemID, owned);
         }
 
-        UpdateDescriptionPanel(invItem);
+        if (furniturePanel != null)
+        {
+            furniturePanel.ShowFurnitureDetail(invItem);
+        }
     }
 
     void UpdateDescriptionPanel(InventoryItem item)
     {
-        var furniturePanel = GetFurnitureDescriptionPanel();
+        var furniturePanel = GetSellDescriptionPanel();
 
         if (item == null)
         {
@@ -1200,19 +1206,50 @@ public class ShopUIManager : MonoBehaviour
 
     void ClearDescriptionPanels()
     {
-        UpdateDescriptionPanel(null);
+        var purchasePanel = GetPurchaseDescriptionPanel();
+        if (purchasePanel != null)
+        {
+            purchasePanel.ClearDescription();
+        }
+
+        var sellPanel = GetSellDescriptionPanel();
+        if (sellPanel != null)
+        {
+            sellPanel.ClearDescription();
+        }
     }
 
-    FurnitureDescriptionPanel GetFurnitureDescriptionPanel()
+    FurnitureDescriptionPanel GetPurchaseDescriptionPanel()
     {
         FurnitureDescriptionPanel descPanel = null;
 
-        if (furnitureDescriptionArea != null)
+        if (purchaseDescriptionArea != null)
         {
-            descPanel = furnitureDescriptionArea.GetComponent<FurnitureDescriptionPanel>();
+            descPanel = purchaseDescriptionArea.GetComponent<FurnitureDescriptionPanel>();
             if (descPanel == null)
             {
-                descPanel = furnitureDescriptionArea.GetComponentInChildren<FurnitureDescriptionPanel>();
+                descPanel = purchaseDescriptionArea.GetComponentInChildren<FurnitureDescriptionPanel>();
+            }
+        }
+
+        if (descPanel == null)
+        {
+            descPanel = FindFirstObjectByType<FurnitureDescriptionPanel>();
+        }
+
+        return descPanel;
+    }
+
+    FurnitureDescriptionPanel GetSellDescriptionPanel()
+    {
+        FurnitureDescriptionPanel descPanel = null;
+
+        if (sellDescriptionArea != null)
+        {
+            descPanel = sellDescriptionArea.GetComponent<FurnitureDescriptionPanel>();
+            if (descPanel == null)
+            {
+                descPanel = sellDescriptionArea.GetComponentInChildren<FurnitureDescriptionPanel>();
             }
         }
 
