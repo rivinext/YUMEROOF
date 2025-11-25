@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Ensures that key UI panels remain mutually exclusive by closing the others
@@ -32,11 +33,23 @@ public class UIPanelExclusionManager : MonoBehaviour
     {
         if (instance != null && instance != this)
         {
-            Destroy(this);
+            Destroy(gameObject);
             return;
         }
 
         instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        RegisterScenePanels();
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void OnDestroy()
@@ -45,6 +58,11 @@ public class UIPanelExclusionManager : MonoBehaviour
         {
             instance = null;
         }
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        RegisterScenePanels();
     }
 
     public void Register(SettingsPanelAnimator panel)
@@ -93,6 +111,16 @@ public class UIPanelExclusionManager : MonoBehaviour
         {
             colorPanel = panel;
         }
+    }
+
+    private void RegisterScenePanels()
+    {
+        settingsPanel = FindAnyObjectByType<SettingsPanelAnimator>(FindObjectsInactive.Include);
+        cameraControlPanel = FindAnyObjectByType<CameraControlPanel>(FindObjectsInactive.Include);
+        milestonePanel = FindAnyObjectByType<MilestonePanel>(FindObjectsInactive.Include);
+        inventoryPanel = FindAnyObjectByType<InventoryUI>(FindObjectsInactive.Include);
+        wardrobePanel = FindAnyObjectByType<WardrobeUIController>(FindObjectsInactive.Include);
+        colorPanel = FindAnyObjectByType<ColorPanelController>(FindObjectsInactive.Include);
     }
 
     public void NotifyOpened(SettingsPanelAnimator panel)
