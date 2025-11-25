@@ -35,7 +35,6 @@ public class ShopUIManager : MonoBehaviour
 
     [Header("Description Panels")]
     public GameObject furnitureDescriptionArea;
-    public GameObject materialDescriptionArea;
 
     [Header("Sell Tab Filters")]
     public Button sellRarityUpButton;
@@ -539,26 +538,17 @@ public class ShopUIManager : MonoBehaviour
             }
         }
 
-        var materials = inventory.GetMaterialList(sellSortType, sellShowOnlyFavorites, sellSortAscending);
-        if (materials != null)
-        {
-            foreach (var item in materials)
-            {
-                if (!ShouldDisplayItem(item))
-                {
-                    continue;
-                }
-
-                items.Add(item);
-            }
-        }
-
         return items;
     }
 
     bool ShouldDisplayItem(InventoryItem item)
     {
         if (item == null)
+        {
+            return false;
+        }
+
+        if (item.itemType == InventoryItem.ItemType.Material)
         {
             return false;
         }
@@ -571,17 +561,6 @@ public class ShopUIManager : MonoBehaviour
             }
 
             return MatchesSellSearch(item);
-        }
-
-        if (item.itemType == InventoryItem.ItemType.Material)
-        {
-            if (sellShowOnlyFavorites && !item.isFavorite)
-            {
-                return false;
-            }
-
-            var data = InventoryManager.Instance?.GetMaterialData(item.itemID);
-            return data != null;
         }
 
         return false;
@@ -1196,12 +1175,10 @@ public class ShopUIManager : MonoBehaviour
     void UpdateDescriptionPanel(InventoryItem item)
     {
         var furniturePanel = GetFurnitureDescriptionPanel();
-        var materialPanel = GetMaterialDescriptionPanel();
 
         if (item == null)
         {
             if (furniturePanel != null) furniturePanel.ClearDescription();
-            if (materialPanel != null) materialPanel.ClearDescription();
             return;
         }
 
@@ -1211,17 +1188,9 @@ public class ShopUIManager : MonoBehaviour
             {
                 furniturePanel.ShowFurnitureDetail(item);
             }
-            if (materialPanel != null)
-            {
-                materialPanel.ClearDescription();
-            }
         }
-        else if (item.itemType == InventoryItem.ItemType.Material)
+        else
         {
-            if (materialPanel != null)
-            {
-                materialPanel.ShowMaterialDetail(item);
-            }
             if (furniturePanel != null)
             {
                 furniturePanel.ClearDescription();
@@ -1250,27 +1219,6 @@ public class ShopUIManager : MonoBehaviour
         if (descPanel == null)
         {
             descPanel = FindFirstObjectByType<FurnitureDescriptionPanel>();
-        }
-
-        return descPanel;
-    }
-
-    MaterialDescriptionPanel GetMaterialDescriptionPanel()
-    {
-        MaterialDescriptionPanel descPanel = null;
-
-        if (materialDescriptionArea != null)
-        {
-            descPanel = materialDescriptionArea.GetComponent<MaterialDescriptionPanel>();
-            if (descPanel == null)
-            {
-                descPanel = materialDescriptionArea.GetComponentInChildren<MaterialDescriptionPanel>();
-            }
-        }
-
-        if (descPanel == null)
-        {
-            descPanel = FindFirstObjectByType<MaterialDescriptionPanel>();
         }
 
         return descPanel;
