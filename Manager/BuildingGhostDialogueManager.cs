@@ -7,7 +7,7 @@ public class BuildingGhostDialogueManager : MonoBehaviour
 {
     public static BuildingGhostDialogueManager Instance { get; private set; }
 
-    [SerializeField] private string dialogueCSVPath = "Data/GhostDialogues";
+    [SerializeField] private string dialogueCSVPath = "Data/YUME_ROOF - GhostDialogues";
 
     private readonly List<DialogueDefinition> definitions = new List<DialogueDefinition>();
 
