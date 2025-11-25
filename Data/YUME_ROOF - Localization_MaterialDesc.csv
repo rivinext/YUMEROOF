@@ -1,0 +1,9 @@
+Key,Id,English(en),Japanese(ja),Chinese (Simplified)(zh-Hans),Chinese (Traditional)(zh-TW),French(fr),German(de),Italian(it),Portuguese(pt),Spanish(es)
+desc_branch,,Branchdesc,ただの木の枝,,,,,,,
+desc_steel,,Steeldesc,鋼材の破片,,,,,,,
+desc_leaf,,Leafdesc,葉っぱ,,,,,,,
+desc_paper,,Paperdesc,紙切れ,,,,,,,
+desc_brick,,Brickdesc,レンガ,,,,,,,
+desc_stone,,Stonedesc,いし,,,,,,,
+desc_plastic,,Plasticdesc,ぷら,,,,,,,
+desc_glass,,Glassdesc,ガラス片,,,,,,,

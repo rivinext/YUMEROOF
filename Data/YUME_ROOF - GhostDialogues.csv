@@ -1,0 +1,6 @@
+ID,Priority,Condition,Speaker1,Message1,Speaker2,Message2
+DefaultGreeting,0,,Building Ghost,Welcome back to the roof!,,
+MilestoneIntro,10,milestone_05,Building Ghost,Thanks for clearing the introduction!,Building Ghost,Let me know when you're ready for the next step.
+CozyLow,5,Cozy<30,Building Ghost,It's still a bit empty up here. Let's make it cozier!,,
+MoneyPlenty,6,Money>=1000,Building Ghost,Whoa! You're carrying quite a bit of money.,Building Ghost,Maybe it's time to invest in something nice?
+NatureFocus,4,Nature>=50,Building Ghost,The greenery is thriving—keep it up!,,

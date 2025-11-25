@@ -1,0 +1,9 @@
+MaterialID,NameID,MaterialName,Category,MaxStack,SellPrice,IconName,Rarity,DescriptionID,weatherAttribute,sourceItems,dropRates
+material_branch,name_branch,Branch,Material,99,10,icon_branch,Common,desc_branch,None,None,None
+material_steel,name_steel,Steel,Material,99,15,icon_steel,Common,desc_steel,None,None,None
+material_leaf,name_leaf,Leaf,Material,99,20,icon_leaf,Uncommon,desc_leaf,None,None,None
+material_paper,name_paper,Paper,Material,99,5,icon_paper,Common,desc_paper,None,None,None
+material_brick,name_brick,Brick,Material,99,25,icon_brick,Uncommon,desc_brick,None,None,None
+material_stone,name_stone,Stone,Material,99,50,icon_stone,Rare,desc_stone,None,None,None
+material_plastic,name_plastic,Plastic,Material,99,30,icon_plastic,Common,desc_plastic,None,None,None
+material_glass,name_glass,Glass,Material,99,30,icon_glass,Common,desc_glass,None,None,None

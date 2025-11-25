@@ -1,0 +1,7 @@
+HintID,TextID,TriggerType,TriggerParam,Category,Priority,Repeatable,Cooldown,OncePerDay,ValidTime,,
+hint_001,hint_text_001,GameStart,None,Tutorial,1,FALSE,0,FALSE,Any,,
+hint_002,hint_text_002,StatusCheck,Money < 50,Helper,2,TRUE,1d,FALSE,Any,Midnight,00:00-05:59
+hint_003,hint_text_003,TimeOfDay,Night,Chatter,5,TRUE,2h,FALSE,Any,Morning,06:00-11:59
+hint_004,hint_text_004,MilestoneClear,MilestoneID=3,Helper,1,TRUE,0,FALSE,Any,Afternoon,12:00-17:59
+hint_005,hint_text_005,StatusCheck,Cozy < 10,Helper,2,TRUE,3h,FALSE,Any,Night,18:00-23:59
+hint_006,hint_text_006,TimeOfDay,Any,Chatter,3,TRUE,0,FALSE,Any,Any,
