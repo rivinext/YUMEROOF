@@ -33,6 +33,7 @@ public class ShopConversationController : MonoBehaviour
     [Header("Dependencies")]
     [SerializeField] private ShopUIManager shopUIManager;
 
+    private readonly Dictionary<string, string> fallbackLocalizedLines = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> localizedLines = new(StringComparer.OrdinalIgnoreCase);
     private bool localizationLoaded;
     private int introLineIndex = -1;
@@ -436,18 +437,22 @@ public class ShopConversationController : MonoBehaviour
             return;
 
         localizedLines.Clear();
+        fallbackLocalizedLines.Clear();
         localizationLoaded = true;
+
+        Locale locale = LocalizationSettings.SelectedLocale;
+        BuildFallbackLocalization(locale);
 
         if (string.IsNullOrEmpty(dialogueCSVPath))
         {
-            Debug.LogWarning("[ShopConversationController] Dialogue CSV path is empty.");
+            Debug.Log("[ShopConversationController] Dialogue CSV path is empty. Using fallback localization only.");
             return;
         }
 
         TextAsset csv = Resources.Load<TextAsset>(dialogueCSVPath);
         if (csv == null)
         {
-            Debug.LogWarning($"[ShopConversationController] CSV not found at {dialogueCSVPath}");
+            Debug.LogWarning($"[ShopConversationController] CSV not found at {dialogueCSVPath}. Using fallback localization.");
             return;
         }
 
@@ -495,12 +500,79 @@ public class ShopConversationController : MonoBehaviour
         if (string.IsNullOrEmpty(id))
             return string.Empty;
 
+        if (fallbackLocalizedLines.TryGetValue(id, out string fallbackText))
+        {
+            return fallbackText;
+        }
+
         if (localizedLines.TryGetValue(id, out string text))
         {
             return text;
         }
 
         return id;
+    }
+
+    private void BuildFallbackLocalization(Locale locale)
+    {
+        HashSet<string> requiredKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (introLineIds != null)
+        {
+            foreach (string id in introLineIds)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    requiredKeys.Add(id);
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(choiceTriggerLineId))
+        {
+            requiredKeys.Add(choiceTriggerLineId);
+        }
+
+        if (exitLineIds != null)
+        {
+            foreach (string id in exitLineIds)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    requiredKeys.Add(id);
+                }
+            }
+        }
+
+        Dictionary<string, string> baseFallback = GetFallbackLinesForLocale(locale);
+        foreach (string key in requiredKeys)
+        {
+            if (baseFallback.TryGetValue(key, out string text))
+            {
+                fallbackLocalizedLines[key] = text;
+            }
+        }
+    }
+
+    private Dictionary<string, string> GetFallbackLinesForLocale(Locale locale)
+    {
+        string localeCode = locale != null ? locale.Identifier.Code : string.Empty;
+
+        if (!string.IsNullOrEmpty(localeCode) && localeCode.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "greeting", "いらっしゃいませ。今日は何をお探しですか？" },
+                { "askPurpose", "購入と販売、どちらになさいますか？" },
+                { "farewell", "またのご来店をお待ちしています。" }
+            };
+        }
+
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "greeting", "Welcome! What can I help you find today?" },
+            { "askPurpose", "Are you here to buy or to sell?" },
+            { "farewell", "Thank you for stopping by. See you again soon!" }
+        };
     }
 
     private void HandleLocaleChanged(Locale locale)
