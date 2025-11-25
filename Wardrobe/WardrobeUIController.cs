@@ -32,6 +32,10 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private WardrobeCatalog wardrobeCatalog;
     [SerializeField] private WardrobeItemView wardrobeItemViewPrefab;
     [SerializeField] private TMP_Text descriptionText;
+    [SerializeField] private AudioClip toggleButtonClip;
+    [SerializeField] private AudioClip closeButtonClip;
+    [SerializeField] private AudioSource toggleButtonAudioSource;
+    [SerializeField] private AudioSource closeButtonAudioSource;
 
     private const string SelectionKeyPrefix = "WardrobeSelection_";
     private const string EmptySelectionToken = "__EMPTY__";
@@ -308,11 +312,14 @@ public class WardrobeUIController : MonoBehaviour
 
     private void OnCloseButtonClicked()
     {
+        PlayButtonSfx(closeButtonClip, closeButtonAudioSource);
         HidePanel();
     }
 
     public void TogglePanel()
     {
+        PlayButtonSfx(toggleButtonClip, toggleButtonAudioSource);
+
         if (panelAnimator != null)
         {
             if (panelAnimator.IsShown)
@@ -330,6 +337,27 @@ public class WardrobeUIController : MonoBehaviour
             panelRoot.SetActive(activate);
             UpdatePreviewActivation(activate);
         }
+    }
+
+    private void PlayButtonSfx(AudioClip clip, AudioSource preferredSource)
+    {
+        if (clip == null)
+        {
+            return;
+        }
+
+        AudioSource source = preferredSource;
+        if (source == null)
+        {
+            source = toggleButtonAudioSource;
+        }
+
+        if (source == null)
+        {
+            return;
+        }
+
+        source.PlayOneShot(clip, AudioManager.CurrentSfxVolume);
     }
 
     public void Equip(WardrobeTabType category, GameObject prefab)
