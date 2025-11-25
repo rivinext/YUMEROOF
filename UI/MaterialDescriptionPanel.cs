@@ -14,6 +14,8 @@ public class MaterialDescriptionPanel : MonoBehaviour
     public TMP_Text descriptionText;     // 説明文
     public Image rarityCornerMark;       // レアリティコーナーマーク
 
+    private const string PlaceholderText = "情報なし";
+
     [Header("Rarity Sprites")]
     public Sprite commonSprite;
     public Sprite uncommonSprite;
@@ -22,6 +24,7 @@ public class MaterialDescriptionPanel : MonoBehaviour
     // 現在表示中の素材
     private InventoryItem currentMaterialItem;
     private MaterialDataSO currentMaterialDataSO;
+    private bool missingMaterialDataLogged;
 
     void Start()
     {
@@ -45,33 +48,55 @@ public class MaterialDescriptionPanel : MonoBehaviour
         // MaterialDataSOを取得
         currentMaterialDataSO = FurnitureDataManager.Instance?.GetMaterialDataSO(item.itemID);
 
+        // インベントリからのフォールバックデータ
+        MaterialData fallbackMaterialData = null;
+
         if (currentMaterialDataSO == null)
         {
-            Debug.LogWarning($"MaterialDataSO not found for ID: {item.itemID}");
-            ClearDescription();
-            return;
+            if (!missingMaterialDataLogged)
+            {
+                Debug.LogWarning($"MaterialDataSO not found for ID: {item.itemID}");
+                missingMaterialDataLogged = true;
+            }
+
+            fallbackMaterialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
         }
 
-        // 基本情報の表示
-        UpdateBasicInfo();
+        // 基本情報の表示（フォールバックを考慮）
+        UpdateBasicInfo(fallbackMaterialData);
     }
 
     /// <summary>
     /// 基本情報を更新
     /// </summary>
-    private void UpdateBasicInfo()
+    private void UpdateBasicInfo(MaterialData fallbackMaterialData = null)
     {
+        string fallbackName = fallbackMaterialData?.materialName
+            ?? currentMaterialDataSO?.materialName
+            ?? currentMaterialItem?.itemID
+            ?? PlaceholderText;
+        string fallbackDescription = PlaceholderText;
+
         // アイテム名
         if (itemNameText != null)
-            itemNameText.text = LocalizationSettings.StringDatabase.GetLocalizedString("MaterialNames", currentMaterialDataSO.nameID);
+            itemNameText.text = GetLocalizedOrPlaceholder("MaterialNames", currentMaterialDataSO?.nameID ?? fallbackMaterialData?.nameID, fallbackName);
 
         // 説明文
         if (descriptionText != null)
-            descriptionText.text = LocalizationSettings.StringDatabase.GetLocalizedString("MaterialDesc", currentMaterialDataSO.descriptionID);
+            descriptionText.text = GetLocalizedOrPlaceholder("MaterialDesc", currentMaterialDataSO?.descriptionID ?? fallbackMaterialData?.descriptionID, fallbackDescription);
 
         // レアリティ表示
         if (rarityCornerMark != null)
-            UpdateRarityIndicator(currentMaterialDataSO.rarity);
+        {
+            if (currentMaterialDataSO != null)
+            {
+                UpdateRarityIndicator(currentMaterialDataSO.rarity);
+            }
+            else
+            {
+                rarityCornerMark.gameObject.SetActive(false);
+            }
+        }
     }
 
     /// <summary>
@@ -115,6 +140,37 @@ public class MaterialDescriptionPanel : MonoBehaviour
 
         // 実際にはローカライゼーションテーブルから取得
         return descriptionID;
+    }
+
+    /// <summary>
+    /// ローカライズ文字列を取得し、失敗時はフォールバックを返す
+    /// </summary>
+    private string GetLocalizedOrPlaceholder(string table, string entryKey, string fallback)
+    {
+        string localized = null;
+
+        if (!string.IsNullOrEmpty(entryKey))
+        {
+            try
+            {
+                localized = LocalizationSettings.StringDatabase.GetLocalizedString(table, entryKey);
+            }
+            catch (System.Exception ex)
+            {
+                if (!missingMaterialDataLogged)
+                {
+                    Debug.LogWarning($"Localization lookup failed for key: {entryKey} ({ex.Message})");
+                    missingMaterialDataLogged = true;
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(localized) || localized == entryKey)
+        {
+            return string.IsNullOrWhiteSpace(fallback) ? PlaceholderText : fallback;
+        }
+
+        return localized;
     }
 
     /// <summary>
