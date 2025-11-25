@@ -45,6 +45,7 @@ public class UIPanelExclusionManager : MonoBehaviour
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
         RegisterScenePanels();
+        CloseAllRegisteredPanels();
     }
 
     private void OnDisable()
@@ -63,6 +64,7 @@ public class UIPanelExclusionManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         RegisterScenePanels();
+        CloseAllRegisteredPanels();
     }
 
     public void Register(SettingsPanelAnimator panel)
@@ -187,6 +189,39 @@ public class UIPanelExclusionManager : MonoBehaviour
         }
 
         if (colorPanel != null && openedPanel != colorPanel && colorPanel.IsOpen)
+        {
+            colorPanel.ClosePanel();
+        }
+    }
+
+    private void CloseAllRegisteredPanels()
+    {
+        if (settingsPanel != null)
+        {
+            settingsPanel.ClosePanel();
+        }
+
+        if (cameraControlPanel != null)
+        {
+            cameraControlPanel.ClosePanel();
+        }
+
+        if (milestonePanel != null)
+        {
+            milestonePanel.ClosePanel();
+        }
+
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.CloseInventory();
+        }
+
+        if (wardrobePanel != null)
+        {
+            wardrobePanel.HidePanel();
+        }
+
+        if (colorPanel != null)
         {
             colorPanel.ClosePanel();
         }
