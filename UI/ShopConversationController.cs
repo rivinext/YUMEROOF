@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Localization;
@@ -13,6 +14,26 @@ using UnityEngine.UI;
 /// </summary>
 public class ShopConversationController : MonoBehaviour
 {
+    [Serializable]
+    private struct DialogueLineReference
+    {
+        [Tooltip("Localization table key used for CSV lookup and fallback dictionaries.")]
+        public string id;
+        [Tooltip("LocalizedString that can resolve directly without CSV/fallback lookup.")]
+        public LocalizedString localizedString;
+
+        public bool HasKey => !string.IsNullOrEmpty(id);
+        public bool HasLocalizedString => localizedString != null && !localizedString.IsEmpty;
+    }
+
+    [Serializable]
+    private struct DialogueFallbackEntry
+    {
+        public string id;
+        [TextArea]
+        public string text;
+    }
+
     [Header("UI")]
     [SerializeField] private InteractionSlidePanel conversationPanel;
     [SerializeField] private TextMeshProUGUI speakerLabel;
@@ -26,9 +47,18 @@ public class ShopConversationController : MonoBehaviour
 
     [Header("Conversation")]
     [SerializeField] private string dialogueCSVPath = "Data/ShopDialogue";
-    [SerializeField] private List<string> introLineIds = new() { "greeting", "askPurpose" };
-    [SerializeField] private string choiceTriggerLineId = "askPurpose";
-    [SerializeField] private List<string> exitLineIds = new() { "farewell" };
+    [SerializeField, Tooltip("Optional TextAsset override for the dialogue CSV. If assigned, this is used instead of Resources.Load.")] private TextAsset dialogueCsvAsset;
+    [SerializeField, Tooltip("Ordered intro lines. Each entry can use a LocalizedString or a plain ID for CSV/fallback lookup.")] private List<DialogueLineReference> introLines = new()
+    {
+        new DialogueLineReference { id = "greeting" },
+        new DialogueLineReference { id = "askPurpose" }
+    };
+    [SerializeField, Tooltip("Line that should be redisplayed when returning from the shop or when toggling choices.")] private DialogueLineReference choiceTriggerLine = new() { id = "askPurpose" };
+    [SerializeField, Tooltip("Ordered exit lines. Each entry can use a LocalizedString or a plain ID for CSV/fallback lookup.")] private List<DialogueLineReference> exitLines = new()
+    {
+        new DialogueLineReference { id = "farewell" }
+    };
+    [SerializeField, Tooltip("Optional explicit fallback localization to use when a key cannot be resolved from CSV or LocalizedString.")] private List<DialogueFallbackEntry> fallbackLocalization = new();
 
     [Header("Dependencies")]
     [SerializeField] private ShopUIManager shopUIManager;
@@ -42,7 +72,8 @@ public class ShopConversationController : MonoBehaviour
     private bool exitSequenceActive;
     private bool shopPanelOpen;
     private bool conversationActive;
-    private string activeLineId;
+    private DialogueLineReference activeLine;
+    private bool activeLineAssigned;
 
     /// <summary>
     /// True when the conversation overlay is currently open.
@@ -131,13 +162,14 @@ public class ShopConversationController : MonoBehaviour
         shopPanelOpen = false;
         introLineIndex = -1;
         exitLineIndex = -1;
-        activeLineId = null;
+        activeLineAssigned = false;
+        activeLine = default;
         ResetChoiceToggles();
         PlayerController.SetGlobalInputEnabled(false);
         SetBackgroundDimmer(true);
         conversationPanel?.SlideIn();
 
-        if (introLineIds != null && introLineIds.Count > 0)
+        if (introLines != null && introLines.Count > 0)
         {
             DisplayIntroLineAt(0);
         }
@@ -149,13 +181,13 @@ public class ShopConversationController : MonoBehaviour
 
     private void AdvanceIntroSequence()
     {
-        if (introLineIds == null || introLineIds.Count == 0)
+        if (introLines == null || introLines.Count == 0)
         {
             EnterChoiceState();
             return;
         }
 
-        int nextIndex = Mathf.Min(introLineIndex + 1, introLineIds.Count - 1);
+        int nextIndex = Mathf.Min(introLineIndex + 1, introLines.Count - 1);
         if (nextIndex == introLineIndex)
         {
             EnterChoiceState();
@@ -170,14 +202,14 @@ public class ShopConversationController : MonoBehaviour
         if (!exitSequenceActive)
             return;
 
-        if (exitLineIds == null || exitLineIds.Count == 0)
+        if (exitLines == null || exitLines.Count == 0)
         {
             EndConversation();
             return;
         }
 
         int nextIndex = exitLineIndex + 1;
-        if (nextIndex >= exitLineIds.Count)
+        if (nextIndex >= exitLines.Count)
         {
             EndConversation();
         }
@@ -189,16 +221,15 @@ public class ShopConversationController : MonoBehaviour
 
     private void DisplayIntroLineAt(int index)
     {
-        if (introLineIds == null || index < 0 || index >= introLineIds.Count)
+        if (introLines == null || index < 0 || index >= introLines.Count)
             return;
 
         introLineIndex = index;
-        string id = introLineIds[index];
-        ShowLine(id);
+        DialogueLineReference line = introLines[index];
+        ShowLine(line);
 
-        bool isChoiceTrigger = !string.IsNullOrEmpty(choiceTriggerLineId) &&
-                               string.Equals(id, choiceTriggerLineId, StringComparison.OrdinalIgnoreCase);
-        bool isLastLine = introLineIndex >= introLineIds.Count - 1;
+        bool isChoiceTrigger = IsChoiceTrigger(line);
+        bool isLastLine = introLineIndex >= introLines.Count - 1;
         if ((isChoiceTrigger || isLastLine) && !awaitingChoice)
         {
             EnterChoiceState();
@@ -207,18 +238,19 @@ public class ShopConversationController : MonoBehaviour
 
     private void DisplayExitLineAt(int index)
     {
-        if (exitLineIds == null || index < 0 || index >= exitLineIds.Count)
+        if (exitLines == null || index < 0 || index >= exitLines.Count)
             return;
 
         exitLineIndex = index;
-        string id = exitLineIds[index];
-        ShowLine(id);
+        DialogueLineReference line = exitLines[index];
+        ShowLine(line);
     }
 
-    private void ShowLine(string id)
+    private void ShowLine(DialogueLineReference line)
     {
-        activeLineId = id;
-        string lineText = GetLocalizedLine(id);
+        activeLine = line;
+        activeLineAssigned = true;
+        string lineText = GetLocalizedLine(line);
         if (dialogueLabel != null)
         {
             dialogueLabel.text = lineText;
@@ -271,7 +303,7 @@ public class ShopConversationController : MonoBehaviour
             return;
 
         awaitingChoice = false;
-        exitSequenceActive = exitLineIds != null && exitLineIds.Count > 0;
+        exitSequenceActive = exitLines != null && exitLines.Count > 0;
         UpdateChoiceButtonsVisibility();
 
         if (exitSequenceActive)
@@ -293,10 +325,7 @@ public class ShopConversationController : MonoBehaviour
         if (!exitSequenceActive)
         {
             awaitingChoice = true;
-            if (!string.IsNullOrEmpty(choiceTriggerLineId))
-            {
-                ShowLine(choiceTriggerLineId);
-            }
+            ShowLine(choiceTriggerLine);
         }
         UpdateChoiceButtonsVisibility();
     }
@@ -319,7 +348,7 @@ public class ShopConversationController : MonoBehaviour
         awaitingChoice = false;
         exitSequenceActive = false;
         shopPanelOpen = false;
-        activeLineId = null;
+        activeLineAssigned = false;
         UpdateChoiceButtonsVisibility();
 
         if (shopUIManager != null && shopUIManager.IsOpen)
@@ -443,16 +472,15 @@ public class ShopConversationController : MonoBehaviour
         Locale locale = LocalizationSettings.SelectedLocale;
         BuildFallbackLocalization(locale);
 
-        if (string.IsNullOrEmpty(dialogueCSVPath))
+        TextAsset csv = dialogueCsvAsset;
+        if (csv == null && !string.IsNullOrEmpty(dialogueCSVPath))
         {
-            Debug.Log("[ShopConversationController] Dialogue CSV path is empty. Using fallback localization only.");
-            return;
+            csv = Resources.Load<TextAsset>(dialogueCSVPath);
         }
 
-        TextAsset csv = Resources.Load<TextAsset>(dialogueCSVPath);
         if (csv == null)
         {
-            Debug.LogWarning($"[ShopConversationController] CSV not found at {dialogueCSVPath}. Using fallback localization.");
+            Debug.LogWarning("[ShopConversationController] Dialogue CSV not found. Using fallback localization.");
             return;
         }
 
@@ -495,53 +523,43 @@ public class ShopConversationController : MonoBehaviour
         return 1;
     }
 
-    private string GetLocalizedLine(string id)
+    private string GetLocalizedLine(DialogueLineReference line)
     {
-        if (string.IsNullOrEmpty(id))
-            return string.Empty;
-
-        if (fallbackLocalizedLines.TryGetValue(id, out string fallbackText))
+        if (line.HasLocalizedString)
         {
-            return fallbackText;
+            string localizedText = line.localizedString.GetLocalizedString();
+            if (!string.IsNullOrEmpty(localizedText))
+            {
+                return localizedText;
+            }
         }
 
-        if (localizedLines.TryGetValue(id, out string text))
+        if (line.HasKey)
         {
-            return text;
+            string id = line.id;
+            if (fallbackLocalizedLines.TryGetValue(id, out string fallbackText))
+            {
+                return fallbackText;
+            }
+
+            if (localizedLines.TryGetValue(id, out string text))
+            {
+                return text;
+            }
+
+            return id;
         }
 
-        return id;
+        return string.Empty;
     }
 
     private void BuildFallbackLocalization(Locale locale)
     {
         HashSet<string> requiredKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (introLineIds != null)
-        {
-            foreach (string id in introLineIds)
-            {
-                if (!string.IsNullOrEmpty(id))
-                {
-                    requiredKeys.Add(id);
-                }
-            }
-        }
-
-        if (!string.IsNullOrEmpty(choiceTriggerLineId))
-        {
-            requiredKeys.Add(choiceTriggerLineId);
-        }
-
-        if (exitLineIds != null)
-        {
-            foreach (string id in exitLineIds)
-            {
-                if (!string.IsNullOrEmpty(id))
-                {
-                    requiredKeys.Add(id);
-                }
-            }
-        }
+        AddKeysFromLines(requiredKeys, introLines);
+        AddKeyIfPresent(requiredKeys, choiceTriggerLine);
+        AddKeysFromLines(requiredKeys, exitLines);
+        AddKeysFromFallbackEntries(requiredKeys, fallbackLocalization);
 
         Dictionary<string, string> baseFallback = GetFallbackLinesForLocale(locale);
         foreach (string key in requiredKeys)
@@ -549,6 +567,14 @@ public class ShopConversationController : MonoBehaviour
             if (baseFallback.TryGetValue(key, out string text))
             {
                 fallbackLocalizedLines[key] = text;
+            }
+        }
+
+        foreach (DialogueFallbackEntry entry in fallbackLocalization)
+        {
+            if (!string.IsNullOrEmpty(entry.id))
+            {
+                fallbackLocalizedLines[entry.id] = entry.text;
             }
         }
     }
@@ -580,9 +606,37 @@ public class ShopConversationController : MonoBehaviour
         localizationLoaded = false;
         LoadLocalizationIfNeeded();
 
-        if (!string.IsNullOrEmpty(activeLineId))
+        RefreshLocalizedStrings();
+
+        if (activeLineAssigned)
         {
-            ShowLine(activeLineId);
+            ShowLine(activeLine);
+        }
+    }
+
+    private void RefreshLocalizedStrings()
+    {
+        RefreshLocalizedString(choiceTriggerLine.localizedString);
+        RefreshLocalizedStringCollection(introLines);
+        RefreshLocalizedStringCollection(exitLines);
+    }
+
+    private void RefreshLocalizedString(LocalizedString localizedString)
+    {
+        if (localizedString != null && !localizedString.IsEmpty)
+        {
+            localizedString.RefreshString();
+        }
+    }
+
+    private void RefreshLocalizedStringCollection(IEnumerable<DialogueLineReference> lines)
+    {
+        if (lines == null)
+            return;
+
+        foreach (DialogueLineReference line in lines)
+        {
+            RefreshLocalizedString(line.localizedString);
         }
     }
 
@@ -650,6 +704,114 @@ public class ShopConversationController : MonoBehaviour
         if (shopUIManager == null)
         {
             shopUIManager = FindFirstObjectByType<ShopUIManager>();
+        }
+    }
+
+    private void AddKeysFromLines(HashSet<string> keys, IEnumerable<DialogueLineReference> lines)
+    {
+        if (lines == null)
+            return;
+
+        foreach (DialogueLineReference line in lines)
+        {
+            AddKeyIfPresent(keys, line);
+        }
+    }
+
+    private void AddKeysFromFallbackEntries(HashSet<string> keys, IEnumerable<DialogueFallbackEntry> entries)
+    {
+        if (entries == null)
+            return;
+
+        foreach (DialogueFallbackEntry entry in entries)
+        {
+            if (!string.IsNullOrEmpty(entry.id))
+            {
+                keys.Add(entry.id);
+            }
+        }
+    }
+
+    private void AddKeyIfPresent(HashSet<string> keys, DialogueLineReference line)
+    {
+        if (!string.IsNullOrEmpty(line.id))
+        {
+            keys.Add(line.id);
+        }
+    }
+
+    private bool IsChoiceTrigger(DialogueLineReference line)
+    {
+        if (!choiceTriggerLine.HasKey || !line.HasKey)
+            return false;
+
+        return string.Equals(choiceTriggerLine.id, line.id, StringComparison.OrdinalIgnoreCase);
+    }
+
+    void OnValidate()
+    {
+        ValidateDialogueKeys();
+    }
+
+    private void ValidateDialogueKeys()
+    {
+        ValidateLines(introLines, "Intro line");
+        ValidateLines(exitLines, "Exit line");
+        ValidateFallbackEntries();
+
+        if (choiceTriggerLine.HasKey && HasDuplicateKey(choiceTriggerLine.id, introLines.Concat(exitLines)))
+        {
+            Debug.LogWarning("[ShopConversationController] Choice trigger key duplicates another line. Verify the intended flow.", this);
+        }
+    }
+
+    private void ValidateLines(IEnumerable<DialogueLineReference> lines, string labelPrefix)
+    {
+        if (lines == null)
+            return;
+
+        HashSet<string> seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int index = 0;
+        foreach (DialogueLineReference line in lines)
+        {
+            if (!line.HasKey && !line.HasLocalizedString)
+            {
+                Debug.LogWarning($"[ShopConversationController] {labelPrefix} at index {index} has an empty key. CSV/fallback lookup will be skipped.", this);
+            }
+            else if (line.HasKey && !seenKeys.Add(line.id))
+            {
+                Debug.LogWarning($"[ShopConversationController] {labelPrefix} key '{line.id}' is duplicated. Only the first occurrence will be used for fallback lookup.", this);
+            }
+
+            index++;
+        }
+    }
+
+    private bool HasDuplicateKey(string key, IEnumerable<DialogueLineReference> lines)
+    {
+        if (string.IsNullOrEmpty(key) || lines == null)
+            return false;
+
+        return lines.Any(line => line.HasKey && string.Equals(line.id, key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ValidateFallbackEntries()
+    {
+        if (fallbackLocalization == null)
+            return;
+
+        HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < fallbackLocalization.Count; i++)
+        {
+            DialogueFallbackEntry entry = fallbackLocalization[i];
+            if (string.IsNullOrEmpty(entry.id))
+            {
+                Debug.LogWarning($"[ShopConversationController] Fallback entry at index {i} has an empty key. It will be ignored.", this);
+            }
+            else if (!seen.Add(entry.id))
+            {
+                Debug.LogWarning($"[ShopConversationController] Fallback entry key '{entry.id}' is duplicated. Later entries are ignored.", this);
+            }
         }
     }
 }
