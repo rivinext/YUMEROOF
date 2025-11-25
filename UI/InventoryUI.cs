@@ -78,6 +78,12 @@ public class InventoryUI : MonoBehaviour
     public Toggle favoriteToggle;
     public Button craftButton;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip craftButtonSfx;
+    [SerializeField] private AudioSource craftButtonAudioSource;
+    [SerializeField, Range(0f, 1f)] private float craftButtonSfxVolume = 1f;
+    [SerializeField] private bool autoCreateAudioSource = true;
+
 
     [Header("Auto Reopen")]
     public Toggle autoReopenToggle;
@@ -103,6 +109,7 @@ public class InventoryUI : MonoBehaviour
     private string searchQuery = "";
     private InventoryItem selectedFurnitureItem;
     private bool autoReopenEnabled = false;
+    private float currentSfxVolume = 1f;
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
 
@@ -140,6 +147,17 @@ public class InventoryUI : MonoBehaviour
 
         CacheSceneInteractionComponents();
         UpdateAutoReopenVisual();
+    }
+
+    void OnEnable()
+    {
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    void OnDisable()
+    {
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     void InitializeTabState()
@@ -338,6 +356,7 @@ public class InventoryUI : MonoBehaviour
             craftButton.onClick.AddListener(() =>
             {
                 if (debugMode) Debug.Log("=== CRAFT BUTTON CLICKED ===");
+                PlayCraftButtonSfx();
                 CraftSelectedItem();
             });
 
@@ -345,6 +364,60 @@ public class InventoryUI : MonoBehaviour
 
             if (debugMode) Debug.Log("Craft button setup complete");
         }
+
+        EnsureCraftButtonAudioSource();
+    }
+
+    void EnsureCraftButtonAudioSource()
+    {
+        if (craftButtonAudioSource == null && autoCreateAudioSource)
+        {
+            craftButtonAudioSource = GetComponent<AudioSource>();
+            if (craftButtonAudioSource == null)
+            {
+                craftButtonAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (craftButtonAudioSource != null)
+        {
+            craftButtonAudioSource.playOnAwake = false;
+            craftButtonAudioSource.loop = false;
+            craftButtonAudioSource.spatialBlend = 0f;
+            UpdateCraftButtonAudioSourceVolume();
+        }
+    }
+
+    void HandleSfxVolumeChanged(float value)
+    {
+        currentSfxVolume = Mathf.Clamp01(value);
+        UpdateCraftButtonAudioSourceVolume();
+    }
+
+    void UpdateCraftButtonAudioSourceVolume()
+    {
+        if (craftButtonAudioSource != null)
+        {
+            craftButtonAudioSource.volume = currentSfxVolume;
+        }
+    }
+
+    void PlayCraftButtonSfx()
+    {
+        if (craftButtonSfx == null)
+        {
+            return;
+        }
+
+        EnsureCraftButtonAudioSource();
+
+        if (craftButtonAudioSource == null)
+        {
+            return;
+        }
+
+        float volume = craftButtonSfxVolume * currentSfxVolume;
+        craftButtonAudioSource.PlayOneShot(craftButtonSfx, volume);
     }
 
     void SetupAutoReopenControl()
