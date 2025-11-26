@@ -4,7 +4,8 @@ using UnityEngine;
 public class PanelScaleAnimator : MonoBehaviour
 {
     [SerializeField] private RectTransform target;
-    [SerializeField] private AnimationCurve scaleCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField] private AnimationCurve openScaleCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField] private AnimationCurve closeScaleCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private float openDuration = 0.25f;
     [SerializeField] private float closeDuration = 0.2f;
     [SerializeField] private Vector3 closedScale = Vector3.zero;
@@ -96,7 +97,8 @@ public class PanelScaleAnimator : MonoBehaviour
         while (elapsed < duration)
         {
             float normalizedTime = duration > 0f ? Mathf.Clamp01(elapsed / duration) : 1f;
-            float curveValue = scaleCurve != null ? scaleCurve.Evaluate(normalizedTime) : normalizedTime;
+            AnimationCurve curve = opening ? openScaleCurve : closeScaleCurve;
+            float curveValue = curve != null ? curve.Evaluate(normalizedTime) : normalizedTime;
 
             Vector3 scaledValue = new Vector3(
                 Mathf.LerpUnclamped(startScale.x, endScale.x, curveValue),
