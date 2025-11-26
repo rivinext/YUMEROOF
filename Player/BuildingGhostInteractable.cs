@@ -10,6 +10,7 @@ using UnityEngine.Localization.Settings;
 /// ビルおばけのインタラクション処理。
 /// フォーカス状態に応じて会話を開始し、HintSystem をフォールバックとして利用します。
 /// </summary>
+[RequireComponent(typeof(GhostFloatAnimator))]
 public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
 {
     [Header("ヒント設定")]

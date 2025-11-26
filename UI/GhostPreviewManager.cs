@@ -6,7 +6,7 @@ public class GhostPreviewManager : MonoBehaviour
 
     private GameObject ghostObject;
 
-    public GameObject CreateGhost(GameObject source, Vector3 position, Quaternion rotation)
+    public GameObject CreateGhost(GameObject source, Vector3 position, Quaternion rotation, bool enableFloating = false)
     {
         DestroyGhost();
 
@@ -16,7 +16,10 @@ public class GhostPreviewManager : MonoBehaviour
         }
 
         ghostObject = Instantiate(source, position, rotation);
-        ghostObject.AddComponent<GhostFloatAnimator>();
+        if (enableFloating)
+        {
+            ghostObject.AddComponent<GhostFloatAnimator>();
+        }
         PrepareGhostObject(ghostObject);
         return ghostObject;
     }
