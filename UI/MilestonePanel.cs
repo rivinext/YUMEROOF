@@ -485,6 +485,17 @@ public class MilestonePanel : MonoBehaviour
 
         CacheTooltipReferences();
 
+        bool tooltipWasInactive = tooltipPanel != null && !tooltipPanel.activeSelf;
+        if (tooltipWasInactive)
+        {
+            tooltipPanel.SetActive(true);
+            Canvas.ForceUpdateCanvases();
+            if (tooltipRectTransform != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(tooltipRectTransform);
+            }
+        }
+
         if (tooltipRectTransform != null &&
             TryGetTooltipAnchoredPosition(milestoneRectTransform, out var anchoredPosition))
         {
