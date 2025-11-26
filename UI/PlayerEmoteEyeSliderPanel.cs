@@ -129,6 +129,28 @@ public class PlayerEmoteEyeSliderPanel : MonoBehaviour
         if (eyeBlendShapeController == null)
         {
             eyeBlendShapeController = GetComponentInParent<PlayerEyeBlendShapeController>();
+
+            if (eyeBlendShapeController == null)
+            {
+                if (contentRoot != null)
+                {
+                    eyeBlendShapeController = contentRoot.GetComponentInChildren<PlayerEyeBlendShapeController>(true);
+                }
+                else if (transform.root != null)
+                {
+                    eyeBlendShapeController = transform.root.GetComponentInChildren<PlayerEyeBlendShapeController>(true);
+                }
+
+                if (eyeBlendShapeController == null)
+                {
+                    eyeBlendShapeController = FindFirstObjectByType<PlayerEyeBlendShapeController>();
+                }
+
+                if (eyeBlendShapeController == null)
+                {
+                    Debug.LogWarning($"[{nameof(PlayerEmoteEyeSliderPanel)}] Could not locate {nameof(PlayerEyeBlendShapeController)} in parents, content root, scene root, or scene search. Manual eye sliders will be disabled.", this);
+                }
+            }
         }
 
         if (leftEyeSlider != null)

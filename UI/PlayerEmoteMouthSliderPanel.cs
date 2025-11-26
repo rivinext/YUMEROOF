@@ -129,6 +129,28 @@ public class PlayerEmoteMouthSliderPanel : MonoBehaviour
         if (mouthBlendShapeController == null)
         {
             mouthBlendShapeController = GetComponentInParent<PlayerMouthBlendShapeController>();
+
+            if (mouthBlendShapeController == null)
+            {
+                if (contentRoot != null)
+                {
+                    mouthBlendShapeController = contentRoot.GetComponentInChildren<PlayerMouthBlendShapeController>(true);
+                }
+                else if (transform.root != null)
+                {
+                    mouthBlendShapeController = transform.root.GetComponentInChildren<PlayerMouthBlendShapeController>(true);
+                }
+
+                if (mouthBlendShapeController == null)
+                {
+                    mouthBlendShapeController = FindFirstObjectByType<PlayerMouthBlendShapeController>();
+                }
+
+                if (mouthBlendShapeController == null)
+                {
+                    Debug.LogWarning($"[{nameof(PlayerEmoteMouthSliderPanel)}] Could not locate {nameof(PlayerMouthBlendShapeController)} in parents, content root, scene root, or scene search. Manual mouth sliders will be disabled.", this);
+                }
+            }
         }
 
         if (verticalSlider != null)
