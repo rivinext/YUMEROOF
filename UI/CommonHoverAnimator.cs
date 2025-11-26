@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 [DisallowMultipleComponent]
-public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     private const float MinHoverScaleValue = 0.01f;
     private const float MinHoverDurationValue = 0.01f;
@@ -20,6 +20,11 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
     [SerializeField, Range(0f, 1f)] private float hoverSfxVolume = 1f;
     [SerializeField, Min(0f)] private float hoverSfxCooldown = 0.1f;
     [SerializeField] private bool disableHoverSfx = false;
+
+    [Header("Click Audio")]
+    [SerializeField] private AudioClip clickSfx;
+    [SerializeField] private AudioSource clickAudioSource;
+    [SerializeField, Range(0f, 1f)] private float clickSfxVolume = 1f;
 
     private RectTransform resolvedHoverTarget;
     private Vector3 baseScale = Vector3.one;
@@ -44,6 +49,7 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
         ResetHoverTargetTransform();
 
         SetupHoverAudioSource();
+        SetupClickAudioSource();
     }
 
     private void OnValidate()
@@ -52,6 +58,7 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
         hoverDuration = Mathf.Max(hoverDuration, MinHoverDurationValue);
         hoverSfxVolume = Mathf.Clamp01(hoverSfxVolume);
         hoverSfxCooldown = Mathf.Max(hoverSfxCooldown, 0f);
+        clickSfxVolume = Mathf.Clamp01(clickSfxVolume);
     }
 
     private void OnDisable()
@@ -108,6 +115,11 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
         OnPointerExit(eventData);
     }
 
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        PlayClickSfx();
+    }
+
     private void KillHoverTween()
     {
         hoverTween?.Kill();
@@ -144,6 +156,25 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
         }
     }
 
+    private void SetupClickAudioSource()
+    {
+        if (clickAudioSource == null)
+        {
+            clickAudioSource = hoverAudioSource != null ? hoverAudioSource : GetComponent<AudioSource>();
+            if (clickAudioSource == null)
+            {
+                clickAudioSource = gameObject.AddComponent<AudioSource>();
+            }
+        }
+
+        if (clickAudioSource != null)
+        {
+            clickAudioSource.playOnAwake = false;
+            clickAudioSource.loop = false;
+            clickAudioSource.spatialBlend = 0f;
+        }
+    }
+
     private void PlayHoverSfx()
     {
         if (disableHoverSfx)
@@ -170,5 +201,21 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
 
         hoverAudioSource.PlayOneShot(hoverSfx, volume);
         lastHoverSfxTime = Time.unscaledTime;
+    }
+
+    private void PlayClickSfx()
+    {
+        if (clickSfx == null || clickAudioSource == null)
+        {
+            return;
+        }
+
+        float volume = clickSfxVolume * AudioManager.CurrentSfxVolume;
+        if (volume <= 0f)
+        {
+            return;
+        }
+
+        clickAudioSource.PlayOneShot(clickSfx, volume);
     }
 }
