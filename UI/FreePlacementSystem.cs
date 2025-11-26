@@ -607,7 +607,7 @@ public class FreePlacementSystem : MonoBehaviour
         originalRotation = furniture.transform.rotation;
 
         // ゴーストを生成
-        ghostManager?.CreateGhost(previewObject, originalPosition, originalRotation);
+        ghostManager?.CreateGhost(previewObject, originalPosition, originalRotation, false);
 
         // 参照位置とオブジェクト位置の差をオフセットとして保存
         moveOffset = furniture.transform.position - referencePoint;
