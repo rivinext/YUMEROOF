@@ -157,7 +157,7 @@ public class PlayerEmoteController : MonoBehaviour
             return;
         }
 
-        StopActiveEmoteImmediate(false);
+        StopActiveEmoteImmediate(false, preserveManualControls: true);
 
         if (animator == null)
         {
@@ -310,7 +310,7 @@ public class PlayerEmoteController : MonoBehaviour
         RestorePostEmoteState(true);
     }
 
-    private void StopActiveEmoteImmediate(bool crossFadeToIdle)
+    private void StopActiveEmoteImmediate(bool crossFadeToIdle, bool preserveManualControls = false)
     {
         if (activeCoroutine != null)
         {
@@ -320,7 +320,7 @@ public class PlayerEmoteController : MonoBehaviour
 
         if (activeEmote != null || inputLockedByEmote || blinkLockedByEmote)
         {
-            RestorePostEmoteState(crossFadeToIdle);
+            RestorePostEmoteState(crossFadeToIdle, preserveManualControls);
         }
         else if (crossFadeToIdle)
         {
@@ -328,7 +328,7 @@ public class PlayerEmoteController : MonoBehaviour
         }
     }
 
-    private void RestorePostEmoteState(bool crossFadeToIdle)
+    private void RestorePostEmoteState(bool crossFadeToIdle, bool preserveManualControls = false)
     {
         if (inputLockedByEmote && playerController != null)
         {
@@ -343,23 +343,23 @@ public class PlayerEmoteController : MonoBehaviour
         }
         blinkLockedByEmote = false;
 
-        if (eyeBlendShapeController != null)
+        if (!preserveManualControls && eyeBlendShapeController != null)
         {
             eyeBlendShapeController.SetManualControlActive(false);
         }
 
-        if (mouthBlendShapeController != null)
+        if (!preserveManualControls && mouthBlendShapeController != null)
         {
             mouthBlendShapeController.SetManualControlActive(false);
         }
 
-        if (eyeSliderPanel != null)
+        if (!preserveManualControls && eyeSliderPanel != null)
         {
             eyeSliderPanel.SetEmoteModeActive(false);
             eyeSliderPanel.ResetSliders();
         }
 
-        if (mouthSliderPanel != null)
+        if (!preserveManualControls && mouthSliderPanel != null)
         {
             mouthSliderPanel.SetEmoteModeActive(false);
             mouthSliderPanel.ResetSliders();
