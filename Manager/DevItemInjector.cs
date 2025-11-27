@@ -4,8 +4,6 @@ using UnityEngine;
 
 public class DevItemInjector : MonoBehaviour
 {
-    private static bool _hasInjected = false;
-
     [Serializable]
     public class DevEntry
     {
@@ -23,7 +21,7 @@ public class DevItemInjector : MonoBehaviour
 
     public void Inject()
     {
-        if (!enableInjection || _hasInjected) return;
+        if (!enableInjection) return;
 
         if (InventoryManager.Instance == null) return;
 
@@ -43,11 +41,5 @@ public class DevItemInjector : MonoBehaviour
             }
         }
 
-        _hasInjected = true;
-    }
-
-    public static void ResetInjected()
-    {
-        _hasInjected = false;
     }
 }
