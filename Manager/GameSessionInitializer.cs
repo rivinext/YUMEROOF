@@ -61,7 +61,6 @@ public class GameSessionInitializer : MonoBehaviour
     {
         if (scene.name == "MainMenu")
         {
-            DevItemInjector.ResetInjected();
             Destroy(gameObject);
             return;
         }
@@ -138,10 +137,13 @@ public class GameSessionInitializer : MonoBehaviour
             yield return null;
         }
 
-        SaveGameManager.Instance.Load(slotKey);
+        bool createdNewSave = SaveGameManager.Instance.Load(slotKey);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include)?.Inject();
-        InventoryManager.Instance.ForceInventoryUpdate();
+        if (createdNewSave)
+        {
+            FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include)?.Inject();
+            InventoryManager.Instance.ForceInventoryUpdate();
+        }
 #endif
         initialized = true;
         slotKey = null;

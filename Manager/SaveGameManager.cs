@@ -184,15 +184,17 @@ public class SaveGameManager : MonoBehaviour
         }
     }
 
-    public void Load(string slotKey)
+    public bool Load(string slotKey)
     {
         string path = GetSlotPath(slotKey);
         currentSlot = slotKey;
         EnsureAutoSave();
         bool creative = slotKey.StartsWith("Creative", StringComparison.OrdinalIgnoreCase);
+        bool createdNewSave = false;
 
         if (!File.Exists(path))
         {
+            createdNewSave = true;
             if (creative)
             {
                 var emptyData = new CreativeSaveData();
@@ -203,7 +205,7 @@ public class SaveGameManager : MonoBehaviour
                 var emptyData = new StorySaveData();
                 ApplyManagers(emptyData);
             }
-            return;
+            return createdNewSave;
         }
 
         string json = File.ReadAllText(path);
@@ -217,6 +219,8 @@ public class SaveGameManager : MonoBehaviour
             var data = StorySaveData.FromJson(json);
             ApplyManagers(data);
         }
+
+        return createdNewSave;
     }
 
     public void Delete(string slotKey)
