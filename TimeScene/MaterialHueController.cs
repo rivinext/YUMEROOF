@@ -158,6 +158,43 @@ public class MaterialHueController : MonoBehaviour
         builtInPresets[presetIndex] = preset;
     }
 
+    public int GetBuiltInPresetCount()
+    {
+        return builtInPresets?.Length ?? 0;
+    }
+
+    public int GetUserPresetCount()
+    {
+        return userPresets?.Length ?? 0;
+    }
+
+    public int GetTotalPresetCount()
+    {
+        return GetBuiltInPresetCount() + GetUserPresetCount();
+    }
+
+    public bool TryGetPresetDisplayName(int presetIndex, out string displayName)
+    {
+        int builtInCount = GetBuiltInPresetCount();
+        int userCount = GetUserPresetCount();
+
+        if (presetIndex >= 0 && presetIndex < builtInCount)
+        {
+            displayName = $"Preset {presetIndex + 1}";
+            return true;
+        }
+
+        int userIndex = presetIndex - builtInCount;
+        if (userIndex >= 0 && userIndex < userCount)
+        {
+            displayName = $"User Preset {userIndex + 1}";
+            return true;
+        }
+
+        displayName = string.Empty;
+        return false;
+    }
+
     private void LoadSavedValues()
     {
         if (PlayerPrefs.HasKey(HueKey))
