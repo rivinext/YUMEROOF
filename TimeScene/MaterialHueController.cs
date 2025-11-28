@@ -38,6 +38,7 @@ public class MaterialHueController : MonoBehaviour
     [Range(0f,1f)] [SerializeField] private float value;
 
     [SerializeField] private int selectedPresetIndex = -1;
+    public int SelectedPresetIndex => selectedPresetIndex;
 
     [SerializeField] private HueRingSelector hueRingSelector;
     [SerializeField] private SaturationValuePalette saturationValuePalette;
@@ -90,52 +91,46 @@ public class MaterialHueController : MonoBehaviour
 
     public void LoadPreset()
     {
-        if (!TryGetSelectedPresetIndex(out int presetIndex))
-        {
-            return;
-        }
-
-        LoadPreset(presetIndex);
+        LoadPreset(selectedPresetIndex);
     }
 
     public void LoadPreset(int presetIndex)
     {
-        if (!TryGetPreset(presetIndex, out ColorPreset preset))
+        if (!TryResolvePresetIndex(presetIndex, out int resolvedPresetIndex))
         {
-            Debug.LogWarning($"Preset index {presetIndex} is out of range.");
             return;
         }
 
-        selectedPresetIndex = presetIndex;
+        if (!TryGetPreset(resolvedPresetIndex, out ColorPreset preset))
+        {
+            Debug.LogWarning($"Preset index {resolvedPresetIndex} is out of range.");
+            return;
+        }
+
+        selectedPresetIndex = resolvedPresetIndex;
         ApplyPreset(preset);
     }
 
     public void SavePreset()
     {
-        if (!TryGetSelectedPresetIndex(out int presetIndex))
-        {
-            return;
-        }
-
-        SavePreset(presetIndex);
+        SavePreset(selectedPresetIndex);
     }
 
     public void SavePreset(int presetIndex)
     {
-        if (presetIndex < 0)
+        if (!TryResolvePresetIndex(presetIndex, out int resolvedPresetIndex))
         {
-            Debug.LogWarning($"Preset index {presetIndex} is invalid.");
             return;
         }
 
-        int userIndex = presetIndex - (builtInPresets?.Length ?? 0);
+        int userIndex = resolvedPresetIndex - (builtInPresets?.Length ?? 0);
         if (userIndex < 0 || userIndex >= userPresets.Length)
         {
-            Debug.LogWarning($"Preset {presetIndex} is not a user preset and cannot be saved.");
+            Debug.LogWarning($"Preset {resolvedPresetIndex} is not a user preset and cannot be saved.");
             return;
         }
 
-        selectedPresetIndex = presetIndex;
+        selectedPresetIndex = resolvedPresetIndex;
         ColorPreset currentPreset = new ColorPreset
         {
             hue = hue,
@@ -144,7 +139,7 @@ public class MaterialHueController : MonoBehaviour
         };
 
         userPresets[userIndex] = currentPreset;
-        SaveUserPresetToPrefs(presetIndex, currentPreset);
+        SaveUserPresetToPrefs(resolvedPresetIndex, currentPreset);
     }
 
     public void SetBuiltInPreset(int presetIndex, ColorPreset preset)
@@ -213,6 +208,17 @@ public class MaterialHueController : MonoBehaviour
 
         preset = default;
         return false;
+    }
+
+    private bool TryResolvePresetIndex(int requestedIndex, out int resolvedIndex)
+    {
+        if (requestedIndex >= 0)
+        {
+            resolvedIndex = requestedIndex;
+            return true;
+        }
+
+        return TryGetSelectedPresetIndex(out resolvedIndex);
     }
 
     private bool TryLoadPresetFromPrefs(int presetIndex, out ColorPreset preset)
