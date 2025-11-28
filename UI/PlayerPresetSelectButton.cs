@@ -2,11 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(Button))]
-public class MaterialPresetButton : MonoBehaviour
+public class PlayerPresetSelectButton : MonoBehaviour
 {
     [SerializeField] private MaterialHueController hueController;
     [SerializeField] private int presetIndex = -1;
-    [SerializeField] private bool selectOnly;
 
     private Button button;
 
@@ -31,36 +30,24 @@ public class MaterialPresetButton : MonoBehaviour
         }
     }
 
-    public void HandleClick()
+    private void HandleClick()
     {
         if (hueController == null)
         {
-            Debug.LogWarning($"{nameof(MaterialPresetButton)} on {name} is missing a reference to {nameof(MaterialHueController)}.");
+            Debug.LogWarning($"{nameof(PlayerPresetSelectButton)} on {name} is missing a reference to {nameof(MaterialHueController)}.");
             return;
         }
 
         hueController.SelectPreset(presetIndex);
-
-        if (selectOnly)
-        {
-            return;
-        }
-
-        hueController.LoadPreset(presetIndex);
     }
 
-    public void SetSelectOnly(bool value)
+    public void SetHueController(MaterialHueController controller)
     {
-        selectOnly = value;
+        hueController = controller;
     }
 
     public void SetPresetIndex(int index)
     {
         presetIndex = index;
-    }
-
-    public void SetController(MaterialHueController controller)
-    {
-        hueController = controller;
     }
 }

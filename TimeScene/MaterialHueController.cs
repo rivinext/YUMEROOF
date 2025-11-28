@@ -37,6 +37,8 @@ public class MaterialHueController : MonoBehaviour
 
     [Range(0f,1f)] [SerializeField] private float value;
 
+    [SerializeField] private int selectedPresetIndex = -1;
+
     [SerializeField] private HueRingSelector hueRingSelector;
     [SerializeField] private SaturationValuePalette saturationValuePalette;
 
@@ -75,6 +77,27 @@ public class MaterialHueController : MonoBehaviour
         SetColorValues(hue, saturation, newVal);
     }
 
+    public void SelectPreset(int presetIndex)
+    {
+        if (!TryGetPreset(presetIndex, out _))
+        {
+            Debug.LogWarning($"Preset index {presetIndex} is out of range.");
+            return;
+        }
+
+        selectedPresetIndex = presetIndex;
+    }
+
+    public void LoadPreset()
+    {
+        if (!TryGetSelectedPresetIndex(out int presetIndex))
+        {
+            return;
+        }
+
+        LoadPreset(presetIndex);
+    }
+
     public void LoadPreset(int presetIndex)
     {
         if (!TryGetPreset(presetIndex, out ColorPreset preset))
@@ -83,7 +106,18 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
+        selectedPresetIndex = presetIndex;
         ApplyPreset(preset);
+    }
+
+    public void SavePreset()
+    {
+        if (!TryGetSelectedPresetIndex(out int presetIndex))
+        {
+            return;
+        }
+
+        SavePreset(presetIndex);
     }
 
     public void SavePreset(int presetIndex)
@@ -101,6 +135,7 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
+        selectedPresetIndex = presetIndex;
         ColorPreset currentPreset = new ColorPreset
         {
             hue = hue,
@@ -251,6 +286,19 @@ public class MaterialHueController : MonoBehaviour
         {
             PlayerPrefs.Save();
         }
+    }
+
+    private bool TryGetSelectedPresetIndex(out int presetIndex)
+    {
+        if (selectedPresetIndex < 0)
+        {
+            Debug.LogWarning("No preset is currently selected.");
+            presetIndex = -1;
+            return false;
+        }
+
+        presetIndex = selectedPresetIndex;
+        return true;
     }
 
     private void ApplyPresetToSelectors()
