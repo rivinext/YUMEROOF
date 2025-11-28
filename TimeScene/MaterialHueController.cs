@@ -112,16 +112,6 @@ public class MaterialHueController : MonoBehaviour
         SaveUserPresetToPrefs(presetIndex, currentPreset);
     }
 
-    public ColorPreset GetCurrentPreset()
-    {
-        return new ColorPreset
-        {
-            hue = hue,
-            saturation = saturation,
-            value = value
-        };
-    }
-
     public void SetBuiltInPreset(int presetIndex, ColorPreset preset)
     {
         if (builtInPresets == null || presetIndex < 0 || presetIndex >= builtInPresets.Length)
