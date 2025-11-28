@@ -9,6 +9,7 @@ public class HueRingSelector : MonoBehaviour, IPointerDownHandler, IDragHandler
     [SerializeField] private RectTransform ringRectTransform;
     [SerializeField] private RectTransform handleRectTransform;
     [SerializeField] private Graphic ringGraphic;
+    [SerializeField] private float handleRadiusOffset = 0f;
 
     [SerializeField] private UnityEvent<float> onHueChanged = new UnityEvent<float>();
 
@@ -76,6 +77,7 @@ public class HueRingSelector : MonoBehaviour, IPointerDownHandler, IDragHandler
         float angle = hue * 360f * Mathf.Deg2Rad;
         Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
         float radius = Mathf.Min(ringRectTransform.rect.width, ringRectTransform.rect.height) * 0.5f;
-        handleRectTransform.anchoredPosition = direction * radius;
+        float adjustedRadius = Mathf.Max(radius + handleRadiusOffset, 0f);
+        handleRectTransform.anchoredPosition = direction * adjustedRadius;
     }
 }
