@@ -33,20 +33,35 @@ public class MaterialPresetButton : MonoBehaviour
 
     public void HandleClick()
     {
-        if (hueController == null)
-        {
-            Debug.LogWarning($"{nameof(MaterialPresetButton)} on {name} is missing a reference to {nameof(MaterialHueController)}.");
-            return;
-        }
-
-        hueController.SelectPreset(presetIndex);
-
         if (selectOnly)
         {
+            SelectPresetOnly();
+        }
+        else
+        {
+            LoadPreset();
+        }
+    }
+
+    public void SelectPresetOnly()
+    {
+        if (!TryGetController(out MaterialHueController controller))
+        {
             return;
         }
 
-        hueController.LoadPreset(presetIndex);
+        controller.SelectPreset(presetIndex);
+    }
+
+    public void LoadPreset()
+    {
+        if (!TryGetController(out MaterialHueController controller))
+        {
+            return;
+        }
+
+        controller.SelectPreset(presetIndex);
+        controller.LoadPreset(presetIndex);
     }
 
     public void SetSelectOnly(bool value)
@@ -62,5 +77,18 @@ public class MaterialPresetButton : MonoBehaviour
     public void SetController(MaterialHueController controller)
     {
         hueController = controller;
+    }
+
+    private bool TryGetController(out MaterialHueController controller)
+    {
+        if (hueController == null)
+        {
+            Debug.LogWarning($"{nameof(MaterialPresetButton)} on {name} is missing a reference to {nameof(MaterialHueController)}.");
+            controller = null;
+            return false;
+        }
+
+        controller = hueController;
+        return true;
     }
 }
