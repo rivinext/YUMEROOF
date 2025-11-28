@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 public class MaterialHueController : MonoBehaviour
 {
     private const string HueKey = "material_hue";
@@ -6,6 +7,8 @@ public class MaterialHueController : MonoBehaviour
     private const string ValueKey = "material_value";
 
     [SerializeField] private Material targetMaterial;
+    [SerializeField] private Image previewImage;
+    [SerializeField] private RawImage previewRawImage;
 
     [Range(0f, 1f)]
     [SerializeField] private float hue;
@@ -102,12 +105,22 @@ public class MaterialHueController : MonoBehaviour
 
     private void ApplyColor()
     {
-        if (targetMaterial == null)
+        Color currentColor = Color.HSVToRGB(hue, saturation, value);
+
+        if (targetMaterial != null)
         {
-            return;
+            targetMaterial.color = currentColor;
         }
 
-        targetMaterial.color = Color.HSVToRGB(hue, saturation, value);
+        if (previewImage != null)
+        {
+            previewImage.color = currentColor;
+        }
+
+        if (previewRawImage != null)
+        {
+            previewRawImage.color = currentColor;
+        }
     }
 
     private void OnValidate()
