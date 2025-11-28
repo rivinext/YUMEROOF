@@ -1,6 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
-
 public class MaterialHueController : MonoBehaviour
 {
     private const string HueKey = "material_hue";
@@ -17,28 +15,25 @@ public class MaterialHueController : MonoBehaviour
 
     [Range(0f,1f)] [SerializeField] private float value;
 
-    [SerializeField] private Slider hueSlider;
-    [SerializeField] private Slider saturationSlider;
-    [SerializeField] private Slider valueSlider;
+    [SerializeField] private HueRingSelector hueRingSelector;
+    [SerializeField] private SaturationValuePalette saturationValuePalette;
 
     private void Start()
     {
         LoadSavedValues();
 
-        if (hueSlider != null)
+        if (hueRingSelector != null)
         {
-            hueSlider.value = hue;
-            hueSlider.onValueChanged.AddListener(UpdateHue);
+            hueRingSelector.SetHue(hue);
+            hueRingSelector.OnHueChanged.AddListener(UpdateHue);
         }
-        if (saturationSlider != null)
+
+        if (saturationValuePalette != null)
         {
-            saturationSlider.value = saturation;
-            saturationSlider.onValueChanged.AddListener(UpdateSaturation);
-        }
-        if (valueSlider != null)
-        {
-            valueSlider.value = value;
-            valueSlider.onValueChanged.AddListener(UpdateValue);
+            saturationValuePalette.SetHue(hue);
+            saturationValuePalette.SetValues(saturation, value);
+            saturationValuePalette.OnSaturationChanged.AddListener(UpdateSaturation);
+            saturationValuePalette.OnValueChanged.AddListener(UpdateValue);
         }
 
         ApplyColor();
@@ -48,6 +43,8 @@ public class MaterialHueController : MonoBehaviour
     {
         bool hasChanged = !Mathf.Approximately(hue, newHue);
         hue = newHue;
+        hueRingSelector?.SetHue(hue);
+        saturationValuePalette?.SetHue(hue);
         ApplyColor();
 
         if (hasChanged)
@@ -61,6 +58,7 @@ public class MaterialHueController : MonoBehaviour
     {
         bool hasChanged = !Mathf.Approximately(saturation, newSat);
         saturation = newSat;
+        saturationValuePalette?.SetSaturation(saturation);
         ApplyColor();
 
         if (hasChanged)
@@ -74,6 +72,7 @@ public class MaterialHueController : MonoBehaviour
     {
         bool hasChanged = !Mathf.Approximately(value, newVal);
         value = newVal;
+        saturationValuePalette?.SetValue(value);
         ApplyColor();
 
         if (hasChanged)
@@ -118,6 +117,9 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
+        hueRingSelector?.SetHue(hue);
+        saturationValuePalette?.SetHue(hue);
+        saturationValuePalette?.SetValues(saturation, value);
         ApplyColor();
     }
 }
