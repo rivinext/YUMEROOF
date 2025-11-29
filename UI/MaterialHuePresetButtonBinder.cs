@@ -70,6 +70,12 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             textComponent.text = label;
         }
 
+        bool isDefaultSlot = presetManager != null && presetManager.IsDefaultSlot(slotIndex);
+        if (isSave && isDefaultSlot)
+        {
+            buttonInstance.interactable = false;
+        }
+
         buttonInstance.onClick.AddListener(() =>
         {
             if (presetManager == null)
