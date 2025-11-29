@@ -18,8 +18,10 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private int initialPresetIndex;
 
     [SerializeField] private Material targetMaterial;
+    [SerializeField] private List<Material> targetMaterials = new();
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
+    [SerializeField] private List<Graphic> previewGraphics = new();
 
     [Header("Preset Category UI")]
     [SerializeField] private Button defaultCategoryButton;
@@ -265,21 +267,40 @@ public class MaterialHueController : MonoBehaviour
 
     private void ApplyColor()
     {
-        Color currentColor = Color.HSVToRGB(hue, saturation, value);
+        ApplyColorToTargets(Color.HSVToRGB(hue, saturation, value));
+    }
 
+    private void ApplyColorToTargets(Color color)
+    {
         if (targetMaterial != null)
         {
-            targetMaterial.color = currentColor;
+            targetMaterial.color = color;
+        }
+
+        foreach (Material material in targetMaterials)
+        {
+            if (material != null)
+            {
+                material.color = color;
+            }
         }
 
         if (previewImage != null)
         {
-            previewImage.color = currentColor;
+            previewImage.color = color;
         }
 
         if (previewRawImage != null)
         {
-            previewRawImage.color = currentColor;
+            previewRawImage.color = color;
+        }
+
+        foreach (Graphic graphic in previewGraphics)
+        {
+            if (graphic != null)
+            {
+                graphic.color = color;
+            }
         }
     }
 
