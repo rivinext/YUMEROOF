@@ -14,9 +14,18 @@ public class MaterialHueController : MonoBehaviour
         public float Value;
     }
 
+    public enum DefaultSlotType
+    {
+        BasicSlot,
+        FixedSlot,
+    }
+
     [SerializeField] private string controllerId;
     [SerializeField] private string uniqueId;
     [SerializeField] private int slotNumber;
+    [SerializeField] private DefaultSlotType defaultSlotType;
+    [SerializeField] private int defaultBasicSlotIndex;
+    [SerializeField] private int defaultFixedSlotIndex;
     [SerializeField] private bool disableLocalPersistence;
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
@@ -30,8 +39,22 @@ public class MaterialHueController : MonoBehaviour
 
     [Range(0f,1f)] [SerializeField] private float value;
 
+    [SerializeField]
+    private HsvColorData defaultHsvColorData = new HsvColorData
+    {
+        Hue = 0f,
+        Saturation = 1f,
+        Value = 1f,
+    };
+
     [SerializeField] private HueRingSelector hueRingSelector;
     [SerializeField] private SaturationValuePalette saturationValuePalette;
+
+    private void Awake()
+    {
+        InitializeSlotNumber();
+        ClampDefaultColorData();
+    }
 
     private void Start()
     {
@@ -56,7 +79,8 @@ public class MaterialHueController : MonoBehaviour
 
     public HsvColorData GetDefaultPreset(int index)
     {
-        return default;
+        int calculatedSlot = CalculateSlotIndex(defaultSlotType);
+        return index == calculatedSlot ? defaultHsvColorData : default;
     }
 
     public void ApplyDefaultPreset(int index, bool saveToPlayerPrefs = true)
@@ -221,6 +245,9 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
+        InitializeSlotNumber();
+        ClampDefaultColorData();
+
         hueRingSelector?.SetHue(hue);
         saturationValuePalette?.SetHue(hue);
         saturationValuePalette?.SetValues(saturation, value);
@@ -245,5 +272,32 @@ public class MaterialHueController : MonoBehaviour
     private bool ShouldUseLocalPersistence()
     {
         return !disableLocalPersistence;
+    }
+
+    private int CalculateSlotIndex(DefaultSlotType slotType)
+    {
+        int index = slotType switch
+        {
+            DefaultSlotType.BasicSlot => defaultBasicSlotIndex,
+            DefaultSlotType.FixedSlot => defaultFixedSlotIndex,
+            _ => defaultBasicSlotIndex,
+        };
+
+        return Mathf.Max(0, index);
+    }
+
+    private void InitializeSlotNumber()
+    {
+        slotNumber = CalculateSlotIndex(defaultSlotType);
+    }
+
+    private void ClampDefaultColorData()
+    {
+        defaultHsvColorData = new HsvColorData
+        {
+            Hue = Mathf.Repeat(defaultHsvColorData.Hue, 1f),
+            Saturation = Mathf.Clamp01(defaultHsvColorData.Saturation),
+            Value = Mathf.Clamp01(defaultHsvColorData.Value),
+        };
     }
 }
