@@ -50,6 +50,8 @@ public class MaterialHueController : MonoBehaviour
     private int currentSlotIndex;
 
     private readonly List<Button> slotButtons = new();
+    private readonly List<int> slotButtonGlobalIndices = new();
+    private PresetCategory lastSlotButtonCategory = (PresetCategory)(-1);
 
     private void Start()
     {
@@ -308,6 +310,7 @@ public class MaterialHueController : MonoBehaviour
         currentSlotIndex = slotIndex;
 
         int globalIndex = GetGlobalSlotIndex(currentCategory, currentSlotIndex);
+        RefreshSlotButtonsForCategory(currentCategory);
         FinalizePresetSelection(globalIndex, true);
     }
 
@@ -345,11 +348,17 @@ public class MaterialHueController : MonoBehaviour
 
     private void BuildSlotButtons()
     {
+        RefreshSlotButtonsForCategory(currentCategory);
+    }
+
+    private void RefreshSlotButtonsForCategory(PresetCategory category)
+    {
         if (slotButtonContainer == null || slotButtonPrefab == null)
         {
             return;
         }
 
+        slotButtonGlobalIndices.Clear();
         slotButtons.Clear();
 
         for (int i = slotButtonContainer.childCount - 1; i >= 0; i--)
@@ -357,9 +366,9 @@ public class MaterialHueController : MonoBehaviour
             Destroy(slotButtonContainer.GetChild(i).gameObject);
         }
 
-        int totalSlots = GetTotalSlotCount();
+        int slotCount = GetSlotCountForCategory(category);
 
-        for (int i = 0; i < totalSlots; i++)
+        for (int i = 0; i < slotCount; i++)
         {
             GameObject buttonInstance = Instantiate(slotButtonPrefab, slotButtonContainer);
             Button button = buttonInstance.GetComponent<Button>();
@@ -368,11 +377,14 @@ public class MaterialHueController : MonoBehaviour
                 continue;
             }
 
-            int capturedIndex = i;
-            button.onClick.AddListener(() => SelectPresetByIndex(capturedIndex));
-            UpdateSlotButtonLabel(buttonInstance, capturedIndex);
+            int globalIndex = GetGlobalSlotIndex(category, i);
+            button.onClick.AddListener(() => SelectPresetByIndex(globalIndex));
+            UpdateSlotButtonLabel(buttonInstance, globalIndex);
             slotButtons.Add(button);
+            slotButtonGlobalIndices.Add(globalIndex);
         }
+
+        lastSlotButtonCategory = category;
     }
 
     private void UpdateSlotButtonLabel(GameObject buttonObject, int globalIndex)
@@ -420,9 +432,18 @@ public class MaterialHueController : MonoBehaviour
             ApplySelectedPreset();
         }
 
+        EnsureSlotButtonsForCategory(currentCategory);
         UpdateActionButtons();
         UpdateCategoryButtons();
         UpdateSlotButtonSelection(selectedGlobalIndex);
+    }
+
+    private void EnsureSlotButtonsForCategory(PresetCategory category)
+    {
+        if (lastSlotButtonCategory != category)
+        {
+            RefreshSlotButtonsForCategory(category);
+        }
     }
 
     private void UpdateSlotButtonSelection(int selectedGlobalIndex)
@@ -440,7 +461,7 @@ public class MaterialHueController : MonoBehaviour
                 continue;
             }
 
-            bool isSelected = i == selectedGlobalIndex;
+            bool isSelected = slotButtonGlobalIndices.Count > i && slotButtonGlobalIndices[i] == selectedGlobalIndex;
             button.interactable = !isSelected;
         }
     }
