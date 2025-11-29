@@ -46,7 +46,9 @@ public class MaterialHueController : MonoBehaviour
     [Range(0f,1f)] [SerializeField] private float value;
 
     [SerializeField] private HueRingSelector hueRingSelector;
+    [SerializeField] private List<HueRingSelector> hueRingSelectors = new();
     [SerializeField] private SaturationValuePalette saturationValuePalette;
+    [SerializeField] private List<SaturationValuePalette> saturationValuePalettes = new();
 
     private PresetCategory currentCategory;
     private int currentSlotIndex;
@@ -62,18 +64,18 @@ public class MaterialHueController : MonoBehaviour
         RegisterActionButtons();
         InitializePresetSelection();
 
-        if (hueRingSelector != null)
+        foreach (HueRingSelector ringSelector in EnumerateHueRingSelectors())
         {
-            hueRingSelector.SetHue(hue);
-            hueRingSelector.OnHueChanged.AddListener(UpdateHue);
+            ringSelector.SetHue(hue);
+            ringSelector.OnHueChanged.AddListener(UpdateHue);
         }
 
-        if (saturationValuePalette != null)
+        foreach (SaturationValuePalette palette in EnumerateSaturationValuePalettes())
         {
-            saturationValuePalette.SetHue(hue);
-            saturationValuePalette.SetValues(saturation, value);
-            saturationValuePalette.OnSaturationChanged.AddListener(UpdateSaturation);
-            saturationValuePalette.OnValueChanged.AddListener(UpdateValue);
+            palette.SetHue(hue);
+            palette.SetValues(saturation, value);
+            palette.OnSaturationChanged.AddListener(UpdateSaturation);
+            palette.OnValueChanged.AddListener(UpdateValue);
         }
 
         ApplyColor();
@@ -105,22 +107,38 @@ public class MaterialHueController : MonoBehaviour
     public void UpdateHue(float newHue)
     {
         hue = newHue;
-        hueRingSelector?.SetHue(hue);
-        saturationValuePalette?.SetHue(hue);
+        foreach (HueRingSelector ringSelector in EnumerateHueRingSelectors())
+        {
+            ringSelector.SetHue(hue);
+        }
+
+        foreach (SaturationValuePalette palette in EnumerateSaturationValuePalettes())
+        {
+            palette.SetHue(hue);
+        }
+
         ApplyColor();
     }
 
     public void UpdateSaturation(float newSat)
     {
         saturation = newSat;
-        saturationValuePalette?.SetSaturation(saturation);
+        foreach (SaturationValuePalette palette in EnumerateSaturationValuePalettes())
+        {
+            palette.SetSaturation(saturation);
+        }
+
         ApplyColor();
     }
 
     public void UpdateValue(float newVal)
     {
         value = newVal;
-        saturationValuePalette?.SetValue(value);
+        foreach (SaturationValuePalette palette in EnumerateSaturationValuePalettes())
+        {
+            palette.SetValue(value);
+        }
+
         ApplyColor();
     }
 
@@ -190,10 +208,56 @@ public class MaterialHueController : MonoBehaviour
         saturation = presetSaturation;
         value = presetValue;
 
-        hueRingSelector?.SetHue(hue);
-        saturationValuePalette?.SetHue(hue);
-        saturationValuePalette?.SetValues(saturation, value);
+        foreach (HueRingSelector ringSelector in EnumerateHueRingSelectors())
+        {
+            ringSelector.SetHue(hue);
+        }
+
+        foreach (SaturationValuePalette palette in EnumerateSaturationValuePalettes())
+        {
+            palette.SetHue(hue);
+            palette.SetValues(saturation, value);
+        }
+
         ApplyColor();
+    }
+
+    private IEnumerable<HueRingSelector> EnumerateHueRingSelectors()
+    {
+        if (hueRingSelectors != null)
+        {
+            foreach (HueRingSelector selector in hueRingSelectors)
+            {
+                if (selector != null)
+                {
+                    yield return selector;
+                }
+            }
+        }
+
+        if (hueRingSelector != null && (hueRingSelectors == null || !hueRingSelectors.Contains(hueRingSelector)))
+        {
+            yield return hueRingSelector;
+        }
+    }
+
+    private IEnumerable<SaturationValuePalette> EnumerateSaturationValuePalettes()
+    {
+        if (saturationValuePalettes != null)
+        {
+            foreach (SaturationValuePalette palette in saturationValuePalettes)
+            {
+                if (palette != null)
+                {
+                    yield return palette;
+                }
+            }
+        }
+
+        if (saturationValuePalette != null && (saturationValuePalettes == null || !saturationValuePalettes.Contains(saturationValuePalette)))
+        {
+            yield return saturationValuePalette;
+        }
     }
 
     private int GetTotalSlotCount()
