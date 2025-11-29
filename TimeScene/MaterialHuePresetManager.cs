@@ -8,82 +8,19 @@ public class MaterialHuePresetManager : MonoBehaviour
     private const string UserPresetScope = "user";
 
     [System.Serializable]
-    public class ControllerColor
-    {
-        public string ControllerId;
-        public int SlotNumber;
-        public MaterialHueController.HsvColorData ColorData;
-    }
-
-    [System.Serializable]
-    public class ControllerColorMapDto
-    {
-        public ControllerColor[] Entries = System.Array.Empty<ControllerColor>();
-
-        public ControllerColorMapDto()
-        {
-        }
-
-        public ControllerColorMapDto(IEnumerable<ControllerColor> entries)
-        {
-            Entries = SortBySlot(entries);
-        }
-
-        public ControllerColor[] GetEntriesSortedBySlot()
-        {
-            return SortBySlot(Entries);
-        }
-
-        public ControllerColor[] GetEntriesSortedById()
-        {
-            return SortById(Entries);
-        }
-
-        public ControllerColor[] GetEntriesForControllers(Dictionary<string, MaterialHueController> lookup)
-        {
-            return GetEntriesSortedBySlot()
-                .Where(entry => entry != null && !string.IsNullOrWhiteSpace(entry.ControllerId))
-                .Where(entry => lookup.ContainsKey(entry.ControllerId))
-                .ToArray();
-        }
-
-        private static ControllerColor[] SortBySlot(IEnumerable<ControllerColor> entries)
-        {
-            return entries
-                .Where(entry => entry != null && !string.IsNullOrWhiteSpace(entry.ControllerId))
-                .OrderBy(entry => entry.SlotNumber)
-                .ThenBy(entry => entry.ControllerId)
-                .ToArray();
-        }
-
-        private static ControllerColor[] SortById(IEnumerable<ControllerColor> entries)
-        {
-            return entries
-                .Where(entry => entry != null && !string.IsNullOrWhiteSpace(entry.ControllerId))
-                .OrderBy(entry => entry.ControllerId)
-                .ThenBy(entry => entry.SlotNumber)
-                .ToArray();
-        }
-    }
-
-    [System.Serializable]
     public class MaterialHuePreset
     {
         public string PresetId;
-        public ControllerColorMapDto ColorMap;
-        public ControllerColor[] ControllerColors;
+        public Color[] Colors = System.Array.Empty<Color>();
     }
 
     [SerializeField] private MaterialHueController[] materialHueControllers;
     [SerializeField] private MaterialHuePreset[] defaultPresets;
     [SerializeField] private MaterialHuePreset[] userPresets;
 
-    private readonly Dictionary<string, MaterialHueController> controllerLookup = new();
-
     private void Awake()
     {
         InitializeControllers();
-        BuildControllerLookup();
     }
 
     public MaterialHueController[] GetControllers()
@@ -94,10 +31,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     public void ApplyDefaultPreset(int presetIndex)
     {
         MaterialHuePreset preset = GetPreset(defaultPresets, presetIndex);
-        if (preset != null)
-        {
-            ApplyPreset(preset, false);
-        }
+        NotifyControllers(preset, false);
     }
 
     public void SaveUserPreset(int presetIndex)
@@ -109,7 +43,7 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         MaterialHuePreset capturedPreset = CreatePresetSnapshot(GetUserPresetId(presetIndex));
         userPresets[presetIndex] = capturedPreset;
-        SavePresetToPlayerPrefs(capturedPreset.ColorMap, UserPresetScope, presetIndex);
+        SavePresetToPlayerPrefs(capturedPreset, UserPresetScope, presetIndex);
     }
 
     public void ApplyUserPreset(int presetIndex)
@@ -120,36 +54,16 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         MaterialHuePreset preset = LoadUserPreset(presetIndex) ?? userPresets[presetIndex];
-        if (preset != null)
-        {
-            ApplyPreset(preset, false);
-        }
+        NotifyControllers(preset, true);
     }
 
     public MaterialHuePreset CreatePresetSnapshot(string presetId)
     {
-        List<ControllerColor> entries = new();
-        foreach (MaterialHueController controller in materialHueControllers)
-        {
-            if (controller == null)
-            {
-                continue;
-            }
-
-            entries.Add(new ControllerColor
-            {
-                ControllerId = controller.ControllerId,
-                SlotNumber = controller.SlotNumber,
-                ColorData = controller.GetCurrentColorData(),
-            });
-        }
-
-        ControllerColorMapDto colorMap = new ControllerColorMapDto(entries);
+        List<Color> colors = CaptureColorsBySlot();
         return new MaterialHuePreset
         {
             PresetId = presetId,
-            ColorMap = colorMap,
-            ControllerColors = colorMap.GetEntriesSortedById(),
+            Colors = colors.ToArray(),
         };
     }
 
@@ -167,27 +81,17 @@ public class MaterialHuePresetManager : MonoBehaviour
         return colors.ToArray();
     }
 
-    public void ApplyPreset(MaterialHuePreset preset, bool saveToControllers)
+    private void NotifyControllers(MaterialHuePreset preset, bool saveToControllers)
     {
-        ControllerColor[] controllerColors = GetValidControllerColors(preset);
-        if (controllerColors == null)
+        Color[] colors = preset?.Colors;
+        if (colors == null)
         {
             return;
         }
 
-        foreach (ControllerColor entry in controllerColors)
+        foreach (MaterialHueController controller in materialHueControllers)
         {
-            if (entry == null || string.IsNullOrWhiteSpace(entry.ControllerId))
-            {
-                continue;
-            }
-
-            if (!controllerLookup.TryGetValue(entry.ControllerId, out MaterialHueController controller) || controller == null)
-            {
-                continue;
-            }
-
-            controller.ApplyColorData(entry.ColorData, saveToControllers);
+            controller?.ApplyPresetColors(colors, saveToControllers);
         }
     }
 
@@ -199,35 +103,32 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
     }
 
-    private void BuildControllerLookup()
+    private List<Color> CaptureColorsBySlot()
     {
-        controllerLookup.Clear();
-        foreach (MaterialHueController controller in materialHueControllers)
-        {
-            if (controller == null || string.IsNullOrWhiteSpace(controller.ControllerId))
-            {
-                continue;
-            }
+        List<Color> colors = new();
 
-            controllerLookup[controller.ControllerId] = controller;
-        }
-    }
+        MaterialHueController[] orderedControllers = materialHueControllers
+            .Where(controller => controller != null)
+            .OrderBy(controller => controller.SlotNumber)
+            .ToArray();
 
-    private ControllerColor[] GetValidControllerColors(MaterialHuePreset preset)
-    {
-        if (preset == null)
+        int requiredSlotCount = orderedControllers
+            .Select(controller => Mathf.Max(controller.SlotNumber + 1, controller.DefaultSlotCount + controller.FixedSlotCount))
+            .DefaultIfEmpty(0)
+            .Max();
+
+        for (int i = 0; i < requiredSlotCount; i++)
         {
-            return null;
+            colors.Add(Color.black);
         }
 
-        ControllerColorMapDto map = preset.ColorMap;
-        if (map == null && preset.ControllerColors != null)
+        foreach (MaterialHueController controller in orderedControllers)
         {
-            map = new ControllerColorMapDto(preset.ControllerColors);
-            preset.ColorMap = map;
+            int slotIndex = Mathf.Clamp(controller.SlotNumber, 0, requiredSlotCount - 1);
+            colors[slotIndex] = controller.GetCurrentColor();
         }
 
-        return map?.GetEntriesForControllers(controllerLookup);
+        return colors;
     }
 
     private MaterialHuePreset LoadUserPreset(int presetIndex)
@@ -237,33 +138,25 @@ public class MaterialHuePresetManager : MonoBehaviour
             return null;
         }
 
-        List<ControllerColor> colors = new();
-        foreach (MaterialHueController controller in materialHueControllers)
+        int colorCount = PlayerPrefs.GetInt(GetCountKey(UserPresetScope, presetIndex), -1);
+        if (colorCount <= 0)
         {
-            if (controller == null)
-            {
-                continue;
-            }
-
-            colors.Add(new ControllerColor
-            {
-                ControllerId = controller.ControllerId,
-                SlotNumber = controller.SlotNumber,
-                ColorData = new MaterialHueController.HsvColorData
-                {
-                    Hue = PlayerPrefs.GetFloat(GetControllerKey(UserPresetScope, presetIndex, controller.ControllerId, nameof(MaterialHueController.HsvColorData.Hue))),
-                    Saturation = PlayerPrefs.GetFloat(GetControllerKey(UserPresetScope, presetIndex, controller.ControllerId, nameof(MaterialHueController.HsvColorData.Saturation))),
-                    Value = PlayerPrefs.GetFloat(GetControllerKey(UserPresetScope, presetIndex, controller.ControllerId, nameof(MaterialHueController.HsvColorData.Value))),
-                }
-            });
+            return null;
         }
 
-        ControllerColorMapDto colorMap = new ControllerColorMapDto(colors);
+        Color[] colors = new Color[colorCount];
+        for (int i = 0; i < colorCount; i++)
+        {
+            float r = PlayerPrefs.GetFloat(GetColorKey(UserPresetScope, presetIndex, i, "r"), 0f);
+            float g = PlayerPrefs.GetFloat(GetColorKey(UserPresetScope, presetIndex, i, "g"), 0f);
+            float b = PlayerPrefs.GetFloat(GetColorKey(UserPresetScope, presetIndex, i, "b"), 0f);
+            colors[i] = new Color(r, g, b, 1f);
+        }
+
         return new MaterialHuePreset
         {
             PresetId = GetUserPresetId(presetIndex),
-            ColorMap = colorMap,
-            ControllerColors = colorMap.GetEntriesSortedById(),
+            Colors = colors,
         };
     }
 
@@ -282,23 +175,21 @@ public class MaterialHuePresetManager : MonoBehaviour
         return presets != null && index >= 0 && index < presets.Length;
     }
 
-    private void SavePresetToPlayerPrefs(ControllerColorMapDto preset, string presetScope, int presetIndex)
+    private void SavePresetToPlayerPrefs(MaterialHuePreset preset, string presetScope, int presetIndex)
     {
-        ControllerColor[] entries = preset?.GetEntriesSortedById();
-        if (entries == null)
+        Color[] colors = preset?.Colors;
+        if (colors == null)
         {
             return;
         }
 
-        foreach (ControllerColor entry in entries)
-        {
-            string hueKey = GetControllerKey(presetScope, presetIndex, entry.ControllerId, nameof(MaterialHueController.HsvColorData.Hue));
-            string saturationKey = GetControllerKey(presetScope, presetIndex, entry.ControllerId, nameof(MaterialHueController.HsvColorData.Saturation));
-            string valueKey = GetControllerKey(presetScope, presetIndex, entry.ControllerId, nameof(MaterialHueController.HsvColorData.Value));
+        PlayerPrefs.SetInt(GetCountKey(presetScope, presetIndex), colors.Length);
 
-            PlayerPrefs.SetFloat(hueKey, entry.ColorData.Hue);
-            PlayerPrefs.SetFloat(saturationKey, entry.ColorData.Saturation);
-            PlayerPrefs.SetFloat(valueKey, entry.ColorData.Value);
+        for (int i = 0; i < colors.Length; i++)
+        {
+            PlayerPrefs.SetFloat(GetColorKey(presetScope, presetIndex, i, "r"), colors[i].r);
+            PlayerPrefs.SetFloat(GetColorKey(presetScope, presetIndex, i, "g"), colors[i].g);
+            PlayerPrefs.SetFloat(GetColorKey(presetScope, presetIndex, i, "b"), colors[i].b);
         }
 
         PlayerPrefs.SetInt(GetSavedFlagKey(presetScope, presetIndex), 1);
@@ -310,14 +201,19 @@ public class MaterialHuePresetManager : MonoBehaviour
         return PlayerPrefs.GetInt(GetSavedFlagKey(UserPresetScope, presetIndex), 0) == 1;
     }
 
+    private string GetCountKey(string presetScope, int presetIndex)
+    {
+        return $"{PrefsKeyPrefix}/{presetScope}/{presetIndex}/count";
+    }
+
     private string GetSavedFlagKey(string presetScope, int presetIndex)
     {
         return $"{PrefsKeyPrefix}/{presetScope}/{presetIndex}/saved";
     }
 
-    private string GetControllerKey(string presetScope, int presetIndex, string controllerId, string propertyName)
+    private string GetColorKey(string presetScope, int presetIndex, int colorIndex, string propertyName)
     {
-        return $"{PrefsKeyPrefix}/{presetScope}/{presetIndex}/{controllerId}/{propertyName}";
+        return $"{PrefsKeyPrefix}/{presetScope}/{presetIndex}/{colorIndex}/{propertyName}";
     }
 
     private string GetUserPresetId(int presetIndex)

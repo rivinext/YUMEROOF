@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 public class MaterialHueController : MonoBehaviour
@@ -17,6 +19,8 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private string controllerId;
     [SerializeField] private string uniqueId;
     [SerializeField] private int slotNumber;
+    [SerializeField] private int defaultSlotCount = 1;
+    [SerializeField] private int fixedSlotCount;
     [SerializeField] private bool disableLocalPersistence;
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
@@ -87,6 +91,10 @@ public class MaterialHueController : MonoBehaviour
 
     public int SlotNumber => slotNumber;
 
+    public int DefaultSlotCount => Mathf.Max(0, defaultSlotCount);
+
+    public int FixedSlotCount => Mathf.Max(0, fixedSlotCount);
+
     public void ApplyColorData(HsvColorData colorData, bool saveToPlayerPrefs = true)
     {
         hue = Mathf.Repeat(colorData.Hue, 1f);
@@ -103,6 +111,46 @@ public class MaterialHueController : MonoBehaviour
         {
             SaveValues();
         }
+    }
+
+    public void ApplyPresetColors(IList<Color> colors, bool saveToPlayerPrefs = true)
+    {
+        if (colors == null)
+        {
+            return;
+        }
+
+        int totalSlots = DefaultSlotCount + FixedSlotCount;
+        if (totalSlots <= 0)
+        {
+            throw new InvalidOperationException("No available slots configured for MaterialHueController.");
+        }
+
+        if (colors.Count > totalSlots)
+        {
+            Debug.LogWarning($"Preset contains more colors ({colors.Count}) than available slots ({totalSlots}); extra colors will be ignored.");
+        }
+
+        if (slotNumber < 0 || slotNumber >= totalSlots)
+        {
+            Debug.LogWarning($"Slot number {slotNumber} is out of range for configured slots (0-{totalSlots - 1}).");
+            return;
+        }
+
+        if (slotNumber >= colors.Count)
+        {
+            Debug.LogWarning($"No preset color exists for slot {slotNumber}; preset contains only {colors.Count} colors.");
+            return;
+        }
+
+        Color sourceColor = colors[slotNumber];
+        Color.RGBToHSV(sourceColor, out float newHue, out float newSaturation, out float newValue);
+        ApplyColorData(new HsvColorData
+        {
+            Hue = newHue,
+            Saturation = newSaturation,
+            Value = newValue,
+        }, saveToPlayerPrefs);
     }
 
     public void UpdateHue(float newHue)
@@ -146,6 +194,11 @@ public class MaterialHueController : MonoBehaviour
             PlayerPrefs.SetFloat(ValueKey, value);
             PlayerPrefs.Save();
         }
+    }
+
+    public Color GetCurrentColor()
+    {
+        return Color.HSVToRGB(hue, saturation, value);
     }
 
     private void LoadSavedValues()
@@ -239,6 +292,16 @@ public class MaterialHueController : MonoBehaviour
         if (slotNumber < 0)
         {
             slotNumber = 0;
+        }
+
+        if (defaultSlotCount < 0)
+        {
+            defaultSlotCount = 0;
+        }
+
+        if (fixedSlotCount < 0)
+        {
+            fixedSlotCount = 0;
         }
     }
 
