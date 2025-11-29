@@ -53,6 +53,8 @@ public class MaterialHueController : MonoBehaviour
 
     private void SetupMaterialBindings()
     {
+        Dictionary<MaterialPresetUIController, PresetUIBindingGroup> presetUIGroups = new();
+
         foreach (MaterialHueBinding binding in materialBindings.Where(b => b != null))
         {
             HueSyncCoordinator coordinator = CreateCoordinator(binding);
@@ -69,7 +71,31 @@ public class MaterialHueController : MonoBehaviour
             MaterialPresetService bindingPresetService = binding.PresetService != null ? binding.PresetService : presetService;
             MaterialPresetUIController bindingPresetUI = binding.PresetUIController != null ? binding.PresetUIController : presetUIController;
 
-            bindingPresetUI?.Initialize(bindingPresetService, new List<HueSyncCoordinator> { coordinator }, binding.InitialPresetIndex);
+            if (bindingPresetUI == null)
+            {
+                continue;
+            }
+
+            if (!presetUIGroups.TryGetValue(bindingPresetUI, out PresetUIBindingGroup group))
+            {
+                group = new PresetUIBindingGroup();
+                presetUIGroups[bindingPresetUI] = group;
+            }
+
+            group.Service ??= bindingPresetService;
+            group.Coordinators.Add(coordinator);
+
+            if (!group.InitialPresetIndex.HasValue)
+            {
+                group.InitialPresetIndex = binding.InitialPresetIndex;
+            }
+        }
+
+        foreach (KeyValuePair<MaterialPresetUIController, PresetUIBindingGroup> entry in presetUIGroups)
+        {
+            PresetUIBindingGroup group = entry.Value;
+            int presetIndex = group.InitialPresetIndex ?? initialPresetIndex;
+            entry.Key.Initialize(group.Service, group.Coordinators, presetIndex);
         }
     }
 
@@ -93,6 +119,13 @@ public class MaterialHueController : MonoBehaviour
         }
 
         return coordinator;
+    }
+
+    private class PresetUIBindingGroup
+    {
+        public MaterialPresetService Service;
+        public readonly List<HueSyncCoordinator> Coordinators = new();
+        public int? InitialPresetIndex;
     }
 }
 
