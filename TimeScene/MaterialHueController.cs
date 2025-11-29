@@ -18,6 +18,9 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
 
+    [SerializeField] private HsvColorData[] defaultPresets;
+    [SerializeField] private int defaultPresetIndex;
+
     [Range(0f, 1f)]
     [SerializeField] private float hue;
 
@@ -32,6 +35,13 @@ public class MaterialHueController : MonoBehaviour
     private void Start()
     {
         LoadSavedValues();
+
+        defaultPresetIndex = ClampDefaultPresetIndex(defaultPresetIndex);
+
+        if (!HasSavedValues() && HasDefaultPresets())
+        {
+            ApplyDefaultPreset(defaultPresetIndex, false);
+        }
 
         if (hueRingSelector != null)
         {
@@ -48,6 +58,29 @@ public class MaterialHueController : MonoBehaviour
         }
 
         ApplyColor();
+    }
+
+    public HsvColorData GetDefaultPreset(int index)
+    {
+        if (!HasDefaultPresets())
+        {
+            return default;
+        }
+
+        int clampedIndex = ClampDefaultPresetIndex(index);
+        return defaultPresets[clampedIndex];
+    }
+
+    public void ApplyDefaultPreset(int index, bool saveToPlayerPrefs = true)
+    {
+        if (!HasDefaultPresets())
+        {
+            return;
+        }
+
+        defaultPresetIndex = ClampDefaultPresetIndex(index);
+        HsvColorData preset = GetDefaultPreset(defaultPresetIndex);
+        ApplyColorData(preset, saveToPlayerPrefs);
     }
 
     public HsvColorData GetColorData()
@@ -139,6 +172,11 @@ public class MaterialHueController : MonoBehaviour
         }
     }
 
+    private bool HasSavedValues()
+    {
+        return PlayerPrefs.HasKey(HueKey) || PlayerPrefs.HasKey(SaturationKey) || PlayerPrefs.HasKey(ValueKey);
+    }
+
     private void ApplyColor()
     {
         Color currentColor = Color.HSVToRGB(hue, saturation, value);
@@ -167,6 +205,21 @@ public class MaterialHueController : MonoBehaviour
         PlayerPrefs.Save();
     }
 
+    private bool HasDefaultPresets()
+    {
+        return defaultPresets != null && defaultPresets.Length > 0;
+    }
+
+    private int ClampDefaultPresetIndex(int index)
+    {
+        if (!HasDefaultPresets())
+        {
+            return 0;
+        }
+
+        return Mathf.Clamp(index, 0, defaultPresets.Length - 1);
+    }
+
     private void OnValidate()
     {
         if (Application.isPlaying)
@@ -174,9 +227,18 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
-        hueRingSelector?.SetHue(hue);
-        saturationValuePalette?.SetHue(hue);
-        saturationValuePalette?.SetValues(saturation, value);
-        ApplyColor();
+        defaultPresetIndex = ClampDefaultPresetIndex(defaultPresetIndex);
+
+        if (HasDefaultPresets())
+        {
+            ApplyDefaultPreset(defaultPresetIndex, false);
+        }
+        else
+        {
+            hueRingSelector?.SetHue(hue);
+            saturationValuePalette?.SetHue(hue);
+            saturationValuePalette?.SetValues(saturation, value);
+            ApplyColor();
+        }
     }
 }
