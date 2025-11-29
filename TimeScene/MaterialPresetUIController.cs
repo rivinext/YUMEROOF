@@ -1,0 +1,354 @@
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class MaterialPresetUIController : MonoBehaviour
+{
+    [Header("Preset Category UI")]
+    [SerializeField] private Button defaultCategoryButton;
+    [SerializeField] private Button userCategoryButton;
+
+    [Header("Preset Slot UI")]
+    [SerializeField] private Transform slotButtonContainer;
+    [SerializeField] private GameObject slotButtonPrefab;
+
+    [Header("Preset Action Buttons")]
+    [SerializeField] private Button saveButton;
+    [SerializeField] private Button loadButton;
+    [SerializeField] private GameObject saveButtonRoot;
+    [SerializeField] private GameObject loadButtonRoot;
+
+    private readonly List<Button> slotButtons = new();
+    private readonly List<int> slotButtonGlobalIndices = new();
+
+    private PresetCategory currentCategory;
+    private int currentSlotIndex;
+    private PresetSlotInfo slotInfo;
+
+    private MaterialPresetService presetService;
+    private HueSyncCoordinator hueCoordinator;
+
+    public void Initialize(MaterialPresetService service, HueSyncCoordinator coordinator, int initialPresetIndex)
+    {
+        presetService = service;
+        hueCoordinator = coordinator;
+        slotInfo = presetService != null ? presetService.GetSlotInfo() : new PresetSlotInfo();
+        currentCategory = slotInfo.HasDefaultSlots ? PresetCategory.Default : PresetCategory.User;
+        currentSlotIndex = 0;
+
+        RegisterCategoryButtons();
+        RegisterActionButtons();
+        RefreshSlotButtonsForCategory(currentCategory);
+
+        int totalSlots = slotInfo.TotalSlotCount;
+        if (totalSlots > 0)
+        {
+            SelectPresetByGlobalIndex(initialPresetIndex);
+        }
+        else
+        {
+            UpdateCategoryButtons();
+            UpdateActionButtons();
+        }
+    }
+
+    public void SelectPresetByGlobalIndex(int globalIndex)
+    {
+        if (slotInfo.TotalSlotCount <= 0)
+        {
+            return;
+        }
+
+        int clampedIndex = Mathf.Clamp(globalIndex, 0, slotInfo.TotalSlotCount - 1);
+        (PresetCategory category, int slotIndex) = GetCategoryAndSlotFromGlobalIndex(clampedIndex);
+        currentCategory = category;
+        currentSlotIndex = slotIndex;
+
+        ApplyPresetFromSelection();
+        FinalizePresetSelection(clampedIndex);
+    }
+
+    public void LoadCurrentPreset()
+    {
+        ApplyPresetFromSelection();
+    }
+
+    public void SaveCurrentPreset()
+    {
+        if (presetService == null || hueCoordinator == null)
+        {
+            return;
+        }
+
+        bool saved = presetService.SavePreset(currentCategory, currentSlotIndex, hueCoordinator.Hue, hueCoordinator.Saturation, hueCoordinator.Value);
+        if (!saved)
+        {
+            return;
+        }
+
+        UpdateActionButtons();
+    }
+
+    private void ApplyPresetFromSelection()
+    {
+        if (presetService == null || hueCoordinator == null || slotInfo.TotalSlotCount <= 0)
+        {
+            return;
+        }
+
+        Color fallbackColor = hueCoordinator.CurrentColor;
+        bool loaded = presetService.LoadPreset(currentCategory, currentSlotIndex, fallbackColor, out float hue, out float saturation, out float value);
+        if (!loaded)
+        {
+            return;
+        }
+
+        hueCoordinator.SetColorValues(hue, saturation, value);
+    }
+
+    private void FinalizePresetSelection(int selectedGlobalIndex)
+    {
+        EnsureSlotButtonsForCategory(currentCategory);
+        UpdateActionButtons();
+        UpdateCategoryButtons();
+        UpdateSlotButtonSelection(selectedGlobalIndex);
+    }
+
+    private void RegisterCategoryButtons()
+    {
+        if (defaultCategoryButton != null)
+        {
+            defaultCategoryButton.onClick.RemoveListener(SelectDefaultCategory);
+            defaultCategoryButton.onClick.AddListener(SelectDefaultCategory);
+        }
+
+        if (userCategoryButton != null)
+        {
+            userCategoryButton.onClick.RemoveListener(SelectUserCategory);
+            userCategoryButton.onClick.AddListener(SelectUserCategory);
+        }
+    }
+
+    private void RegisterActionButtons()
+    {
+        if (saveButton != null)
+        {
+            saveButton.onClick.RemoveAllListeners();
+            saveButton.onClick.AddListener(SaveCurrentPreset);
+        }
+
+        if (loadButton != null)
+        {
+            loadButton.onClick.RemoveAllListeners();
+            loadButton.onClick.AddListener(LoadCurrentPreset);
+        }
+    }
+
+    private void SelectDefaultCategory()
+    {
+        SetPresetCategory(PresetCategory.Default);
+    }
+
+    private void SelectUserCategory()
+    {
+        SetPresetCategory(PresetCategory.User);
+    }
+
+    private void SetPresetCategory(PresetCategory category)
+    {
+        if (!HasSlotsForCategory(category))
+        {
+            Debug.LogWarning($"{category} presets are not available.");
+            return;
+        }
+
+        int slotCount = GetSlotCountForCategory(category);
+        int slotIndex = Mathf.Clamp(currentCategory == category ? currentSlotIndex : 0, 0, slotCount - 1);
+        currentCategory = category;
+        currentSlotIndex = slotIndex;
+
+        int globalIndex = GetGlobalSlotIndex(category, slotIndex);
+        RefreshSlotButtonsForCategory(category);
+        ApplyPresetFromSelection();
+        FinalizePresetSelection(globalIndex);
+    }
+
+    private void RefreshSlotButtonsForCategory(PresetCategory category)
+    {
+        if (slotButtonContainer == null || slotButtonPrefab == null)
+        {
+            return;
+        }
+
+        slotButtonGlobalIndices.Clear();
+        slotButtons.Clear();
+
+        for (int i = slotButtonContainer.childCount - 1; i >= 0; i--)
+        {
+            Destroy(slotButtonContainer.GetChild(i).gameObject);
+        }
+
+        int slotCount = GetSlotCountForCategory(category);
+
+        for (int i = 0; i < slotCount; i++)
+        {
+            GameObject buttonInstance = Instantiate(slotButtonPrefab, slotButtonContainer);
+            Button button = buttonInstance.GetComponent<Button>();
+            if (button == null)
+            {
+                continue;
+            }
+
+            int globalIndex = GetGlobalSlotIndex(category, i);
+            button.onClick.AddListener(() => SelectPresetByGlobalIndex(globalIndex));
+            UpdateSlotButtonLabel(buttonInstance, globalIndex);
+            slotButtons.Add(button);
+            slotButtonGlobalIndices.Add(globalIndex);
+        }
+    }
+
+    private void EnsureSlotButtonsForCategory(PresetCategory category)
+    {
+        int expectedCount = GetSlotCountForCategory(category);
+        if (slotButtons.Count != expectedCount)
+        {
+            RefreshSlotButtonsForCategory(category);
+        }
+    }
+
+    private int GetSlotCountForCategory(PresetCategory category)
+    {
+        return category == PresetCategory.User ? slotInfo.UserSlotCount : slotInfo.DefaultSlotCount;
+    }
+
+    private bool HasSlotsForCategory(PresetCategory category)
+    {
+        return category == PresetCategory.User ? slotInfo.HasUserSlots : slotInfo.HasDefaultSlots;
+    }
+
+    private int GetGlobalSlotIndex(PresetCategory category, int slotIndex)
+    {
+        return category == PresetCategory.User ? slotInfo.DefaultSlotCount + slotIndex : slotIndex;
+    }
+
+    private (PresetCategory category, int slotIndex) GetCategoryAndSlotFromGlobalIndex(int globalIndex)
+    {
+        bool isUserSlot = slotInfo.HasUserSlots && globalIndex >= slotInfo.DefaultSlotCount;
+        return isUserSlot
+            ? (PresetCategory.User, globalIndex - slotInfo.DefaultSlotCount)
+            : (PresetCategory.Default, globalIndex);
+    }
+
+    private void UpdateSlotButtonLabel(GameObject buttonObject, int globalIndex)
+    {
+        if (buttonObject == null)
+        {
+            return;
+        }
+
+        string label = BuildSlotLabel(globalIndex);
+
+        TMP_Text tmpLabel = buttonObject.GetComponentInChildren<TMP_Text>();
+        if (tmpLabel != null)
+        {
+            tmpLabel.text = label;
+            return;
+        }
+
+        Text uiText = buttonObject.GetComponentInChildren<Text>();
+        if (uiText != null)
+        {
+            uiText.text = label;
+        }
+    }
+
+    private string BuildSlotLabel(int globalIndex)
+    {
+        bool isUserSlot = slotInfo.HasUserSlots && globalIndex >= slotInfo.DefaultSlotCount;
+
+        if (isUserSlot)
+        {
+            int userIndex = globalIndex - slotInfo.DefaultSlotCount + 1;
+            return $"User {userIndex}";
+        }
+
+        int defaultIndex = globalIndex + 1;
+        return $"Default {defaultIndex}";
+    }
+
+    private void UpdateSlotButtonSelection(int selectedGlobalIndex)
+    {
+        if (slotButtons.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < slotButtons.Count; i++)
+        {
+            Button button = slotButtons[i];
+            if (button == null)
+            {
+                continue;
+            }
+
+            bool isSelected = slotButtonGlobalIndices.Count > i && slotButtonGlobalIndices[i] == selectedGlobalIndex;
+            button.interactable = !isSelected;
+        }
+    }
+
+    private void UpdateActionButtons()
+    {
+        bool hasDefaultSlots = slotInfo.HasDefaultSlots;
+        bool hasUserSlots = slotInfo.HasUserSlots;
+        bool isUser = currentCategory == PresetCategory.User;
+
+        bool showSave = isUser && hasUserSlots;
+        bool showLoad = (isUser && hasUserSlots) || (!isUser && hasDefaultSlots);
+
+        SetButtonVisibility(saveButton, saveButtonRoot, showSave);
+        SetButtonVisibility(loadButton, loadButtonRoot, showLoad);
+
+        if (saveButton != null)
+        {
+            saveButton.interactable = showSave;
+        }
+
+        if (loadButton != null)
+        {
+            loadButton.interactable = showLoad;
+        }
+    }
+
+    private void UpdateCategoryButtons()
+    {
+        UpdateCategoryButton(defaultCategoryButton, PresetCategory.Default);
+        UpdateCategoryButton(userCategoryButton, PresetCategory.User);
+    }
+
+    private void UpdateCategoryButton(Button button, PresetCategory category)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        bool hasSlots = HasSlotsForCategory(category);
+        button.gameObject.SetActive(hasSlots);
+        button.interactable = hasSlots && currentCategory != category;
+    }
+
+    private void SetButtonVisibility(Button button, GameObject buttonRoot, bool isVisible)
+    {
+        if (buttonRoot != null)
+        {
+            buttonRoot.SetActive(isVisible);
+            return;
+        }
+
+        if (button != null)
+        {
+            button.gameObject.SetActive(isVisible);
+        }
+    }
+}
