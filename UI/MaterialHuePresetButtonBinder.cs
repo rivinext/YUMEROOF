@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,9 +12,6 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
     [SerializeField] private ToggleGroup toggleGroup;
     [SerializeField] private Button saveButton;
     [SerializeField] private Button loadButton;
-
-    [Header("Labels")]
-    [SerializeField] private string toggleLabelFormat = "Preset {0}";
 
     [Header("Options")]
     [SerializeField] private bool rebuildOnEnable = true;
@@ -71,11 +69,19 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             toggleInstance.group = toggleGroup;
         }
 
-        string label = string.Format(toggleLabelFormat, slotIndex + 1);
-        Text textComponent = toggleInstance.GetComponentInChildren<Text>();
-        if (textComponent != null)
+        string label = GetSlotLabel(slotIndex);
+        TextMeshProUGUI tmpLabel = toggleInstance.GetComponentInChildren<TextMeshProUGUI>();
+        if (tmpLabel != null)
         {
-            textComponent.text = label;
+            tmpLabel.text = label;
+        }
+        else
+        {
+            Text textComponent = toggleInstance.GetComponentInChildren<Text>();
+            if (textComponent != null)
+            {
+                textComponent.text = label;
+            }
         }
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex || (slotIndex == 0 && spawnedToggles.Count == 0);
         toggleInstance.isOn = shouldSelect;
@@ -96,6 +102,21 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         });
 
         spawnedToggles.Add(toggleInstance);
+    }
+
+    private string GetSlotLabel(int slotIndex)
+    {
+        string defaultLabel = $"Slot {slotIndex + 1}";
+
+        if (presetManager?.PresetSlots == null || slotIndex < 0 || slotIndex >= presetManager.PresetSlots.Count)
+        {
+            return defaultLabel;
+        }
+
+        MaterialHuePresetSlot slot = presetManager.PresetSlots[slotIndex];
+        string slotLabel = slot?.Label?.Trim() ?? string.Empty;
+
+        return string.IsNullOrWhiteSpace(slotLabel) ? defaultLabel : slotLabel;
     }
 
     private void BindActionButtons()
