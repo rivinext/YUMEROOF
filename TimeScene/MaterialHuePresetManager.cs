@@ -50,8 +50,33 @@ public class MaterialHuePresetManager : MonoBehaviour
         new MaterialHuePresetSlot()
     };
 
+    [Header("Selection")]
+    [SerializeField] private int selectedSlotIndex = 0;
+
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
+    public int SelectedSlotIndex
+    {
+        get
+        {
+            if (SlotCount <= 0)
+            {
+                return 0;
+            }
+
+            return Mathf.Clamp(selectedSlotIndex, 0, SlotCount - 1);
+        }
+        set
+        {
+            if (SlotCount <= 0)
+            {
+                selectedSlotIndex = 0;
+                return;
+            }
+
+            selectedSlotIndex = Mathf.Clamp(value, 0, SlotCount - 1);
+        }
+    }
 
     // 指定スロットに、すべての MaterialHueController の色を保存
     public void SavePreset(int slotIndex)
