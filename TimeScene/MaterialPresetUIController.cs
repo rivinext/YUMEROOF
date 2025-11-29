@@ -6,6 +6,10 @@ using UnityEngine.UI;
 
 public class MaterialPresetUIController : MonoBehaviour
 {
+    [Header("Material Selection UI")]
+    [SerializeField] private Transform materialSelectionContainer;
+    [SerializeField] private GameObject materialSelectionButtonPrefab;
+
     [Header("Preset Category UI")]
     [SerializeField] private Button defaultCategoryButton;
     [SerializeField] private Button userCategoryButton;
@@ -22,9 +26,11 @@ public class MaterialPresetUIController : MonoBehaviour
 
     private readonly List<Button> slotButtons = new();
     private readonly List<int> slotButtonGlobalIndices = new();
+    private readonly List<Button> materialButtons = new();
 
     private PresetCategory currentCategory;
     private int currentSlotIndex;
+    private int currentMaterialIndex;
     private PresetSlotInfo slotInfo;
 
     private MaterialPresetService presetService;
@@ -38,12 +44,14 @@ public class MaterialPresetUIController : MonoBehaviour
     public void Initialize(MaterialPresetService service, List<HueSyncCoordinator> coordinators, int initialPresetIndex)
     {
         presetService = service;
-        hueCoordinators = coordinators?.Where(c => c != null).ToList() ?? new List<HueSyncCoordinator>();
-        hueCoordinator = hueCoordinators.FirstOrDefault();
+        hueCoordinators = coordinators?.Where(c => c != null).Distinct().ToList() ?? new List<HueSyncCoordinator>();
+        currentMaterialIndex = Mathf.Clamp(currentMaterialIndex, 0, Mathf.Max(hueCoordinators.Count - 1, 0));
+        hueCoordinator = GetCurrentMaterialCoordinator();
         slotInfo = presetService != null ? presetService.GetSlotInfo() : new PresetSlotInfo();
         currentCategory = slotInfo.HasDefaultSlots ? PresetCategory.Default : PresetCategory.User;
         currentSlotIndex = 0;
 
+        RefreshMaterialSelection();
         RegisterCategoryButtons();
         RegisterActionButtons();
         RefreshSlotButtonsForCategory(currentCategory);
@@ -55,6 +63,7 @@ public class MaterialPresetUIController : MonoBehaviour
         }
         else
         {
+            SyncCurrentMaterialSelectors();
             UpdateCategoryButtons();
             UpdateActionButtons();
         }
@@ -118,6 +127,7 @@ public class MaterialPresetUIController : MonoBehaviour
         }
 
         ApplyPresetToCoordinators(presetSet, fallbackSet);
+        SyncCurrentMaterialSelectors();
     }
 
     private void FinalizePresetSelection(int selectedGlobalIndex)
@@ -267,18 +277,20 @@ public class MaterialPresetUIController : MonoBehaviour
 
     private IEnumerable<HueSyncCoordinator> EnumerateCoordinators()
     {
+        HashSet<HueSyncCoordinator> seen = new HashSet<HueSyncCoordinator>();
+
         if (hueCoordinators != null)
         {
             foreach (HueSyncCoordinator coordinator in hueCoordinators)
             {
-                if (coordinator != null)
+                if (coordinator != null && seen.Add(coordinator))
                 {
                     yield return coordinator;
                 }
             }
         }
 
-        if (hueCoordinator != null && (hueCoordinators == null || !hueCoordinators.Contains(hueCoordinator)))
+        if (hueCoordinator != null && seen.Add(hueCoordinator))
         {
             yield return hueCoordinator;
         }
@@ -417,5 +429,144 @@ public class MaterialPresetUIController : MonoBehaviour
         {
             button.gameObject.SetActive(isVisible);
         }
+    }
+
+    private HueSyncCoordinator GetCurrentMaterialCoordinator()
+    {
+        if (hueCoordinators == null || hueCoordinators.Count == 0)
+        {
+            return hueCoordinator;
+        }
+
+        if (currentMaterialIndex < 0 || currentMaterialIndex >= hueCoordinators.Count)
+        {
+            currentMaterialIndex = 0;
+        }
+
+        return hueCoordinators[currentMaterialIndex];
+    }
+
+    private void RefreshMaterialSelection()
+    {
+        materialButtons.Clear();
+
+        if (materialSelectionContainer == null || materialSelectionButtonPrefab == null)
+        {
+            SelectMaterialByIndex(currentMaterialIndex);
+            return;
+        }
+
+        for (int i = materialSelectionContainer.childCount - 1; i >= 0; i--)
+        {
+            Destroy(materialSelectionContainer.GetChild(i).gameObject);
+        }
+
+        List<HueSyncCoordinator> coordinators = hueCoordinators?.Where(c => c != null).ToList() ?? new List<HueSyncCoordinator>();
+        for (int i = 0; i < coordinators.Count; i++)
+        {
+            HueSyncCoordinator coordinator = coordinators[i];
+            GameObject buttonInstance = Instantiate(materialSelectionButtonPrefab, materialSelectionContainer);
+            Button button = buttonInstance.GetComponent<Button>();
+            if (button == null)
+            {
+                continue;
+            }
+
+            int index = i;
+            button.onClick.AddListener(() => SelectMaterialByIndex(index));
+            UpdateMaterialButtonLabel(buttonInstance, coordinator, index);
+            materialButtons.Add(button);
+        }
+
+        SelectMaterialByIndex(currentMaterialIndex);
+    }
+
+    public void SelectMaterialByIndex(int materialIndex)
+    {
+        if (hueCoordinators == null || hueCoordinators.Count == 0)
+        {
+            hueCoordinator = null;
+            UpdateMaterialButtonSelection();
+            return;
+        }
+
+        int clampedIndex = Mathf.Clamp(materialIndex, 0, hueCoordinators.Count - 1);
+        currentMaterialIndex = clampedIndex;
+        hueCoordinator = GetCurrentMaterialCoordinator();
+
+        SyncCurrentMaterialSelectors();
+        UpdateMaterialButtonSelection();
+        UpdateActionButtons();
+    }
+
+    private void SyncCurrentMaterialSelectors()
+    {
+        HueSyncCoordinator coordinator = GetCurrentMaterialCoordinator();
+        if (coordinator == null)
+        {
+            return;
+        }
+
+        coordinator.SyncSelectors();
+        coordinator.ApplyColor();
+    }
+
+    private void UpdateMaterialButtonSelection()
+    {
+        if (materialButtons.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < materialButtons.Count; i++)
+        {
+            Button button = materialButtons[i];
+            if (button == null)
+            {
+                continue;
+            }
+
+            bool isSelected = i == currentMaterialIndex;
+            button.interactable = !isSelected;
+        }
+    }
+
+    private void UpdateMaterialButtonLabel(GameObject buttonObject, HueSyncCoordinator coordinator, int index)
+    {
+        if (buttonObject == null)
+        {
+            return;
+        }
+
+        string label = BuildMaterialLabel(coordinator, index);
+
+        TMP_Text tmpLabel = buttonObject.GetComponentInChildren<TMP_Text>();
+        if (tmpLabel != null)
+        {
+            tmpLabel.text = label;
+            return;
+        }
+
+        Text uiText = buttonObject.GetComponentInChildren<Text>();
+        if (uiText != null)
+        {
+            uiText.text = label;
+        }
+    }
+
+    private string BuildMaterialLabel(HueSyncCoordinator coordinator, int index)
+    {
+        if (coordinator == null)
+        {
+            return $"Material {index + 1}";
+        }
+
+        string identifier = coordinator.GetMaterialIdentifier();
+        if (string.IsNullOrWhiteSpace(identifier))
+        {
+            return $"Material {index + 1}";
+        }
+
+        return identifier;
     }
 }
