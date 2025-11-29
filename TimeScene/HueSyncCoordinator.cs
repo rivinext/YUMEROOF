@@ -47,6 +47,32 @@ public class HueSyncCoordinator : MonoBehaviour
     public float Value => value;
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
 
+    public string GetMaterialIdentifier()
+    {
+        if (targetMaterial != null)
+        {
+            return BuildMaterialId(targetMaterial);
+        }
+
+        if (targetMaterials != null)
+        {
+            foreach (Material material in targetMaterials)
+            {
+                if (material != null)
+                {
+                    return BuildMaterialId(material);
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(sessionKey))
+        {
+            return sessionKey;
+        }
+
+        return gameObject != null ? gameObject.name : string.Empty;
+    }
+
     private void Start()
     {
         RegisterSelectorListeners();
@@ -93,6 +119,21 @@ public class HueSyncCoordinator : MonoBehaviour
 
         SyncSelectors();
         ApplyColor();
+    }
+
+    public MaterialColor CreateMaterialColor()
+    {
+        return new MaterialColor(GetMaterialIdentifier(), hue, saturation, value);
+    }
+
+    public void ApplyMaterialColor(MaterialColor color)
+    {
+        if (color == null)
+        {
+            return;
+        }
+
+        SetColorValues(color.Hue, color.Saturation, color.Value);
     }
 
     public void SetHue(float newHue)
@@ -238,6 +279,11 @@ public class HueSyncCoordinator : MonoBehaviour
     private bool IsMatchingSession(string selectorSessionKey)
     {
         return string.Equals(selectorSessionKey ?? string.Empty, sessionKey ?? string.Empty);
+    }
+
+    private string BuildMaterialId(Material material)
+    {
+        return material == null ? string.Empty : $"{material.name}_{material.GetInstanceID()}";
     }
 
     private void ApplyColorToTargets(Color color)

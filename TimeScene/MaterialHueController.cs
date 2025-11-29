@@ -38,7 +38,7 @@ public class MaterialHueController : MonoBehaviour
         }
 
         hueCoordinator?.InitializeSelectors();
-        presetUIController?.Initialize(presetService, hueCoordinator, initialPresetIndex);
+        presetUIController?.Initialize(presetService, hueCoordinator != null ? new List<HueSyncCoordinator> { hueCoordinator } : new List<HueSyncCoordinator>(), initialPresetIndex);
     }
 
     private void OnValidate()
@@ -69,7 +69,7 @@ public class MaterialHueController : MonoBehaviour
             MaterialPresetService bindingPresetService = binding.PresetService != null ? binding.PresetService : presetService;
             MaterialPresetUIController bindingPresetUI = binding.PresetUIController != null ? binding.PresetUIController : presetUIController;
 
-            bindingPresetUI?.Initialize(bindingPresetService, coordinator, binding.InitialPresetIndex);
+            bindingPresetUI?.Initialize(bindingPresetService, new List<HueSyncCoordinator> { coordinator }, binding.InitialPresetIndex);
         }
     }
 
