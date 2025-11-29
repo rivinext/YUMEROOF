@@ -57,6 +57,7 @@ public class MaterialHueController : MonoBehaviour
     {
         BuildSlotButtons();
         RegisterCategoryButtons();
+        RegisterActionButtons();
         InitializePresetSelection();
 
         if (hueRingSelector != null)
@@ -74,6 +75,29 @@ public class MaterialHueController : MonoBehaviour
         }
 
         ApplyColor();
+    }
+
+    private void RegisterActionButtons()
+    {
+        if (saveButton != null)
+        {
+            saveButton.onClick.RemoveAllListeners();
+            saveButton.onClick.AddListener(SaveCurrentUserPreset);
+        }
+        else
+        {
+            Debug.LogWarning("Save button is not assigned in the inspector.");
+        }
+
+        if (loadButton != null)
+        {
+            loadButton.onClick.RemoveAllListeners();
+            loadButton.onClick.AddListener(LoadCurrentPreset);
+        }
+        else
+        {
+            Debug.LogWarning("Load button is not assigned in the inspector.");
+        }
     }
 
     public void UpdateHue(float newHue)
