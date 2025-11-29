@@ -1,25 +1,39 @@
 using UnityEngine;
 using UnityEngine.UI;
+
 public class MaterialHueController : MonoBehaviour
 {
-    private const string HueKey = "material_hue";
-    private const string SaturationKey = "material_saturation";
-    private const string ValueKey = "material_value";
+    // PlayerPrefs のキー用プレフィックス（インスタンスごとに変えられる）
+    [SerializeField] private string playerPrefsKeyPrefix = "material";
 
+    private string HueKey => $"{playerPrefsKeyPrefix}_hue";
+    private string SaturationKey => $"{playerPrefsKeyPrefix}_saturation";
+    private string ValueKey => $"{playerPrefsKeyPrefix}_value";
+
+    [Header("Targets")]
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
 
+    [Header("HSV Values")]
     [Range(0f, 1f)]
     [SerializeField] private float hue;
 
     [Range(0f, 1f)]
     [SerializeField] private float saturation;
 
-    [Range(0f,1f)] [SerializeField] private float value;
+    [Range(0f, 1f)]
+    [SerializeField] private float value;
 
+    [Header("Selectors")]
     [SerializeField] private HueRingSelector hueRingSelector;
     [SerializeField] private SaturationValuePalette saturationValuePalette;
+
+    // 外部（プリセットマネージャなど）から参照する用
+    public float Hue => hue;
+    public float Saturation => saturation;
+    public float Value => value;
+    public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
 
     private void Start()
     {
@@ -42,46 +56,66 @@ public class MaterialHueController : MonoBehaviour
         ApplyColor();
     }
 
+    /// <summary>
+    /// Hueリング用のリスナー
+    /// </summary>
     public void UpdateHue(float newHue)
     {
-        bool hasChanged = !Mathf.Approximately(hue, newHue);
-        hue = newHue;
-        hueRingSelector?.SetHue(hue);
-        saturationValuePalette?.SetHue(hue);
-        ApplyColor();
-
-        if (hasChanged)
-        {
-            PlayerPrefs.SetFloat(HueKey, hue);
-            PlayerPrefs.Save();
-        }
+        SetHSV(newHue, saturation, value, saveToPrefs: true);
     }
 
+    /// <summary>
+    /// Saturation用のリスナー
+    /// </summary>
     public void UpdateSaturation(float newSat)
     {
-        bool hasChanged = !Mathf.Approximately(saturation, newSat);
-        saturation = newSat;
-        saturationValuePalette?.SetSaturation(saturation);
-        ApplyColor();
-
-        if (hasChanged)
-        {
-            PlayerPrefs.SetFloat(SaturationKey, saturation);
-            PlayerPrefs.Save();
-        }
+        SetHSV(hue, newSat, value, saveToPrefs: true);
     }
 
+    /// <summary>
+    /// Value用のリスナー
+    /// </summary>
     public void UpdateValue(float newVal)
     {
-        bool hasChanged = !Mathf.Approximately(value, newVal);
-        value = newVal;
-        saturationValuePalette?.SetValue(value);
+        SetHSV(hue, saturation, newVal, saveToPrefs: true);
+    }
+
+    /// <summary>
+    /// 外部からまとめて HSV を設定するための API
+    /// saveToPrefs = true にすると PlayerPrefs にも保存される
+    /// </summary>
+    public void SetHSV(float newHue, float newSaturation, float newValue, bool saveToPrefs = false)
+    {
+        newHue = Mathf.Repeat(newHue, 1f);
+        newSaturation = Mathf.Clamp01(newSaturation);
+        newValue = Mathf.Clamp01(newValue);
+
+        bool changed =
+            !Mathf.Approximately(hue, newHue) ||
+            !Mathf.Approximately(saturation, newSaturation) ||
+            !Mathf.Approximately(value, newValue);
+
+        hue = newHue;
+        saturation = newSaturation;
+        value = newValue;
+
+        // セレクタ側も同期
+        if (hueRingSelector != null)
+        {
+            hueRingSelector.SetHue(hue);
+        }
+
+        if (saturationValuePalette != null)
+        {
+            saturationValuePalette.SetHue(hue);
+            saturationValuePalette.SetValues(saturation, value);
+        }
+
         ApplyColor();
 
-        if (hasChanged)
+        if (saveToPrefs && changed)
         {
-            PlayerPrefs.SetFloat(ValueKey, value);
-            PlayerPrefs.Save();
+            SaveValues();
         }
     }
 
@@ -103,9 +137,17 @@ public class MaterialHueController : MonoBehaviour
         }
     }
 
+    private void SaveValues()
+    {
+        PlayerPrefs.SetFloat(HueKey, hue);
+        PlayerPrefs.SetFloat(SaturationKey, saturation);
+        PlayerPrefs.SetFloat(ValueKey, value);
+        PlayerPrefs.Save();
+    }
+
     private void ApplyColor()
     {
-        Color currentColor = Color.HSVToRGB(hue, saturation, value);
+        Color currentColor = CurrentColor;
 
         if (targetMaterial != null)
         {
@@ -130,9 +172,18 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
-        hueRingSelector?.SetHue(hue);
-        saturationValuePalette?.SetHue(hue);
-        saturationValuePalette?.SetValues(saturation, value);
+        // エディタ上で値をいじったときも UI & マテリアルに反映
+        if (hueRingSelector != null)
+        {
+            hueRingSelector.SetHue(hue);
+        }
+
+        if (saturationValuePalette != null)
+        {
+            saturationValuePalette.SetHue(hue);
+            saturationValuePalette.SetValues(saturation, value);
+        }
+
         ApplyColor();
     }
 }
