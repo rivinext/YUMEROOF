@@ -15,6 +15,8 @@ public class MaterialHueController : MonoBehaviour
     }
 
     [SerializeField] private string controllerId;
+    [SerializeField] private string uniqueId;
+    [SerializeField] private int slotNumber;
     [SerializeField] private bool disableLocalPersistence;
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
@@ -77,7 +79,13 @@ public class MaterialHueController : MonoBehaviour
         return GetColorData();
     }
 
-    public string ControllerId => string.IsNullOrWhiteSpace(controllerId) ? gameObject.name : controllerId;
+    public string ControllerId => string.IsNullOrWhiteSpace(uniqueId)
+        ? string.IsNullOrWhiteSpace(controllerId)
+            ? gameObject.name
+            : controllerId
+        : uniqueId;
+
+    public int SlotNumber => slotNumber;
 
     public void ApplyColorData(HsvColorData colorData, bool saveToPlayerPrefs = true)
     {
@@ -221,6 +229,16 @@ public class MaterialHueController : MonoBehaviour
         if (string.IsNullOrWhiteSpace(controllerId))
         {
             controllerId = gameObject.name;
+        }
+
+        if (string.IsNullOrWhiteSpace(uniqueId))
+        {
+            uniqueId = controllerId;
+        }
+
+        if (slotNumber < 0)
+        {
+            slotNumber = 0;
         }
     }
 
