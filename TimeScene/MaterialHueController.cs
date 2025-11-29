@@ -6,6 +6,14 @@ public class MaterialHueController : MonoBehaviour
     private const string SaturationKey = "material_saturation";
     private const string ValueKey = "material_value";
 
+    [System.Serializable]
+    public struct HsvColorData
+    {
+        public float Hue;
+        public float Saturation;
+        public float Value;
+    }
+
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
@@ -40,6 +48,34 @@ public class MaterialHueController : MonoBehaviour
         }
 
         ApplyColor();
+    }
+
+    public HsvColorData GetColorData()
+    {
+        return new HsvColorData
+        {
+            Hue = hue,
+            Saturation = saturation,
+            Value = value
+        };
+    }
+
+    public void ApplyColorData(HsvColorData colorData, bool saveToPlayerPrefs = true)
+    {
+        hue = Mathf.Repeat(colorData.Hue, 1f);
+        saturation = Mathf.Clamp01(colorData.Saturation);
+        value = Mathf.Clamp01(colorData.Value);
+
+        hueRingSelector?.SetHue(hue);
+        saturationValuePalette?.SetHue(hue);
+        saturationValuePalette?.SetValues(saturation, value);
+
+        ApplyColor();
+
+        if (saveToPlayerPrefs)
+        {
+            SaveValues();
+        }
     }
 
     public void UpdateHue(float newHue)
@@ -121,6 +157,14 @@ public class MaterialHueController : MonoBehaviour
         {
             previewRawImage.color = currentColor;
         }
+    }
+
+    private void SaveValues()
+    {
+        PlayerPrefs.SetFloat(HueKey, hue);
+        PlayerPrefs.SetFloat(SaturationKey, saturation);
+        PlayerPrefs.SetFloat(ValueKey, value);
+        PlayerPrefs.Save();
     }
 
     private void OnValidate()
