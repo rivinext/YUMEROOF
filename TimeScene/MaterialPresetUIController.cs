@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,11 +29,17 @@ public class MaterialPresetUIController : MonoBehaviour
 
     private MaterialPresetService presetService;
     private HueSyncCoordinator hueCoordinator;
-
+    private List<HueSyncCoordinator> hueCoordinators = new();
     public void Initialize(MaterialPresetService service, HueSyncCoordinator coordinator, int initialPresetIndex)
     {
+        Initialize(service, coordinator != null ? new List<HueSyncCoordinator> { coordinator } : new List<HueSyncCoordinator>(), initialPresetIndex);
+    }
+
+    public void Initialize(MaterialPresetService service, List<HueSyncCoordinator> coordinators, int initialPresetIndex)
+    {
         presetService = service;
-        hueCoordinator = coordinator;
+        hueCoordinators = coordinators?.Where(c => c != null).ToList() ?? new List<HueSyncCoordinator>();
+        hueCoordinator = hueCoordinators.FirstOrDefault();
         slotInfo = presetService != null ? presetService.GetSlotInfo() : new PresetSlotInfo();
         currentCategory = slotInfo.HasDefaultSlots ? PresetCategory.Default : PresetCategory.User;
         currentSlotIndex = 0;
@@ -76,12 +83,18 @@ public class MaterialPresetUIController : MonoBehaviour
 
     public void SaveCurrentPreset()
     {
-        if (presetService == null || hueCoordinator == null)
+        if (presetService == null)
         {
             return;
         }
 
-        bool saved = presetService.SavePreset(currentCategory, currentSlotIndex, hueCoordinator.Hue, hueCoordinator.Saturation, hueCoordinator.Value);
+        MaterialColorSet currentSet = BuildCurrentColorSet();
+        if (currentSet == null || currentSet.Colors.Count == 0)
+        {
+            return;
+        }
+
+        bool saved = presetService.SavePreset(currentCategory, currentSlotIndex, currentSet);
         if (!saved)
         {
             return;
@@ -92,19 +105,19 @@ public class MaterialPresetUIController : MonoBehaviour
 
     private void ApplyPresetFromSelection()
     {
-        if (presetService == null || hueCoordinator == null || slotInfo.TotalSlotCount <= 0)
+        if (presetService == null || slotInfo.TotalSlotCount <= 0)
         {
             return;
         }
 
-        Color fallbackColor = hueCoordinator.CurrentColor;
-        bool loaded = presetService.LoadPreset(currentCategory, currentSlotIndex, fallbackColor, out float hue, out float saturation, out float value);
+        MaterialColorSet fallbackSet = BuildCurrentColorSet();
+        bool loaded = presetService.LoadPreset(currentCategory, currentSlotIndex, fallbackSet, out MaterialColorSet presetSet);
         if (!loaded)
         {
             return;
         }
 
-        hueCoordinator.SetColorValues(hue, saturation, value);
+        ApplyPresetToCoordinators(presetSet, fallbackSet);
     }
 
     private void FinalizePresetSelection(int selectedGlobalIndex)
@@ -127,6 +140,41 @@ public class MaterialPresetUIController : MonoBehaviour
         {
             userCategoryButton.onClick.RemoveListener(SelectUserCategory);
             userCategoryButton.onClick.AddListener(SelectUserCategory);
+        }
+    }
+
+    private MaterialColorSet BuildCurrentColorSet()
+    {
+        List<MaterialColor> colors = new List<MaterialColor>();
+
+        foreach (HueSyncCoordinator coordinator in EnumerateCoordinators())
+        {
+            MaterialColor materialColor = coordinator.CreateMaterialColor();
+            if (materialColor != null)
+            {
+                colors.Add(materialColor);
+            }
+        }
+
+        return new MaterialColorSet(colors);
+    }
+
+    private void ApplyPresetToCoordinators(MaterialColorSet presetSet, MaterialColorSet fallbackSet)
+    {
+        foreach (HueSyncCoordinator coordinator in EnumerateCoordinators())
+        {
+            string materialId = coordinator.GetMaterialIdentifier();
+
+            if (presetSet != null && presetSet.TryGetColor(materialId, out MaterialColor color))
+            {
+                coordinator.ApplyMaterialColor(color);
+                continue;
+            }
+
+            if (fallbackSet != null && fallbackSet.TryGetColor(materialId, out MaterialColor fallbackColor))
+            {
+                coordinator.ApplyMaterialColor(fallbackColor);
+            }
         }
     }
 
@@ -214,6 +262,25 @@ public class MaterialPresetUIController : MonoBehaviour
         if (slotButtons.Count != expectedCount)
         {
             RefreshSlotButtonsForCategory(category);
+        }
+    }
+
+    private IEnumerable<HueSyncCoordinator> EnumerateCoordinators()
+    {
+        if (hueCoordinators != null)
+        {
+            foreach (HueSyncCoordinator coordinator in hueCoordinators)
+            {
+                if (coordinator != null)
+                {
+                    yield return coordinator;
+                }
+            }
+        }
+
+        if (hueCoordinator != null && (hueCoordinators == null || !hueCoordinators.Contains(hueCoordinator)))
+        {
+            yield return hueCoordinator;
         }
     }
 

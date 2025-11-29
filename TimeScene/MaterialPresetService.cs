@@ -1,4 +1,62 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
+
+[System.Serializable]
+public class MaterialColor
+{
+    public string MaterialId;
+    public float Hue;
+    public float Saturation;
+    public float Value;
+
+    public MaterialColor()
+    {
+    }
+
+    public MaterialColor(string materialId, float hue, float saturation, float value)
+    {
+        MaterialId = materialId;
+        Hue = hue;
+        Saturation = saturation;
+        Value = value;
+    }
+}
+
+[System.Serializable]
+public class MaterialColorSet
+{
+    [SerializeField] private List<MaterialColor> colors = new();
+
+    public IReadOnlyList<MaterialColor> Colors => colors ?? new List<MaterialColor>();
+
+    public MaterialColorSet()
+    {
+    }
+
+    public MaterialColorSet(IEnumerable<MaterialColor> colorValues)
+    {
+        colors = colorValues?.Where(c => c != null).ToList() ?? new List<MaterialColor>();
+    }
+
+    public bool TryGetColor(string materialId, out MaterialColor color)
+    {
+        color = Colors.FirstOrDefault(c => string.Equals(NormalizeId(c.MaterialId), NormalizeId(materialId)));
+        return color != null;
+    }
+
+    public static MaterialColorSet FromColor(Color color, string materialId)
+    {
+        Color.RGBToHSV(color, out float hue, out float saturation, out float value);
+        return new MaterialColorSet(new[] { new MaterialColor(materialId, hue, saturation, value) });
+    }
+
+    private static string NormalizeId(string materialId)
+    {
+        return materialId ?? string.Empty;
+    }
+}
 
 public enum PresetCategory
 {
@@ -27,7 +85,9 @@ public class MaterialPresetService : MonoBehaviour
 
     [SerializeField] private int defaultPresetCount = 3;
     [SerializeField] private int userPresetCount = 5;
-    [SerializeField] private Color[] defaultPresetColors;
+    [SerializeField] private MaterialColorSet[] defaultPresetColors;
+    [FormerlySerializedAs("defaultPresetColors")]
+    [SerializeField] private Color[] legacyDefaultPresetColors;
     [SerializeField] private string userPresetKeyPrefix = DefaultUserPresetKeyPrefix;
 
     public PresetSlotInfo GetSlotInfo()
@@ -35,12 +95,10 @@ public class MaterialPresetService : MonoBehaviour
         return new PresetSlotInfo(defaultPresetCount, userPresetCount);
     }
 
-    public bool LoadPreset(PresetCategory category, int slotIndex, Color fallbackColor, out float hue, out float saturation, out float value)
+    public bool LoadPreset(PresetCategory category, int slotIndex, MaterialColorSet fallbackSet, out MaterialColorSet presetSet)
     {
         PresetSlotInfo slotInfo = GetSlotInfo();
-        hue = 0f;
-        saturation = 0f;
-        value = 0f;
+        presetSet = new MaterialColorSet();
 
         if (slotInfo.TotalSlotCount <= 0)
         {
@@ -54,7 +112,7 @@ public class MaterialPresetService : MonoBehaviour
                 return false;
             }
 
-            return TryLoadDefaultPreset(slotIndex, fallbackColor, slotInfo.DefaultSlotCount, out hue, out saturation, out value);
+            return TryLoadDefaultPreset(slotIndex, fallbackSet, slotInfo.DefaultSlotCount, out presetSet);
         }
 
         if (slotInfo.UserSlotCount <= 0)
@@ -62,10 +120,10 @@ public class MaterialPresetService : MonoBehaviour
             return false;
         }
 
-        return TryLoadUserPreset(slotIndex, fallbackColor, slotInfo.UserSlotCount, out hue, out saturation, out value);
+        return TryLoadUserPreset(slotIndex, fallbackSet, slotInfo.UserSlotCount, out presetSet);
     }
 
-    public bool SavePreset(PresetCategory category, int slotIndex, float hue, float saturation, float value)
+    public bool SavePreset(PresetCategory category, int slotIndex, MaterialColorSet presetSet)
     {
         PresetSlotInfo slotInfo = GetSlotInfo();
         if (category != PresetCategory.User || slotInfo.UserSlotCount <= 0)
@@ -75,61 +133,128 @@ public class MaterialPresetService : MonoBehaviour
         }
 
         int clampedSlot = Mathf.Clamp(slotIndex, 0, slotInfo.UserSlotCount - 1);
-        PlayerPrefs.SetFloat(GetUserHueKey(clampedSlot), hue);
-        PlayerPrefs.SetFloat(GetUserSaturationKey(clampedSlot), saturation);
-        PlayerPrefs.SetFloat(GetUserValueKey(clampedSlot), value);
+        IReadOnlyList<MaterialColor> colors = presetSet?.Colors ?? new List<MaterialColor>();
+
+        foreach (MaterialColor color in colors)
+        {
+            if (color == null)
+            {
+                continue;
+            }
+
+            string materialId = NormalizeMaterialId(color.MaterialId);
+            PlayerPrefs.SetFloat(GetUserHueKey(clampedSlot, materialId), color.Hue);
+            PlayerPrefs.SetFloat(GetUserSaturationKey(clampedSlot, materialId), color.Saturation);
+            PlayerPrefs.SetFloat(GetUserValueKey(clampedSlot, materialId), color.Value);
+        }
+
         PlayerPrefs.Save();
         return true;
     }
 
-    private bool TryLoadDefaultPreset(int slotIndex, Color fallbackColor, int availableSlots, out float hue, out float saturation, out float value)
+    private bool TryLoadDefaultPreset(int slotIndex, MaterialColorSet fallbackSet, int availableSlots, out MaterialColorSet presetSet)
     {
-        Color color = GetDefaultPresetColor(slotIndex, availableSlots, fallbackColor);
-        Color.RGBToHSV(color, out hue, out saturation, out value);
+        presetSet = GetDefaultPresetSet(slotIndex, availableSlots, fallbackSet);
         return true;
     }
 
-    private bool TryLoadUserPreset(int slotIndex, Color fallbackColor, int availableSlots, out float hue, out float saturation, out float value)
+    private bool TryLoadUserPreset(int slotIndex, MaterialColorSet fallbackSet, int availableSlots, out MaterialColorSet presetSet)
     {
         int clampedSlot = Mathf.Clamp(slotIndex, 0, availableSlots - 1);
-        string hueKey = GetUserHueKey(clampedSlot);
+        MaterialColorSet defaultSet = GetDefaultPresetSet(clampedSlot, availableSlots, fallbackSet);
+        IReadOnlyList<MaterialColor> targetColors = fallbackSet?.Colors?.Count > 0
+            ? fallbackSet.Colors
+            : defaultSet.Colors;
 
-        if (!PlayerPrefs.HasKey(hueKey))
+        if (targetColors == null || targetColors.Count == 0)
         {
-            Color color = GetDefaultPresetColor(clampedSlot, availableSlots, fallbackColor);
-            Color.RGBToHSV(color, out hue, out saturation, out value);
+            presetSet = defaultSet;
             return true;
         }
 
-        hue = PlayerPrefs.GetFloat(hueKey);
-        saturation = PlayerPrefs.GetFloat(GetUserSaturationKey(clampedSlot));
-        value = PlayerPrefs.GetFloat(GetUserValueKey(clampedSlot));
+        List<MaterialColor> loadedColors = new List<MaterialColor>();
+
+        for (int i = 0; i < targetColors.Count; i++)
+        {
+            MaterialColor target = targetColors[i];
+            if (target == null)
+            {
+                continue;
+            }
+
+            string materialId = NormalizeMaterialId(target.MaterialId, i);
+            string hueKey = GetUserHueKey(clampedSlot, materialId);
+
+            if (!PlayerPrefs.HasKey(hueKey))
+            {
+                if (defaultSet.TryGetColor(materialId, out MaterialColor defaultColor))
+                {
+                    loadedColors.Add(new MaterialColor(materialId, defaultColor.Hue, defaultColor.Saturation, defaultColor.Value));
+                    continue;
+                }
+
+                loadedColors.Add(new MaterialColor(materialId, target.Hue, target.Saturation, target.Value));
+                continue;
+            }
+
+            float hue = PlayerPrefs.GetFloat(hueKey);
+            float saturation = PlayerPrefs.GetFloat(GetUserSaturationKey(clampedSlot, materialId));
+            float value = PlayerPrefs.GetFloat(GetUserValueKey(clampedSlot, materialId));
+            loadedColors.Add(new MaterialColor(materialId, hue, saturation, value));
+        }
+
+        presetSet = new MaterialColorSet(loadedColors);
         return true;
     }
 
-    private Color GetDefaultPresetColor(int slotIndex, int availableSlots, Color fallbackColor)
+    private MaterialColorSet GetDefaultPresetSet(int slotIndex, int availableSlots, MaterialColorSet fallbackSet)
     {
-        if (defaultPresetColors == null || defaultPresetColors.Length == 0)
+        if (defaultPresetColors != null && defaultPresetColors.Length > 0)
         {
-            return fallbackColor;
+            int clampedSlot = Mathf.Clamp(slotIndex, 0, Mathf.Min(defaultPresetColors.Length, availableSlots) - 1);
+            return defaultPresetColors[clampedSlot] ?? new MaterialColorSet();
         }
 
-        int clampedSlot = Mathf.Clamp(slotIndex, 0, Mathf.Min(defaultPresetColors.Length, availableSlots) - 1);
-        return defaultPresetColors[clampedSlot];
+        if (legacyDefaultPresetColors != null && legacyDefaultPresetColors.Length > 0)
+        {
+            int clampedSlot = Mathf.Clamp(slotIndex, 0, Mathf.Min(legacyDefaultPresetColors.Length, availableSlots) - 1);
+            Color legacyColor = legacyDefaultPresetColors[clampedSlot];
+            string materialId = TryGetFallbackMaterialId(fallbackSet) ?? $"material_{clampedSlot}";
+            return MaterialColorSet.FromColor(legacyColor, materialId);
+        }
+
+        return fallbackSet ?? new MaterialColorSet();
     }
 
-    private string GetUserHueKey(int slotIndex)
+    private string GetUserHueKey(int slotIndex, string materialId)
     {
-        return $"{userPresetKeyPrefix}_{slotIndex}_hue";
+        return $"{userPresetKeyPrefix}_{slotIndex}_{materialId}_hue";
     }
 
-    private string GetUserSaturationKey(int slotIndex)
+    private string GetUserSaturationKey(int slotIndex, string materialId)
     {
-        return $"{userPresetKeyPrefix}_{slotIndex}_saturation";
+        return $"{userPresetKeyPrefix}_{slotIndex}_{materialId}_saturation";
     }
 
-    private string GetUserValueKey(int slotIndex)
+    private string GetUserValueKey(int slotIndex, string materialId)
     {
-        return $"{userPresetKeyPrefix}_{slotIndex}_value";
+        return $"{userPresetKeyPrefix}_{slotIndex}_{materialId}_value";
+    }
+
+    private string NormalizeMaterialId(string materialId, int index = 0)
+    {
+        string sanitized = string.IsNullOrEmpty(materialId) ? $"material_{index}" : materialId.Replace(" ", "_");
+        return sanitized;
+    }
+
+    private string TryGetFallbackMaterialId(MaterialColorSet fallbackSet)
+    {
+        if (fallbackSet?.Colors == null || fallbackSet.Colors.Count <= 0)
+        {
+            return null;
+        }
+
+        MaterialColor first = fallbackSet.Colors.FirstOrDefault(c => c != null);
+        return first != null ? NormalizeMaterialId(first.MaterialId) : null;
     }
 }
