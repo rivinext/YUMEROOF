@@ -1,24 +1,37 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
+public class MaterialHuePresetSlot
+{
+    [SerializeField] private string label = "Slot";
+
+    public string Label => string.IsNullOrWhiteSpace(label) ? "Slot" : label.Trim();
+}
+
 public class MaterialHuePresetManager : MonoBehaviour
 {
     [SerializeField] private List<MaterialHueController> controllers = new();
     [SerializeField] private string keyPrefix = "multi_mat_preset";
 
-    // インスペクタから確認しやすいようにスロット数だけ表示しておく（お好みで）
-    [SerializeField] private int maxSlots = 5;
+    [Header("Preset Slots")]
+    [SerializeField] private List<MaterialHuePresetSlot> presetSlots = new()
+    {
+        new MaterialHuePresetSlot(),
+        new MaterialHuePresetSlot(),
+        new MaterialHuePresetSlot()
+    };
+
+    public int SlotCount => presetSlots?.Count ?? 0;
+    public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
 
     // 指定スロットに、すべての MaterialHueController の色を保存
     public void SavePreset(int slotIndex)
     {
-        if (controllers == null || controllers.Count == 0)
+        if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
-            Debug.LogWarning("No MaterialHueControllers are assigned.");
             return;
         }
-
-        int clampedSlot = Mathf.Max(0, slotIndex);
 
         for (int i = 0; i < controllers.Count; i++)
         {
@@ -38,13 +51,10 @@ public class MaterialHuePresetManager : MonoBehaviour
     // 指定スロットから、すべての MaterialHueController の色を復元
     public void LoadPreset(int slotIndex)
     {
-        if (controllers == null || controllers.Count == 0)
+        if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
-            Debug.LogWarning("No MaterialHueControllers are assigned.");
             return;
         }
-
-        int clampedSlot = Mathf.Max(0, slotIndex);
 
         for (int i = 0; i < controllers.Count; i++)
         {
@@ -68,12 +78,28 @@ public class MaterialHuePresetManager : MonoBehaviour
         Debug.Log($"Loaded preset slot {clampedSlot}");
     }
 
-    // ボタン用のラッパー（インスペクタで使いやすいように）
-    public void SavePresetSlot0() => SavePreset(0);
-    public void SavePresetSlot1() => SavePreset(1);
-    public void SavePresetSlot2() => SavePreset(2);
+    private bool TryValidateSlot(int slotIndex, out int validSlotIndex)
+    {
+        validSlotIndex = Mathf.Max(0, slotIndex);
 
-    public void LoadPresetSlot0() => LoadPreset(0);
-    public void LoadPresetSlot1() => LoadPreset(1);
-    public void LoadPresetSlot2() => LoadPreset(2);
+        if (controllers == null || controllers.Count == 0)
+        {
+            Debug.LogWarning("No MaterialHueControllers are assigned.");
+            return false;
+        }
+
+        if (SlotCount <= 0)
+        {
+            Debug.LogWarning("No preset slots are configured.");
+            return false;
+        }
+
+        if (validSlotIndex >= SlotCount)
+        {
+            Debug.LogWarning($"Slot index {validSlotIndex} is out of range. Available slots: {SlotCount}");
+            validSlotIndex = Mathf.Clamp(validSlotIndex, 0, SlotCount - 1);
+        }
+
+        return true;
+    }
 }
