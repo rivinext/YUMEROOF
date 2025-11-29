@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
 public class HueSyncCoordinator : MonoBehaviour
 {
+    [SerializeField] private string sessionKey = string.Empty;
+
     [Header("HSV Values")]
     [Range(0f, 1f)]
     [SerializeField] private float hue;
@@ -38,6 +41,7 @@ public class HueSyncCoordinator : MonoBehaviour
     public UnityEvent<float> OnValueUpdated => onValueUpdated;
     public UnityEvent<Color> OnColorApplied => onColorApplied;
 
+    public string SessionKey => sessionKey;
     public float Hue => hue;
     public float Saturation => saturation;
     public float Value => value;
@@ -48,6 +52,30 @@ public class HueSyncCoordinator : MonoBehaviour
         RegisterSelectorListeners();
         SyncSelectors();
         ApplyColor();
+    }
+
+    public void SetSessionKey(string key)
+    {
+        sessionKey = key ?? string.Empty;
+    }
+
+    public void ConfigureSelectors(IEnumerable<HueRingSelector> rings, IEnumerable<SaturationValuePalette> palettes)
+    {
+        hueRingSelectors = rings?.Where(s => s != null).ToList() ?? new List<HueRingSelector>();
+        hueRingSelector = hueRingSelectors.FirstOrDefault();
+
+        saturationValuePalettes = palettes?.Where(p => p != null).ToList() ?? new List<SaturationValuePalette>();
+        saturationValuePalette = saturationValuePalettes.FirstOrDefault();
+    }
+
+    public void ConfigureTargets(Material primaryMaterial, IEnumerable<Material> additionalMaterials,
+        Image imagePreview = null, RawImage rawImagePreview = null, IEnumerable<Graphic> graphics = null)
+    {
+        targetMaterial = primaryMaterial;
+        targetMaterials = additionalMaterials?.Where(m => m != null).ToList() ?? new List<Material>();
+        previewImage = imagePreview;
+        previewRawImage = rawImagePreview;
+        previewGraphics = graphics?.Where(g => g != null).ToList() ?? new List<Graphic>();
     }
 
     public void InitializeSelectors()
@@ -173,14 +201,15 @@ public class HueSyncCoordinator : MonoBehaviour
         {
             foreach (HueRingSelector selector in hueRingSelectors)
             {
-                if (selector != null)
+                if (selector != null && IsMatchingSession(selector.SessionKey))
                 {
                     yield return selector;
                 }
             }
         }
 
-        if (hueRingSelector != null && (hueRingSelectors == null || !hueRingSelectors.Contains(hueRingSelector)))
+        if (hueRingSelector != null && IsMatchingSession(hueRingSelector.SessionKey) &&
+            (hueRingSelectors == null || !hueRingSelectors.Contains(hueRingSelector)))
         {
             yield return hueRingSelector;
         }
@@ -192,17 +221,23 @@ public class HueSyncCoordinator : MonoBehaviour
         {
             foreach (SaturationValuePalette palette in saturationValuePalettes)
             {
-                if (palette != null)
+                if (palette != null && IsMatchingSession(palette.SessionKey))
                 {
                     yield return palette;
                 }
             }
         }
 
-        if (saturationValuePalette != null && (saturationValuePalettes == null || !saturationValuePalettes.Contains(saturationValuePalette)))
+        if (saturationValuePalette != null && IsMatchingSession(saturationValuePalette.SessionKey) &&
+            (saturationValuePalettes == null || !saturationValuePalettes.Contains(saturationValuePalette)))
         {
             yield return saturationValuePalette;
         }
+    }
+
+    private bool IsMatchingSession(string selectorSessionKey)
+    {
+        return string.Equals(selectorSessionKey ?? string.Empty, sessionKey ?? string.Empty);
     }
 
     private void ApplyColorToTargets(Color color)

@@ -11,10 +11,13 @@ public class HueRingSelector : MonoBehaviour, IPointerDownHandler, IDragHandler
     [SerializeField] private Graphic ringGraphic;
     [SerializeField] private float handleRadiusOffset = 0f;
 
+    [SerializeField] private string sessionKey = string.Empty;
+
     [SerializeField] private UnityEvent<float> onHueChanged = new UnityEvent<float>();
 
     private float hue;
 
+    public string SessionKey => sessionKey;
     public UnityEvent<float> OnHueChanged => onHueChanged;
 
     private RectTransform RectTransformCache => (RectTransform)transform;
@@ -30,6 +33,11 @@ public class HueRingSelector : MonoBehaviour, IPointerDownHandler, IDragHandler
         {
             ringGraphic = GetComponent<Graphic>();
         }
+    }
+
+    public void SetSessionKey(string key)
+    {
+        sessionKey = key ?? string.Empty;
     }
 
     public void OnPointerDown(PointerEventData eventData)
