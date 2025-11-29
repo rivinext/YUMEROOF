@@ -11,6 +11,8 @@ public class SaturationValuePalette : MonoBehaviour, IPointerDownHandler, IDragH
     [SerializeField] private RawImage paletteImage;
     [SerializeField] private int textureResolution = 64;
 
+    [SerializeField] private string sessionKey = string.Empty;
+
     [SerializeField] private UnityEvent<float> onSaturationChanged = new UnityEvent<float>();
     [SerializeField] private UnityEvent<float> onValueChanged = new UnityEvent<float>();
 
@@ -19,6 +21,7 @@ public class SaturationValuePalette : MonoBehaviour, IPointerDownHandler, IDragH
     private float saturation;
     private float value;
 
+    public string SessionKey => sessionKey;
     public UnityEvent<float> OnSaturationChanged => onSaturationChanged;
     public UnityEvent<float> OnValueChanged => onValueChanged;
 
@@ -38,6 +41,11 @@ public class SaturationValuePalette : MonoBehaviour, IPointerDownHandler, IDragH
         {
             Destroy(paletteTexture);
         }
+    }
+
+    public void SetSessionKey(string key)
+    {
+        sessionKey = key ?? string.Empty;
     }
 
     public void OnPointerDown(PointerEventData eventData)
