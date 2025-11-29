@@ -6,31 +6,34 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private MaterialHuePresetManager presetManager;
-    [SerializeField] private Button saveButtonTemplate;
-    [SerializeField] private Button loadButtonTemplate;
-    [SerializeField] private Transform saveButtonContainer;
-    [SerializeField] private Transform loadButtonContainer;
+    [SerializeField] private Toggle toggleTemplate;
+    [SerializeField] private Transform toggleContainer;
+    [SerializeField] private ToggleGroup toggleGroup;
+    [SerializeField] private Button saveButton;
+    [SerializeField] private Button loadButton;
 
     [Header("Labels")]
-    [SerializeField] private string saveLabelFormat = "Save {0}";
-    [SerializeField] private string loadLabelFormat = "Load {0}";
+    [SerializeField] private string toggleLabelFormat = "Preset {0}";
 
     [Header("Options")]
     [SerializeField] private bool rebuildOnEnable = true;
 
-    private readonly List<Button> spawnedButtons = new();
+    private readonly List<Toggle> spawnedToggles = new();
 
     private void OnEnable()
     {
         if (rebuildOnEnable)
         {
-            RebuildButtons();
+            RebuildToggles();
         }
+
+        BindActionButtons();
+        UpdateSaveButtonState();
     }
 
-    public void RebuildButtons()
+    public void RebuildToggles()
     {
-        ClearSpawnedButtons();
+        ClearSpawnedToggles();
 
         if (presetManager == null)
         {
@@ -47,65 +50,112 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
 
         for (int i = 0; i < slotCount; i++)
         {
-            SpawnButton(saveButtonTemplate, saveButtonContainer, i, true);
-            SpawnButton(loadButtonTemplate, loadButtonContainer, i, false);
+            SpawnToggle(toggleTemplate, toggleContainer, i);
         }
+
+        UpdateSaveButtonState();
     }
 
-    private void SpawnButton(Button template, Transform parent, int slotIndex, bool isSave)
+    private void SpawnToggle(Toggle template, Transform parent, int slotIndex)
     {
         if (template == null || parent == null)
         {
             return;
         }
 
-        Button buttonInstance = Instantiate(template, parent);
-        buttonInstance.gameObject.SetActive(true);
+        Toggle toggleInstance = Instantiate(template, parent);
+        toggleInstance.gameObject.SetActive(true);
 
-        string labelTemplate = isSave ? saveLabelFormat : loadLabelFormat;
-        string label = string.Format(labelTemplate, slotIndex + 1);
-        Text textComponent = buttonInstance.GetComponentInChildren<Text>();
+        if (toggleGroup != null)
+        {
+            toggleInstance.group = toggleGroup;
+        }
+
+        string label = string.Format(toggleLabelFormat, slotIndex + 1);
+        Text textComponent = toggleInstance.GetComponentInChildren<Text>();
         if (textComponent != null)
         {
             textComponent.text = label;
         }
-
-        bool isDefaultSlot = presetManager != null && presetManager.IsDefaultSlot(slotIndex);
-        if (isSave && isDefaultSlot)
+        bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex || (slotIndex == 0 && spawnedToggles.Count == 0);
+        toggleInstance.isOn = shouldSelect;
+        if (shouldSelect)
         {
-            buttonInstance.interactable = false;
+            presetManager.SelectedSlotIndex = slotIndex;
         }
 
-        buttonInstance.onClick.AddListener(() =>
+        toggleInstance.onValueChanged.AddListener(isOn =>
         {
-            if (presetManager == null)
+            if (!isOn || presetManager == null)
             {
                 return;
             }
 
-            if (isSave)
-            {
-                presetManager.SavePreset(slotIndex);
-            }
-            else
-            {
-                presetManager.LoadPreset(slotIndex);
-            }
+            presetManager.SelectedSlotIndex = slotIndex;
+            UpdateSaveButtonState();
         });
 
-        spawnedButtons.Add(buttonInstance);
+        spawnedToggles.Add(toggleInstance);
     }
 
-    private void ClearSpawnedButtons()
+    private void BindActionButtons()
     {
-        foreach (Button button in spawnedButtons)
+        if (loadButton != null)
         {
-            if (button != null)
+            loadButton.onClick.RemoveAllListeners();
+            loadButton.onClick.AddListener(() =>
             {
-                Destroy(button.gameObject);
+                if (presetManager == null)
+                {
+                    return;
+                }
+
+                presetManager.LoadPreset(presetManager.SelectedSlotIndex);
+            });
+        }
+
+        if (saveButton != null)
+        {
+            saveButton.onClick.RemoveAllListeners();
+            saveButton.onClick.AddListener(() =>
+            {
+                if (presetManager == null)
+                {
+                    return;
+                }
+
+                int targetSlot = presetManager.SelectedSlotIndex;
+                if (presetManager.IsDefaultSlot(targetSlot))
+                {
+                    Debug.LogWarning($"Slot {targetSlot} is a default preset and cannot be saved.");
+                    return;
+                }
+
+                presetManager.SavePreset(targetSlot);
+            });
+        }
+    }
+
+    private void UpdateSaveButtonState()
+    {
+        if (saveButton == null || presetManager == null)
+        {
+            return;
+        }
+
+        saveButton.interactable = !presetManager.IsDefaultSlot(presetManager.SelectedSlotIndex);
+    }
+
+    private void ClearSpawnedToggles()
+    {
+        foreach (Toggle toggle in spawnedToggles)
+        {
+            if (toggle != null)
+            {
+                Destroy(toggle.gameObject);
             }
         }
 
-        spawnedButtons.Clear();
+        spawnedToggles.Clear();
     }
 }
