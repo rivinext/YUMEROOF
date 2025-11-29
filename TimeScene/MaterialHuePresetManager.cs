@@ -2,11 +2,39 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
+public struct HSVColor
+{
+    [Range(0f, 1f)]
+    [SerializeField] private float h;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float s;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float v;
+
+    public float H => Mathf.Repeat(h, 1f);
+    public float S => Mathf.Clamp01(s);
+    public float V => Mathf.Clamp01(v);
+
+    public HSVColor(float hue, float saturation, float value)
+    {
+        h = Mathf.Repeat(hue, 1f);
+        s = Mathf.Clamp01(saturation);
+        v = Mathf.Clamp01(value);
+    }
+}
+
+[System.Serializable]
 public class MaterialHuePresetSlot
 {
     [SerializeField] private string label = "Slot";
+    [SerializeField] private bool isDefaultPreset = false;
+    [SerializeField] private List<HSVColor> defaultColors = new();
 
     public string Label => string.IsNullOrWhiteSpace(label) ? "Slot" : label.Trim();
+    public bool IsDefaultPreset => isDefaultPreset;
+    public IReadOnlyList<HSVColor> DefaultColors => defaultColors;
 }
 
 public class MaterialHuePresetManager : MonoBehaviour
@@ -33,6 +61,12 @@ public class MaterialHuePresetManager : MonoBehaviour
             return;
         }
 
+        if (IsDefaultSlot(clampedSlot))
+        {
+            Debug.LogWarning($"Slot index {clampedSlot} is configured as default and cannot be saved.");
+            return;
+        }
+
         for (int i = 0; i < controllers.Count; i++)
         {
             MaterialHueController controller = controllers[i];
@@ -56,12 +90,65 @@ public class MaterialHuePresetManager : MonoBehaviour
             return;
         }
 
+        MaterialHuePresetSlot slot = presetSlots[clampedSlot];
+        if (slot != null && slot.IsDefaultPreset)
+        {
+            LoadDefaultPreset(slot, clampedSlot);
+            return;
+        }
+
+        LoadUserPreset(clampedSlot);
+    }
+
+    public bool IsDefaultSlot(int slotIndex)
+    {
+        if (presetSlots == null || slotIndex < 0 || slotIndex >= SlotCount)
+        {
+            return false;
+        }
+
+        MaterialHuePresetSlot slot = presetSlots[slotIndex];
+        return slot != null && slot.IsDefaultPreset;
+    }
+
+    private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex)
+    {
+        IReadOnlyList<HSVColor> defaultColors = slot.DefaultColors;
+
+        if (defaultColors == null || defaultColors.Count == 0)
+        {
+            Debug.LogWarning($"No default colors configured for slot index {slotIndex}.");
+            return;
+        }
+
+        if (defaultColors.Count < controllers.Count)
+        {
+            Debug.LogWarning($"Default colors count ({defaultColors.Count}) is less than controller count ({controllers.Count}) for slot index {slotIndex}.");
+        }
+
+        for (int i = 0; i < controllers.Count && i < defaultColors.Count; i++)
+        {
+            MaterialHueController controller = controllers[i];
+            if (controller == null)
+            {
+                continue;
+            }
+
+            HSVColor defaultColor = defaultColors[i];
+            controller.SetHSV(defaultColor.H, defaultColor.S, defaultColor.V);
+        }
+
+        Debug.Log($"Loaded default preset slot {slotIndex}");
+    }
+
+    private void LoadUserPreset(int slotIndex)
+    {
         for (int i = 0; i < controllers.Count; i++)
         {
             MaterialHueController controller = controllers[i];
             if (controller == null) continue;
 
-            string baseKey = $"{keyPrefix}_{clampedSlot}_{i}";
+            string baseKey = $"{keyPrefix}_{slotIndex}_{i}";
             string hueKey = baseKey + "_h";
 
             // そのスロットにまだ保存されていない場合はスキップ
@@ -75,7 +162,7 @@ public class MaterialHuePresetManager : MonoBehaviour
             controller.SetHSV(h, s, v);
         }
 
-        Debug.Log($"Loaded preset slot {clampedSlot}");
+        Debug.Log($"Loaded preset slot {slotIndex}");
     }
 
     private bool TryValidateSlot(int slotIndex, out int validSlotIndex)
