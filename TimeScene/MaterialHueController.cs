@@ -14,12 +14,11 @@ public class MaterialHueController : MonoBehaviour
         public float Value;
     }
 
+    [SerializeField] private string controllerId;
+    [SerializeField] private bool disableLocalPersistence;
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
-
-    [SerializeField] private HsvColorData[] defaultPresets;
-    [SerializeField] private int defaultPresetIndex;
 
     [Range(0f, 1f)]
     [SerializeField] private float hue;
@@ -35,13 +34,6 @@ public class MaterialHueController : MonoBehaviour
     private void Start()
     {
         LoadSavedValues();
-
-        defaultPresetIndex = ClampDefaultPresetIndex(defaultPresetIndex);
-
-        if (!HasSavedValues() && HasDefaultPresets())
-        {
-            ApplyDefaultPreset(defaultPresetIndex, false);
-        }
 
         if (hueRingSelector != null)
         {
@@ -62,25 +54,12 @@ public class MaterialHueController : MonoBehaviour
 
     public HsvColorData GetDefaultPreset(int index)
     {
-        if (!HasDefaultPresets())
-        {
-            return default;
-        }
-
-        int clampedIndex = ClampDefaultPresetIndex(index);
-        return defaultPresets[clampedIndex];
+        return default;
     }
 
     public void ApplyDefaultPreset(int index, bool saveToPlayerPrefs = true)
     {
-        if (!HasDefaultPresets())
-        {
-            return;
-        }
-
-        defaultPresetIndex = ClampDefaultPresetIndex(index);
-        HsvColorData preset = GetDefaultPreset(defaultPresetIndex);
-        ApplyColorData(preset, saveToPlayerPrefs);
+        ApplyColorData(GetDefaultPreset(index), saveToPlayerPrefs);
     }
 
     public HsvColorData GetColorData()
@@ -92,6 +71,13 @@ public class MaterialHueController : MonoBehaviour
             Value = value
         };
     }
+
+    public HsvColorData GetCurrentColorData()
+    {
+        return GetColorData();
+    }
+
+    public string ControllerId => string.IsNullOrWhiteSpace(controllerId) ? gameObject.name : controllerId;
 
     public void ApplyColorData(HsvColorData colorData, bool saveToPlayerPrefs = true)
     {
@@ -105,7 +91,7 @@ public class MaterialHueController : MonoBehaviour
 
         ApplyColor();
 
-        if (saveToPlayerPrefs)
+        if (saveToPlayerPrefs && ShouldUseLocalPersistence())
         {
             SaveValues();
         }
@@ -119,7 +105,7 @@ public class MaterialHueController : MonoBehaviour
         saturationValuePalette?.SetHue(hue);
         ApplyColor();
 
-        if (hasChanged)
+        if (hasChanged && ShouldUseLocalPersistence())
         {
             PlayerPrefs.SetFloat(HueKey, hue);
             PlayerPrefs.Save();
@@ -133,7 +119,7 @@ public class MaterialHueController : MonoBehaviour
         saturationValuePalette?.SetSaturation(saturation);
         ApplyColor();
 
-        if (hasChanged)
+        if (hasChanged && ShouldUseLocalPersistence())
         {
             PlayerPrefs.SetFloat(SaturationKey, saturation);
             PlayerPrefs.Save();
@@ -147,7 +133,7 @@ public class MaterialHueController : MonoBehaviour
         saturationValuePalette?.SetValue(value);
         ApplyColor();
 
-        if (hasChanged)
+        if (hasChanged && ShouldUseLocalPersistence())
         {
             PlayerPrefs.SetFloat(ValueKey, value);
             PlayerPrefs.Save();
@@ -156,6 +142,11 @@ public class MaterialHueController : MonoBehaviour
 
     private void LoadSavedValues()
     {
+        if (!ShouldUseLocalPersistence())
+        {
+            return;
+        }
+
         if (PlayerPrefs.HasKey(HueKey))
         {
             hue = PlayerPrefs.GetFloat(HueKey);
@@ -174,6 +165,11 @@ public class MaterialHueController : MonoBehaviour
 
     private bool HasSavedValues()
     {
+        if (!ShouldUseLocalPersistence())
+        {
+            return false;
+        }
+
         return PlayerPrefs.HasKey(HueKey) || PlayerPrefs.HasKey(SaturationKey) || PlayerPrefs.HasKey(ValueKey);
     }
 
@@ -199,25 +195,15 @@ public class MaterialHueController : MonoBehaviour
 
     private void SaveValues()
     {
+        if (!ShouldUseLocalPersistence())
+        {
+            return;
+        }
+
         PlayerPrefs.SetFloat(HueKey, hue);
         PlayerPrefs.SetFloat(SaturationKey, saturation);
         PlayerPrefs.SetFloat(ValueKey, value);
         PlayerPrefs.Save();
-    }
-
-    private bool HasDefaultPresets()
-    {
-        return defaultPresets != null && defaultPresets.Length > 0;
-    }
-
-    private int ClampDefaultPresetIndex(int index)
-    {
-        if (!HasDefaultPresets())
-        {
-            return 0;
-        }
-
-        return Mathf.Clamp(index, 0, defaultPresets.Length - 1);
     }
 
     private void OnValidate()
@@ -227,18 +213,19 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
-        defaultPresetIndex = ClampDefaultPresetIndex(defaultPresetIndex);
+        hueRingSelector?.SetHue(hue);
+        saturationValuePalette?.SetHue(hue);
+        saturationValuePalette?.SetValues(saturation, value);
+        ApplyColor();
 
-        if (HasDefaultPresets())
+        if (string.IsNullOrWhiteSpace(controllerId))
         {
-            ApplyDefaultPreset(defaultPresetIndex, false);
+            controllerId = gameObject.name;
         }
-        else
-        {
-            hueRingSelector?.SetHue(hue);
-            saturationValuePalette?.SetHue(hue);
-            saturationValuePalette?.SetValues(saturation, value);
-            ApplyColor();
-        }
+    }
+
+    private bool ShouldUseLocalPersistence()
+    {
+        return !disableLocalPersistence;
     }
 }
