@@ -1,10 +1,11 @@
 using UnityEngine;
-using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
 using UnityEngine.EventSystems;
 using System.Linq;
 using UnityEngine.Events;
+using UnityEngine.UI;
+using TMPro;
 
 
 public class InventoryUI : MonoBehaviour
@@ -45,14 +46,14 @@ public class InventoryUI : MonoBehaviour
     [Header("Material Tab Elements")]
     public GameObject materialContent;
     public GameObject materialDescriptionArea;
-    public InputField materialSearchField;
+    public TMP_InputField materialSearchField;
 
 
     [Header("Furniture Tab Elements")]
     public GameObject furnitureContent;
     public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
-    public InputField furnitureSearchField;
+    public TMP_InputField furnitureSearchField;
 
 
     [Header("Prefabs")]
@@ -308,7 +309,7 @@ public class InventoryUI : MonoBehaviour
         ConfigureRarityButton(rarityDownButtonFurn, false, "Furniture Rarity Down clicked");
     }
 
-    void ConfigureSearchField(InputField field, string debugLabel)
+    void ConfigureSearchField(TMP_InputField field, string debugLabel)
     {
         if (field == null) return;
 
@@ -320,7 +321,7 @@ public class InventoryUI : MonoBehaviour
             RefreshInventoryDisplay();
         });
 
-        var placeholder = field.placeholder?.GetComponent<Text>();
+        var placeholder = field.placeholder as TMP_Text;
         if (placeholder != null) placeholder.text = "Search...";
     }
 
