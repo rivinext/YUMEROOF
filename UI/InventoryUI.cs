@@ -46,12 +46,14 @@ public class InventoryUI : MonoBehaviour
     public GameObject materialContent;
     public GameObject materialDescriptionArea;
     public InputField materialSearchField;
+    public ScrollRect materialScrollRect;
 
 
     [Header("Furniture Tab Elements")]
     public GameObject furnitureContent;
     public GameObject furnitureDescriptionArea;
     public InputField furnitureSearchField;
+    public ScrollRect furnitureScrollRect;
 
 
     [Header("Prefabs")]
@@ -143,6 +145,7 @@ public class InventoryUI : MonoBehaviour
     {
         UIPanelExclusionManager.Instance?.Register(this);
         LoadAutoReopenPreference();
+        CacheScrollRects();
     }
 
     void Start()
@@ -159,6 +162,7 @@ public class InventoryUI : MonoBehaviour
         SetupAutoReopenControl();
         RegisterEvents();
         InitializeTabState();
+        CacheScrollRects();
 
         CacheSceneInteractionComponents();
         UpdateAutoReopenVisual();
@@ -222,6 +226,8 @@ public class InventoryUI : MonoBehaviour
         {
             inventoryPanel.SetActive(true);
         }
+
+        ResetScrollPositionsToTop();
 
         // パネル位置とスケールの初期状態を設定
         var animator = EnsurePanelAnimator();
@@ -460,6 +466,42 @@ public class InventoryUI : MonoBehaviour
         if (craftButtonAudioSource != null)
         {
             craftButtonAudioSource.volume = currentSfxVolume;
+        }
+    }
+
+    void CacheScrollRects()
+    {
+        if (materialScrollRect == null)
+        {
+            materialScrollRect = FindScrollRect(materialContent);
+        }
+
+        if (furnitureScrollRect == null)
+        {
+            furnitureScrollRect = FindScrollRect(furnitureContent);
+        }
+    }
+
+    ScrollRect FindScrollRect(GameObject target)
+    {
+        if (target == null)
+            return null;
+
+        return target.GetComponentInParent<ScrollRect>() ?? target.GetComponentInChildren<ScrollRect>();
+    }
+
+    void ResetScrollPositionsToTop()
+    {
+        CacheScrollRects();
+
+        if (materialScrollRect != null)
+        {
+            materialScrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        if (furnitureScrollRect != null)
+        {
+            furnitureScrollRect.verticalNormalizedPosition = 1f;
         }
     }
 
@@ -753,6 +795,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (isOpen) return;
 
+        ResetScrollPositionsToTop();
         var animator = EnsurePanelAnimator();
         EnsurePanelScaleAnimator();
 
@@ -900,6 +943,7 @@ public class InventoryUI : MonoBehaviour
             binding.content.SetActive(binding.type == targetType);
         }
 
+        ResetScrollPositionsToTop();
         RefreshInventoryDisplay();
     }
 
