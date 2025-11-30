@@ -20,6 +20,32 @@ public class GameClockUI : MonoBehaviour
     private Toggle _activeToggle;
     private GameClock _currentClock;
 
+    void ApplyTimeScale(Toggle toggle, float timeScale)
+    {
+        if (_currentClock == null || toggle == null)
+            return;
+
+        _currentClock.SetTimeScale(timeScale);
+        SetActiveToggle(toggle);
+    }
+
+    void SetupToggle(Toggle toggle, float timeScale)
+    {
+        if (toggle == null)
+            return;
+
+        toggle.onValueChanged.AddListener(isOn =>
+        {
+            if (!isOn)
+                return;
+
+            ApplyTimeScale(toggle, timeScale);
+        });
+
+        var pointerHandler = toggle.GetComponent<GameClockToggleHandler>() ?? toggle.gameObject.AddComponent<GameClockToggleHandler>();
+        pointerHandler.Initialize(this, toggle, timeScale);
+    }
+
     void SetActiveToggle(Toggle activeToggle)
     {
         Toggle[] toggles = { pauseToggle, scale1Toggle, scale2Toggle, scale4Toggle, scale6Toggle };
@@ -118,46 +144,14 @@ public class GameClockUI : MonoBehaviour
                 toggle.group = timeScaleToggleGroup;
         }
 
-        if (pauseToggle != null)
-            pauseToggle.onValueChanged.AddListener(isOn =>
-            {
-                if (!isOn || _currentClock == null)
-                    return;
-                _currentClock.SetTimeScale(0f);
-                SetActiveToggle(pauseToggle);
-            });
-        if (scale1Toggle != null)
-            scale1Toggle.onValueChanged.AddListener(isOn =>
-            {
-                if (!isOn || _currentClock == null)
-                    return;
-                _currentClock.SetTimeScale(_currentClock.timeScales[0]);
-                SetActiveToggle(scale1Toggle);
-            });
-        if (scale2Toggle != null)
-            scale2Toggle.onValueChanged.AddListener(isOn =>
-            {
-                if (!isOn || _currentClock == null)
-                    return;
-                _currentClock.SetTimeScale(_currentClock.timeScales[1]);
-                SetActiveToggle(scale2Toggle);
-            });
-        if (scale4Toggle != null)
-            scale4Toggle.onValueChanged.AddListener(isOn =>
-            {
-                if (!isOn || _currentClock == null)
-                    return;
-                _currentClock.SetTimeScale(_currentClock.timeScales[2]);
-                SetActiveToggle(scale4Toggle);
-            });
-        if (scale6Toggle != null)
-            scale6Toggle.onValueChanged.AddListener(isOn =>
-            {
-                if (!isOn || _currentClock == null)
-                    return;
-                _currentClock.SetTimeScale(_currentClock.timeScales[3]);
-                SetActiveToggle(scale6Toggle);
-            });
+        if (_currentClock != null)
+        {
+            SetupToggle(pauseToggle, 0f);
+            SetupToggle(scale1Toggle, _currentClock.timeScales[0]);
+            SetupToggle(scale2Toggle, _currentClock.timeScales[1]);
+            SetupToggle(scale4Toggle, _currentClock.timeScales[2]);
+            SetupToggle(scale6Toggle, _currentClock.timeScales[3]);
+        }
 
         UpdateDayText(_currentClock.currentDay);
         _currentClock.OnDayChanged += UpdateDayText;
@@ -222,5 +216,30 @@ public class GameClockUI : MonoBehaviour
 
         if (targetToggle != null)
             SetActiveToggle(targetToggle);
+    }
+
+    class GameClockToggleHandler : MonoBehaviour, IPointerDownHandler
+    {
+        Toggle _toggle;
+        GameClockUI _gameClockUI;
+        float _timeScale;
+
+        public void Initialize(GameClockUI gameClockUI, Toggle toggle, float timeScale)
+        {
+            _gameClockUI = gameClockUI;
+            _toggle = toggle;
+            _timeScale = timeScale;
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            if (_toggle == null || _gameClockUI == null)
+                return;
+
+            if (!_toggle.isOn)
+                _toggle.isOn = true;
+
+            _gameClockUI.ApplyTimeScale(_toggle, _timeScale);
+        }
     }
 }
