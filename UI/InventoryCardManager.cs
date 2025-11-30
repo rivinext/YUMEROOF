@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -21,6 +22,7 @@ public class InventoryCardManager : MonoBehaviour
 
     // UI参照
     private GameObject furnitureContent;
+    private ScrollRect furnitureScrollRect;
 
     // デバッグモード
 #if UNITY_EDITOR
@@ -72,6 +74,9 @@ public class InventoryCardManager : MonoBehaviour
 
         // 選択状態を復元
         RestoreSelection();
+
+        UpdateScrollRectReference();
+        ResetScrollPosition();
 
         if (debugMode) Debug.Log($"[CardManager] Cards created: {activeFurnitureCards.Count}");
     }
@@ -239,6 +244,42 @@ public class InventoryCardManager : MonoBehaviour
                 // 復元時も通知
                 NotifyItemSelection(selectedFurnitureItem);
             }
+        }
+    }
+
+    void UpdateScrollRectReference()
+    {
+        if (furnitureScrollRect == null && furnitureContent != null)
+        {
+            furnitureScrollRect = furnitureContent.GetComponentInParent<ScrollRect>();
+        }
+    }
+
+    void ResetScrollPosition()
+    {
+        Canvas.ForceUpdateCanvases();
+
+        if (furnitureScrollRect == null)
+        {
+            return;
+        }
+
+        furnitureScrollRect.verticalNormalizedPosition = 1f;
+
+        if (gameObject.activeInHierarchy)
+        {
+            StartCoroutine(ResetScrollPositionNextFrame());
+        }
+    }
+
+    System.Collections.IEnumerator ResetScrollPositionNextFrame()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+
+        if (furnitureScrollRect != null)
+        {
+            furnitureScrollRect.verticalNormalizedPosition = 1f;
         }
     }
 
