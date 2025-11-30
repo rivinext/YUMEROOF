@@ -19,6 +19,10 @@ public class FreePlacementSystem : MonoBehaviour
 
     [Header("Placement Settings")]
     public GameObject cornerMarkerPrefab;
+    [SerializeField] private GameObject wallCornerMarkerPrefab;
+    [SerializeField] private float[] floorCornerYRotations = { 270f, 180f, 90f, 0f };
+    [SerializeField] private float[] ceilingCornerYRotations = { 270f, 180f, 90f, 0f };
+    [SerializeField] private float[] wallCornerMarkerZRotations = { 90f, 0f, 270f, 180f };
     public float wallSnapDistance = 0.1f;
     [Tooltip("アンカー同士の吸着を許可する距離")]
     [SerializeField] private float anchorSnapDistance = 0.3f;
@@ -1413,7 +1417,7 @@ public class FreePlacementSystem : MonoBehaviour
 
     public void CreateCornerMarkers(PlacedFurniture furniture)
     {
-        if (cornerMarkerPrefab == null) return;
+        if (cornerMarkerPrefab == null && wallCornerMarkerPrefab == null) return;
 
         if (furniture.cornerMarkers != null && furniture.cornerMarkers.Length > 0)
         {
@@ -1438,8 +1442,14 @@ public class FreePlacementSystem : MonoBehaviour
             ? furniture.furnitureData.placementRules
             : PlacementRule.Floor;
 
+        if (placementRule != PlacementRule.Wall && cornerMarkerPrefab == null)
+        {
+            return;
+        }
+
         if (placementRule == PlacementRule.Wall)
         {
+            GameObject markerPrefab = wallCornerMarkerPrefab != null ? wallCornerMarkerPrefab : cornerMarkerPrefab;
             Vector3 localMin = Vector3.zero;
             Vector3 localMax = Vector3.zero;
             bool hasLocalBounds = false;
@@ -1489,16 +1499,16 @@ public class FreePlacementSystem : MonoBehaviour
                 new Vector3(localMax.x, localMin.y, minLocalZ)
             };
 
-            float[] cornerRotations = { 90f, 0f, 270f, 180f };
-            Quaternion baseRotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
-
             for (int i = 0; i < localCorners.Length; i++)
             {
                 Vector3 worldCorner = furniture.transform.TransformPoint(localCorners[i]);
-                GameObject marker = Instantiate(cornerMarkerPrefab, worldCorner, Quaternion.identity);
+                GameObject marker = Instantiate(markerPrefab, worldCorner, Quaternion.identity);
                 marker.transform.SetParent(furniture.transform);
                 marker.transform.localPosition = localCorners[i];
-                marker.transform.localRotation = baseRotation * Quaternion.AngleAxis(cornerRotations[i], Vector3.forward);
+
+                float zRotation = GetCornerRotation(wallCornerMarkerZRotations, i, DefaultWallMarkerZRotations[i]);
+                marker.transform.localRotation = Quaternion.AngleAxis(zRotation, Vector3.forward);
+
                 furniture.cornerMarkers[i] = marker;
                 marker.SetActive(false);
             }
@@ -1515,7 +1525,7 @@ public class FreePlacementSystem : MonoBehaviour
                 new Vector3(bounds.min.x, markerHeight, bounds.max.z)
             };
 
-            CreatePlanarCornerMarkers(furniture, corners, 90f);
+            CreatePlanarCornerMarkers(furniture, corners, ceilingCornerYRotations);
         }
         else
         {
@@ -1529,21 +1539,34 @@ public class FreePlacementSystem : MonoBehaviour
                 new Vector3(bounds.min.x, markerHeight, bounds.max.z)
             };
 
-            CreatePlanarCornerMarkers(furniture, corners, 90f);
+            CreatePlanarCornerMarkers(furniture, corners, floorCornerYRotations);
         }
     }
 
-    private static readonly float[] PlanarMarkerYRotations = { 270f, 180f, 90f, 0f };
+    private static readonly float[] DefaultPlanarMarkerYRotations = { 270f, 180f, 90f, 0f };
+    private static readonly float[] DefaultWallMarkerZRotations = { 90f, 0f, 270f, 180f };
 
-    private void CreatePlanarCornerMarkers(PlacedFurniture furniture, Vector3[] corners, float xRotationDegrees)
+    private void CreatePlanarCornerMarkers(PlacedFurniture furniture, Vector3[] corners, float[] yRotations)
     {
         for (int i = 0; i < corners.Length && i < furniture.cornerMarkers.Length; i++)
         {
-            Quaternion rotation = Quaternion.Euler(xRotationDegrees, PlanarMarkerYRotations[i], 0f);
+            float yRotation = GetCornerRotation(yRotations, i, DefaultPlanarMarkerYRotations[i]);
+            Quaternion rotation = Quaternion.Euler(0f, yRotation, 0f);
+
             GameObject marker = Instantiate(cornerMarkerPrefab, corners[i], rotation);
             marker.transform.SetParent(furniture.transform);
             furniture.cornerMarkers[i] = marker;
             marker.SetActive(false);
         }
+    }
+
+    private float GetCornerRotation(float[] configuredRotations, int index, float defaultValue)
+    {
+        if (configuredRotations != null && index >= 0 && index < configuredRotations.Length)
+        {
+            return configuredRotations[index];
+        }
+
+        return defaultValue;
     }
 }
