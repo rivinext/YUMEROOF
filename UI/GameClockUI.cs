@@ -37,15 +37,25 @@ public class GameClockUI : MonoBehaviour
         _activeButton = activeButton;
 
         var eventSystem = EventSystem.current;
-        if (eventSystem != null)
+        if (eventSystem != null && ShouldUpdateSelection(eventSystem))
         {
             eventSystem.SetSelectedGameObject(null);
 
             if (_activeButton != null)
+            {
                 eventSystem.SetSelectedGameObject(_activeButton.gameObject);
+                _activeButton.Select();
+            }
         }
+    }
 
-        _activeButton?.Select();
+    bool ShouldUpdateSelection(EventSystem eventSystem)
+    {
+        var selectedGameObject = eventSystem.currentSelectedGameObject;
+        if (selectedGameObject == null)
+            return true;
+
+        return selectedGameObject.transform.IsChildOf(transform);
     }
 
     void OnEnable()
@@ -72,17 +82,6 @@ public class GameClockUI : MonoBehaviour
     {
         if (_currentClock != null && timeText != null)
             timeText.text = _currentClock.GetFormattedTime();
-
-        var eventSystem = EventSystem.current;
-        if (_activeButton != null && eventSystem != null)
-        {
-            var selectedGameObject = eventSystem.currentSelectedGameObject;
-            if (selectedGameObject == null || selectedGameObject != _activeButton.gameObject)
-            {
-                eventSystem.SetSelectedGameObject(_activeButton.gameObject);
-                _activeButton.Select();
-            }
-        }
     }
 
     void UpdateDayText(int day)
