@@ -109,6 +109,8 @@ public class InventoryUI : MonoBehaviour
     private bool showOnlyFavorites = false;
     private bool isPlacingItem = false;
     private string searchQuery = "";
+    private bool isSearchEditing = false;
+    private TMP_InputField currentSearchField;
     private InventoryItem selectedFurnitureItem;
     private bool autoReopenEnabled = false;
     private float currentSfxVolume = 1f;
@@ -321,6 +323,18 @@ public class InventoryUI : MonoBehaviour
             RefreshInventoryDisplay();
         });
 
+        field.onSelect.RemoveAllListeners();
+        field.onSelect.AddListener(_ => HandleSearchFieldSelected(field));
+
+        field.onDeselect.RemoveAllListeners();
+        field.onDeselect.AddListener(_ => HandleSearchFieldDeselected(field));
+
+        field.onSubmit.RemoveAllListeners();
+        field.onSubmit.AddListener(_ => HandleSearchFieldSubmitted(field));
+
+        field.onEndEdit.RemoveAllListeners();
+        field.onEndEdit.AddListener(_ => HandleSearchFieldEndEdit(field));
+
         var placeholder = field.placeholder as TMP_Text;
         if (placeholder != null) placeholder.text = "Search...";
     }
@@ -329,6 +343,53 @@ public class InventoryUI : MonoBehaviour
     {
         ConfigureSearchField(furnitureSearchField, "Furniture search");
         ConfigureSearchField(materialSearchField, "Material search");
+    }
+
+    void HandleSearchFieldSelected(TMP_InputField field)
+    {
+        if (field == null)
+            return;
+
+        if (currentSearchField == field && isSearchEditing)
+            return;
+
+        currentSearchField = field;
+        isSearchEditing = true;
+        PlayerController.SetGlobalInputEnabled(false);
+    }
+
+    void HandleSearchFieldDeselected(TMP_InputField field)
+    {
+        if (currentSearchField != field)
+            return;
+
+        ClearSearchEditingState();
+    }
+
+    void HandleSearchFieldSubmitted(TMP_InputField field)
+    {
+        if (currentSearchField != field)
+            return;
+
+        currentSearchField.DeactivateInputField();
+    }
+
+    void HandleSearchFieldEndEdit(TMP_InputField field)
+    {
+        if (currentSearchField != field)
+            return;
+
+        ClearSearchEditingState();
+    }
+
+    void ClearSearchEditingState()
+    {
+        if (!isSearchEditing)
+            return;
+
+        isSearchEditing = false;
+        currentSearchField = null;
+        PlayerController.SetGlobalInputEnabled(true);
     }
 
     void SetupFilters()
@@ -640,6 +701,16 @@ public class InventoryUI : MonoBehaviour
         if (isPlacingItem)
             return;
 
+        if (isSearchEditing)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            {
+                currentSearchField?.DeactivateInputField();
+            }
+
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             ToggleInventory();
@@ -721,6 +792,16 @@ public class InventoryUI : MonoBehaviour
         if (!isOpen) return;
 
         EnsurePanelScaleAnimator();
+
+        if (isSearchEditing)
+        {
+            if (currentSearchField != null && currentSearchField.isFocused)
+            {
+                currentSearchField.DeactivateInputField();
+            }
+
+            ClearSearchEditingState();
+        }
 
         isOpen = false;
 
