@@ -4,12 +4,10 @@ using UnityEngine;
 public class PanelScaleAnimator : MonoBehaviour
 {
     [SerializeField] private RectTransform target;
-    [SerializeField] private AnimationCurve openScaleCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-    [SerializeField] private AnimationCurve closeScaleCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField] private AnimationCurve openFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField] private AnimationCurve closeFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private float openDuration = 0.25f;
     [SerializeField] private float closeDuration = 0.2f;
-    [SerializeField] private Vector3 closedScale = Vector3.zero;
-    [SerializeField] private Vector3 openedScale = Vector3.one;
     [SerializeField] private CanvasGroup canvasGroup;
 
     private Coroutine animationRoutine;
@@ -17,14 +15,13 @@ public class PanelScaleAnimator : MonoBehaviour
 
     private void Awake()
     {
-        EnsureTarget();
         EnsureCanvasGroup();
-        ApplyClosedScale();
+        ApplyClosedState();
     }
 
     private void OnEnable()
     {
-        ApplyClosedScale();
+        ApplyClosedState();
     }
 
     private void OnDisable()
@@ -40,12 +37,12 @@ public class PanelScaleAnimator : MonoBehaviour
 
     public void Open()
     {
-        StartScaleRoutine(true);
+        StartFadeRoutine(true);
     }
 
     public void Close()
     {
-        StartScaleRoutine(false);
+        StartFadeRoutine(false);
     }
 
     public void Toggle()
@@ -60,33 +57,32 @@ public class PanelScaleAnimator : MonoBehaviour
         }
     }
 
-    private void StartScaleRoutine(bool opening)
+    private void StartFadeRoutine(bool opening)
     {
-        if (target == null)
+        EnsureCanvasGroup();
+
+        if (canvasGroup == null)
         {
             return;
         }
-
-        EnsureCanvasGroup();
-        ApplyCanvasGroupState(opening);
 
         if (animationRoutine != null)
         {
             StopCoroutine(animationRoutine);
         }
 
-        animationRoutine = StartCoroutine(ScaleRoutine(opening));
+        animationRoutine = StartCoroutine(FadeRoutine(opening));
     }
 
-    private IEnumerator ScaleRoutine(bool opening)
+    private IEnumerator FadeRoutine(bool opening)
     {
         float duration = Mathf.Max(0f, opening ? openDuration : closeDuration);
-        Vector3 startScale = opening ? closedScale : openedScale;
-        Vector3 endScale = opening ? openedScale : closedScale;
+        float startAlpha = opening ? 0f : 1f;
+        float endAlpha = opening ? 1f : 0f;
 
         if (duration <= 0f)
         {
-            ApplyScale(endScale);
+            ApplyAlpha(endAlpha);
             isOpen = opening;
             ApplyCanvasGroupState(opening);
             animationRoutine = null;
@@ -94,63 +90,61 @@ public class PanelScaleAnimator : MonoBehaviour
         }
 
         float elapsed = 0f;
+        ApplyAlpha(startAlpha);
+        if (!opening)
+        {
+            ApplyCanvasGroupState(false);
+        }
+
         while (elapsed < duration)
         {
             float normalizedTime = duration > 0f ? Mathf.Clamp01(elapsed / duration) : 1f;
-            AnimationCurve curve = opening ? openScaleCurve : closeScaleCurve;
+            AnimationCurve curve = opening ? openFadeCurve : closeFadeCurve;
             float curveValue = curve != null ? curve.Evaluate(normalizedTime) : normalizedTime;
 
-            Vector3 scaledValue = new Vector3(
-                Mathf.LerpUnclamped(startScale.x, endScale.x, curveValue),
-                Mathf.LerpUnclamped(startScale.y, endScale.y, curveValue),
-                Mathf.LerpUnclamped(startScale.z, endScale.z, curveValue));
-
-            ApplyScale(scaledValue);
+            float alphaValue = Mathf.LerpUnclamped(startAlpha, endAlpha, curveValue);
+            ApplyAlpha(alphaValue);
 
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
-        ApplyScale(endScale);
+        ApplyAlpha(endAlpha);
         isOpen = opening;
         ApplyCanvasGroupState(opening);
         animationRoutine = null;
     }
 
-    private void ApplyScale(Vector3 scale)
+    private void ApplyAlpha(float alpha)
     {
-        if (target != null)
+        if (canvasGroup != null)
         {
-            target.localScale = scale;
+            canvasGroup.alpha = Mathf.Clamp01(alpha);
         }
     }
 
     public void SnapOpen()
     {
-        ApplyOpenScale();
+        ApplyOpenState();
     }
 
     public void SnapClosed()
     {
-        ApplyClosedScale();
+        ApplyClosedState();
     }
 
-    private void ApplyOpenScale()
+    private void ApplyOpenState()
     {
-        if (target != null)
-        {
-            target.localScale = openedScale;
-            isOpen = true;
-        }
+        ApplyAlpha(1f);
+        ApplyCanvasGroupState(true);
+        isOpen = true;
     }
 
-    private void ApplyClosedScale()
+    private void ApplyClosedState()
     {
-        if (target != null)
-        {
-            target.localScale = closedScale;
-            isOpen = false;
-        }
+        ApplyAlpha(0f);
+        ApplyCanvasGroupState(false);
+        isOpen = false;
     }
 
     private void EnsureTarget()
@@ -163,19 +157,25 @@ public class PanelScaleAnimator : MonoBehaviour
 
     private void EnsureCanvasGroup()
     {
-        if (canvasGroup != null)
-        {
-            return;
-        }
-
-        if (target != null)
-        {
-            canvasGroup = target.GetComponent<CanvasGroup>();
-        }
-
         if (canvasGroup == null)
         {
-            canvasGroup = GetComponent<CanvasGroup>();
+            EnsureTarget();
+            if (target != null)
+            {
+                canvasGroup = target.GetComponent<CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    canvasGroup = target.gameObject.AddComponent<CanvasGroup>();
+                }
+            }
+            else
+            {
+                canvasGroup = GetComponent<CanvasGroup>();
+                if (canvasGroup == null)
+                {
+                    canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                }
+            }
         }
     }
 
