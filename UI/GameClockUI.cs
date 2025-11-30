@@ -108,8 +108,18 @@ public class GameClockUI : MonoBehaviour
 
     void Update()
     {
+        EnsureActiveToggleState();
+
         if (_currentClock != null && timeText != null)
             timeText.text = _currentClock.GetFormattedTime();
+    }
+
+    void EnsureActiveToggleState()
+    {
+        if (_activeToggle == null || _activeToggle.isOn)
+            return;
+
+        _activeToggle.isOn = true;
     }
 
     void UpdateDayText(int day)
@@ -143,6 +153,9 @@ public class GameClockUI : MonoBehaviour
             if (timeScaleToggleGroup != null)
                 toggle.group = timeScaleToggleGroup;
         }
+
+        if (timeScaleToggleGroup != null)
+            timeScaleToggleGroup.allowSwitchOff = false;
 
         if (_currentClock != null)
         {
