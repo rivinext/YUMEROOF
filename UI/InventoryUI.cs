@@ -50,6 +50,7 @@ public class InventoryUI : MonoBehaviour
 
     [Header("Furniture Tab Elements")]
     public GameObject furnitureContent;
+    public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
     public InputField furnitureSearchField;
 
