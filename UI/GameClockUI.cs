@@ -156,8 +156,6 @@ public class GameClockUI : MonoBehaviour
         UpdateDayText(_currentClock.currentDay);
         _currentClock.OnDayChanged += UpdateDayText;
 
-        _currentClock.SetTimeScale(_currentClock.timeScales[0]);
-        SetActiveToggle(scale1Toggle);
         HandleTimeScaleChanged(_currentClock.CurrentScale);
     }
 
