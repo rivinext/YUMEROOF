@@ -50,15 +50,13 @@ public class InventoryUI : MonoBehaviour
 
 
     [Header("Furniture Tab Elements")]
-    public GameObject furnitureContent;
+    public FurnitureTabController furnitureTabController;
     public GameObject furnitureDescriptionArea;
     public InputField furnitureSearchField;
-    public ScrollRect furnitureScrollRect;
 
 
     [Header("Prefabs")]
     public GameObject materialIconPrefab;
-    public GameObject furnitureCardPrefab;
 
 
     [Header("Material Item Slots")]
@@ -111,7 +109,6 @@ public class InventoryUI : MonoBehaviour
 
 
     // マネージャー
-    private InventoryCardManager cardManager;
     private InventoryMaterialManager materialManager;
 
 
@@ -208,15 +205,13 @@ public class InventoryUI : MonoBehaviour
 
     void InitializeManagers()
     {
-        cardManager = gameObject.AddComponent<InventoryCardManager>();
-        cardManager.furnitureCardPrefab = furnitureCardPrefab;
-        cardManager.Initialize(furnitureContent);
-
         materialManager = gameObject.AddComponent<InventoryMaterialManager>();
         materialManager.materialIconPrefab = materialIconPrefab;
         materialManager.Initialize(materialContent, materialSlots);
         if (materialDescriptionArea != null)
             materialManager.materialDescPanel = materialDescriptionArea.GetComponent<MaterialDescriptionPanel>();
+
+        furnitureTabController?.EnsureCardManager();
     }
 
     void SetupBaseUI()
@@ -476,10 +471,7 @@ public class InventoryUI : MonoBehaviour
             materialScrollRect = FindScrollRect(materialContent);
         }
 
-        if (furnitureScrollRect == null)
-        {
-            furnitureScrollRect = FindScrollRect(furnitureContent);
-        }
+        furnitureTabController?.CacheScrollRect();
     }
 
     ScrollRect FindScrollRect(GameObject target)
@@ -499,10 +491,7 @@ public class InventoryUI : MonoBehaviour
             materialScrollRect.verticalNormalizedPosition = 1f;
         }
 
-        if (furnitureScrollRect != null)
-        {
-            furnitureScrollRect.verticalNormalizedPosition = 1f;
-        }
+        furnitureTabController?.ResetScrollPosition();
     }
 
     void PlayCraftButtonSfx()
@@ -755,7 +744,7 @@ public class InventoryUI : MonoBehaviour
         {
             if (!IsPointerOverUIElement())
             {
-                cardManager?.DeselectAll();
+                furnitureTabController?.DeselectAll();
             }
         }
     }
@@ -996,7 +985,7 @@ public class InventoryUI : MonoBehaviour
 
         if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}");
 
-        cardManager?.RefreshFurnitureCards(items);
+        furnitureTabController?.RefreshFurnitureCards(items);
     }
 
     // Material用の説明エリア更新（新規追加）
@@ -1065,7 +1054,7 @@ public class InventoryUI : MonoBehaviour
             InventoryManager.Instance.OnInventoryChanged -= RefreshInventoryDisplay;
         }
 
-        cardManager?.Cleanup();
+        furnitureTabController?.Cleanup();
         materialManager?.Cleanup();
 
         foreach (var pair in tabToggleListeners)
