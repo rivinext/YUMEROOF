@@ -46,17 +46,17 @@ public class InventoryUI : MonoBehaviour
     public GameObject materialContent;
     public GameObject materialDescriptionArea;
     public InputField materialSearchField;
-    public ScrollRect materialScrollRect;
 
 
     [Header("Furniture Tab Elements")]
-    public FurnitureTabController furnitureTabController;
+    public GameObject furnitureContent;
     public GameObject furnitureDescriptionArea;
     public InputField furnitureSearchField;
 
 
     [Header("Prefabs")]
     public GameObject materialIconPrefab;
+    public GameObject furnitureCardPrefab;
 
 
     [Header("Material Item Slots")]
@@ -91,24 +91,10 @@ public class InventoryUI : MonoBehaviour
 
     [Header("Panel Animation")]
     [SerializeField] private PanelScaleAnimator panelScaleAnimator;
-    [SerializeField] private float closedPositionX = 0f;
-    [SerializeField] private float openPositionX = 0f;
-    [SerializeField] private float anchoredY = 0f;
-    [SerializeField] private float slideDuration = 1f;
-    [SerializeField]
-    private AnimationCurve slideInCurve = new AnimationCurve(
-        new Keyframe(0f, 0f, 0f, 2f),
-        new Keyframe(0.6f, 1.15f, 0f, 0f),
-        new Keyframe(1f, 1f, 0f, 0f));
-    [SerializeField]
-    private AnimationCurve slideOutCurve = new AnimationCurve(
-        new Keyframe(0f, 0f, 0f, 0.5f),
-        new Keyframe(0.5f, 0.85f, 0f, 0f),
-        new Keyframe(1f, 1f, 0f, 0f));
-    private InventoryPanelAnimator panelAnimator;
 
 
     // マネージャー
+    private InventoryCardManager cardManager;
     private InventoryMaterialManager materialManager;
 
 
@@ -142,7 +128,6 @@ public class InventoryUI : MonoBehaviour
     {
         UIPanelExclusionManager.Instance?.Register(this);
         LoadAutoReopenPreference();
-        CacheScrollRects();
     }
 
     void Start()
@@ -159,7 +144,6 @@ public class InventoryUI : MonoBehaviour
         SetupAutoReopenControl();
         RegisterEvents();
         InitializeTabState();
-        CacheScrollRects();
 
         CacheSceneInteractionComponents();
         UpdateAutoReopenVisual();
@@ -205,13 +189,15 @@ public class InventoryUI : MonoBehaviour
 
     void InitializeManagers()
     {
+        cardManager = gameObject.AddComponent<InventoryCardManager>();
+        cardManager.furnitureCardPrefab = furnitureCardPrefab;
+        cardManager.Initialize(furnitureContent);
+
         materialManager = gameObject.AddComponent<InventoryMaterialManager>();
         materialManager.materialIconPrefab = materialIconPrefab;
         materialManager.Initialize(materialContent, materialSlots);
         if (materialDescriptionArea != null)
             materialManager.materialDescPanel = materialDescriptionArea.GetComponent<MaterialDescriptionPanel>();
-
-        furnitureTabController?.EnsureCardManager();
     }
 
     void SetupBaseUI()
@@ -222,12 +208,7 @@ public class InventoryUI : MonoBehaviour
             inventoryPanel.SetActive(true);
         }
 
-        ResetScrollPositionsToTop();
-
-        // パネル位置とスケールの初期状態を設定
-        var animator = EnsurePanelAnimator();
-        animator?.SnapToInitialPosition();
-
+        // パネルをスケール0の初期状態に設定
         EnsurePanelScaleAnimator();
         panelScaleAnimator?.SnapClosed();
 
@@ -277,49 +258,6 @@ public class InventoryUI : MonoBehaviour
             tabToggleListeners[binding.toggle] = listener;
             binding.toggle.onValueChanged.AddListener(listener);
         }
-    }
-
-    private CanvasGroup EnsureTabCanvasGroup()
-    {
-        GameObject canvasGroupOwner = tabContentRoot != null ? tabContentRoot : tabContainer;
-        if (canvasGroupOwner == null)
-        {
-            return null;
-        }
-
-        CanvasGroup canvasGroup = canvasGroupOwner.GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-        {
-            canvasGroup = canvasGroupOwner.AddComponent<CanvasGroup>();
-        }
-
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
-
-        return canvasGroup;
-    }
-
-    private InventoryPanelAnimator EnsurePanelAnimator()
-    {
-        if (panelAnimator == null)
-        {
-            panelAnimator = GetComponent<InventoryPanelAnimator>();
-            if (panelAnimator == null)
-            {
-                panelAnimator = gameObject.AddComponent<InventoryPanelAnimator>();
-            }
-        }
-
-        RectTransform rectTransform = null;
-        if (tabContainer != null)
-        {
-            rectTransform = tabContainer.GetComponent<RectTransform>();
-        }
-
-        CanvasGroup canvasGroup = EnsureTabCanvasGroup();
-        panelAnimator.Initialize(rectTransform, canvasGroup, closedPositionX, openPositionX, anchoredY, slideDuration, slideInCurve, slideOutCurve);
-
-        return panelAnimator;
     }
 
     private void EnsurePanelScaleAnimator()
@@ -462,36 +400,6 @@ public class InventoryUI : MonoBehaviour
         {
             craftButtonAudioSource.volume = currentSfxVolume;
         }
-    }
-
-    void CacheScrollRects()
-    {
-        if (materialScrollRect == null)
-        {
-            materialScrollRect = FindScrollRect(materialContent);
-        }
-
-        furnitureTabController?.CacheScrollRect();
-    }
-
-    ScrollRect FindScrollRect(GameObject target)
-    {
-        if (target == null)
-            return null;
-
-        return target.GetComponentInParent<ScrollRect>() ?? target.GetComponentInChildren<ScrollRect>();
-    }
-
-    void ResetScrollPositionsToTop()
-    {
-        CacheScrollRects();
-
-        if (materialScrollRect != null)
-        {
-            materialScrollRect.verticalNormalizedPosition = 1f;
-        }
-
-        furnitureTabController?.ResetScrollPosition();
     }
 
     void PlayCraftButtonSfx()
@@ -744,7 +652,7 @@ public class InventoryUI : MonoBehaviour
         {
             if (!IsPointerOverUIElement())
             {
-                furnitureTabController?.DeselectAll();
+                cardManager?.DeselectAll();
             }
         }
     }
@@ -784,8 +692,6 @@ public class InventoryUI : MonoBehaviour
     {
         if (isOpen) return;
 
-        ResetScrollPositionsToTop();
-        var animator = EnsurePanelAnimator();
         EnsurePanelScaleAnimator();
 
         isOpen = true;
@@ -801,7 +707,6 @@ public class InventoryUI : MonoBehaviour
             tabContainer.SetActive(true);
         }
 
-        animator?.PlayOpen();
         panelScaleAnimator?.Open();
         RefreshInventoryDisplay();
 
@@ -813,12 +718,10 @@ public class InventoryUI : MonoBehaviour
     {
         if (!isOpen) return;
 
-        var animator = EnsurePanelAnimator();
         EnsurePanelScaleAnimator();
 
         isOpen = false;
 
-        animator?.PlayClose();
         panelScaleAnimator?.Close();
         NotifyCameraController(false);
 
@@ -932,7 +835,6 @@ public class InventoryUI : MonoBehaviour
             binding.content.SetActive(binding.type == targetType);
         }
 
-        ResetScrollPositionsToTop();
         RefreshInventoryDisplay();
     }
 
@@ -985,7 +887,7 @@ public class InventoryUI : MonoBehaviour
 
         if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}");
 
-        furnitureTabController?.RefreshFurnitureCards(items);
+        cardManager?.RefreshFurnitureCards(items);
     }
 
     // Material用の説明エリア更新（新規追加）
@@ -1054,7 +956,7 @@ public class InventoryUI : MonoBehaviour
             InventoryManager.Instance.OnInventoryChanged -= RefreshInventoryDisplay;
         }
 
-        furnitureTabController?.Cleanup();
+        cardManager?.Cleanup();
         materialManager?.Cleanup();
 
         foreach (var pair in tabToggleListeners)

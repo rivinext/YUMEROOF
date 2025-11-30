@@ -42,11 +42,9 @@ public class FurnitureTabLogger : MonoBehaviour
         }
 
         var inventoryUI = FindFirstObjectByType<InventoryUI>(FindObjectsInactive.Include);
-        if (inventoryUI != null &&
-            inventoryUI.furnitureTabController != null &&
-            inventoryUI.furnitureTabController.GetFurnitureContent() != null)
+        if (inventoryUI != null && inventoryUI.furnitureContent != null)
         {
-            furnitureContent = inventoryUI.furnitureTabController.GetFurnitureContent();
+            furnitureContent = inventoryUI.furnitureContent;
             return;
         }
 

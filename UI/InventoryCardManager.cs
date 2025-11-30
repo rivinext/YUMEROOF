@@ -23,14 +23,12 @@ public class InventoryCardManager : MonoBehaviour
     private GameObject furnitureContent;
 
     // デバッグモード
+#if UNITY_EDITOR
     [SerializeField]
-    private bool debugMode = true;
-
-    public bool DebugMode
-    {
-        get => debugMode;
-        set => debugMode = value;
-    }
+    private bool debugMode = false;
+#else
+    private const bool debugMode = false;
+#endif
 
     public void Initialize(GameObject content)
     {
@@ -170,7 +168,7 @@ public class InventoryCardManager : MonoBehaviour
     // 説明パネルを更新
     void UpdateDescriptionPanel(InventoryItem item)
     {
-        var descPanel = FindObjectOfType<FurnitureDescriptionPanel>();
+        var descPanel = FindFirstObjectByType<FurnitureDescriptionPanel>();
         if (descPanel != null)
         {
             if (item != null)
