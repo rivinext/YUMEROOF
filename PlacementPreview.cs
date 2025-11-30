@@ -11,9 +11,34 @@ public class PlacementPreview : MonoBehaviour
     public Material okMaterial;
     public Material ngMaterial;
 
+    [Header("Marker Prefabs")]
+    [Tooltip("Marker prefab used when previewing placement on floors or ceilings. The prefab must include a SpriteRenderer so existing visibility and scale animation logic applies.")]
+    public GameObject floorOrCeilingMarkerPrefab;
+
+    [Tooltip("Marker prefab used when previewing placement on walls. The prefab must include a SpriteRenderer so existing visibility and scale animation logic applies.")]
+    public GameObject wallMarkerPrefab;
+
+    [Tooltip("Fallback sprite used when no marker prefab is assigned. Also used to initialize SpriteRenderer components on marker prefabs when they do not have a sprite set.")]
     public Sprite cornerSprite;
     public Vector3 cornerSpriteOffset = new Vector3(0f, 0.05f, 0f);
     public float cornerSpriteScale = 0.25f;
+
+    public enum PlacementMode
+    {
+        FloorOrCeiling,
+        Wall
+    }
+
+    [Header("Placement Mode")]
+    [Tooltip("Determines which marker prefab and rotation rules are applied. FloorOrCeiling rotates around the Y axis, Wall rotates around the Z axis.")]
+    public PlacementMode placementMode = PlacementMode.FloorOrCeiling;
+
+    [Header("Corner Rotation Offsets")]
+    [Tooltip("Clockwise Y-axis offsets for floor or ceiling placement (starting from bottom-left corner).")]
+    public float[] floorOrCeilingCornerYRotations = new float[4] { 270f, 0f, 90f, 180f };
+
+    [Tooltip("Clockwise Z-axis offsets for wall placement (starting from bottom-left corner).")]
+    public float[] wallCornerZRotations = new float[4] { 0f, 90f, 180f, 270f };
 
     // スケールのアニメーション用変数
     [Header("Scale Animation")]
@@ -22,6 +47,7 @@ public class PlacementPreview : MonoBehaviour
     public float period = 1.5f;
 
     private SpriteRenderer[] cornerRenderers = new SpriteRenderer[4];
+    private Vector3[] cornerBaseScales = new Vector3[4];
     private bool isSelected = false;
     private Color originalColor;
     private MeshRenderer meshRenderer;
@@ -70,7 +96,14 @@ public class PlacementPreview : MonoBehaviour
             float scale = Mathf.Lerp(minScale, maxScale, (Mathf.Sin(Time.time * (2 * Mathf.PI / period)) + 1) / 2);
             foreach (var sr in cornerRenderers)
             {
-                sr.transform.localScale = Vector3.one * scale;
+                if (sr != null)
+                {
+                    int index = System.Array.IndexOf(cornerRenderers, sr);
+                    Vector3 baseScale = (index >= 0 && index < cornerBaseScales.Length && cornerBaseScales[index] != Vector3.zero)
+                        ? cornerBaseScales[index]
+                        : Vector3.one;
+                    sr.transform.localScale = baseScale * scale;
+                }
             }
         }
         else
@@ -80,7 +113,11 @@ public class PlacementPreview : MonoBehaviour
             {
                 if (sr != null)
                 {
-                    sr.transform.localScale = Vector3.one * cornerSpriteScale;
+                    int index = System.Array.IndexOf(cornerRenderers, sr);
+                    Vector3 baseScale = (index >= 0 && index < cornerBaseScales.Length && cornerBaseScales[index] != Vector3.zero)
+                        ? cornerBaseScales[index]
+                        : Vector3.one;
+                    sr.transform.localScale = baseScale * cornerSpriteScale;
                 }
             }
         }
@@ -143,24 +180,77 @@ public class PlacementPreview : MonoBehaviour
         localPositions[3] = new Vector3(half.x, bottomY, -half.z);
 
         Quaternion[] rotations = new Quaternion[4];
-        rotations[0] = Quaternion.Euler(90, 270, 0);
-        rotations[1] = Quaternion.Euler(90, 0, 0);
-        rotations[2] = Quaternion.Euler(90, 90, 0);
-        rotations[3] = Quaternion.Euler(90, 180, 0);
+        for (int i = 0; i < rotations.Length; i++)
+        {
+            rotations[i] = GetCornerRotation(i);
+        }
 
         for (int i = 0; i < 4; i++)
         {
-            GameObject cornerObj = new GameObject("CornerSprite_" + i);
-            cornerObj.transform.SetParent(transform);
+            GameObject cornerObj = CreateCornerObject(i);
             cornerObj.transform.localPosition = localPositions[i];
             cornerObj.transform.localRotation = rotations[i];
-            cornerObj.transform.localScale = Vector3.one * cornerSpriteScale;
+            cornerObj.transform.localScale = Vector3.one;
 
-            SpriteRenderer sr = cornerObj.AddComponent<SpriteRenderer>();
-            sr.sprite = cornerSprite;
+            SpriteRenderer sr = GetOrCreateSpriteRenderer(cornerObj);
+            if (sr.sprite == null && cornerSprite != null)
+            {
+                sr.sprite = cornerSprite;
+            }
+
             sr.sortingOrder = 100;
+
+            cornerBaseScales[i] = sr.transform.localScale == Vector3.zero ? Vector3.one : sr.transform.localScale;
+            sr.transform.localScale = cornerBaseScales[i] * cornerSpriteScale;
+
             cornerRenderers[i] = sr;
         }
+    }
+
+    private Quaternion GetCornerRotation(int index)
+    {
+        if (placementMode == PlacementMode.Wall)
+        {
+            float zRotation = (wallCornerZRotations != null && wallCornerZRotations.Length > index)
+                ? wallCornerZRotations[index]
+                : 0f;
+            return Quaternion.Euler(0f, 0f, zRotation);
+        }
+        else
+        {
+            float yRotation = (floorOrCeilingCornerYRotations != null && floorOrCeilingCornerYRotations.Length > index)
+                ? floorOrCeilingCornerYRotations[index]
+                : 0f;
+            return Quaternion.Euler(90f, yRotation, 0f);
+        }
+    }
+
+    private GameObject CreateCornerObject(int index)
+    {
+        GameObject selectedPrefab = placementMode == PlacementMode.Wall ? wallMarkerPrefab : floorOrCeilingMarkerPrefab;
+
+        if (selectedPrefab != null)
+        {
+            GameObject instance = Instantiate(selectedPrefab, transform);
+            instance.name = $"{selectedPrefab.name}_Corner_{index}";
+            return instance;
+        }
+
+        GameObject cornerObj = new GameObject("CornerSprite_" + index);
+        cornerObj.transform.SetParent(transform);
+        return cornerObj;
+    }
+
+    private SpriteRenderer GetOrCreateSpriteRenderer(GameObject cornerObj)
+    {
+        SpriteRenderer sr = cornerObj.GetComponentInChildren<SpriteRenderer>();
+
+        if (sr == null)
+        {
+            sr = cornerObj.AddComponent<SpriteRenderer>();
+        }
+
+        return sr;
     }
 
     // パブリックメソッドで外部から選択状態を制御できるようにする
@@ -214,6 +304,7 @@ public class PlacementPreview : MonoBehaviour
         }
 
         cornerRenderers = new SpriteRenderer[4];
+        cornerBaseScales = new Vector3[4];
         CreateCornerSprites();
         UpdateCornerVisibility();
     }
