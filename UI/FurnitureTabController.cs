@@ -14,6 +14,11 @@ public class FurnitureTabController : MonoBehaviour
 
     public GameObject FurnitureContent => furnitureContent;
 
+    public GameObject GetFurnitureContent()
+    {
+        return furnitureContent;
+    }
+
     private void Awake()
     {
         EnsureCardManager();
