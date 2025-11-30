@@ -3,18 +3,29 @@ using UnityEngine;
 
 public class PanelScaleAnimator : MonoBehaviour
 {
+    private enum AnimationMode
+    {
+        Fade,
+        Scale
+    }
+
     [SerializeField] private RectTransform target;
+    [SerializeField] private AnimationMode animationMode = AnimationMode.Fade;
     [SerializeField] private AnimationCurve openFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve closeFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private float openDuration = 0.25f;
     [SerializeField] private float closeDuration = 0.2f;
     [SerializeField] private CanvasGroup canvasGroup;
+    [SerializeField] private Vector3 closedScale = Vector3.zero;
 
     private Coroutine animationRoutine;
     private bool isOpen;
+    private Vector3 initialScale = Vector3.one;
 
     private void Awake()
     {
+        EnsureTarget();
+        CacheInitialScale();
         EnsureCanvasGroup();
         ApplyClosedState();
     }
@@ -59,9 +70,9 @@ public class PanelScaleAnimator : MonoBehaviour
 
     private void StartFadeRoutine(bool opening)
     {
-        EnsureCanvasGroup();
+        EnsureReferences();
 
-        if (canvasGroup == null)
+        if (animationMode == AnimationMode.Fade && canvasGroup == null)
         {
             return;
         }
@@ -79,10 +90,12 @@ public class PanelScaleAnimator : MonoBehaviour
         float duration = Mathf.Max(0f, opening ? openDuration : closeDuration);
         float startAlpha = opening ? 0f : 1f;
         float endAlpha = opening ? 1f : 0f;
+        Vector3 startScale = opening ? closedScale : initialScale;
+        Vector3 endScale = opening ? initialScale : closedScale;
 
         if (duration <= 0f)
         {
-            ApplyAlpha(endAlpha);
+            ApplyFinalState(endAlpha, endScale);
             isOpen = opening;
             ApplyCanvasGroupState(opening);
             animationRoutine = null;
@@ -90,11 +103,7 @@ public class PanelScaleAnimator : MonoBehaviour
         }
 
         float elapsed = 0f;
-        ApplyAlpha(startAlpha);
-        if (!opening)
-        {
-            ApplyCanvasGroupState(false);
-        }
+        ApplyInitialState(startAlpha, startScale, opening);
 
         while (elapsed < duration)
         {
@@ -102,17 +111,59 @@ public class PanelScaleAnimator : MonoBehaviour
             AnimationCurve curve = opening ? openFadeCurve : closeFadeCurve;
             float curveValue = curve != null ? curve.Evaluate(normalizedTime) : normalizedTime;
 
-            float alphaValue = Mathf.LerpUnclamped(startAlpha, endAlpha, curveValue);
-            ApplyAlpha(alphaValue);
+            ApplyAnimatedValue(startAlpha, endAlpha, startScale, endScale, curveValue);
 
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
 
-        ApplyAlpha(endAlpha);
+        ApplyFinalState(endAlpha, endScale);
         isOpen = opening;
         ApplyCanvasGroupState(opening);
         animationRoutine = null;
+    }
+
+    private void ApplyInitialState(float startAlpha, Vector3 startScale, bool opening)
+    {
+        if (animationMode == AnimationMode.Fade)
+        {
+            ApplyAlpha(startAlpha);
+        }
+        else
+        {
+            ApplyScale(startScale);
+        }
+
+        if (!opening)
+        {
+            ApplyCanvasGroupState(false);
+        }
+    }
+
+    private void ApplyAnimatedValue(float startAlpha, float endAlpha, Vector3 startScale, Vector3 endScale, float curveValue)
+    {
+        if (animationMode == AnimationMode.Fade)
+        {
+            float alphaValue = Mathf.LerpUnclamped(startAlpha, endAlpha, curveValue);
+            ApplyAlpha(alphaValue);
+        }
+        else
+        {
+            Vector3 scaleValue = Vector3.LerpUnclamped(startScale, endScale, curveValue);
+            ApplyScale(scaleValue);
+        }
+    }
+
+    private void ApplyFinalState(float endAlpha, Vector3 endScale)
+    {
+        if (animationMode == AnimationMode.Fade)
+        {
+            ApplyAlpha(endAlpha);
+        }
+        else
+        {
+            ApplyScale(endScale);
+        }
     }
 
     private void ApplyAlpha(float alpha)
@@ -120,6 +171,14 @@ public class PanelScaleAnimator : MonoBehaviour
         if (canvasGroup != null)
         {
             canvasGroup.alpha = Mathf.Clamp01(alpha);
+        }
+    }
+
+    private void ApplyScale(Vector3 scale)
+    {
+        if (target != null)
+        {
+            target.localScale = scale;
         }
     }
 
@@ -135,14 +194,30 @@ public class PanelScaleAnimator : MonoBehaviour
 
     private void ApplyOpenState()
     {
-        ApplyAlpha(1f);
+        if (animationMode == AnimationMode.Fade)
+        {
+            ApplyAlpha(1f);
+        }
+        else
+        {
+            ApplyScale(initialScale);
+        }
+
         ApplyCanvasGroupState(true);
         isOpen = true;
     }
 
     private void ApplyClosedState()
     {
-        ApplyAlpha(0f);
+        if (animationMode == AnimationMode.Fade)
+        {
+            ApplyAlpha(0f);
+        }
+        else
+        {
+            ApplyScale(closedScale);
+        }
+
         ApplyCanvasGroupState(false);
         isOpen = false;
     }
@@ -152,6 +227,23 @@ public class PanelScaleAnimator : MonoBehaviour
         if (target == null)
         {
             target = GetComponent<RectTransform>();
+        }
+    }
+
+    private void CacheInitialScale()
+    {
+        if (target != null)
+        {
+            initialScale = target.localScale;
+        }
+    }
+
+    private void EnsureReferences()
+    {
+        EnsureTarget();
+        if (animationMode == AnimationMode.Fade)
+        {
+            EnsureCanvasGroup();
         }
     }
 
