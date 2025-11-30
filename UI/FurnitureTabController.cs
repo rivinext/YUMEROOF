@@ -12,6 +12,8 @@ public class FurnitureTabController : MonoBehaviour
 
     private InventoryCardManager cardManager;
 
+    public GameObject FurnitureContent => furnitureContent;
+
     private void Awake()
     {
         EnsureCardManager();
