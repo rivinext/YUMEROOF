@@ -20,7 +20,7 @@ public class FreePlacementSystem : MonoBehaviour
     [Header("Placement Settings")]
     public GameObject cornerMarkerPrefab;
     [SerializeField] private GameObject wallCornerMarkerPrefab;
-    [SerializeField] private float[] floorCornerYRotations = { 270f, 180f, 90f, 0f };
+    [SerializeField] private float[] floorCornerYRotations = { 0f, 0f, 0f, 0f };
     [SerializeField] private float[] ceilingCornerYRotations = { 270f, 180f, 90f, 0f };
     [SerializeField] private float[] wallCornerMarkerZRotations = { 90f, 0f, 270f, 180f };
     public float wallSnapDistance = 0.1f;
