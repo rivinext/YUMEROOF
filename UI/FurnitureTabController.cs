@@ -30,7 +30,7 @@ public class FurnitureTabController : MonoBehaviour
             }
         }
 
-        cardManager.debugMode = debugMode;
+        cardManager.DebugMode = debugMode;
         cardManager.furnitureCardPrefab = furnitureCardPrefab;
         cardManager.Initialize(furnitureContent);
     }
