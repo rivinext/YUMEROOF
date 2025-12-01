@@ -20,9 +20,9 @@ public class FreePlacementSystem : MonoBehaviour
     [Header("Placement Settings")]
     public GameObject cornerMarkerPrefab;
     [SerializeField] private GameObject wallCornerMarkerPrefab;
-    [SerializeField] private float[] floorCornerYRotations = { 0f, 0f, 0f, 0f };
-    [SerializeField] private float[] ceilingCornerYRotations = { 270f, 180f, 90f, 0f };
-    [SerializeField] private float[] wallCornerMarkerZRotations = { 90f, 0f, 270f, 180f };
+    [SerializeField] private float[] floorCornerYRotations = { 90f, 0f, 270f, 180f };
+    [SerializeField] private float[] ceilingCornerYRotations = { 90f, 0f, 270f, 180f };
+    [SerializeField] private float[] wallCornerMarkerZRotations = { 180f, 90f, 0f, 270f };
     public float wallSnapDistance = 0.1f;
     [Tooltip("アンカー同士の吸着を許可する距離")]
     [SerializeField] private float anchorSnapDistance = 0.3f;
