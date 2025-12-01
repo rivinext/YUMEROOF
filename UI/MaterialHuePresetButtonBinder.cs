@@ -86,16 +86,17 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
 
-        toggleInstance.onValueChanged.AddListener(isOn =>
-        {
-            if (!isOn || presetManager == null)
+            toggleInstance.onValueChanged.AddListener(isOn =>
             {
-                return;
-            }
+                if (!isOn || presetManager == null)
+                {
+                    return;
+                }
 
-            presetManager.SelectedSlotIndex = slotIndex;
-            UpdateSaveButtonState();
-        });
+                presetManager.SelectedSlotIndex = slotIndex;
+                presetManager.PreviewPreset(slotIndex);
+                UpdateSaveButtonState();
+            });
 
         spawnedToggles.Add(toggleInstance);
     }

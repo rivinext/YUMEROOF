@@ -146,8 +146,19 @@ public class MaterialHuePresetManager : MonoBehaviour
         Debug.Log($"Saved preset slot {clampedSlot}");
     }
 
+    // 指定スロットの色を読み取り、コントローラに一時反映
+    public void PreviewPreset(int slotIndex)
+    {
+        ApplyPresetToControllers(slotIndex, "Previewed");
+    }
+
     // 指定スロットから、すべての MaterialHueController の色を復元
     public void LoadPreset(int slotIndex)
+    {
+        ApplyPresetToControllers(slotIndex, "Loaded");
+    }
+
+    private void ApplyPresetToControllers(int slotIndex, string actionLabel)
     {
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
@@ -157,11 +168,11 @@ public class MaterialHuePresetManager : MonoBehaviour
         MaterialHuePresetSlot slot = presetSlots[clampedSlot];
         if (slot != null && slot.IsDefaultPreset)
         {
-            LoadDefaultPreset(slot, clampedSlot);
+            LoadDefaultPreset(slot, clampedSlot, actionLabel);
             return;
         }
 
-        LoadUserPreset(clampedSlot);
+        LoadUserPreset(clampedSlot, actionLabel);
     }
 
     public bool IsDefaultSlot(int slotIndex)
@@ -175,7 +186,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         return slot != null && slot.IsDefaultPreset;
     }
 
-    private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex)
+    private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded")
     {
         IReadOnlyList<HSVColor> defaultColors = slot.DefaultColors;
 
@@ -202,10 +213,10 @@ public class MaterialHuePresetManager : MonoBehaviour
             controller.SetHSV(defaultColor.H, defaultColor.S, defaultColor.V);
         }
 
-        Debug.Log($"Loaded default preset slot {slotIndex}");
+        Debug.Log($"{actionLabel} default preset slot {slotIndex}");
     }
 
-    private void LoadUserPreset(int slotIndex)
+    private void LoadUserPreset(int slotIndex, string actionLabel = "Loaded")
     {
         for (int i = 0; i < controllers.Count; i++)
         {
@@ -226,7 +237,7 @@ public class MaterialHuePresetManager : MonoBehaviour
             controller.SetHSV(h, s, v);
         }
 
-        Debug.Log($"Loaded preset slot {slotIndex}");
+        Debug.Log($"{actionLabel} preset slot {slotIndex}");
     }
 
     public void ApplyFromSaveData(MaterialHueSaveData data)
