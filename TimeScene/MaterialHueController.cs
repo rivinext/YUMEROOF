@@ -89,8 +89,9 @@ public class MaterialHueController : MonoBehaviour
     /// <summary>
     /// 外部からまとめて HSV を設定するための API
     /// saveToPrefs = true にすると PlayerPrefs にも保存される
+    /// applyToMaterial = false にするとプレビュー用 UI のみ更新し、マテリアルは変更しない
     /// </summary>
-    public void SetHSV(float newHue, float newSaturation, float newValue, bool saveToPrefs = false)
+    public void SetHSV(float newHue, float newSaturation, float newValue, bool saveToPrefs = false, bool applyToMaterial = true)
     {
         newHue = Mathf.Repeat(newHue, 1f);
         newSaturation = Mathf.Clamp01(newSaturation);
@@ -117,12 +118,17 @@ public class MaterialHueController : MonoBehaviour
             saturationValuePalette.SetValues(saturation, value);
         }
 
-        ApplyColor();
+        ApplyColor(applyToMaterial);
 
         if (saveToPrefs && changed)
         {
             SaveValues();
         }
+    }
+
+    public void SetPreviewHSV(float newHue, float newSaturation, float newValue)
+    {
+        SetHSV(newHue, newSaturation, newValue, saveToPrefs: false, applyToMaterial: false);
     }
 
     public bool ApplySavedValuesFromPrefs()
@@ -173,11 +179,11 @@ public class MaterialHueController : MonoBehaviour
         return hasSavedValue;
     }
 
-    private void ApplyColor()
+    private void ApplyColor(bool applyToMaterial = true)
     {
         Color currentColor = CurrentColor;
 
-        if (targetMaterial != null)
+        if (applyToMaterial && targetMaterial != null)
         {
             targetMaterial.color = currentColor;
         }
