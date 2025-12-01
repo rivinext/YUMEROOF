@@ -10,6 +10,7 @@ public class PlacedFurniture : MonoBehaviour
     public bool isOnSurface = false;       // 他の家具の上に置かれているか
     public PlacedFurniture parentFurniture; // 親となる家具（上に置かれている場合）
     public List<PlacedFurniture> childFurnitures = new List<PlacedFurniture>(); // 上に置かれた家具
+    public AnchorPoint attachedAnchor;      // 設置時に使用したアンカーポイント
 
     private Renderer[] renderers;
     private Collider[] colliders;
@@ -102,6 +103,16 @@ public class PlacedFurniture : MonoBehaviour
         }
     }
 
+    // アンカー占有状態を解除
+    public void ReleaseAnchor()
+    {
+        if (attachedAnchor != null)
+        {
+            attachedAnchor.SetOccupied(false);
+            attachedAnchor = null;
+        }
+    }
+
     // インベントリに収納
     public void StoreToInventory()
     {
@@ -115,11 +126,7 @@ public class PlacedFurniture : MonoBehaviour
                 child.StoreToInventory();
             }
         }
-        AnchorPoint parentAnchor = transform.parent?.GetComponent<AnchorPoint>();
-        if (parentAnchor != null)
-        {
-            parentAnchor.SetOccupied(false);
-        }
+        ReleaseAnchor();
 
         SetParentFurniture(null);
 

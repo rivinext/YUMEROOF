@@ -71,6 +71,7 @@ public class FreePlacementSystem : MonoBehaviour
     private Quaternion originalRotation;
     private PlacedFurniture originalParentFurniture;
     private Vector3 originalScale = Vector3.one;
+    private AnchorPoint originalAttachedAnchor;
 
     public System.Action OnPlacementCompleted;
     public System.Action OnPlacementCancelled;
@@ -416,15 +417,10 @@ public class FreePlacementSystem : MonoBehaviour
     {
         if (previewObject != null && isMovingFurniture)
         {
-            AnchorPoint parentAnchor = previewObject.transform.parent?.GetComponent<AnchorPoint>();
-            if (parentAnchor != null)
-            {
-                parentAnchor.SetOccupied(false);
-            }
-
             PlacedFurniture pf = previewObject.GetComponent<PlacedFurniture>();
             if (pf != null)
             {
+                pf.ReleaseAnchor();
                 pf.SetParentFurniture(null);
             }
 
@@ -434,7 +430,16 @@ public class FreePlacementSystem : MonoBehaviour
             previewObject.transform.localScale = originalScale;
             if (pf != null && originalParentFurniture != null)
                 pf.SetParentFurniture(originalParentFurniture);
+            if (pf != null)
+            {
+                pf.attachedAnchor = originalAttachedAnchor;
+                if (originalAttachedAnchor != null)
+                {
+                    originalAttachedAnchor.SetOccupied(true);
+                }
+            }
             originalParentFurniture = null;
+            originalAttachedAnchor = null;
         }
 
         if (selectedFurniture != null)
@@ -466,11 +471,7 @@ public class FreePlacementSystem : MonoBehaviour
 
         PlacedFurniture furnitureToRemove = selectedFurniture;
 
-        AnchorPoint parentAnchor = furnitureToRemove.transform.parent?.GetComponent<AnchorPoint>();
-        if (parentAnchor != null)
-        {
-            parentAnchor.SetOccupied(false);
-        }
+        furnitureToRemove.ReleaseAnchor();
 
         furnitureToRemove.SetParentFurniture(null);
 
@@ -529,6 +530,7 @@ public class FreePlacementSystem : MonoBehaviour
 
         ghostManager?.DestroyGhost();
         snappedAnchor = null;
+        originalAttachedAnchor = null;
     }
 
     void SelectFurniture()
@@ -583,11 +585,8 @@ public class FreePlacementSystem : MonoBehaviour
 
     void StartMovingFurniture(PlacedFurniture furniture, Vector3 referencePoint)
     {
-        AnchorPoint parentAnchor = furniture.transform.parent?.GetComponent<AnchorPoint>();
-        if (parentAnchor != null)
-        {
-            parentAnchor.SetOccupied(false);
-        }
+        originalAttachedAnchor = furniture.attachedAnchor;
+        furniture.ReleaseAnchor();
         originalParentFurniture = furniture.parentFurniture;
         furniture.SetParentFurniture(null);
         snappedAnchor = null;
@@ -1190,6 +1189,8 @@ public class FreePlacementSystem : MonoBehaviour
         PlacedFurniture placedComp = previewObject.GetComponent<PlacedFurniture>();
         if (placedComp != null && !placedComp.IsOverlapping())
         {
+            placedComp.attachedAnchor = anchorUsed ? snappedAnchor : null;
+
             if (isPlacingNewFurniture)
             {
                 placedComp.SetSelected(false);
@@ -1233,6 +1234,7 @@ public class FreePlacementSystem : MonoBehaviour
                 snappedAnchor.SetOccupied(true);
             }
             snappedAnchor = null;
+            originalAttachedAnchor = null;
 
             OnPlacementCompleted?.Invoke();
 
