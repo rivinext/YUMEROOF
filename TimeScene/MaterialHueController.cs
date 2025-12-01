@@ -28,6 +28,15 @@ public class MaterialHueController : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float value;
 
+    [Header("Applied HSV Values")]
+    [SerializeField] private float appliedHue;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float appliedSaturation;
+
+    [Range(0f, 1f)]
+    [SerializeField] private float appliedValue;
+
     [Header("Selectors")]
     [SerializeField] private HueRingSelector hueRingSelector;
     [SerializeField] private SaturationValuePalette saturationValuePalette;
@@ -36,7 +45,16 @@ public class MaterialHueController : MonoBehaviour
     public float Hue => hue;
     public float Saturation => saturation;
     public float Value => value;
+    public float AppliedHue => appliedHue;
+    public float AppliedSaturation => appliedSaturation;
+    public float AppliedValue => appliedValue;
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
+    public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
+
+    private void Awake()
+    {
+        SyncAppliedToPreview();
+    }
 
     private void Start()
     {
@@ -97,7 +115,7 @@ public class MaterialHueController : MonoBehaviour
         newSaturation = Mathf.Clamp01(newSaturation);
         newValue = Mathf.Clamp01(newValue);
 
-        bool changed =
+        bool previewChanged =
             !Mathf.Approximately(hue, newHue) ||
             !Mathf.Approximately(saturation, newSaturation) ||
             !Mathf.Approximately(value, newValue);
@@ -105,6 +123,13 @@ public class MaterialHueController : MonoBehaviour
         hue = newHue;
         saturation = newSaturation;
         value = newValue;
+
+        if (applyToMaterial)
+        {
+            appliedHue = hue;
+            appliedSaturation = saturation;
+            appliedValue = value;
+        }
 
         // セレクタ側も同期
         if (hueRingSelector != null)
@@ -120,7 +145,7 @@ public class MaterialHueController : MonoBehaviour
 
         ApplyColor(applyToMaterial);
 
-        if (saveToPrefs && changed)
+        if (saveToPrefs && applyToMaterial && previewChanged)
         {
             SaveValues();
         }
@@ -144,9 +169,9 @@ public class MaterialHueController : MonoBehaviour
 
     private void SaveValues()
     {
-        PlayerPrefs.SetFloat(HueKey, hue);
-        PlayerPrefs.SetFloat(SaturationKey, saturation);
-        PlayerPrefs.SetFloat(ValueKey, value);
+        PlayerPrefs.SetFloat(HueKey, appliedHue);
+        PlayerPrefs.SetFloat(SaturationKey, appliedSaturation);
+        PlayerPrefs.SetFloat(ValueKey, appliedValue);
         PlayerPrefs.Save();
     }
 
@@ -154,9 +179,9 @@ public class MaterialHueController : MonoBehaviour
     {
         bool hasSavedValue = false;
 
-        savedHue = hue;
-        savedSaturation = saturation;
-        savedValue = value;
+        savedHue = appliedHue;
+        savedSaturation = appliedSaturation;
+        savedValue = appliedValue;
 
         if (PlayerPrefs.HasKey(HueKey))
         {
@@ -185,7 +210,7 @@ public class MaterialHueController : MonoBehaviour
 
         if (applyToMaterial && targetMaterial != null)
         {
-            targetMaterial.color = currentColor;
+            targetMaterial.color = AppliedColor;
         }
 
         if (previewImage != null)
@@ -206,6 +231,8 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
+        SyncAppliedToPreview();
+
         // エディタ上で値をいじったときも UI & マテリアルに反映
         if (hueRingSelector != null)
         {
@@ -219,5 +246,12 @@ public class MaterialHueController : MonoBehaviour
         }
 
         ApplyColor();
+    }
+
+    private void SyncAppliedToPreview()
+    {
+        appliedHue = hue;
+        appliedSaturation = saturation;
+        appliedValue = value;
     }
 }
