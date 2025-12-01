@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// マテリアルの色を Hue Ring と Saturation/Value パレットで操作するコントローラー。
@@ -15,6 +16,10 @@ public class IndependentMaterialColorController : MonoBehaviour
 
     [SerializeField, Tooltip("Saturation Value Palette をアタッチしてください。")]
     private SaturationValuePalette saturationValuePalette;
+
+    [Header("確認用 Raw Image")]
+    [SerializeField, Tooltip("調整後の色を表示したい Raw Image をアタッチしてください。")]
+    private RawImage previewRawImage;
 
     [Header("初期 HSV 値")]
     [SerializeField, Range(0f, 1f)] private float initialHue = 0f;
@@ -110,6 +115,11 @@ public class IndependentMaterialColorController : MonoBehaviour
         }
 
         targetMaterial.color = Color.HSVToRGB(currentHue, currentSaturation, currentValue);
+
+        if (previewRawImage != null)
+        {
+            previewRawImage.color = targetMaterial.color;
+        }
     }
 
 #if UNITY_EDITOR
