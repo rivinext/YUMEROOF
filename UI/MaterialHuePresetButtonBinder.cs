@@ -83,12 +83,8 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
                 textComponent.text = label;
             }
         }
-        bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex || (slotIndex == 0 && spawnedToggles.Count == 0);
-        toggleInstance.isOn = shouldSelect;
-        if (shouldSelect)
-        {
-            presetManager.SelectedSlotIndex = slotIndex;
-        }
+        bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
+        toggleInstance.SetIsOnWithoutNotify(shouldSelect);
 
         toggleInstance.onValueChanged.AddListener(isOn =>
         {
