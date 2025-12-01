@@ -161,6 +161,10 @@ public class GameClockUI : MonoBehaviour
             toggle.onValueChanged.RemoveAllListeners();
             if (timeScaleToggleGroup != null)
                 toggle.group = timeScaleToggleGroup;
+
+            var navigation = toggle.navigation;
+            navigation.mode = Navigation.Mode.None;
+            toggle.navigation = navigation;
         }
 
         if (timeScaleToggleGroup != null)
