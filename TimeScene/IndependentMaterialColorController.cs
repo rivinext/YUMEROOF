@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class IndependentMaterialColorController : MonoBehaviour
 {
@@ -21,10 +22,14 @@ public class IndependentMaterialColorController : MonoBehaviour
         materialIndex = 0;
     }
 
-    private void Start()
+    private void Awake()
     {
         EnsurePrefsPrefix();
+        EnsureUIReferences();
+    }
 
+    private void Start()
+    {
         LoadValuesFromPrefs();
         ApplySelectors();
         ApplyColor();
@@ -201,6 +206,101 @@ public class IndependentMaterialColorController : MonoBehaviour
         {
             prefsKeyPrefix = "independent_mat";
         }
+    }
+
+    private void EnsureUIReferences()
+    {
+        if (hueSelector == null)
+        {
+            hueSelector = GetComponentInChildren<HueRingSelector>(includeInactive: true);
+        }
+
+        if (svPalette == null)
+        {
+            svPalette = GetComponentInChildren<SaturationValuePalette>(includeInactive: true);
+        }
+
+        Transform uiRoot = null;
+
+        if (hueSelector == null || svPalette == null)
+        {
+            uiRoot = GetOrCreateUIRoot();
+        }
+
+        if (hueSelector == null)
+        {
+            hueSelector = CreateHueSelector(uiRoot);
+        }
+
+        if (svPalette == null)
+        {
+            svPalette = CreateSaturationValuePalette(uiRoot);
+        }
+    }
+
+    private Transform GetOrCreateUIRoot()
+    {
+        Canvas existingCanvas = GetComponentInChildren<Canvas>(includeInactive: true);
+        if (existingCanvas != null)
+        {
+            return existingCanvas.transform;
+        }
+
+        GameObject canvasObject = new GameObject("IndependentColorUI");
+        canvasObject.transform.SetParent(transform, false);
+
+        Canvas canvas = canvasObject.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvasObject.AddComponent<CanvasScaler>();
+        canvasObject.AddComponent<GraphicRaycaster>();
+
+        return canvasObject.transform;
+    }
+
+    private HueRingSelector CreateHueSelector(Transform parent)
+    {
+        GameObject hueObject = new GameObject("HueSelector", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(HueRingSelector));
+        hueObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = hueObject.GetComponent<RectTransform>();
+        rectTransform.sizeDelta = new Vector2(100f, 100f);
+
+        Image ringImage = hueObject.GetComponent<Image>();
+        ringImage.raycastTarget = true;
+
+        HueRingSelector selector = hueObject.GetComponent<HueRingSelector>();
+
+        GameObject handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleObject.transform.SetParent(hueObject.transform, false);
+
+        selector.GetType().GetField("handleRectTransform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(selector, handleObject.GetComponent<RectTransform>());
+        selector.GetType().GetField("ringRectTransform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(selector, rectTransform);
+        selector.GetType().GetField("ringGraphic", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(selector, ringImage);
+
+        return selector;
+    }
+
+    private SaturationValuePalette CreateSaturationValuePalette(Transform parent)
+    {
+        GameObject paletteObject = new GameObject("SaturationValuePalette", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage), typeof(SaturationValuePalette));
+        paletteObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = paletteObject.GetComponent<RectTransform>();
+        rectTransform.sizeDelta = new Vector2(150f, 150f);
+
+        RawImage paletteImage = paletteObject.GetComponent<RawImage>();
+        paletteImage.raycastTarget = true;
+
+        SaturationValuePalette palette = paletteObject.GetComponent<SaturationValuePalette>();
+
+        GameObject handleObject = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+        handleObject.transform.SetParent(paletteObject.transform, false);
+
+        palette.GetType().GetField("handleRectTransform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(palette, handleObject.GetComponent<RectTransform>());
+        palette.GetType().GetField("paletteRectTransform", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(palette, rectTransform);
+        palette.GetType().GetField("paletteImage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(palette, paletteImage);
+
+        return palette;
     }
 
     private string GetHueKey()
