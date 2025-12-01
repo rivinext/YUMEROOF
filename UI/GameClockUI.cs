@@ -67,23 +67,24 @@ public class GameClockUI : MonoBehaviour
         var eventSystem = EventSystem.current;
         if (eventSystem != null && ShouldUpdateSelection(eventSystem))
         {
-            eventSystem.SetSelectedGameObject(null);
-
-            if (_activeToggle != null)
-            {
-                eventSystem.SetSelectedGameObject(_activeToggle.gameObject);
-                _activeToggle.Select();
-            }
+            eventSystem.SetSelectedGameObject(_activeToggle.gameObject);
+            _activeToggle.Select();
         }
     }
 
     bool ShouldUpdateSelection(EventSystem eventSystem)
     {
         var selectedGameObject = eventSystem.currentSelectedGameObject;
+        if (_activeToggle == null)
+            return false;
+
         if (selectedGameObject == null)
             return true;
 
-        return selectedGameObject.transform.IsChildOf(transform);
+        if (selectedGameObject == _activeToggle.gameObject)
+            return false;
+
+        return !selectedGameObject.transform.IsChildOf(transform);
     }
 
     void OnEnable()
@@ -116,10 +117,18 @@ public class GameClockUI : MonoBehaviour
 
     void EnsureActiveToggleState()
     {
-        if (_activeToggle == null || _activeToggle.isOn)
+        if (_activeToggle == null)
             return;
 
-        _activeToggle.isOn = true;
+        if (!_activeToggle.isOn)
+            _activeToggle.isOn = true;
+
+        var eventSystem = EventSystem.current;
+        if (eventSystem == null || !ShouldUpdateSelection(eventSystem))
+            return;
+
+        eventSystem.SetSelectedGameObject(_activeToggle.gameObject);
+        _activeToggle.Select();
     }
 
     void UpdateDayText(int day)
