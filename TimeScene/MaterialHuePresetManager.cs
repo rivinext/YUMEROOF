@@ -111,7 +111,7 @@ public class MaterialHuePresetManager : MonoBehaviour
                 continue;
             }
 
-            data.controllerColors.Add(new HSVColor(controller.Hue, controller.Saturation, controller.Value));
+            data.controllerColors.Add(new HSVColor(controller.AppliedHue, controller.AppliedSaturation, controller.AppliedValue));
         }
 
         return data;
@@ -137,9 +137,9 @@ public class MaterialHuePresetManager : MonoBehaviour
             if (controller == null) continue;
 
             string baseKey = $"{keyPrefix}_{clampedSlot}_{i}";
-            PlayerPrefs.SetFloat(baseKey + "_h", controller.Hue);
-            PlayerPrefs.SetFloat(baseKey + "_s", controller.Saturation);
-            PlayerPrefs.SetFloat(baseKey + "_v", controller.Value);
+            PlayerPrefs.SetFloat(baseKey + "_h", controller.AppliedHue);
+            PlayerPrefs.SetFloat(baseKey + "_s", controller.AppliedSaturation);
+            PlayerPrefs.SetFloat(baseKey + "_v", controller.AppliedValue);
         }
 
         PlayerPrefs.Save();
