@@ -278,6 +278,12 @@ public class SaveGameManager : MonoBehaviour
             data.cozy = env.CozyTotal;
             data.nature = env.NatureTotal;
         }
+
+        var huePresetManager = FindFirstObjectByType<MaterialHuePresetManager>();
+        if (huePresetManager != null)
+        {
+            data.materialHue = huePresetManager.GetSaveData();
+        }
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -305,6 +311,12 @@ public class SaveGameManager : MonoBehaviour
         {
             data.cozy = env.CozyTotal;
             data.nature = env.NatureTotal;
+        }
+
+        var huePresetManager = FindFirstObjectByType<MaterialHuePresetManager>();
+        if (huePresetManager != null)
+        {
+            data.materialHue = huePresetManager.GetSaveData();
         }
     }
 
@@ -377,6 +389,8 @@ public class SaveGameManager : MonoBehaviour
         {
             milestone.RequestProgressUpdate();
         }
+
+        ApplyHuePresets(data.materialHue);
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -407,6 +421,26 @@ public class SaveGameManager : MonoBehaviour
         if (milestone != null)
         {
             milestone.RequestProgressUpdate();
+        }
+
+        ApplyHuePresets(data.materialHue);
+    }
+
+    void ApplyHuePresets(MaterialHueSaveData data)
+    {
+        var huePresetManager = FindFirstObjectByType<MaterialHuePresetManager>();
+        if (huePresetManager == null)
+        {
+            return;
+        }
+
+        if (data != null)
+        {
+            huePresetManager.ApplyFromSaveData(data);
+        }
+        else
+        {
+            huePresetManager.ApplyDefaultPresetFallback();
         }
     }
 
