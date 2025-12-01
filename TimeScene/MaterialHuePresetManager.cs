@@ -42,6 +42,11 @@ public class MaterialHuePresetManager : MonoBehaviour
     [SerializeField] private List<MaterialHueController> controllers = new();
     [SerializeField] private string keyPrefix = "multi_mat_preset";
 
+    [Header("Initial Load")]
+    [SerializeField] private bool applyInitialPresetOnStart = false;
+    [SerializeField] private int initialPresetIndex = 0;
+    [SerializeField] private bool applyFirstDefaultSlot = false;
+
     [Header("Preset Slots")]
     [SerializeField] private List<MaterialHuePresetSlot> presetSlots = new()
     {
@@ -75,6 +80,19 @@ public class MaterialHuePresetManager : MonoBehaviour
             }
 
             selectedSlotIndex = Mathf.Clamp(value, 0, SlotCount - 1);
+        }
+    }
+
+    private void Awake()
+    {
+        SelectedSlotIndex = ResolveInitialSlotIndex();
+    }
+
+    private void Start()
+    {
+        if (applyInitialPresetOnStart)
+        {
+            LoadPreset(SelectedSlotIndex);
         }
     }
 
@@ -213,5 +231,52 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         return true;
+    }
+
+    private int ResolveInitialSlotIndex()
+    {
+        if (SlotCount <= 0)
+        {
+            return 0;
+        }
+
+        if (applyFirstDefaultSlot)
+        {
+            int defaultSlotIndex = FindFirstDefaultSlotIndex();
+            if (defaultSlotIndex >= 0)
+            {
+                return defaultSlotIndex;
+            }
+
+            Debug.LogWarning("No default preset slot found. Falling back to the configured initial preset index.");
+        }
+
+        if (initialPresetIndex < 0 || initialPresetIndex >= SlotCount)
+        {
+            int clampedIndex = Mathf.Clamp(initialPresetIndex, 0, SlotCount - 1);
+            Debug.LogWarning($"Initial preset index {initialPresetIndex} is out of range. Falling back to {clampedIndex}.");
+            return clampedIndex;
+        }
+
+        return initialPresetIndex;
+    }
+
+    private int FindFirstDefaultSlotIndex()
+    {
+        if (presetSlots == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < presetSlots.Count; i++)
+        {
+            MaterialHuePresetSlot slot = presetSlots[i];
+            if (slot != null && slot.IsDefaultPreset)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }
