@@ -149,16 +149,16 @@ public class MaterialHuePresetManager : MonoBehaviour
     // 指定スロットの色を読み取り、コントローラに一時反映
     public void PreviewPreset(int slotIndex)
     {
-        ApplyPresetToControllers(slotIndex, "Previewed");
+        ApplyPresetToControllers(slotIndex, "Previewed", applyToMaterial: false);
     }
 
     // 指定スロットから、すべての MaterialHueController の色を復元
     public void LoadPreset(int slotIndex)
     {
-        ApplyPresetToControllers(slotIndex, "Loaded");
+        ApplyPresetToControllers(slotIndex, "Loaded", applyToMaterial: true);
     }
 
-    private void ApplyPresetToControllers(int slotIndex, string actionLabel)
+    private void ApplyPresetToControllers(int slotIndex, string actionLabel, bool applyToMaterial)
     {
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
@@ -168,11 +168,11 @@ public class MaterialHuePresetManager : MonoBehaviour
         MaterialHuePresetSlot slot = presetSlots[clampedSlot];
         if (slot != null && slot.IsDefaultPreset)
         {
-            LoadDefaultPreset(slot, clampedSlot, actionLabel);
+            LoadDefaultPreset(slot, clampedSlot, actionLabel, applyToMaterial);
             return;
         }
 
-        LoadUserPreset(clampedSlot, actionLabel);
+        LoadUserPreset(clampedSlot, actionLabel, applyToMaterial);
     }
 
     public bool IsDefaultSlot(int slotIndex)
@@ -186,7 +186,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         return slot != null && slot.IsDefaultPreset;
     }
 
-    private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded")
+    private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         IReadOnlyList<HSVColor> defaultColors = slot.DefaultColors;
 
@@ -210,13 +210,13 @@ public class MaterialHuePresetManager : MonoBehaviour
             }
 
             HSVColor defaultColor = defaultColors[i];
-            controller.SetHSV(defaultColor.H, defaultColor.S, defaultColor.V);
+            controller.SetHSV(defaultColor.H, defaultColor.S, defaultColor.V, applyToMaterial: applyToMaterial);
         }
 
         Debug.Log($"{actionLabel} default preset slot {slotIndex}");
     }
 
-    private void LoadUserPreset(int slotIndex, string actionLabel = "Loaded")
+    private void LoadUserPreset(int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         for (int i = 0; i < controllers.Count; i++)
         {
@@ -234,7 +234,7 @@ public class MaterialHuePresetManager : MonoBehaviour
             float s = PlayerPrefs.GetFloat(baseKey + "_s", controller.Saturation);
             float v = PlayerPrefs.GetFloat(baseKey + "_v", controller.Value);
 
-            controller.SetHSV(h, s, v);
+            controller.SetHSV(h, s, v, applyToMaterial: applyToMaterial);
         }
 
         Debug.Log($"{actionLabel} preset slot {slotIndex}");
