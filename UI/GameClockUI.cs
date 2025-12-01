@@ -238,7 +238,7 @@ public class GameClockUI : MonoBehaviour
             SetActiveToggle(targetToggle);
     }
 
-    class GameClockToggleHandler : MonoBehaviour, IPointerDownHandler
+    class GameClockToggleHandler : MonoBehaviour, IPointerDownHandler, IPointerClickHandler, ISubmitHandler, ISelectHandler
     {
         Toggle _toggle;
         GameClockUI _gameClockUI;
@@ -251,15 +251,47 @@ public class GameClockUI : MonoBehaviour
             _timeScale = timeScale;
         }
 
-        public void OnPointerDown(PointerEventData eventData)
+        bool CanHandle()
         {
             if (_toggle == null || _gameClockUI == null)
+                return false;
+
+            var eventSystem = EventSystem.current;
+            if (eventSystem == null)
+                return false;
+
+            return true;
+        }
+
+        void HandleToggleActivation()
+        {
+            if (!CanHandle())
                 return;
 
             if (!_toggle.isOn)
                 _toggle.isOn = true;
 
             _gameClockUI.ApplyTimeScale(_toggle, _timeScale);
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            HandleToggleActivation();
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            HandleToggleActivation();
+        }
+
+        public void OnSubmit(BaseEventData eventData)
+        {
+            HandleToggleActivation();
+        }
+
+        public void OnSelect(BaseEventData eventData)
+        {
+            HandleToggleActivation();
         }
     }
 }
