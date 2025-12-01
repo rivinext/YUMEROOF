@@ -6,6 +6,9 @@ public class MaterialHueController : MonoBehaviour
     // PlayerPrefs のキー用プレフィックス（インスタンスごとに変えられる）
     [SerializeField] private string playerPrefsKeyPrefix = "material";
 
+    [Header("Persistence")]
+    [SerializeField] private bool loadFromPrefsOnStart = false;
+
     private string HueKey => $"{playerPrefsKeyPrefix}_hue";
     private string SaturationKey => $"{playerPrefsKeyPrefix}_saturation";
     private string ValueKey => $"{playerPrefsKeyPrefix}_value";
@@ -37,7 +40,10 @@ public class MaterialHueController : MonoBehaviour
 
     private void Start()
     {
-        LoadSavedValues();
+        if (loadFromPrefsOnStart)
+        {
+            ApplySavedValuesFromPrefs();
+        }
 
         if (hueRingSelector != null)
         {
@@ -119,22 +125,15 @@ public class MaterialHueController : MonoBehaviour
         }
     }
 
-    private void LoadSavedValues()
+    public bool ApplySavedValuesFromPrefs()
     {
-        if (PlayerPrefs.HasKey(HueKey))
+        if (!TryGetSavedValues(out float savedHue, out float savedSaturation, out float savedValue))
         {
-            hue = PlayerPrefs.GetFloat(HueKey);
+            return false;
         }
 
-        if (PlayerPrefs.HasKey(SaturationKey))
-        {
-            saturation = PlayerPrefs.GetFloat(SaturationKey);
-        }
-
-        if (PlayerPrefs.HasKey(ValueKey))
-        {
-            value = PlayerPrefs.GetFloat(ValueKey);
-        }
+        SetHSV(savedHue, savedSaturation, savedValue);
+        return true;
     }
 
     private void SaveValues()
@@ -143,6 +142,35 @@ public class MaterialHueController : MonoBehaviour
         PlayerPrefs.SetFloat(SaturationKey, saturation);
         PlayerPrefs.SetFloat(ValueKey, value);
         PlayerPrefs.Save();
+    }
+
+    private bool TryGetSavedValues(out float savedHue, out float savedSaturation, out float savedValue)
+    {
+        bool hasSavedValue = false;
+
+        savedHue = hue;
+        savedSaturation = saturation;
+        savedValue = value;
+
+        if (PlayerPrefs.HasKey(HueKey))
+        {
+            savedHue = PlayerPrefs.GetFloat(HueKey);
+            hasSavedValue = true;
+        }
+
+        if (PlayerPrefs.HasKey(SaturationKey))
+        {
+            savedSaturation = PlayerPrefs.GetFloat(SaturationKey);
+            hasSavedValue = true;
+        }
+
+        if (PlayerPrefs.HasKey(ValueKey))
+        {
+            savedValue = PlayerPrefs.GetFloat(ValueKey);
+            hasSavedValue = true;
+        }
+
+        return hasSavedValue;
     }
 
     private void ApplyColor()
