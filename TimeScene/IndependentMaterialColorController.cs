@@ -2,8 +2,11 @@ using UnityEngine;
 
 public class IndependentMaterialColorController : MonoBehaviour
 {
-    [SerializeField] private Renderer targetRenderer;
-    [SerializeField] private int materialIndex;
+    [SerializeField, Tooltip("Renderer whose material color will be controlled. Drag the target Renderer here in the Inspector.")]
+    private Renderer targetRenderer;
+
+    [SerializeField, Tooltip("Index of the material to edit on the target Renderer. Confirm the index when the Renderer has multiple materials.")]
+    private int materialIndex;
     [SerializeField] private HueRingSelector hueSelector;
     [SerializeField] private SaturationValuePalette svPalette;
     [SerializeField] private string prefsKeyPrefix = "independent_mat";
@@ -11,6 +14,12 @@ public class IndependentMaterialColorController : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float hue = 0f;
     [SerializeField, Range(0f, 1f)] private float saturation = 1f;
     [SerializeField, Range(0f, 1f)] private float value = 1f;
+
+    private void Reset()
+    {
+        targetRenderer = GetComponent<Renderer>();
+        materialIndex = 0;
+    }
 
     private void Start()
     {
@@ -227,6 +236,12 @@ public class IndependentMaterialColorController : MonoBehaviour
         hue = Mathf.Repeat(hue, 1f);
         saturation = Mathf.Clamp01(saturation);
         value = Mathf.Clamp01(value);
+
+        if (targetRenderer != null)
+        {
+            int maxIndex = Mathf.Max(0, targetRenderer.materials.Length - 1);
+            materialIndex = Mathf.Clamp(materialIndex, 0, maxIndex);
+        }
 
         ApplySelectors();
         ApplyColor();
