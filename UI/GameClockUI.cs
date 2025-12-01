@@ -138,12 +138,45 @@ public class GameClockUI : MonoBehaviour
         if (!_activeToggle.isOn)
             _activeToggle.isOn = true;
 
+        ForceToggleGraphicActive(_activeToggle);
+
         var eventSystem = EventSystem.current;
         if (eventSystem == null || !ShouldUpdateSelection(eventSystem))
             return;
 
         eventSystem.SetSelectedGameObject(_activeToggle.gameObject);
         _activeToggle.Select();
+    }
+
+    void ForceToggleGraphicActive(Toggle toggle)
+    {
+        if (toggle == null)
+            return;
+
+        var graphic = toggle.graphic;
+        if (graphic != null)
+        {
+            graphic.enabled = true;
+            var color = graphic.color;
+            color.a = 1f;
+            graphic.color = color;
+            graphic.gameObject.SetActive(true);
+        }
+
+        var checkmarkTransform = toggle.transform.Find("Background/Checkmark");
+        if (checkmarkTransform != null)
+        {
+            var checkmarkGraphic = checkmarkTransform.GetComponent<Graphic>();
+            if (checkmarkGraphic != null)
+            {
+                checkmarkGraphic.enabled = true;
+                var color = checkmarkGraphic.color;
+                color.a = 1f;
+                checkmarkGraphic.color = color;
+            }
+
+            checkmarkTransform.gameObject.SetActive(true);
+        }
     }
 
     void UpdateDayText(int day)
