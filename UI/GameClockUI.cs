@@ -78,6 +78,9 @@ public class GameClockUI : MonoBehaviour
         if (_activeToggle == null)
             return false;
 
+        if (IsFocusedInputField(selectedGameObject))
+            return false;
+
         if (selectedGameObject == null)
             return true;
 
@@ -85,6 +88,15 @@ public class GameClockUI : MonoBehaviour
             return false;
 
         return !selectedGameObject.transform.IsChildOf(transform);
+    }
+
+    bool IsFocusedInputField(GameObject selectedGameObject)
+    {
+        if (selectedGameObject == null)
+            return false;
+
+        var inputField = selectedGameObject.GetComponent<TMP_InputField>();
+        return inputField != null && inputField.isFocused;
     }
 
     void OnEnable()
