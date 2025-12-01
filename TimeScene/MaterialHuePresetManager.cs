@@ -96,6 +96,27 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
     }
 
+    public MaterialHueSaveData GetSaveData()
+    {
+        var data = new MaterialHueSaveData
+        {
+            selectedSlotIndex = SelectedSlotIndex
+        };
+
+        foreach (var controller in controllers)
+        {
+            if (controller == null)
+            {
+                data.controllerColors.Add(new HSVColor());
+                continue;
+            }
+
+            data.controllerColors.Add(new HSVColor(controller.Hue, controller.Saturation, controller.Value));
+        }
+
+        return data;
+    }
+
     // 指定スロットに、すべての MaterialHueController の色を保存
     public void SavePreset(int slotIndex)
     {
@@ -208,6 +229,39 @@ public class MaterialHuePresetManager : MonoBehaviour
         Debug.Log($"Loaded preset slot {slotIndex}");
     }
 
+    public void ApplyFromSaveData(MaterialHueSaveData data)
+    {
+        if (!TryValidateSlot(data?.selectedSlotIndex ?? SelectedSlotIndex, out int clampedSlot))
+        {
+            return;
+        }
+
+        SelectedSlotIndex = clampedSlot;
+
+        if (data == null || data.controllerColors == null || data.controllerColors.Count == 0)
+        {
+            ApplyDefaultPresetFallback();
+            return;
+        }
+
+        for (int i = 0; i < controllers.Count && i < data.controllerColors.Count; i++)
+        {
+            MaterialHueController controller = controllers[i];
+            if (controller == null)
+            {
+                continue;
+            }
+
+            HSVColor savedColor = data.controllerColors[i];
+            controller.SetHSV(savedColor.H, savedColor.S, savedColor.V);
+        }
+
+        if (!IsDefaultSlot(clampedSlot))
+        {
+            SavePreset(clampedSlot);
+        }
+    }
+
     private bool TryValidateSlot(int slotIndex, out int validSlotIndex)
     {
         validSlotIndex = Mathf.Max(0, slotIndex);
@@ -259,6 +313,18 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         return initialPresetIndex;
+    }
+
+    public void ApplyDefaultPresetFallback()
+    {
+        int targetSlot = FindFirstDefaultSlotIndex();
+        if (targetSlot < 0)
+        {
+            targetSlot = ResolveInitialSlotIndex();
+        }
+
+        SelectedSlotIndex = targetSlot;
+        LoadPreset(targetSlot);
     }
 
     private int FindFirstDefaultSlotIndex()

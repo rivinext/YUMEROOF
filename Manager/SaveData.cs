@@ -42,6 +42,7 @@ public class StorySaveData : BaseSaveData
     public int milestoneIndex;
     public int cozy;
     public int nature;
+    public MaterialHueSaveData materialHue;
 
     public static StorySaveData FromJson(string json)
     {
@@ -60,9 +61,17 @@ public class CreativeSaveData : BaseSaveData
     public int milestoneIndex;
     public int cozy;
     public int nature;
+    public MaterialHueSaveData materialHue;
 
     public static CreativeSaveData FromJson(string json)
     {
         return JsonUtility.FromJson<CreativeSaveData>(json);
     }
+}
+
+[Serializable]
+public class MaterialHueSaveData
+{
+    public int selectedSlotIndex;
+    public List<HSVColor> controllerColors = new();
 }
