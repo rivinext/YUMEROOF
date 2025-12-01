@@ -6,6 +6,17 @@ using UnityEngine.UI;
 /// </summary>
 public class IndependentMaterialColorController : MonoBehaviour
 {
+    [Header("保存設定")]
+    [SerializeField, Tooltip("PlayerPrefs に保存するときのキー プレフィックス。インスタンスごとに変えてください。")]
+    private string playerPrefsKeyPrefix = "independent_material";
+
+    [SerializeField, Tooltip("起動時に PlayerPrefs から HSV を自動で読み込むかどうか。")]
+    private bool loadFromPrefsOnAwake = true;
+
+    private string HueKey => $"{playerPrefsKeyPrefix}_hue";
+    private string SaturationKey => $"{playerPrefsKeyPrefix}_saturation";
+    private string ValueKey => $"{playerPrefsKeyPrefix}_value";
+
     [Header("対象マテリアル")]
     [SerializeField, Tooltip("色を変更したいマテリアルをアタッチしてください。")]
     private Material targetMaterial;
@@ -35,6 +46,11 @@ public class IndependentMaterialColorController : MonoBehaviour
         currentHue = Mathf.Repeat(initialHue, 1f);
         currentSaturation = Mathf.Clamp01(initialSaturation);
         currentValue = Mathf.Clamp01(initialValue);
+
+        if (loadFromPrefsOnAwake)
+        {
+            ApplySavedValuesFromPrefs();
+        }
 
         ApplySelectors();
         ApplyColor();
@@ -83,14 +99,73 @@ public class IndependentMaterialColorController : MonoBehaviour
         SetHSV(currentHue, currentSaturation, newValue);
     }
 
-    public void SetHSV(float hue, float saturation, float value)
+    public void SetHSV(float hue, float saturation, float value, bool saveToPrefs = true)
     {
-        currentHue = Mathf.Repeat(hue, 1f);
-        currentSaturation = Mathf.Clamp01(saturation);
-        currentValue = Mathf.Clamp01(value);
+        float clampedHue = Mathf.Repeat(hue, 1f);
+        float clampedSaturation = Mathf.Clamp01(saturation);
+        float clampedValue = Mathf.Clamp01(value);
+
+        bool hasChanged =
+            !Mathf.Approximately(currentHue, clampedHue) ||
+            !Mathf.Approximately(currentSaturation, clampedSaturation) ||
+            !Mathf.Approximately(currentValue, clampedValue);
+
+        currentHue = clampedHue;
+        currentSaturation = clampedSaturation;
+        currentValue = clampedValue;
 
         ApplySelectors();
         ApplyColor();
+
+        if (hasChanged && saveToPrefs)
+        {
+            SaveValues();
+        }
+    }
+
+    private void SaveValues()
+    {
+        PlayerPrefs.SetFloat(HueKey, currentHue);
+        PlayerPrefs.SetFloat(SaturationKey, currentSaturation);
+        PlayerPrefs.SetFloat(ValueKey, currentValue);
+        PlayerPrefs.Save();
+    }
+
+    private void ApplySavedValuesFromPrefs()
+    {
+        if (TryGetSavedValues(out float savedHue, out float savedSaturation, out float savedValue))
+        {
+            SetHSV(savedHue, savedSaturation, savedValue, saveToPrefs: false);
+        }
+    }
+
+    private bool TryGetSavedValues(out float savedHue, out float savedSaturation, out float savedValue)
+    {
+        bool hasSaved = false;
+
+        savedHue = currentHue;
+        savedSaturation = currentSaturation;
+        savedValue = currentValue;
+
+        if (PlayerPrefs.HasKey(HueKey))
+        {
+            savedHue = PlayerPrefs.GetFloat(HueKey);
+            hasSaved = true;
+        }
+
+        if (PlayerPrefs.HasKey(SaturationKey))
+        {
+            savedSaturation = PlayerPrefs.GetFloat(SaturationKey);
+            hasSaved = true;
+        }
+
+        if (PlayerPrefs.HasKey(ValueKey))
+        {
+            savedValue = PlayerPrefs.GetFloat(ValueKey);
+            hasSaved = true;
+        }
+
+        return hasSaved;
     }
 
     private void ApplySelectors()
