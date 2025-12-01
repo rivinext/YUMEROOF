@@ -84,10 +84,13 @@ public class GameClockUI : MonoBehaviour
         if (selectedGameObject == null)
             return true;
 
+        if (!selectedGameObject.transform.IsChildOf(transform))
+            return false;
+
         if (selectedGameObject == _activeToggle.gameObject)
             return false;
 
-        return !selectedGameObject.transform.IsChildOf(transform);
+        return false;
     }
 
     bool IsFocusedInputField(GameObject selectedGameObject)
