@@ -1088,6 +1088,25 @@ public class WardrobeUIController : MonoBehaviour
         return SelectionKeyPrefix + category.ToString();
     }
 
+    public static bool HasSavedSelection(WardrobeTabType category)
+    {
+        string key = SelectionKeyPrefix + category.ToString();
+        return PlayerPrefs.HasKey(key);
+    }
+
+    public static bool HasAnySavedSelections()
+    {
+        foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
+        {
+            if (HasSavedSelection(category))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool IsEmptySelectionValue(string storedValue)
     {
         return string.IsNullOrEmpty(storedValue) || string.Equals(storedValue, EmptySelectionToken, StringComparison.Ordinal);
