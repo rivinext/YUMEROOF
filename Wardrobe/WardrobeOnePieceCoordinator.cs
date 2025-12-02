@@ -104,10 +104,20 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
     /// </summary>
     public void ApplyInitialEquipment()
     {
+        if (ShouldSkipInitialEquipment())
+        {
+            return;
+        }
+
         ApplyInitialEquipmentForCategory(WardrobeTabType.Hair, initialHairItemId);
         ApplyInitialEquipmentForCategory(WardrobeTabType.Tops, initialTopsItemId);
         ApplyInitialEquipmentForCategory(WardrobeTabType.Pants, initialPantsItemId);
         ApplyInitialEquipmentForCategory(WardrobeTabType.Shoes, initialShoesItemId);
+    }
+
+    private bool ShouldSkipInitialEquipment()
+    {
+        return WardrobeUIController.HasAnySavedSelections();
     }
 
     private void ApplyInitialEquipmentForCategory(WardrobeTabType category, string itemId)
