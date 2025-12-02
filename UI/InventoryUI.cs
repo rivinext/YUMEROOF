@@ -711,7 +711,7 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Tab))
+        if (Input.GetKeyDown(KeyCode.Tab) && !IsShopOpen())
         {
             ToggleInventory();
         }
@@ -728,6 +728,11 @@ public class InventoryUI : MonoBehaviour
                 cardManager?.DeselectAll();
             }
         }
+    }
+
+    private bool IsShopOpen()
+    {
+        return ShopUIManager.Instance?.IsOpen ?? false;
     }
 
     bool IsPointerOverUIElement()
