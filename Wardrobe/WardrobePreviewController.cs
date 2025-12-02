@@ -88,6 +88,20 @@ public class WardrobePreviewController : MonoBehaviour
         }
     }
 
+    private void Awake()
+    {
+        TryAssignPreviewReferences();
+        InitializePreviewTarget();
+        CapturePreviewInitialZoom();
+    }
+
+    private void OnEnable()
+    {
+        TryAssignPreviewReferences();
+        InitializePreviewTarget();
+        CapturePreviewInitialZoom();
+    }
+
     private void LateUpdate()
     {
         if (!previewActive || !orbitInitialized)
@@ -472,5 +486,103 @@ public class WardrobePreviewController : MonoBehaviour
         orbitRadius = Mathf.Clamp(orbitRadius, minOrbitDistance, maxOrbitDistance);
         initialOrbitRadius = Mathf.Clamp(initialOrbitRadius, minOrbitDistance, maxOrbitDistance);
         ApplyOrbitToCamera();
+    }
+
+    private bool TryAssignPreviewReferences()
+    {
+        bool referencesUpdated = false;
+
+        if (previewPlayerRoot == null)
+        {
+            previewPlayerRoot = FindTransformByNames(new[] { "PreviewPlayerRoot", "PreviewPlayer", "WardrobePreviewPlayer" })
+                ?? FindTransformByTag("PreviewPlayer");
+            referencesUpdated |= previewPlayerRoot != null;
+        }
+
+        if (previewCamera == null)
+        {
+            previewCamera = FindComponentByNamesOrTags<Camera>(
+                new[] { "PreviewCamera", "WardrobePreviewCamera" },
+                new[] { "PreviewCamera", "WardrobePreviewCamera" })
+                ?? GetComponentInChildren<Camera>(true);
+            referencesUpdated |= previewCamera != null;
+        }
+
+        if (previewTargetImage == null)
+        {
+            previewTargetImage = FindComponentByNamesOrTags<RawImage>(
+                new[] { "PreviewTarget", "PreviewImage", "WardrobePreviewImage" },
+                new[] { "PreviewTarget", "PreviewImage", "WardrobePreviewImage" })
+                ?? GetComponentInChildren<RawImage>(true);
+
+            if (previewTargetImage == null)
+            {
+                RawImage[] images = FindObjectsOfType<RawImage>(true);
+                if (images.Length > 0)
+                {
+                    previewTargetImage = images[0];
+                }
+            }
+
+            referencesUpdated |= previewTargetImage != null;
+        }
+
+        return referencesUpdated;
+    }
+
+    private Transform FindTransformByNames(string[] candidateNames)
+    {
+        Transform[] transforms = GetComponentsInChildren<Transform>(true);
+        foreach (Transform child in transforms)
+        {
+            for (int i = 0; i < candidateNames.Length; i++)
+            {
+                if (string.Equals(child.name, candidateNames[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return child;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private Transform FindTransformByTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return null;
+        }
+
+        GameObject found = GameObject.FindGameObjectWithTag(tag);
+        return found != null ? found.transform : null;
+    }
+
+    private T FindComponentByNamesOrTags<T>(string[] candidateNames, string[] candidateTags) where T : Component
+    {
+        Transform transformByName = FindTransformByNames(candidateNames);
+        if (transformByName != null)
+        {
+            T component = transformByName.GetComponentInParent<T>();
+            if (component != null)
+            {
+                return component;
+            }
+        }
+
+        for (int i = 0; i < candidateTags.Length; i++)
+        {
+            Transform transformByTag = FindTransformByTag(candidateTags[i]);
+            if (transformByTag != null)
+            {
+                T component = transformByTag.GetComponentInParent<T>();
+                if (component != null)
+                {
+                    return component;
+                }
+            }
+        }
+
+        return null;
     }
 }
