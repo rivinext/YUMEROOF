@@ -98,6 +98,7 @@ public class InventoryUI : MonoBehaviour
     // マネージャー
     private InventoryCardManager cardManager;
     private InventoryMaterialManager materialManager;
+    private ShopConversationController shopConversationController;
 
 
     // 状態管理
@@ -711,7 +712,7 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Tab) && !IsShopOpen())
+        if (Input.GetKeyDown(KeyCode.Tab) && !IsShopOpen() && !IsShopConversationActive())
         {
             ToggleInventory();
         }
@@ -733,6 +734,16 @@ public class InventoryUI : MonoBehaviour
     private bool IsShopOpen()
     {
         return ShopUIManager.Instance?.IsOpen ?? false;
+    }
+
+    private bool IsShopConversationActive()
+    {
+        if (shopConversationController == null)
+        {
+            shopConversationController = FindFirstObjectByType<ShopConversationController>();
+        }
+
+        return shopConversationController != null && shopConversationController.IsConversationActive;
     }
 
     bool IsPointerOverUIElement()
