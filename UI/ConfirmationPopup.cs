@@ -61,10 +61,6 @@ public class ConfirmationPopup : MonoBehaviour
         {
             parentCanvas = GetComponentInParent<Canvas>();
         }
-
-        isOpen = false;
-        gameObject.SetActive(false);
-        SetBackdropActive(false);
     }
 
     private void OnDestroy()
