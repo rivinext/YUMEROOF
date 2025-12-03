@@ -121,9 +121,14 @@ public class DropMaterial : MonoBehaviour, IInteractable
         StartCoroutine(PlayCollectAnimation());
     }
 
-    void OnMouseEnter()
+    void OnTriggerEnter(Collider other)
     {
-        if (isCollecting)
+        if (isCollecting || other == null)
+        {
+            return;
+        }
+
+        if (!IsPlayerCollider(other))
         {
             return;
         }
@@ -145,6 +150,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
         }
 
         EnsurePlayerTransform();
+        EnsureDropColliderIsTrigger();
         InitializeHoverAudioSource();
         SceneManager.sceneLoaded += OnSceneLoaded;
 
@@ -485,6 +491,44 @@ public class DropMaterial : MonoBehaviour, IInteractable
         {
             StopCoroutine(playerTransformRetryCoroutine);
             playerTransformRetryCoroutine = null;
+        }
+    }
+
+    private bool IsPlayerCollider(Collider other)
+    {
+        if (other == null)
+        {
+            return false;
+        }
+
+        if (other.CompareTag("Player"))
+        {
+            return true;
+        }
+
+        if (playerTransform != null && other.transform.IsChildOf(playerTransform))
+        {
+            return true;
+        }
+
+        if (playerTransform != null && other.gameObject.layer == playerTransform.gameObject.layer)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void EnsureDropColliderIsTrigger()
+    {
+        var colliders = GetComponentsInChildren<Collider>();
+
+        foreach (var col in colliders)
+        {
+            if (col != null)
+            {
+                col.isTrigger = true;
+            }
         }
     }
 
