@@ -17,6 +17,9 @@ public class DropMaterial : MonoBehaviour, IInteractable
     [SerializeField] private Transform playerTransform;
     [SerializeField] private float collectAnimationDuration = 0.5f;
     [SerializeField] private float collectFadeDuration = 0.5f;
+    [SerializeField] private AudioSource pickupAudioSource;
+    [SerializeField] private AudioClip pickupClip;
+    [SerializeField] private AudioClip[] pickupClips;
     [Tooltip("Controls how the collect animation moves from the drop to the player. X=time, Y=movement interpolation.")]
     [SerializeField] private AnimationCurve collectMovementCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve collectAlphaCurve = new AnimationCurve(
@@ -96,6 +99,8 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
         isCollecting = true;
 
+        PlayPickupSfx();
+
         Debug.Log($"Adding material to inventory: ID={materialID}, Name={materialName}");
         inventory.AddMaterial(materialID);
         Debug.Log($"Added material to inventory: ID={materialID}, Name={materialName}");
@@ -137,6 +142,16 @@ public class DropMaterial : MonoBehaviour, IInteractable
         if (collectAnimationRoot == null)
         {
             collectAnimationRoot = transform;
+        }
+
+        if (pickupAudioSource == null && collectAnimationRoot != null)
+        {
+            pickupAudioSource = collectAnimationRoot.GetComponent<AudioSource>();
+        }
+
+        if (pickupAudioSource == null)
+        {
+            pickupAudioSource = GetComponent<AudioSource>();
         }
 
         EnsurePlayerTransform();
@@ -439,5 +454,28 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         EnsurePlayerTransform();
+    }
+
+    private void PlayPickupSfx()
+    {
+        var clip = GetPickupClip();
+        if (clip == null || pickupAudioSource == null)
+        {
+            return;
+        }
+
+        float volume = AudioManager.CurrentSfxVolume;
+        pickupAudioSource.PlayOneShot(clip, volume);
+    }
+
+    private AudioClip GetPickupClip()
+    {
+        if (pickupClips != null && pickupClips.Length > 0)
+        {
+            int randomIndex = Random.Range(0, pickupClips.Length);
+            return pickupClips[randomIndex];
+        }
+
+        return pickupClip;
     }
 }
