@@ -17,6 +17,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
     [SerializeField] private Transform playerTransform;
     [SerializeField] private float collectAnimationDuration = 0.5f;
     [SerializeField] private float collectFadeDuration = 0.5f;
+    [SerializeField] private AudioClip hoverCollectClip;
     [Tooltip("Controls how the collect animation moves from the drop to the player. X=time, Y=movement interpolation.")]
     [SerializeField] private AnimationCurve collectMovementCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve collectAlphaCurve = new AnimationCurve(
@@ -32,6 +33,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
     private string materialName;
     private Sprite materialIcon;
     private bool isCollecting;
+    private AudioSource hoverAudioSource;
     private SpriteRenderer[] cachedSpriteRenderers = System.Array.Empty<SpriteRenderer>();
     private Color[] initialSpriteColors = System.Array.Empty<Color>();
     private Transform idleAnimationTarget;
@@ -121,10 +123,13 @@ public class DropMaterial : MonoBehaviour, IInteractable
 
     void OnMouseEnter()
     {
-        if (!isCollecting)
+        if (isCollecting)
         {
-            Interact();
+            return;
         }
+
+        PlayHoverCollectSfx();
+        Interact();
     }
 
     void Awake()
@@ -140,6 +145,7 @@ public class DropMaterial : MonoBehaviour, IInteractable
         }
 
         EnsurePlayerTransform();
+        InitializeHoverAudioSource();
         SceneManager.sceneLoaded += OnSceneLoaded;
 
         ResetIdleAnimationState();
@@ -170,6 +176,14 @@ public class DropMaterial : MonoBehaviour, IInteractable
     {
         EnsurePlayerTransform();
         ResetIdleAnimationState();
+        InitializeHoverAudioSource();
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    void OnDisable()
+    {
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
     void OnDestroy()
@@ -369,6 +383,44 @@ public class DropMaterial : MonoBehaviour, IInteractable
         float randomAngle = Random.Range(0f, 360f);
         idleAnimationTarget.rotation = Quaternion.AngleAxis(randomAngle, Vector3.up) * idleBaseRotation;
         idleAnimationStartTime = Time.time;
+    }
+
+    private void InitializeHoverAudioSource()
+    {
+        if (hoverAudioSource == null)
+        {
+            hoverAudioSource = GetComponent<AudioSource>();
+        }
+
+        if (hoverAudioSource == null)
+        {
+            hoverAudioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        hoverAudioSource.playOnAwake = false;
+        hoverAudioSource.loop = false;
+        hoverAudioSource.spatialBlend = 0f;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    private void HandleSfxVolumeChanged(float volume)
+    {
+        if (hoverAudioSource == null)
+        {
+            return;
+        }
+
+        hoverAudioSource.volume = Mathf.Clamp01(volume);
+    }
+
+    private void PlayHoverCollectSfx()
+    {
+        if (isCollecting || hoverCollectClip == null || hoverAudioSource == null)
+        {
+            return;
+        }
+
+        hoverAudioSource.PlayOneShot(hoverCollectClip);
     }
 
     private void EnsurePlayerTransform()
