@@ -18,6 +18,7 @@ public class ColorPanelController : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private ToggleGroup tabToggleGroup;
     [SerializeField] private List<TabBinding> tabs = new();
+    [SerializeField] private int defaultTabIndex;
 
     private Coroutine closeRoutine;
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new();
@@ -194,18 +195,16 @@ public class ColorPanelController : MonoBehaviour
     {
         SetupTabListeners();
 
-        Toggle targetTab = currentTab;
+        var targetBinding = TryGetActiveTabFromToggle(out var toggleTab)
+            ? GetBindingForToggle(toggleTab)
+            : null;
 
-        if (TryGetActiveTabFromToggle(out var toggleTab))
+        if (targetBinding == null)
         {
-            targetTab = toggleTab;
-        }
-        else if (!HasBinding(targetTab))
-        {
-            targetTab = tabs.Count > 0 ? tabs[0].toggle : currentTab;
+            targetBinding = GetBindingForToggle(currentTab) ?? GetDefaultBinding();
         }
 
-        SwitchTab(targetTab);
+        SetActiveTab(targetBinding);
     }
 
     private bool TryGetActiveTabFromToggle(out Toggle toggle)
@@ -266,46 +265,58 @@ public class ColorPanelController : MonoBehaviour
         tabToggleListeners.Clear();
     }
 
-    private bool HasBinding(Toggle toggle)
-    {
-        foreach (var binding in tabs)
-        {
-            if (binding == null)
-            {
-                continue;
-            }
-
-            if (binding.toggle == toggle)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public void SwitchTab(Toggle toggle)
     {
-        currentTab = toggle;
+        var binding = GetBindingForToggle(toggle) ?? GetDefaultBinding();
+        SetActiveTab(binding);
+    }
 
-        foreach (var binding in tabs)
+    private void SetActiveTab(TabBinding binding)
+    {
+        currentTab = binding?.toggle;
+
+        foreach (var currentBinding in tabs)
         {
-            if (binding == null)
+            if (currentBinding == null)
             {
                 continue;
             }
 
-            bool isActive = binding.toggle == toggle;
+            bool isActive = currentBinding == binding;
 
-            if (binding.tabRoot != null)
+            if (currentBinding.tabRoot != null)
             {
-                binding.tabRoot.SetActive(isActive);
+                currentBinding.tabRoot.SetActive(isActive);
             }
 
-            if (binding.toggle != null)
+            if (currentBinding.toggle != null)
             {
-                binding.toggle.SetIsOnWithoutNotify(isActive);
+                currentBinding.toggle.SetIsOnWithoutNotify(isActive);
             }
         }
+    }
+
+    private TabBinding GetBindingForToggle(Toggle toggle)
+    {
+        foreach (var binding in tabs)
+        {
+            if (binding?.toggle == toggle)
+            {
+                return binding;
+            }
+        }
+
+        return null;
+    }
+
+    private TabBinding GetDefaultBinding()
+    {
+        if (tabs.Count == 0)
+        {
+            return null;
+        }
+
+        int clampedIndex = Mathf.Clamp(defaultTabIndex, 0, tabs.Count - 1);
+        return tabs[clampedIndex];
     }
 }
