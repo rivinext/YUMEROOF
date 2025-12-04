@@ -30,6 +30,8 @@ public class PlayerSitStateController : MonoBehaviour
     [SerializeField] private AnimationCurve standUpForwardOffsetCurve = AnimationCurve.Linear(0f, 0f, 1f, 0.5f);
     [SerializeField, Tooltip("If true, only XZ are manually interpolated when moving to the seat. If false, Y is also lerped.")]
     private bool seatMoveLerpXZOnly = false;
+    [SerializeField, Tooltip("If true, keeps the final Y position from root motion instead of snapping to the anchor.")]
+    private bool seatMoveLockFinalY = false;
     [SerializeField, Tooltip("Allows vertical matching when using MatchTarget during seat moves.")]
     private bool enableVerticalSeatMatch = true;
 
@@ -318,7 +320,7 @@ public class PlayerSitStateController : MonoBehaviour
         float finalT = seatMoveCurve.Evaluate(duration);
         Vector3 finalPosition = Vector3.Lerp(startPos, targetPos, finalT);
         Vector3 finalPositionToApply = seatMoveLerpXZOnly
-            ? new Vector3(finalPosition.x, transform.position.y, finalPosition.z)
+            ? new Vector3(finalPosition.x, seatMoveLockFinalY ? transform.position.y : finalPosition.y, finalPosition.z)
             : finalPosition;
         transform.position = finalPositionToApply;
         transform.rotation = Quaternion.Slerp(startRot, targetRot, finalT);
