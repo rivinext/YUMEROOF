@@ -28,6 +28,10 @@ public class PlayerSitStateController : MonoBehaviour
     [Header("Seat Movement")]
     [SerializeField] private AnimationCurve seatMoveCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve standUpForwardOffsetCurve = AnimationCurve.Linear(0f, 0f, 1f, 0.5f);
+    [SerializeField, Tooltip("If true, only XZ are manually interpolated when moving to the seat. If false, Y is also lerped.")]
+    private bool seatMoveLerpXZOnly = false;
+    [SerializeField, Tooltip("Allows vertical matching when using MatchTarget during seat moves.")]
+    private bool enableVerticalSeatMatch = true;
 
     public event Action StandUpRequested;
 
@@ -295,13 +299,16 @@ public class PlayerSitStateController : MonoBehaviour
         {
             float t = seatMoveCurve.Evaluate(elapsed);
             Vector3 lerpedPosition = Vector3.Lerp(startPos, targetPos, t);
-            transform.position = new Vector3(lerpedPosition.x, transform.position.y, lerpedPosition.z);
+            Vector3 positionToApply = seatMoveLerpXZOnly
+                ? new Vector3(lerpedPosition.x, transform.position.y, lerpedPosition.z)
+                : lerpedPosition;
+            transform.position = positionToApply;
             transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
 
             if (animator != null)
             {
                 animator.MatchTarget(targetPos, targetRot, AvatarTarget.Root,
-                    new MatchTargetWeightMask(new Vector3(1f, 0f, 1f), 1f), 0f, 1f, true);
+                    new MatchTargetWeightMask(new Vector3(1f, enableVerticalSeatMatch ? 1f : 0f, 1f), 1f), 0f, 1f, true);
             }
 
             elapsed += Time.deltaTime;
@@ -310,7 +317,10 @@ public class PlayerSitStateController : MonoBehaviour
 
         float finalT = seatMoveCurve.Evaluate(duration);
         Vector3 finalPosition = Vector3.Lerp(startPos, targetPos, finalT);
-        transform.position = new Vector3(finalPosition.x, transform.position.y, finalPosition.z);
+        Vector3 finalPositionToApply = seatMoveLerpXZOnly
+            ? new Vector3(finalPosition.x, transform.position.y, finalPosition.z)
+            : finalPosition;
+        transform.position = finalPositionToApply;
         transform.rotation = Quaternion.Slerp(startRot, targetRot, finalT);
 
         isMovingToSeat = false;
