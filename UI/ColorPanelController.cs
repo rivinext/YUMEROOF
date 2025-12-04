@@ -27,8 +27,6 @@ public class ColorPanelController : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private ToggleGroup tabToggleGroup;
     [SerializeField] private List<TabBinding> tabs = new();
-    [SerializeField] private Color activeTabColor = Color.white;
-    [SerializeField] private Color inactiveTabColor = Color.gray;
     [SerializeField] private TabType initialTab = TabType.Primary;
 
     private Coroutine closeRoutine;
@@ -314,11 +312,6 @@ public class ColorPanelController : MonoBehaviour
             if (binding.toggle != null)
             {
                 binding.toggle.SetIsOnWithoutNotify(isActive);
-
-                if (binding.toggle.graphic != null)
-                {
-                    binding.toggle.graphic.color = isActive ? activeTabColor : inactiveTabColor;
-                }
             }
         }
     }
