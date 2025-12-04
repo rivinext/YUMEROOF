@@ -6,18 +6,9 @@ using UnityEngine.Events;
 
 public class ColorPanelController : MonoBehaviour
 {
-    public enum TabType
-    {
-        Primary,
-        Secondary,
-        Tertiary,
-        Quaternary
-    }
-
     [System.Serializable]
     public class TabBinding
     {
-        public TabType type;
         public Toggle toggle;
         public GameObject tabRoot;
     }
@@ -30,7 +21,7 @@ public class ColorPanelController : MonoBehaviour
 
     private Coroutine closeRoutine;
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new();
-    private TabType currentTab;
+    private Toggle currentTab;
     public bool IsOpen => panelAnimator != null && panelAnimator.IsOpen;
 
     private void Awake()
@@ -203,7 +194,7 @@ public class ColorPanelController : MonoBehaviour
     {
         SetupTabListeners();
 
-        TabType targetTab = currentTab;
+        Toggle targetTab = currentTab;
 
         if (TryGetActiveTabFromToggle(out var toggleTab))
         {
@@ -211,24 +202,24 @@ public class ColorPanelController : MonoBehaviour
         }
         else if (!HasBinding(targetTab))
         {
-            targetTab = tabs.Count > 0 ? tabs[0].type : currentTab;
+            targetTab = tabs.Count > 0 ? tabs[0].toggle : currentTab;
         }
 
         SwitchTab(targetTab);
     }
 
-    private bool TryGetActiveTabFromToggle(out TabType tabType)
+    private bool TryGetActiveTabFromToggle(out Toggle toggle)
     {
         foreach (var binding in tabs)
         {
             if (binding?.toggle != null && binding.toggle.isOn)
             {
-                tabType = binding.type;
+                toggle = binding.toggle;
                 return true;
             }
         }
 
-        tabType = default;
+        toggle = default;
         return false;
     }
 
@@ -248,12 +239,12 @@ public class ColorPanelController : MonoBehaviour
                 binding.toggle.group = tabToggleGroup;
             }
 
-            var targetType = binding.type;
+            var targetToggle = binding.toggle;
             UnityAction<bool> listener = isOn =>
             {
                 if (isOn)
                 {
-                    SwitchTab(targetType);
+                    SwitchTab(targetToggle);
                 }
             };
 
@@ -275,7 +266,7 @@ public class ColorPanelController : MonoBehaviour
         tabToggleListeners.Clear();
     }
 
-    private bool HasBinding(TabType type)
+    private bool HasBinding(Toggle toggle)
     {
         foreach (var binding in tabs)
         {
@@ -284,7 +275,7 @@ public class ColorPanelController : MonoBehaviour
                 continue;
             }
 
-            if (binding.type == type)
+            if (binding.toggle == toggle)
             {
                 return true;
             }
@@ -293,9 +284,9 @@ public class ColorPanelController : MonoBehaviour
         return false;
     }
 
-    public void SwitchTab(TabType type)
+    public void SwitchTab(Toggle toggle)
     {
-        currentTab = type;
+        currentTab = toggle;
 
         foreach (var binding in tabs)
         {
@@ -304,7 +295,7 @@ public class ColorPanelController : MonoBehaviour
                 continue;
             }
 
-            bool isActive = binding.type == type;
+            bool isActive = binding.toggle == toggle;
 
             if (binding.tabRoot != null)
             {
