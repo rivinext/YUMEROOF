@@ -27,7 +27,6 @@ public class ColorPanelController : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private ToggleGroup tabToggleGroup;
     [SerializeField] private List<TabBinding> tabs = new();
-    [SerializeField] private TabType initialTab = TabType.Primary;
 
     private Coroutine closeRoutine;
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new();
@@ -38,7 +37,7 @@ public class ColorPanelController : MonoBehaviour
     {
         RegisterWithExclusionManager();
         RegisterOpenButton();
-        InitializeTabs(resetToDefault: true);
+        InitializeTabs();
         SnapClosed();
     }
 
@@ -46,7 +45,7 @@ public class ColorPanelController : MonoBehaviour
     {
         RegisterWithExclusionManager();
         RegisterOpenButton();
-        InitializeTabs(resetToDefault: false);
+        InitializeTabs();
         SnapClosed();
     }
 
@@ -200,34 +199,37 @@ public class ColorPanelController : MonoBehaviour
         TogglePanel();
     }
 
-    private void InitializeTabs(bool resetToDefault)
+    private void InitializeTabs()
     {
         SetupTabListeners();
 
-        if (resetToDefault || !HasBinding(currentTab))
+        TabType targetTab = currentTab;
+
+        if (TryGetActiveTabFromToggle(out var toggleTab))
         {
-            currentTab = ResolveInitialTab();
+            targetTab = toggleTab;
+        }
+        else if (!HasBinding(targetTab))
+        {
+            targetTab = tabs.Count > 0 ? tabs[0].type : currentTab;
         }
 
-        SwitchTab(currentTab);
+        SwitchTab(targetTab);
     }
 
-    private TabType ResolveInitialTab()
+    private bool TryGetActiveTabFromToggle(out TabType tabType)
     {
         foreach (var binding in tabs)
         {
-            if (binding == null)
+            if (binding?.toggle != null && binding.toggle.isOn)
             {
-                continue;
-            }
-
-            if (binding.type == initialTab)
-            {
-                return binding.type;
+                tabType = binding.type;
+                return true;
             }
         }
 
-        return tabs.Count > 0 ? tabs[0].type : initialTab;
+        tabType = default;
+        return false;
     }
 
     private void SetupTabListeners()
