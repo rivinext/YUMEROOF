@@ -294,13 +294,14 @@ public class PlayerSitStateController : MonoBehaviour
         while (elapsed < duration)
         {
             float t = seatMoveCurve.Evaluate(elapsed);
-            transform.position = Vector3.Lerp(startPos, targetPos, t);
+            Vector3 lerpedPosition = Vector3.Lerp(startPos, targetPos, t);
+            transform.position = new Vector3(lerpedPosition.x, transform.position.y, lerpedPosition.z);
             transform.rotation = Quaternion.Slerp(startRot, targetRot, t);
 
             if (animator != null)
             {
                 animator.MatchTarget(targetPos, targetRot, AvatarTarget.Root,
-                    new MatchTargetWeightMask(Vector3.one, 1f), 0f, 1f, true);
+                    new MatchTargetWeightMask(new Vector3(1f, 0f, 1f), 1f), 0f, 1f, true);
             }
 
             elapsed += Time.deltaTime;
@@ -308,7 +309,8 @@ public class PlayerSitStateController : MonoBehaviour
         }
 
         float finalT = seatMoveCurve.Evaluate(duration);
-        transform.position = Vector3.Lerp(startPos, targetPos, finalT);
+        Vector3 finalPosition = Vector3.Lerp(startPos, targetPos, finalT);
+        transform.position = new Vector3(finalPosition.x, transform.position.y, finalPosition.z);
         transform.rotation = Quaternion.Slerp(startRot, targetRot, finalT);
 
         isMovingToSeat = false;
@@ -316,11 +318,6 @@ public class PlayerSitStateController : MonoBehaviour
         sitTimer = 0f;
         hasEnteredSleepState = false;
         SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
-
-        if (animator != null)
-        {
-            animator.applyRootMotion = false;
-        }
 
         UpdateBlinkControl(true);
 
