@@ -150,6 +150,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
                 }
 
                 presetManager.SavePreset(targetSlot);
+                presetManager.PreviewPreset(targetSlot);
             });
         }
     }
