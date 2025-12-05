@@ -38,11 +38,6 @@ public class InventoryUI : MonoBehaviour
     public ToggleGroup tabToggleGroup;
     [SerializeField] private List<InventoryTabBinding> tabs = new List<InventoryTabBinding>();
 
-    [Header("Tab Visuals")]
-    [SerializeField] private Color activeTabColor = Color.white;
-    [SerializeField] private Color inactiveTabColor = new Color(1f, 1f, 1f, 0.5f);
-
-
     [Header("Material Tab Elements")]
     public GameObject materialContent;
     public GameObject materialDescriptionArea;
@@ -282,11 +277,6 @@ public class InventoryUI : MonoBehaviour
 
             bool isActive = binding.type == targetType;
             binding.toggle.SetIsOnWithoutNotify(isActive);
-
-            if (binding.toggle.graphic != null)
-            {
-                binding.toggle.graphic.color = isActive ? activeTabColor : inactiveTabColor;
-            }
         }
     }
 
