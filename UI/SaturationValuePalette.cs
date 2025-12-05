@@ -21,6 +21,11 @@ public class SaturationValuePalette : MonoBehaviour, IPointerDownHandler, IDragH
     private float saturation;
     private float value;
 
+    // Editor quick check (prefab pivot changes):
+    // 1. Open the palette prefab, adjust paletteRectTransform's pivot (e.g., bottom-left, center).
+    // 2. Enter Play Mode and drag across the palette area to confirm the handle follows the pointer smoothly
+    //    and hits the edges without sticking regardless of pivot settings or UI scaling.
+
     public string SessionKey => sessionKey;
     public UnityEvent<float> OnSaturationChanged => onSaturationChanged;
     public UnityEvent<float> OnValueChanged => onValueChanged;
@@ -97,8 +102,8 @@ public class SaturationValuePalette : MonoBehaviour, IPointerDownHandler, IDragH
         }
 
         Rect rect = paletteRectTransform.rect;
-        float normalizedSaturation = Mathf.Clamp01((localPoint.x / rect.width) + 0.5f);
-        float normalizedValue = Mathf.Clamp01((localPoint.y / rect.height) + 0.5f);
+        float normalizedSaturation = Mathf.Clamp01(Mathf.InverseLerp(rect.xMin, rect.xMax, localPoint.x));
+        float normalizedValue = Mathf.Clamp01(Mathf.InverseLerp(rect.yMin, rect.yMax, localPoint.y));
 
         bool satChanged = !Mathf.Approximately(saturation, normalizedSaturation);
         bool valChanged = !Mathf.Approximately(value, normalizedValue);
