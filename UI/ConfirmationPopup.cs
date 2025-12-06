@@ -79,6 +79,8 @@ public class ConfirmationPopup : MonoBehaviour
             noButton.onClick.RemoveListener(HandleNo);
         if (backdropButton != null)
             backdropButton.onClick.RemoveListener(HandleBackdropClicked);
+        if (panelAnimator != null)
+            panelAnimator.OnCloseComplete -= HandlePanelCloseComplete;
     }
 
     public void Open(string message, Action onYes)
@@ -125,12 +127,17 @@ public class ConfirmationPopup : MonoBehaviour
 
         isOpen = false;
         UnregisterBackdropListener();
-        SetBackdropActive(false);
 
         if (panelAnimator != null)
+        {
+            panelAnimator.OnCloseComplete -= HandlePanelCloseComplete;
+            panelAnimator.OnCloseComplete += HandlePanelCloseComplete;
             panelAnimator.Close();
-
-        onYes = null;
+        }
+        else
+        {
+            FinalizeClose();
+        }
     }
 
     public void ValidateAnimator()
@@ -202,6 +209,20 @@ public class ConfirmationPopup : MonoBehaviour
     private void HandleBackdropClicked()
     {
         HandleNo();
+    }
+
+    private void HandlePanelCloseComplete()
+    {
+        if (panelAnimator != null)
+            panelAnimator.OnCloseComplete -= HandlePanelCloseComplete;
+
+        FinalizeClose();
+    }
+
+    private void FinalizeClose()
+    {
+        SetBackdropActive(false);
+        onYes = null;
     }
 
     private void SetBackdropActive(bool isActive)
