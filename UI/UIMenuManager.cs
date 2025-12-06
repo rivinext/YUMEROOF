@@ -81,6 +81,8 @@ public class UIMenuManager : MonoBehaviour
         if (confirmPopup == null)
             confirmPopup = FindFirstObjectByType<ConfirmationPopup>(FindObjectsInactive.Include);
 
+        confirmPopup?.ValidateAnimator();
+
         // ✅ Post Processingを使わない設定
         if (postProcessVolume != null && postProcessVolume.profile != null)
         {
