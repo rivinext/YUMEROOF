@@ -22,7 +22,7 @@ public class UIMenuManager : MonoBehaviour
     }
 
     [Header("UI Panels")]
-    [SerializeField] private UISlidePanel optionPanel;
+    [SerializeField] private PanelScaleAnimator optionPanel;
     [SerializeField] private UISlidePanel storySlotPanel;
     [SerializeField] private UISlidePanel creativeSlotPanel;
 
@@ -63,7 +63,7 @@ public class UIMenuManager : MonoBehaviour
     [SerializeField] private float maxBlurDistance = 10f;
 
     private DepthOfField depthOfField;
-    private UISlidePanel currentOpenPanel;
+    private MonoBehaviour currentOpenPanel;
     private bool isTransitioning = false;
 
     private void Awake()
@@ -159,7 +159,7 @@ public class UIMenuManager : MonoBehaviour
     {
         if (optionPanel != null)
         {
-            optionPanel.OnSlideOutComplete = () => OnPanelClosed(optionPanel);
+            optionPanel.OnCloseComplete = () => OnPanelClosed(optionPanel);
         }
 
 #if !DEMO_VERSION
@@ -246,24 +246,24 @@ public class UIMenuManager : MonoBehaviour
     /// <summary>
     /// パネルを開く
     /// </summary>
-    private void OpenPanel(UISlidePanel panel)
+    private void OpenPanel(MonoBehaviour panel)
     {
         if (panel == null || isTransitioning) return;
 
         // 既に同じパネルが開いている場合は何もしない
-        if (currentOpenPanel == panel && panel.IsOpen) return;
+        if (currentOpenPanel == panel && IsPanelOpen(panel)) return;
 
         isTransitioning = true;
 
         // 他のパネルが開いている場合は閉じる
         if (currentOpenPanel != null && currentOpenPanel != panel)
         {
-            currentOpenPanel.SlideOut();
+            ClosePanelInternal(currentOpenPanel);
         }
 
         // 新しいパネルを開く
         currentOpenPanel = panel;
-        panel.SlideIn();
+        OpenPanelInternal(panel);
 
         // ブラーエフェクトを有効化
         EnableBlur();
@@ -277,12 +277,12 @@ public class UIMenuManager : MonoBehaviour
     /// <summary>
     /// パネルを閉じる
     /// </summary>
-    private void ClosePanel(UISlidePanel panel)
+    private void ClosePanel(MonoBehaviour panel)
     {
-        if (panel == null || !panel.IsOpen || isTransitioning) return;
+        if (panel == null || !IsPanelOpen(panel) || isTransitioning) return;
 
         isTransitioning = true;
-        panel.SlideOut();
+        ClosePanelInternal(panel);
 
         StartCoroutine(ResetTransitionFlag());
     }
@@ -290,7 +290,7 @@ public class UIMenuManager : MonoBehaviour
     /// <summary>
     /// パネルが閉じられた時の処理
     /// </summary>
-    private void OnPanelClosed(UISlidePanel panel)
+    private void OnPanelClosed(MonoBehaviour panel)
     {
         if (currentOpenPanel == panel)
         {
@@ -309,7 +309,7 @@ public class UIMenuManager : MonoBehaviour
     /// </summary>
     private void CloseAllPanelsImmediate()
     {
-        if (optionPanel != null) optionPanel.CloseImmediate();
+        if (optionPanel != null) optionPanel.SnapClosed();
         if (storySlotPanel != null) storySlotPanel.CloseImmediate();
         if (creativeSlotPanel != null) creativeSlotPanel.CloseImmediate();
 
@@ -397,6 +397,45 @@ public class UIMenuManager : MonoBehaviour
     {
         yield return new WaitForSeconds(0.1f);
         isTransitioning = false;
+    }
+
+    private void OpenPanelInternal(MonoBehaviour panel)
+    {
+        switch (panel)
+        {
+            case UISlidePanel slidePanel:
+                slidePanel.SlideIn();
+                break;
+            case PanelScaleAnimator scaleAnimator:
+                scaleAnimator.Open();
+                break;
+        }
+    }
+
+    private void ClosePanelInternal(MonoBehaviour panel)
+    {
+        switch (panel)
+        {
+            case UISlidePanel slidePanel:
+                slidePanel.SlideOut();
+                break;
+            case PanelScaleAnimator scaleAnimator:
+                scaleAnimator.Close();
+                break;
+        }
+    }
+
+    private bool IsPanelOpen(MonoBehaviour panel)
+    {
+        switch (panel)
+        {
+            case UISlidePanel slidePanel:
+                return slidePanel.IsOpen;
+            case PanelScaleAnimator scaleAnimator:
+                return scaleAnimator.IsOpen;
+            default:
+                return false;
+        }
     }
 
     /// <summary>
