@@ -94,10 +94,27 @@ public class UIMenuManager : MonoBehaviour
             depthOfField = null;
         }
 
+#if DEMO_VERSION
+        // DEMO ビルドではストーリーモードを無効化し、クリエイティブ専用メニューとしてセットアップ
+        if (storyButton != null)
+            storyButton.interactable = false;
+        if (creativeButton != null)
+            creativeButton.interactable = true;
+
         SetupButtonEvents();
         SetupPanelCallbacks();
         InitializeSlots();
+#else
+        SetupButtonEvents();
+        SetupPanelCallbacks();
+        InitializeSlots();
+#endif
         CloseAllPanelsImmediate();
+
+#if DEMO_VERSION
+        // DEMO はクリエイティブのみ利用可能なため、初期表示パネルもクリエイティブに寄せる
+        OpenPanel(creativeSlotPanel);
+#endif
     }
 
     private void Update()
@@ -115,8 +132,10 @@ public class UIMenuManager : MonoBehaviour
         if (optionButton != null)
             optionButton.onClick.AddListener(() => OpenPanel(optionPanel));
 
+#if !DEMO_VERSION
         if (storyButton != null)
             storyButton.onClick.AddListener(() => OpenPanel(storySlotPanel));
+#endif
 
         if (creativeButton != null)
             creativeButton.onClick.AddListener(() => OpenPanel(creativeSlotPanel));
@@ -128,8 +147,10 @@ public class UIMenuManager : MonoBehaviour
         if (optionCloseButton != null)
             optionCloseButton.onClick.AddListener(() => ClosePanel(optionPanel));
 
+#if !DEMO_VERSION
         if (storyCloseButton != null)
             storyCloseButton.onClick.AddListener(() => ClosePanel(storySlotPanel));
+#endif
 
         if (creativeCloseButton != null)
             creativeCloseButton.onClick.AddListener(() => ClosePanel(creativeSlotPanel));
@@ -145,10 +166,12 @@ public class UIMenuManager : MonoBehaviour
             optionPanel.OnSlideOutComplete = () => OnPanelClosed(optionPanel);
         }
 
+#if !DEMO_VERSION
         if (storySlotPanel != null)
         {
             storySlotPanel.OnSlideOutComplete = () => OnPanelClosed(storySlotPanel);
         }
+#endif
 
         if (creativeSlotPanel != null)
         {
@@ -158,12 +181,14 @@ public class UIMenuManager : MonoBehaviour
 
     private void InitializeSlots()
     {
+#if !DEMO_VERSION
         if (storySlot != null)
         {
             storySlot.Refresh();
             storySlot.OnSelected += HandleSlotSelected;
             storySlot.OnDeleteRequested += HandleDeleteRequested;
         }
+#endif
 
         if (creativeSlots != null)
         {
@@ -339,7 +364,12 @@ public class UIMenuManager : MonoBehaviour
     private void SetMainMenuButtonsInteractable(bool interactable)
     {
         if (optionButton != null) optionButton.interactable = interactable;
+#if DEMO_VERSION
+        // DEMO ではストーリーボタンを常に無効にしてクリエイティブ専用とする
+        if (storyButton != null) storyButton.interactable = false;
+#else
         if (storyButton != null) storyButton.interactable = interactable;
+#endif
         if (creativeButton != null) creativeButton.interactable = interactable;
     }
 
@@ -348,7 +378,12 @@ public class UIMenuManager : MonoBehaviour
     /// </summary>
     private void SetSlotsInteractable(bool interactable)
     {
+#if DEMO_VERSION
+        // DEMO ではストーリースロットを常に無効化して選択できないようにする
+        if (storySlot != null) storySlot.SetInteractable(false);
+#else
         if (storySlot != null) storySlot.SetInteractable(interactable);
+#endif
         if (creativeSlots != null)
         {
             foreach (var slot in creativeSlots)
