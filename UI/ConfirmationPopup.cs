@@ -11,6 +11,7 @@ public class ConfirmationPopup : MonoBehaviour
     [SerializeField] private Image backdropImage;
     [SerializeField] private Sprite backdropSprite;
     [SerializeField] private RectTransform panelRectTransform;
+    [SerializeField] private PanelScaleAnimator panelAnimator;
 
     private Action onYes;
     private Button backdropButton;
@@ -20,6 +21,8 @@ public class ConfirmationPopup : MonoBehaviour
 
     private void Awake()
     {
+        EnsurePanelAnimator();
+
         // Ensure required UI references exist even if they were not set in the inspector
         if (messageText == null)
             messageText = GetComponentInChildren<TMP_Text>(true);
@@ -61,6 +64,11 @@ public class ConfirmationPopup : MonoBehaviour
         {
             parentCanvas = GetComponentInParent<Canvas>();
         }
+
+        if (panelAnimator != null)
+        {
+            panelAnimator.SnapClosed();
+        }
     }
 
     private void OnDestroy()
@@ -75,8 +83,13 @@ public class ConfirmationPopup : MonoBehaviour
 
     public void Open(string message, Action onYes)
     {
+        if (panelAnimator == null)
+        {
+            Debug.LogWarning("ConfirmationPopup requires a PanelScaleAnimator.");
+            return;
+        }
+
         isOpen = true;
-        gameObject.SetActive(true);
         if (panelRectTransform != null)
             panelRectTransform.anchoredPosition = onScreenPosition;
         if (messageText != null)
@@ -86,6 +99,8 @@ public class ConfirmationPopup : MonoBehaviour
             backdropImage.sprite = backdropSprite;
         SetBackdropActive(true);
         RegisterBackdropListener();
+
+        panelAnimator.Open();
     }
 
     private void HandleYes()
@@ -112,8 +127,18 @@ public class ConfirmationPopup : MonoBehaviour
         UnregisterBackdropListener();
         SetBackdropActive(false);
 
-        gameObject.SetActive(false);
+        if (panelAnimator != null)
+            panelAnimator.Close();
+
         onYes = null;
+    }
+
+    public void ValidateAnimator()
+    {
+        if (panelAnimator == null)
+        {
+            Debug.LogWarning("PanelScaleAnimator is not assigned on ConfirmationPopup.");
+        }
     }
 
     private void Update()
@@ -192,5 +217,15 @@ public class ConfirmationPopup : MonoBehaviour
         {
             backdropImage.enabled = isActive;
         }
+    }
+
+    private void EnsurePanelAnimator()
+    {
+        if (panelAnimator != null)
+            return;
+
+        panelAnimator = GetComponent<PanelScaleAnimator>();
+        if (panelAnimator == null)
+            panelAnimator = GetComponentInChildren<PanelScaleAnimator>(true);
     }
 }
