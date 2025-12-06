@@ -111,10 +111,6 @@ public class UIMenuManager : MonoBehaviour
 #endif
         CloseAllPanelsImmediate();
 
-#if DEMO_VERSION
-        // DEMO はクリエイティブのみ利用可能なため、初期表示パネルもクリエイティブに寄せる
-        OpenPanel(creativeSlotPanel);
-#endif
     }
 
     private void Update()
