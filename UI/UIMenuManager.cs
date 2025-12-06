@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using TMPro;
 using DG.Tweening;
 
 /// <summary>
@@ -11,12 +10,6 @@ using DG.Tweening;
 /// </summary>
 public class UIMenuManager : MonoBehaviour
 {
-#if DEMO_VERSION
-    private const bool IsDemoBuild = true;
-#else
-    private const bool IsDemoBuild = false;
-#endif
-
     [System.Serializable]
     private struct ParallaxLayer
     {
@@ -50,10 +43,6 @@ public class UIMenuManager : MonoBehaviour
 
     [SerializeField] private ConfirmationPopup confirmPopup;
 
-    [Header("Demo Story Availability")]
-    [SerializeField] private TMP_Text storyUnavailableText;
-    [SerializeField] private string storyUnavailableMessage = "デモ版ではストーリーモードを利用できません";
-
     [Header("Scene Names")]
     [SerializeField] private string storySceneName;
     [SerializeField] private string creativeSceneName;
@@ -86,8 +75,6 @@ public class UIMenuManager : MonoBehaviour
     {
         ClearSelectedSlot();
 
-        ApplyBuildConfiguration();
-
         if (confirmPopup == null)
             confirmPopup = FindFirstObjectByType<ConfirmationPopup>(FindObjectsInactive.Include);
 
@@ -111,9 +98,6 @@ public class UIMenuManager : MonoBehaviour
         SetupPanelCallbacks();
         InitializeSlots();
         CloseAllPanelsImmediate();
-
-        if (IsDemoBuild && creativeSlotPanel != null)
-            OpenPanel(creativeSlotPanel);
     }
 
     private void Update()
@@ -131,10 +115,8 @@ public class UIMenuManager : MonoBehaviour
         if (optionButton != null)
             optionButton.onClick.AddListener(() => OpenPanel(optionPanel));
 
-#if !DEMO_VERSION
         if (storyButton != null)
             storyButton.onClick.AddListener(() => OpenPanel(storySlotPanel));
-#endif
 
         if (creativeButton != null)
             creativeButton.onClick.AddListener(() => OpenPanel(creativeSlotPanel));
@@ -357,11 +339,7 @@ public class UIMenuManager : MonoBehaviour
     private void SetMainMenuButtonsInteractable(bool interactable)
     {
         if (optionButton != null) optionButton.interactable = interactable;
-
-        if (storyButton != null)
-        {
-            storyButton.interactable = IsDemoBuild ? false : interactable;
-        }
+        if (storyButton != null) storyButton.interactable = interactable;
         if (creativeButton != null) creativeButton.interactable = interactable;
     }
 
@@ -370,10 +348,7 @@ public class UIMenuManager : MonoBehaviour
     /// </summary>
     private void SetSlotsInteractable(bool interactable)
     {
-        if (storySlot != null)
-        {
-            storySlot.SetInteractable(IsDemoBuild ? false : interactable);
-        }
+        if (storySlot != null) storySlot.SetInteractable(interactable);
         if (creativeSlots != null)
         {
             foreach (var slot in creativeSlots)
@@ -515,51 +490,5 @@ public class UIMenuManager : MonoBehaviour
             layer.velocity = Vector2.zero;
             parallaxLayers[i] = layer;
         }
-    }
-
-    /// <summary>
-    /// ビルド設定に応じてメニューを初期化
-    /// </summary>
-    private void ApplyBuildConfiguration()
-    {
-        if (!IsDemoBuild)
-        {
-            UpdateStoryUnavailableMessage(false);
-            return;
-        }
-
-        if (storyButton != null)
-        {
-            storyButton.interactable = false;
-        }
-
-        if (storyCloseButton != null)
-        {
-            storyCloseButton.interactable = false;
-        }
-
-        if (storySlot != null)
-        {
-            storySlot.SetInteractable(false);
-        }
-
-        if (storySlotPanel != null)
-        {
-            storySlotPanel.CloseImmediate();
-        }
-
-        UpdateStoryUnavailableMessage(true);
-
-        if (creativeButton != null)
-            creativeButton.interactable = true;
-    }
-
-    private void UpdateStoryUnavailableMessage(bool unavailable)
-    {
-        if (storyUnavailableText == null) return;
-
-        storyUnavailableText.gameObject.SetActive(unavailable);
-        if (unavailable)
-            storyUnavailableText.text = storyUnavailableMessage;
     }
 }
