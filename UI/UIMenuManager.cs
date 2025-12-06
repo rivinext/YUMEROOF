@@ -22,17 +22,20 @@ public class UIMenuManager : MonoBehaviour
     }
 
     [Header("UI Panels")]
+    [SerializeField] private MonoBehaviour creditPanel;
     [SerializeField] private PanelScaleAnimator optionPanel;
     [SerializeField] private UISlidePanel storySlotPanel;
     [SerializeField] private UISlidePanel creativeSlotPanel;
 
     [Header("Menu Buttons")]
+    [SerializeField] private Button creditButton;
     [SerializeField] private Button optionButton;
     [SerializeField] private Button storyButton;
     [SerializeField] private Button creativeButton;
     [SerializeField] private Button exitButton;
 
     [Header("Close Buttons")]
+    [SerializeField] private Button creditCloseButton;
     [SerializeField] private Button optionCloseButton;
     [SerializeField] private Button storyCloseButton;
     [SerializeField] private Button creativeCloseButton;
@@ -125,6 +128,9 @@ public class UIMenuManager : MonoBehaviour
     private void SetupButtonEvents()
     {
         // メインメニューボタン
+        if (creditButton != null)
+            creditButton.onClick.AddListener(() => OpenPanel(creditPanel));
+
         if (optionButton != null)
             optionButton.onClick.AddListener(() => OpenPanel(optionPanel));
 
@@ -140,6 +146,9 @@ public class UIMenuManager : MonoBehaviour
             exitButton.onClick.AddListener(ExitGame);
 
         // 閉じるボタン
+        if (creditCloseButton != null)
+            creditCloseButton.onClick.AddListener(() => ClosePanel(creditPanel));
+
         if (optionCloseButton != null)
             optionCloseButton.onClick.AddListener(() => ClosePanel(optionPanel));
 
@@ -160,6 +169,19 @@ public class UIMenuManager : MonoBehaviour
         if (optionPanel != null)
         {
             optionPanel.OnCloseComplete = () => OnPanelClosed(optionPanel);
+        }
+
+        if (creditPanel != null)
+        {
+            switch (creditPanel)
+            {
+                case PanelScaleAnimator scaleAnimator:
+                    scaleAnimator.OnCloseComplete = () => OnPanelClosed(scaleAnimator);
+                    break;
+                case UISlidePanel slidePanel:
+                    slidePanel.OnSlideOutComplete = () => OnPanelClosed(slidePanel);
+                    break;
+            }
         }
 
 #if !DEMO_VERSION
@@ -309,6 +331,15 @@ public class UIMenuManager : MonoBehaviour
     /// </summary>
     private void CloseAllPanelsImmediate()
     {
+        switch (creditPanel)
+        {
+            case UISlidePanel slidePanel:
+                slidePanel.CloseImmediate();
+                break;
+            case PanelScaleAnimator scaleAnimator:
+                scaleAnimator.SnapClosed();
+                break;
+        }
         if (optionPanel != null) optionPanel.SnapClosed();
         if (storySlotPanel != null) storySlotPanel.CloseImmediate();
         if (creativeSlotPanel != null) creativeSlotPanel.CloseImmediate();
@@ -359,6 +390,7 @@ public class UIMenuManager : MonoBehaviour
     /// </summary>
     private void SetMainMenuButtonsInteractable(bool interactable)
     {
+        if (creditButton != null) creditButton.interactable = interactable;
         if (optionButton != null) optionButton.interactable = interactable;
 #if DEMO_VERSION
         // DEMO ではストーリーボタンを常に無効にしてクリエイティブ専用とする
@@ -459,9 +491,11 @@ public class UIMenuManager : MonoBehaviour
         if (storyButton != null) storyButton.onClick.RemoveAllListeners();
         if (creativeButton != null) creativeButton.onClick.RemoveAllListeners();
         if (exitButton != null) exitButton.onClick.RemoveAllListeners();
+        if (creditButton != null) creditButton.onClick.RemoveAllListeners();
         if (optionCloseButton != null) optionCloseButton.onClick.RemoveAllListeners();
         if (storyCloseButton != null) storyCloseButton.onClick.RemoveAllListeners();
         if (creativeCloseButton != null) creativeCloseButton.onClick.RemoveAllListeners();
+        if (creditCloseButton != null) creditCloseButton.onClick.RemoveAllListeners();
 
         if (storySlot != null)
         {
