@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -17,6 +18,9 @@ public class PanelScaleAnimator : MonoBehaviour
     [SerializeField] private float closeDuration = 0.2f;
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Vector3 closedScale = Vector3.zero;
+
+    public Action OnOpenComplete;
+    public Action OnCloseComplete;
 
     private Coroutine animationRoutine;
     private bool isOpen;
@@ -99,6 +103,7 @@ public class PanelScaleAnimator : MonoBehaviour
             isOpen = opening;
             ApplyCanvasGroupState(opening);
             animationRoutine = null;
+            InvokeCompletion(opening);
             yield break;
         }
 
@@ -121,6 +126,8 @@ public class PanelScaleAnimator : MonoBehaviour
         isOpen = opening;
         ApplyCanvasGroupState(opening);
         animationRoutine = null;
+
+        InvokeCompletion(opening);
     }
 
     private void ApplyInitialState(float startAlpha, Vector3 startScale, bool opening)
@@ -280,5 +287,17 @@ public class PanelScaleAnimator : MonoBehaviour
 
         canvasGroup.interactable = opening;
         canvasGroup.blocksRaycasts = opening;
+    }
+
+    private void InvokeCompletion(bool opening)
+    {
+        if (opening)
+        {
+            OnOpenComplete?.Invoke();
+        }
+        else
+        {
+            OnCloseComplete?.Invoke();
+        }
     }
 }
