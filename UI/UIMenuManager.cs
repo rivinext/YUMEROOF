@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using TMPro;
 using DG.Tweening;
 
 /// <summary>
@@ -48,6 +49,10 @@ public class UIMenuManager : MonoBehaviour
     [SerializeField] private SaveSlotUI[] creativeSlots;
 
     [SerializeField] private ConfirmationPopup confirmPopup;
+
+    [Header("Demo Story Availability")]
+    [SerializeField] private TMP_Text storyUnavailableText;
+    [SerializeField] private string storyUnavailableMessage = "デモ版ではストーリーモードを利用できません";
 
     [Header("Scene Names")]
     [SerializeField] private string storySceneName;
@@ -518,30 +523,43 @@ public class UIMenuManager : MonoBehaviour
     private void ApplyBuildConfiguration()
     {
         if (!IsDemoBuild)
+        {
+            UpdateStoryUnavailableMessage(false);
             return;
+        }
 
         if (storyButton != null)
         {
             storyButton.interactable = false;
-            storyButton.gameObject.SetActive(false);
         }
-
-        if (storySlotPanel != null)
-            storySlotPanel.gameObject.SetActive(false);
 
         if (storyCloseButton != null)
         {
             storyCloseButton.interactable = false;
-            storyCloseButton.gameObject.SetActive(false);
         }
 
         if (storySlot != null)
         {
             storySlot.SetInteractable(false);
-            storySlot.gameObject.SetActive(false);
         }
+
+        if (storySlotPanel != null)
+        {
+            storySlotPanel.CloseImmediate();
+        }
+
+        UpdateStoryUnavailableMessage(true);
 
         if (creativeButton != null)
             creativeButton.interactable = true;
+    }
+
+    private void UpdateStoryUnavailableMessage(bool unavailable)
+    {
+        if (storyUnavailableText == null) return;
+
+        storyUnavailableText.gameObject.SetActive(unavailable);
+        if (unavailable)
+            storyUnavailableText.text = storyUnavailableMessage;
     }
 }
