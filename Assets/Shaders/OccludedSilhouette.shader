@@ -2,10 +2,8 @@ Shader "Custom/URP/OccludedSilhouette"
 {
     Properties
     {
-        _BaseColor("Base Color", Color) = (0, 0, 0, 0)
-        _OutlineColor("Outline Color", Color) = (0.07, 0.93, 1, 0.8)
-        _OutlineWidth("Outline Width", Range(0.01, 5)) = 1
-        _DepthBias("Depth Bias", Range(0.0001, 0.05)) = 0.01
+        _MainTex("Main Texture", 2D) = "white" {}
+        _Alpha("Alpha", Range(0, 1)) = 1
     }
 
     SubShader
@@ -22,7 +20,7 @@ Shader "Custom/URP/OccludedSilhouette"
 
         Pass
         {
-            Name "OccludedOutline"
+            Name "OccludedSilhouette"
             Tags { "LightMode" = "UniversalForward" }
 
             Blend SrcAlpha OneMinusSrcAlpha
@@ -37,15 +35,14 @@ Shader "Custom/URP/OccludedSilhouette"
             #pragma multi_compile_fragment _ _SCREEN_SPACE_OCCLUSION
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _BaseColor;
-                half4 _OutlineColor;
-                half _OutlineWidth;
-                half _DepthBias;
+                half _Alpha;
             CBUFFER_END
+
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
 
             struct Attributes
             {
@@ -58,22 +55,16 @@ Shader "Custom/URP/OccludedSilhouette"
             {
                 float4 positionCS : SV_POSITION;
                 float3 positionVS : TEXCOORD0;
-                float3 normalWS : TEXCOORD1;
-                float3 viewDirWS : TEXCOORD2;
-                float2 uv : TEXCOORD3;
+                float2 uv : TEXCOORD1;
             };
 
             Varyings vert(Attributes input)
             {
                 Varyings output;
                 VertexPositionInputs positionInputs = GetVertexPositionInputs(input.positionOS.xyz);
-                VertexNormalInputs normalInputs = GetVertexNormalInputs(input.normalOS);
 
                 output.positionCS = positionInputs.positionCS;
                 output.positionVS = positionInputs.positionVS;
-                output.normalWS = normalInputs.normalWS;
-                float3 positionWS = positionInputs.positionWS;
-                output.viewDirWS = GetWorldSpaceViewDir(positionWS);
                 output.uv = input.uv;
                 return output;
             }
@@ -89,21 +80,16 @@ Shader "Custom/URP/OccludedSilhouette"
                 float sceneEyeDepth = LinearEyeDepth(sceneDepth01, _ZBufferParams);
                 float fragmentEyeDepth = -input.positionVS.z;
 
-                bool isOccluded = sceneEyeDepth + _DepthBias < fragmentEyeDepth;
-                if (!isOccluded)
+                if (sceneEyeDepth >= fragmentEyeDepth)
                 {
                     discard;
                 }
 
-                float3 normalWS = NormalizeNormalPerPixel(input.normalWS);
-                float3 viewDirWS = SafeNormalize(-input.viewDirWS);
-                half fresnel = pow(saturate(1.0h - dot(normalWS, viewDirWS)), saturate(_OutlineWidth) * 2.5h + 1.0h);
-
-                half alpha = _OutlineColor.a * fresnel;
+                half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                half alpha = tex.a * _Alpha;
                 clip(alpha - 0.001h);
 
-                half3 color = lerp(_BaseColor.rgb, _OutlineColor.rgb, fresnel);
-                return half4(color, alpha);
+                return half4(tex.rgb, alpha);
             }
             ENDHLSL
         }
