@@ -12,6 +12,18 @@ namespace Player
         private Texture2D silhouetteTexture;
 
         [SerializeField]
+        [Tooltip("Override material used for silhouettes. If unset, a material will be generated from the shader.")]
+        private Material silhouetteMaterialOverride;
+
+        [SerializeField]
+        [Tooltip("Renderers that will receive the silhouette material. Leave empty to auto-collect child renderers.")]
+        private Renderer[] silhouetteTargetRenderers;
+
+        [SerializeField]
+        [Tooltip("If true, child renderers are collected automatically; otherwise, use the provided renderer list.")]
+        private bool autoCollectRenderers = true;
+
+        [SerializeField]
         [Tooltip("Layers that will be treated as occluders when checking visibility.")]
         private LayerMask occluderMask = ~0;
 
@@ -20,7 +32,6 @@ namespace Player
         private Camera overrideCamera;
         private Material silhouetteMaterialTemplate;
         private Renderer[] targetRenderers;
-        private readonly bool autoCollectRenderers = true;
 
         private readonly List<Material[]> originalMaterials = new List<Material[]>();
         private readonly List<Material[]> silhouetteMaterials = new List<Material[]>();
@@ -89,7 +100,13 @@ namespace Player
             propertyBlocks.Clear();
             occludedMaterials.Clear();
 
-            bool shouldAutoCollect = autoCollectRenderers || targetRenderers == null || targetRenderers.Length == 0;
+            bool hasManualTargets = silhouetteTargetRenderers != null && silhouetteTargetRenderers.Length > 0;
+            bool shouldAutoCollect = autoCollectRenderers || !hasManualTargets && (targetRenderers == null || targetRenderers.Length == 0);
+
+            if (hasManualTargets)
+            {
+                targetRenderers = silhouetteTargetRenderers;
+            }
 
             if (shouldAutoCollect)
             {
@@ -208,6 +225,11 @@ namespace Player
 
         private Material CreateSilhouetteTemplate()
         {
+            if (silhouetteMaterialOverride != null)
+            {
+                return silhouetteMaterialOverride;
+            }
+
             Shader shader = Shader.Find("Custom/URP/OccludedSilhouette");
             if (shader == null)
             {
