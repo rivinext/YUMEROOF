@@ -451,7 +451,7 @@ namespace Player
                     continue;
                 }
 
-                float linearDepthToPlayer = targetCamera.WorldToCameraMatrix.MultiplyPoint(point).z;
+                float linearDepthToPlayer = targetCamera.worldToCameraMatrix.MultiplyPoint(point).z;
                 if (linearDepthToPlayer <= 0f)
                 {
                     continue;
