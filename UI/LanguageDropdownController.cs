@@ -39,17 +39,27 @@ public class LanguageDropdownController : MonoBehaviour
     void Awake()
     {
         string savedCode = PlayerPrefs.GetString("language", "");
+        var locales = GetAvailableLocales();
+        Locale fallbackLocale = null;
+        if (locales.Count > 0)
+        {
+            var projectLocale = LocalizationSettings.ProjectLocale;
+            fallbackLocale = locales.Find(locale => locale == projectLocale) ?? locales[0];
+        }
+
         if (!string.IsNullOrEmpty(savedCode))
         {
-            var locales = LocalizationSettings.AvailableLocales.Locales;
-            foreach (var locale in locales)
+            var savedLocale = locales.Find(locale => locale != null && locale.Identifier.Code == savedCode);
+            if (savedLocale != null)
             {
-                if (locale.Identifier.Code == savedCode)
-                {
-                    LocalizationSettings.SelectedLocale = locale;
-                    break;
-                }
+                LocalizationSettings.SelectedLocale = savedLocale;
+                return;
             }
+        }
+
+        if (fallbackLocale != null)
+        {
+            LocalizationSettings.SelectedLocale = fallbackLocale;
         }
     }
 
@@ -62,7 +72,7 @@ public class LanguageDropdownController : MonoBehaviour
     {
         yield return LocalizationSettings.InitializationOperation;
 
-        var locales = LocalizationSettings.AvailableLocales.Locales;
+        var locales = GetAvailableLocales();
 
         languageDropdown.options.Clear();
         int selectedIndex = 0;
@@ -86,7 +96,7 @@ public class LanguageDropdownController : MonoBehaviour
 
     public void OnLanguageChanged(int index)
     {
-        var locales = LocalizationSettings.AvailableLocales.Locales;
+        var locales = GetAvailableLocales();
         if (index >= 0 && index < locales.Count)
         {
             var selected = locales[index];
@@ -129,5 +139,16 @@ public class LanguageDropdownController : MonoBehaviour
         }
 
         return null;
+    }
+
+    List<Locale> GetAvailableLocales()
+    {
+        var locales = new List<Locale>(LocalizationSettings.AvailableLocales.Locales);
+
+#if DEMO_VERSION
+        locales = locales.FindAll(locale => locale != null && (locale.Identifier.Code == "en" || locale.Identifier.Code == "ja"));
+#endif
+
+        return locales;
     }
 }
