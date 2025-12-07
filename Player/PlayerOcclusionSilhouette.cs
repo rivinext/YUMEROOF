@@ -39,6 +39,9 @@ namespace Player
         private readonly List<Material[]> occludedMaterials = new List<Material[]>();
         private readonly List<Material> createdSilhouetteMaterials = new List<Material>();
 
+        private int lastAutoCollectedRendererCount = -1;
+        private bool rendererSetDirty;
+
         private Collider playerCollider;
         private Camera targetCamera;
         private int playerLayer = -1;
@@ -101,7 +104,7 @@ namespace Player
             occludedMaterials.Clear();
 
             bool hasManualTargets = silhouetteTargetRenderers != null && silhouetteTargetRenderers.Length > 0;
-            bool shouldAutoCollect = autoCollectRenderers || !hasManualTargets && (targetRenderers == null || targetRenderers.Length == 0);
+            bool shouldAutoCollect = autoCollectRenderers || !hasManualTargets && targetRenderers == null;
 
             if (hasManualTargets)
             {
@@ -110,25 +113,8 @@ namespace Player
 
             if (shouldAutoCollect)
             {
-                Renderer[] childRenderers = GetComponentsInChildren<Renderer>(true);
-                List<Renderer> filteredRenderers = new List<Renderer>(childRenderers.Length);
-                for (int i = 0; i < childRenderers.Length; i++)
-                {
-                    Renderer renderer = childRenderers[i];
-                    if (renderer == null)
-                    {
-                        continue;
-                    }
-
-                    if (renderer is ParticleSystemRenderer)
-                    {
-                        continue;
-                    }
-
-                    filteredRenderers.Add(renderer);
-                }
-
-                targetRenderers = filteredRenderers.ToArray();
+                targetRenderers = CollectChildRenderers();
+                lastAutoCollectedRendererCount = targetRenderers.Length;
             }
 
             if (targetRenderers == null)
@@ -248,6 +234,15 @@ namespace Player
 
         private void LateUpdate()
         {
+            if (autoCollectRenderers)
+            {
+                if (rendererSetDirty || DetectRendererSetChanges())
+                {
+                    rendererSetDirty = false;
+                    RefreshTargetRenderers();
+                }
+            }
+
             if (targetCamera == null)
             {
                 targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
@@ -428,6 +423,14 @@ namespace Player
             UpdatePlayerRoot();
         }
 
+        private void OnTransformChildrenChanged()
+        {
+            if (autoCollectRenderers)
+            {
+                rendererSetDirty = true;
+            }
+        }
+
         private void OnDestroy()
         {
             for (int i = 0; i < createdSilhouetteMaterials.Count; i++)
@@ -444,6 +447,64 @@ namespace Player
         private void UpdatePlayerRoot()
         {
             currentPlayerRoot = ResolvePlayerRoot();
+        }
+
+        private bool DetectRendererSetChanges()
+        {
+            int rendererCount = CountChildRenderers();
+            if (rendererCount != lastAutoCollectedRendererCount)
+            {
+                lastAutoCollectedRendererCount = rendererCount;
+                return true;
+            }
+
+            return false;
+        }
+
+        private Renderer[] CollectChildRenderers()
+        {
+            Renderer[] childRenderers = GetComponentsInChildren<Renderer>(true);
+            List<Renderer> filteredRenderers = new List<Renderer>(childRenderers.Length);
+            for (int i = 0; i < childRenderers.Length; i++)
+            {
+                Renderer renderer = childRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                if (renderer is ParticleSystemRenderer)
+                {
+                    continue;
+                }
+
+                filteredRenderers.Add(renderer);
+            }
+
+            return filteredRenderers.ToArray();
+        }
+
+        private int CountChildRenderers()
+        {
+            Renderer[] childRenderers = GetComponentsInChildren<Renderer>(true);
+            int count = 0;
+            for (int i = 0; i < childRenderers.Length; i++)
+            {
+                Renderer renderer = childRenderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                if (renderer is ParticleSystemRenderer)
+                {
+                    continue;
+                }
+
+                count++;
+            }
+
+            return count;
         }
 
         private Transform ResolvePlayerRoot()
