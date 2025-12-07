@@ -1,127 +1,45 @@
-using System.Collections;
-using Player;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 public class WardrobeSilhouetteSync : MonoBehaviour
 {
     [SerializeField]
-    [Tooltip("Wardrobe UI controller that dispatches equip events when items are generated.")]
+    [Tooltip("Previously used to refresh player occlusion silhouettes after wardrobe changes. Kept for backward compatibility.")]
     private WardrobeUIController wardrobeUIController;
 
-    [SerializeField]
-    [Tooltip("Player occlusion silhouette component that needs to refresh its target renderers after wardrobe changes.")]
-    private PlayerOcclusionSilhouette playerSilhouette;
-
-    private Coroutine refreshRoutine;
-    private readonly WaitForEndOfFrame waitForEndOfFrame = new WaitForEndOfFrame();
     private bool warnedMissingWardrobeController;
-    private bool warnedMissingSilhouette;
+    private bool warnedObsolete;
+
+    private void Awake()
+    {
+        WarnObsolete();
+    }
 
     private void OnEnable()
     {
-        bool hasController = EnsureWardrobeController();
-        bool hasSilhouette = EnsurePlayerSilhouette();
+        WarnObsolete();
 
-        if (hasController)
-        {
-            wardrobeUIController.OnItemEquipped.AddListener(OnWardrobeItemEquipped);
-        }
-
-        if (hasController && hasSilhouette)
-        {
-            StartRefreshRoutine();
-        }
+        // Disable the component once the warning has been displayed to avoid unnecessary updates.
+        enabled = false;
     }
 
-    private void OnDisable()
+    private void WarnObsolete()
     {
-        if (wardrobeUIController != null)
+        if (!warnedMissingWardrobeController && wardrobeUIController == null)
         {
-            wardrobeUIController.OnItemEquipped.RemoveListener(OnWardrobeItemEquipped);
-        }
+            wardrobeUIController = GetComponent<WardrobeUIController>();
 
-        if (refreshRoutine != null)
-        {
-            StopCoroutine(refreshRoutine);
-            refreshRoutine = null;
-        }
-    }
-
-    private void Start()
-    {
-        if (EnsureWardrobeController() && EnsurePlayerSilhouette())
-        {
-            StartRefreshRoutine();
-        }
-    }
-
-    private void OnWardrobeItemEquipped(WardrobeTabType category, GameObject instance, WardrobeItemView itemView)
-    {
-        if (EnsurePlayerSilhouette())
-        {
-            StartRefreshRoutine();
-        }
-    }
-
-    private void StartRefreshRoutine()
-    {
-        if (playerSilhouette == null)
-        {
-            return;
-        }
-
-        if (refreshRoutine != null)
-        {
-            StopCoroutine(refreshRoutine);
-        }
-
-        refreshRoutine = StartCoroutine(RefreshSilhouetteNextFrame());
-    }
-
-    private IEnumerator RefreshSilhouetteNextFrame()
-    {
-        yield return waitForEndOfFrame;
-        playerSilhouette.RefreshTargetRenderers();
-        refreshRoutine = null;
-    }
-
-    private bool EnsureWardrobeController()
-    {
-        if (wardrobeUIController != null)
-        {
-            return true;
-        }
-
-        wardrobeUIController = GetComponent<WardrobeUIController>();
-        if (wardrobeUIController == null)
-        {
-            if (!warnedMissingWardrobeController)
+            if (wardrobeUIController == null)
             {
                 Debug.LogWarning($"{nameof(WardrobeSilhouetteSync)} on {name} is missing a {nameof(WardrobeUIController)} reference.", this);
                 warnedMissingWardrobeController = true;
             }
-
-            return false;
         }
 
-        warnedMissingWardrobeController = false;
-        return true;
-    }
-
-    private bool EnsurePlayerSilhouette()
-    {
-        if (playerSilhouette != null)
+        if (!warnedObsolete)
         {
-            return true;
+            Debug.LogWarning($"{nameof(WardrobeSilhouetteSync)} is obsolete because player occlusion silhouettes have been removed.", this);
+            warnedObsolete = true;
         }
-
-        if (!warnedMissingSilhouette)
-        {
-            Debug.LogWarning($"{nameof(WardrobeSilhouetteSync)} on {name} is missing a {nameof(PlayerOcclusionSilhouette)} reference.", this);
-            warnedMissingSilhouette = true;
-        }
-
-        return false;
     }
 }
