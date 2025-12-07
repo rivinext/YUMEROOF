@@ -8,10 +8,6 @@ namespace Player
     public class PlayerOcclusionSilhouette : MonoBehaviour
     {
         [SerializeField]
-        [Tooltip("Texture used for the occluded silhouette overlay.")]
-        private Texture2D silhouetteTexture;
-
-        [SerializeField]
         [Tooltip("Override material used for silhouettes. If unset, a material will be generated from the shader.")]
         private Material silhouetteMaterialOverride;
 
@@ -224,11 +220,6 @@ namespace Player
             }
 
             Material template = new Material(shader);
-            if (silhouetteTexture != null)
-            {
-                template.SetTexture("_MainTex", silhouetteTexture);
-            }
-
             return template;
         }
 
