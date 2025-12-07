@@ -23,6 +23,22 @@ namespace Player
         [Tooltip("Layers that will be treated as occluders when checking visibility.")]
         private LayerMask occluderMask = ~0;
 
+        [SerializeField]
+        [Tooltip("If true, screen-space depth is sampled before physics checks to determine occlusion.")]
+        private bool useDepthOcclusion;
+
+        private enum OcclusionCheckOrder
+        {
+            PhysicsOnly,
+            DepthOnly,
+            DepthThenPhysics,
+            PhysicsThenDepth
+        }
+
+        [SerializeField]
+        [Tooltip("Determines how depth and physics occlusion checks are combined.")]
+        private OcclusionCheckOrder occlusionCheckOrder = OcclusionCheckOrder.DepthThenPhysics;
+
         public bool ForceSilhouette { get; set; }
 
         private Camera overrideCamera;
@@ -46,6 +62,7 @@ namespace Player
         private Transform currentPlayerRoot;
         private bool isOccluded;
         private float nextCheckTime;
+        private Texture2D depthSampleTexture;
         private static readonly RaycastHit[] RaycastHits = new RaycastHit[4];
         private const float CheckInterval = 0.1f;
 
@@ -54,6 +71,8 @@ namespace Player
             playerCollider = GetComponent<Collider>();
             silhouetteMaterialTemplate = CreateSilhouetteTemplate();
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
+
+            EnsureDepthTexture();
 
             UpdatePlayerRoot();
 
@@ -238,6 +257,8 @@ namespace Player
                 targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
             }
 
+            EnsureDepthTexture();
+
             if (targetCamera == null || playerCollider == null)
             {
                 return;
@@ -275,12 +296,64 @@ namespace Player
 
         private bool CheckOcclusion()
         {
-            Bounds bounds = playerCollider.bounds;
+            Bounds bounds = GetReferenceBounds();
+
+            switch (occlusionCheckOrder)
+            {
+                case OcclusionCheckOrder.PhysicsOnly:
+                    return CheckPhysicsOcclusion(bounds);
+                case OcclusionCheckOrder.DepthOnly:
+                    return useDepthOcclusion && CheckDepthOcclusion(bounds);
+                case OcclusionCheckOrder.DepthThenPhysics:
+                    return (useDepthOcclusion && CheckDepthOcclusion(bounds)) || CheckPhysicsOcclusion(bounds);
+                case OcclusionCheckOrder.PhysicsThenDepth:
+                    return CheckPhysicsOcclusion(bounds) || (useDepthOcclusion && CheckDepthOcclusion(bounds));
+                default:
+                    return CheckPhysicsOcclusion(bounds);
+            }
+        }
+
+        private Bounds GetReferenceBounds()
+        {
+            if (targetRenderers != null && targetRenderers.Length > 0)
+            {
+                bool initialized = false;
+                Bounds combined = default;
+                for (int i = 0; i < targetRenderers.Length; i++)
+                {
+                    Renderer renderer = targetRenderers[i];
+                    if (renderer == null)
+                    {
+                        continue;
+                    }
+
+                    if (!initialized)
+                    {
+                        combined = renderer.bounds;
+                        initialized = true;
+                    }
+                    else
+                    {
+                        combined.Encapsulate(renderer.bounds);
+                    }
+                }
+
+                if (initialized)
+                {
+                    return combined;
+                }
+            }
+
+            return playerCollider.bounds;
+        }
+
+        private Vector3[] BuildSamplePoints(Bounds bounds)
+        {
             Vector3 upOffset = Vector3.up * bounds.extents.y;
             Vector3 forwardOffset = transform.forward * bounds.extents.z;
             Vector3 rightOffset = transform.right * bounds.extents.x;
 
-            Vector3[] samplePoints =
+            return new[]
             {
                 bounds.center,
                 bounds.center + upOffset,
@@ -290,7 +363,11 @@ namespace Player
                 bounds.center + rightOffset * 0.5f,
                 bounds.center - rightOffset * 0.5f
             };
+        }
 
+        private bool CheckPhysicsOcclusion(Bounds bounds)
+        {
+            Vector3[] samplePoints = BuildSamplePoints(bounds);
             Vector3 cameraPosition = targetCamera.transform.position;
             Transform playerTransform = transform;
             Transform playerRoot = currentPlayerRoot != null ? currentPlayerRoot : ResolvePlayerRoot();
@@ -343,6 +420,84 @@ namespace Player
             }
 
             return false;
+        }
+
+        private bool CheckDepthOcclusion(Bounds bounds)
+        {
+            RenderTexture depthTexture = Shader.GetGlobalTexture("_CameraDepthTexture") as RenderTexture;
+            if (depthTexture == null)
+            {
+                return false;
+            }
+
+            if (depthSampleTexture == null)
+            {
+                depthSampleTexture = new Texture2D(1, 1, TextureFormat.RFloat, false, true);
+            }
+
+            Vector3[] samplePoints = BuildSamplePoints(bounds);
+
+            for (int i = 0; i < samplePoints.Length; i++)
+            {
+                Vector3 point = samplePoints[i];
+                Vector3 viewportPoint = targetCamera.WorldToViewportPoint(point);
+                if (viewportPoint.z <= 0f)
+                {
+                    continue;
+                }
+
+                if (viewportPoint.x < 0f || viewportPoint.x > 1f || viewportPoint.y < 0f || viewportPoint.y > 1f)
+                {
+                    continue;
+                }
+
+                float linearDepthToPlayer = targetCamera.WorldToCameraMatrix.MultiplyPoint(point).z;
+                if (linearDepthToPlayer <= 0f)
+                {
+                    continue;
+                }
+
+                int pixelX = Mathf.Clamp(Mathf.RoundToInt(viewportPoint.x * depthTexture.width), 0, depthTexture.width - 1);
+                int pixelY = Mathf.Clamp(Mathf.RoundToInt(viewportPoint.y * depthTexture.height), 0, depthTexture.height - 1);
+
+                RenderTexture active = RenderTexture.active;
+                RenderTexture.active = depthTexture;
+                depthSampleTexture.ReadPixels(new Rect(pixelX, pixelY, 1, 1), 0, 0);
+                depthSampleTexture.Apply();
+                RenderTexture.active = active;
+
+                float rawDepth = depthSampleTexture.GetPixel(0, 0).r;
+                float linearDepth = RawToLinearDepth(rawDepth);
+
+                if (linearDepth > 0f && linearDepth < linearDepthToPlayer)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private float RawToLinearDepth(float rawDepth)
+        {
+            float near = targetCamera.nearClipPlane;
+            float far = targetCamera.farClipPlane;
+            return (2f * near) / (far + near - rawDepth * (far - near));
+        }
+
+        private void EnsureDepthTexture()
+        {
+            if (!useDepthOcclusion)
+            {
+                return;
+            }
+
+            if (targetCamera == null)
+            {
+                return;
+            }
+
+            targetCamera.depthTextureMode |= DepthTextureMode.Depth;
         }
 
         private void ApplyMaterials(bool occluded)
@@ -432,6 +587,12 @@ namespace Player
                 }
             }
             createdSilhouetteMaterials.Clear();
+
+            if (depthSampleTexture != null)
+            {
+                Destroy(depthSampleTexture);
+                depthSampleTexture = null;
+            }
         }
 
         private void UpdatePlayerRoot()
