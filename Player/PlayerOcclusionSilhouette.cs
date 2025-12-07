@@ -7,24 +7,20 @@ namespace Player
     [DisallowMultipleComponent]
     public class PlayerOcclusionSilhouette : MonoBehaviour
     {
-        public Camera overrideCamera;
-
-        public Material silhouetteMaterial;
-
-        public Renderer[] targetRenderers;
+        [SerializeField]
+        [Tooltip("Texture used for the occluded silhouette overlay.")]
+        private Texture2D silhouetteTexture;
 
         [SerializeField]
-        [Tooltip("When enabled, RefreshTargetRenderers automatically collects all child renderers, overwriting manual assignments.")]
-        private bool autoCollectRenderers = true;
+        [Tooltip("Layers that will be treated as occluders when checking visibility.")]
+        private LayerMask occluderMask = ~0;
 
-        public LayerMask occluderMask = ~0;
+        public bool ForceSilhouette { get; set; }
 
-        public float checkInterval = 0.1f;
-        public bool forceSilhouette = false;
-
-        [SerializeField]
-        [Tooltip("Transforms under which occluder hits should be ignored (e.g., attachments).")]
-        private Transform[] ignoredOccluderRoots;
+        private Camera overrideCamera;
+        private Material silhouetteMaterialTemplate;
+        private Renderer[] targetRenderers;
+        private readonly bool autoCollectRenderers = true;
 
         private readonly List<Material[]> originalMaterials = new List<Material[]>();
         private readonly List<Material[]> silhouetteMaterials = new List<Material[]>();
@@ -34,20 +30,19 @@ namespace Player
 
         private Collider playerCollider;
         private Camera targetCamera;
-        [SerializeField]
-        [Tooltip("Player layer to exclude from occlusion checks. Set to -1 to automatically use this GameObject's layer.")]
         private int playerLayer = -1;
-        [SerializeField]
-        [Tooltip("Optional override for the player root transform when ignoring self-occlusion.")]
         private Transform playerRootOverride;
+        private Transform[] ignoredOccluderRoots;
         private Transform currentPlayerRoot;
         private bool isOccluded;
         private float nextCheckTime;
         private static readonly RaycastHit[] RaycastHits = new RaycastHit[4];
+        private const float CheckInterval = 0.1f;
 
         private void Awake()
         {
             playerCollider = GetComponent<Collider>();
+            silhouetteMaterialTemplate = CreateSilhouetteTemplate();
             targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
 
             UpdatePlayerRoot();
@@ -151,10 +146,16 @@ namespace Player
                 Array.Copy(sharedMaterials, sharedMaterialsCopy, sharedMaterials.Length);
                 originalMaterials.Add(sharedMaterialsCopy);
 
-                Material[] silhouetteArray = new Material[sharedMaterials.Length];
-                for (int m = 0; m < sharedMaterials.Length; m++)
+                Material[] silhouetteArray = null;
+                Material template = silhouetteMaterialTemplate ?? CreateSilhouetteTemplate();
+                if (template != null)
                 {
-                    silhouetteArray[m] = CreateSilhouetteMaterialInstance(sharedMaterials[m]);
+                    silhouetteMaterialTemplate = template;
+                    silhouetteArray = new Material[sharedMaterials.Length];
+                    for (int m = 0; m < sharedMaterials.Length; m++)
+                    {
+                        silhouetteArray[m] = CreateSilhouetteMaterialInstance(sharedMaterials[m]);
+                    }
                 }
                 silhouetteMaterials.Add(silhouetteArray);
 
@@ -164,6 +165,10 @@ namespace Player
                     combinedMaterials = new Material[sharedMaterialsCopy.Length + silhouetteArray.Length];
                     Array.Copy(sharedMaterialsCopy, combinedMaterials, sharedMaterialsCopy.Length);
                     Array.Copy(silhouetteArray, 0, combinedMaterials, sharedMaterialsCopy.Length, silhouetteArray.Length);
+                }
+                else if (sharedMaterialsCopy != null)
+                {
+                    combinedMaterials = sharedMaterialsCopy;
                 }
                 occludedMaterials.Add(combinedMaterials);
 
@@ -178,14 +183,18 @@ namespace Player
 
         private Material CreateSilhouetteMaterialInstance(Material sourceMaterial)
         {
-            if (silhouetteMaterial == null)
+            if (silhouetteMaterialTemplate == null)
             {
-                return null;
+                silhouetteMaterialTemplate = CreateSilhouetteTemplate();
+                if (silhouetteMaterialTemplate == null)
+                {
+                    return null;
+                }
             }
 
-            Material materialInstance = new Material(silhouetteMaterial);
+            Material materialInstance = new Material(silhouetteMaterialTemplate);
 
-            int baseRenderQueue = silhouetteMaterial.renderQueue;
+            int baseRenderQueue = silhouetteMaterialTemplate.renderQueue;
             if (sourceMaterial != null && materialInstance.renderQueue <= sourceMaterial.renderQueue)
             {
                 baseRenderQueue = sourceMaterial.renderQueue + 1;
@@ -197,8 +206,31 @@ namespace Player
             return materialInstance;
         }
 
+        private Material CreateSilhouetteTemplate()
+        {
+            Shader shader = Shader.Find("Custom/URP/OccludedSilhouette");
+            if (shader == null)
+            {
+                Debug.LogWarning("Custom/URP/OccludedSilhouette shader not found; silhouettes will be disabled.", this);
+                return null;
+            }
+
+            Material template = new Material(shader);
+            if (silhouetteTexture != null)
+            {
+                template.SetTexture("_MainTex", silhouetteTexture);
+            }
+
+            return template;
+        }
+
         private void LateUpdate()
         {
+            if (targetCamera == null)
+            {
+                targetCamera = overrideCamera != null ? overrideCamera : Camera.main;
+            }
+
             if (targetCamera == null || playerCollider == null)
             {
                 return;
@@ -206,7 +238,7 @@ namespace Player
 
             UpdatePlayerRoot();
 
-            if (forceSilhouette)
+            if (ForceSilhouette)
             {
                 if (!isOccluded)
                 {
@@ -217,12 +249,12 @@ namespace Player
                 return;
             }
 
-            if (checkInterval > 0f && Time.time < nextCheckTime)
+            if (CheckInterval > 0f && Time.time < nextCheckTime)
             {
                 return;
             }
 
-            nextCheckTime = Time.time + Mathf.Max(0f, checkInterval);
+            nextCheckTime = Time.time + Mathf.Max(0f, CheckInterval);
 
             bool occluded = CheckOcclusion();
             if (occluded == isOccluded)

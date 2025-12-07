@@ -182,7 +182,7 @@ public class PlayerOcclusionSilhouetteToggleButton : MonoBehaviour
         // トグルがONの時はシルエットをON、OFFの時はシルエットをOFF
         if (occlusionSilhouette != null)
         {
-            occlusionSilhouette.forceSilhouette = false;
+            occlusionSilhouette.ForceSilhouette = false;
             occlusionSilhouette.enabled = isSilhouetteEnabled;
         }
 
