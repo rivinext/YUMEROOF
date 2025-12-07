@@ -102,16 +102,15 @@ namespace Player
             bool hasManualTargets = silhouetteTargetRenderers != null && silhouetteTargetRenderers.Length > 0;
             bool shouldAutoCollect = autoCollectRenderers || !hasManualTargets && targetRenderers == null;
 
-            if (hasManualTargets)
+            Renderer[] manualRenderers = hasManualTargets ? silhouetteTargetRenderers : null;
+            Renderer[] autoCollectedRenderers = shouldAutoCollect ? CollectChildRenderers() : null;
+
+            if (autoCollectedRenderers != null)
             {
-                targetRenderers = silhouetteTargetRenderers;
+                lastAutoCollectedRendererCount = autoCollectedRenderers.Length;
             }
 
-            if (shouldAutoCollect)
-            {
-                targetRenderers = CollectChildRenderers();
-                lastAutoCollectedRendererCount = targetRenderers.Length;
-            }
+            targetRenderers = MergeTargetRenderers(manualRenderers, autoCollectedRenderers);
 
             if (targetRenderers == null)
             {
@@ -473,6 +472,46 @@ namespace Player
             }
 
             return filteredRenderers.ToArray();
+        }
+
+        private Renderer[] MergeTargetRenderers(Renderer[] manualRenderers, Renderer[] autoCollectedRenderers)
+        {
+            bool hasManual = manualRenderers != null && manualRenderers.Length > 0;
+            bool hasAuto = autoCollectedRenderers != null && autoCollectedRenderers.Length > 0;
+
+            if (!hasManual && !hasAuto)
+            {
+                return null;
+            }
+
+            HashSet<Renderer> uniqueRenderers = new HashSet<Renderer>();
+            List<Renderer> merged = new List<Renderer>();
+
+            if (hasManual)
+            {
+                for (int i = 0; i < manualRenderers.Length; i++)
+                {
+                    Renderer renderer = manualRenderers[i];
+                    if (renderer != null && uniqueRenderers.Add(renderer))
+                    {
+                        merged.Add(renderer);
+                    }
+                }
+            }
+
+            if (hasAuto)
+            {
+                for (int i = 0; i < autoCollectedRenderers.Length; i++)
+                {
+                    Renderer renderer = autoCollectedRenderers[i];
+                    if (renderer != null && uniqueRenderers.Add(renderer))
+                    {
+                        merged.Add(renderer);
+                    }
+                }
+            }
+
+            return merged.ToArray();
         }
 
         private int CountChildRenderers()
