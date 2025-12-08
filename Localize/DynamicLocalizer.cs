@@ -6,6 +6,7 @@ using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization.Components;
 using TMPro;
+using UnityEngine.UI;
 
 /// <summary>
 /// 汎用的な動的ローカライズコンポーネント
@@ -186,6 +187,8 @@ public class DynamicLocalizer : MonoBehaviour
     [Header("オプション")]
     [SerializeField] private bool waitForLocalizationInit = true;  // 初期化を待つかどうか
     [SerializeField] private bool debugMode = false;
+    [SerializeField] private RectTransform layoutRoot;              // レイアウト再構築用のルート
+    [SerializeField] private bool forceLayoutOnLocaleChange = true; // 言語変更時にレイアウト再計算を実行
 
     private bool isLocalizationReady = false;
     private Locale currentLocale;
@@ -245,6 +248,8 @@ public class DynamicLocalizer : MonoBehaviour
 
         // テキストも更新（キーが設定されている場合）
         RefreshAll();
+
+        ForceLayoutRebuild("OnLocaleChanged");
     }
 
     /// <summary>
@@ -506,6 +511,55 @@ public class DynamicLocalizer : MonoBehaviour
     }
 
     /// <summary>
+    /// レイアウトを強制再構築
+    /// </summary>
+    /// <param name="triggerSource">呼び出し元の情報（デバッグ用）</param>
+    private void ForceLayoutRebuild(string triggerSource)
+    {
+        if (!forceLayoutOnLocaleChange)
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[DynamicLocalizer] Layout rebuild skipped (disabled) after {triggerSource}.");
+            }
+            return;
+        }
+
+        RectTransform targetLayoutRoot = layoutRoot;
+
+        if (targetLayoutRoot == null)
+        {
+            var layoutGroup = GetComponentInParent<LayoutGroup>();
+            if (layoutGroup != null)
+            {
+                targetLayoutRoot = layoutGroup.transform as RectTransform;
+
+                if (debugMode)
+                {
+                    Debug.Log($"[DynamicLocalizer] Auto-detected layout root via {layoutGroup.GetType().Name} for {triggerSource}.");
+                }
+            }
+        }
+
+        if (targetLayoutRoot == null)
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[DynamicLocalizer] Layout rebuild skipped; no layout root found after {triggerSource}.");
+            }
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(targetLayoutRoot);
+
+        if (debugMode)
+        {
+            Debug.Log($"[DynamicLocalizer] Layout rebuilt after {triggerSource} (target: {targetLayoutRoot.name}).");
+        }
+    }
+
+    /// <summary>
     /// 名前でフィールドを取得
     /// </summary>
     private LocalizedTextField GetFieldByName(string fieldName)
@@ -576,6 +630,8 @@ public class DynamicLocalizer : MonoBehaviour
 
         // テキストを更新
         RefreshAll();
+
+        ForceLayoutRebuild("DelayedRefresh");
     }
 
 #if UNITY_EDITOR
@@ -646,6 +702,8 @@ public class DynamicLocalizer : MonoBehaviour
             UpdateFontsForLocale(currentLocale);
         }
         RefreshAll();
+
+        ForceLayoutRebuild("ForceRefreshAll (ContextMenu)");
     }
 #endif
 }
