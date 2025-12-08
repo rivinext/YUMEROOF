@@ -9,6 +9,7 @@ public class GameClockUI : MonoBehaviour
 {
     public GameClock clock;
     public TMP_Text timeText;
+    public TMP_Text amPmText;
     public TMP_Text dayText;
     public ToggleGroup timeScaleToggleGroup;
     public Toggle pauseToggle;
@@ -126,8 +127,27 @@ public class GameClockUI : MonoBehaviour
     {
         EnsureActiveToggleState();
 
-        if (_currentClock != null && timeText != null)
-            timeText.text = _currentClock.GetFormattedTime();
+        UpdateTimeDisplay();
+    }
+
+    void UpdateTimeDisplay()
+    {
+        if (_currentClock == null)
+            return;
+
+        if (amPmText == null)
+        {
+            if (timeText != null)
+                timeText.text = _currentClock.GetFormattedTime();
+            return;
+        }
+
+        _currentClock.GetDisplayTime(out int displayHour, out int minutes, out string ampm);
+
+        if (timeText != null)
+            timeText.text = string.Format("{0}:{1:00}", displayHour, minutes);
+
+        amPmText.text = ampm;
     }
 
     void EnsureActiveToggleState()
