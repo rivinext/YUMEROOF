@@ -120,19 +120,30 @@ public class GameClock : MonoBehaviour
     }
 
     /// <summary>
+    /// Calculates the displayable hour, minute, and AM/PM suffix for the current time.
+    /// </summary>
+    /// <param name="displayHour">Hour in 12-hour format (1-12).</param>
+    /// <param name="minutes">Minutes component, rounded up to 5 minutes.</param>
+    /// <param name="ampm">"am" or "pm" suffix.</param>
+    public void GetDisplayTime(out int displayHour, out int minutes, out string ampm)
+    {
+        int totalMinutes = Mathf.CeilToInt(currentMinutes / 5f) * 5;
+        totalMinutes = Mathf.Min(totalMinutes, 1440);
+        int hours = totalMinutes / 60;
+        minutes = totalMinutes % 60;
+
+        ampm = hours >= 12 ? "pm" : "am";
+        displayHour = hours % 12;
+        if (displayHour == 0) displayHour = 12;
+    }
+
+    /// <summary>
     /// Returns the current time as a string in 12-hour format rounded up to 5 minutes.
     /// Day starts at 6:00 AM and ends at 8:00 PM.
     /// </summary>
     public string GetFormattedTime()
     {
-        int totalMinutes = Mathf.CeilToInt(currentMinutes / 5f) * 5;
-        totalMinutes = Mathf.Min(totalMinutes, 1440);
-        int hours = totalMinutes / 60;
-        int minutes = totalMinutes % 60;
-
-        string ampm = hours >= 12 ? "pm" : "am";
-        int displayHour = hours % 12;
-        if (displayHour == 0) displayHour = 12;
+        GetDisplayTime(out int displayHour, out int minutes, out string ampm);
 
         return string.Format("{0}:{1:00} {2}", displayHour, minutes, ampm);
     }
