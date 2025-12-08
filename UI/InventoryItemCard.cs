@@ -433,7 +433,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
 
         // 数量表示（修正：常に表示）
-        UpdateQuantityDisplay($"×{currentItem.quantity}", currentItem.quantity);
+        UpdateQuantityDisplay(currentItem.quantity.ToString(), currentItem.quantity);
 
         // Cozy/Nature値表示（0の場合も"0"を表示）
         if (cozyContainer != null)
