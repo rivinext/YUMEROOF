@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -187,43 +188,39 @@ public class AutoAssetLinker : EditorWindow
             }
             else
             {
-                // 複数の検索パターンを試す
-                string[] iconSearchPatterns = new string[]
+                // 複数の検索パターンを試す（サブフォルダも含めて探索）
+                var iconNameCandidates = new string[]
                 {
-                    $"{iconFolder}{data.iconName}.png",
-                    $"{iconFolder}{data.iconName}.jpg",
-                    $"{iconFolder}icon_{data.nameID.ToLower()}.png",
-                    $"{iconFolder}{data.nameID}.png"
+                    data.iconName,
+                    $"icon_{data.nameID.ToLower()}",
+                    data.nameID
                 };
 
-                foreach (string searchPath in iconSearchPatterns)
+                Sprite icon = FindSpriteInFolder(iconFolder, iconNameCandidates);
+
+                if (icon != null)
                 {
-                    Sprite icon = AssetDatabase.LoadAssetAtPath<Sprite>(searchPath);
-                    if (icon != null)
-                    {
-                        data.icon = icon;
-                        iconLinked = true;
-                        linkResults.Add(new LinkResult(true, $"{data.nameID}: アイコン接続成功 ({icon.name})"));
-                        break;
-                    }
+                    data.icon = icon;
+                    iconLinked = true;
+                    linkResults.Add(new LinkResult(true, $"{data.nameID}: アイコン接続成功 ({icon.name})"));
                 }
 
                 if (!iconLinked)
                 {
-                    // テクスチャとして読み込んでSpriteに変換を試みる
-                    Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>($"{iconFolder}{data.iconName}.png");
-                    if (texture != null)
+                    string texturePath = FindTexturePathInFolder(iconFolder, new[] { data.iconName });
+                    if (!string.IsNullOrEmpty(texturePath))
                     {
-                        ConvertTextureToSprite(AssetDatabase.GetAssetPath(texture));
-                        Sprite icon = AssetDatabase.LoadAssetAtPath<Sprite>($"{iconFolder}{data.iconName}.png");
-                        if (icon != null)
+                        ConvertTextureToSprite(texturePath);
+                        Sprite convertedIcon = AssetDatabase.LoadAssetAtPath<Sprite>(texturePath);
+                        if (convertedIcon != null)
                         {
-                            data.icon = icon;
+                            data.icon = convertedIcon;
                             iconLinked = true;
                             linkResults.Add(new LinkResult(true, $"{data.nameID}: テクスチャをSpriteに変換して接続"));
                         }
                     }
-                    else
+
+                    if (!iconLinked)
                     {
                         linkResults.Add(new LinkResult(false, $"{data.nameID}: アイコンが見つかりません ({data.iconName})"));
                     }
@@ -264,26 +261,21 @@ public class AutoAssetLinker : EditorWindow
             // アイコンの自動リンク
             if (!string.IsNullOrEmpty(data.iconName))
             {
-                string[] iconSearchPatterns = new string[]
+                var iconNameCandidates = new string[]
                 {
-                    $"{iconFolder}{data.iconName}.png",
-                    $"{iconFolder}icon_{data.materialID.ToLower()}.png",
-                    $"{iconFolder}{data.materialID}.png"
+                    data.iconName,
+                    $"icon_{data.materialID.ToLower()}",
+                    data.materialID
                 };
 
-                foreach (string searchPath in iconSearchPatterns)
+                Sprite icon = FindSpriteInFolder(iconFolder, iconNameCandidates);
+                if (icon != null)
                 {
-                    Sprite icon = AssetDatabase.LoadAssetAtPath<Sprite>(searchPath);
-                    if (icon != null)
-                    {
-                        data.icon = icon;
-                        iconLinked = true;
-                        linkResults.Add(new LinkResult(true, $"{data.materialID}: アイコン接続成功"));
-                        break;
-                    }
+                    data.icon = icon;
+                    iconLinked = true;
+                    linkResults.Add(new LinkResult(true, $"{data.materialID}: アイコン接続成功"));
                 }
-
-                if (!iconLinked)
+                else
                 {
                     linkResults.Add(new LinkResult(false, $"{data.materialID}: アイコンが見つかりません"));
                 }
@@ -346,6 +338,55 @@ public class AutoAssetLinker : EditorWindow
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.SaveAndReimport();
         }
+    }
+
+    // アイコンフォルダ配下（サブフォルダ含む）からSpriteを検索
+    Sprite FindSpriteInFolder(string baseFolder, IEnumerable<string> candidateNames)
+    {
+        string searchFolder = baseFolder.TrimEnd('/', '\\');
+        if (string.IsNullOrEmpty(searchFolder))
+        {
+            linkResults.Add(new LinkResult(false, "  アイコン検索フォルダが未設定です"));
+            return null;
+        }
+
+        string[] spriteGuids = AssetDatabase.FindAssets("t:Sprite", new[] { searchFolder });
+        foreach (string guid in spriteGuids)
+        {
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            string assetName = Path.GetFileNameWithoutExtension(assetPath);
+
+            if (candidateNames.Any(name => string.Equals(name, assetName, StringComparison.OrdinalIgnoreCase)))
+            {
+                return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+            }
+        }
+
+        return null;
+    }
+
+    // アイコンフォルダ配下（サブフォルダ含む）からテクスチャパスを検索
+    string FindTexturePathInFolder(string baseFolder, IEnumerable<string> candidateNames)
+    {
+        string searchFolder = baseFolder.TrimEnd('/', '\\');
+        if (string.IsNullOrEmpty(searchFolder))
+        {
+            return null;
+        }
+
+        string[] textureGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { searchFolder });
+        foreach (string guid in textureGuids)
+        {
+            string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+            string assetName = Path.GetFileNameWithoutExtension(assetPath);
+
+            if (candidateNames.Any(name => string.Equals(name, assetName, StringComparison.OrdinalIgnoreCase)))
+            {
+                return assetPath;
+            }
+        }
+
+        return null;
     }
 
     // リンク結果を保持する構造体
