@@ -360,6 +360,15 @@ public class AutoAssetLinker : EditorWindow
             {
                 return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
             }
+
+            var spriteSlices = AssetDatabase.LoadAllAssetRepresentationsAtPath(assetPath);
+            foreach (var sprite in spriteSlices.OfType<Sprite>())
+            {
+                if (candidateNames.Any(name => string.Equals(name, sprite.name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return sprite;
+                }
+            }
         }
 
         return null;
