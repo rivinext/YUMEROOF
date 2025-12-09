@@ -334,8 +334,27 @@ public class AutoAssetLinker : EditorWindow
         TextureImporter importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
         if (importer != null)
         {
+            SpriteImportMode originalSpriteImportMode = importer.spriteImportMode;
+            float originalPixelsPerUnit = importer.spritePixelsPerUnit;
+            FilterMode originalFilterMode = importer.filterMode;
+            TextureWrapMode originalWrapMode = importer.wrapMode;
+            TextureImporterNPOTScale originalNpotScale = importer.npotScale;
+
             importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Single;
+
+            if (originalSpriteImportMode == SpriteImportMode.Multiple)
+            {
+                importer.spriteImportMode = SpriteImportMode.Multiple;
+            }
+            else
+            {
+                importer.spriteImportMode = SpriteImportMode.Single;
+            }
+
+            importer.spritePixelsPerUnit = originalPixelsPerUnit;
+            importer.filterMode = originalFilterMode;
+            importer.wrapMode = originalWrapMode;
+            importer.npotScale = originalNpotScale;
             importer.SaveAndReimport();
         }
     }
