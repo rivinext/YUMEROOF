@@ -11,6 +11,8 @@ public class ColorPanelController : MonoBehaviour
     {
         public Toggle toggle;
         public GameObject tabRoot;
+        [Tooltip("If false, the tab remains visible but cannot be selected.")]
+        public bool isEnabled = true;
     }
 
     [SerializeField] private PanelScaleAnimator panelAnimator;
@@ -213,8 +215,11 @@ public class ColorPanelController : MonoBehaviour
         {
             if (binding?.toggle != null && binding.toggle.isOn)
             {
-                toggle = binding.toggle;
-                return true;
+                if (binding.isEnabled)
+                {
+                    toggle = binding.toggle;
+                    return true;
+                }
             }
         }
 
@@ -238,10 +243,12 @@ public class ColorPanelController : MonoBehaviour
                 binding.toggle.group = tabToggleGroup;
             }
 
+            binding.toggle.interactable = binding.isEnabled;
+
             var targetToggle = binding.toggle;
             UnityAction<bool> listener = isOn =>
             {
-                if (isOn)
+                if (isOn && binding.isEnabled)
                 {
                     SwitchTab(targetToggle);
                 }
@@ -267,7 +274,13 @@ public class ColorPanelController : MonoBehaviour
 
     public void SwitchTab(Toggle toggle)
     {
-        var binding = GetBindingForToggle(toggle) ?? GetDefaultBinding();
+        var binding = GetBindingForToggle(toggle);
+
+        if (binding == null || !binding.isEnabled)
+        {
+            binding = GetDefaultBinding();
+        }
+
         SetActiveTab(binding);
     }
 
@@ -317,6 +330,18 @@ public class ColorPanelController : MonoBehaviour
         }
 
         int clampedIndex = Mathf.Clamp(defaultTabIndex, 0, tabs.Count - 1);
-        return tabs[clampedIndex];
+
+        for (int offset = 0; offset < tabs.Count; offset++)
+        {
+            int index = (clampedIndex + offset) % tabs.Count;
+            var candidate = tabs[index];
+
+            if (candidate != null && candidate.isEnabled)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }
