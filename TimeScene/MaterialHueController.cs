@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,8 +14,7 @@ public class MaterialHueController : MonoBehaviour
     private string ValueKey => $"{playerPrefsKeyPrefix}_value";
 
     [Header("Targets")]
-    [SerializeField] private List<Material> targetMaterials = new();
-    [SerializeField, HideInInspector] private Material targetMaterial;
+    [SerializeField] private Material targetMaterial;
     [SerializeField] private string colorPropertyName = "_Color0";
     [SerializeField] private string blockIndexPropertyName = "_BlockIndex0";
     [SerializeField] private float blockIndex = 0f;
@@ -56,39 +54,9 @@ public class MaterialHueController : MonoBehaviour
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
 
-    public void RegisterTargetMaterial(Material material)
-    {
-        if (material == null)
-        {
-            return;
-        }
-
-        if (targetMaterials == null)
-        {
-            targetMaterials = new List<Material>();
-        }
-
-        if (!targetMaterials.Contains(material))
-        {
-            targetMaterials.Add(material);
-            ApplyColor();
-        }
-    }
-
-    public void RegisterTargetRenderer(Renderer renderer)
-    {
-        if (renderer == null)
-        {
-            return;
-        }
-
-        RegisterTargetMaterial(renderer.material);
-    }
-
     private void Awake()
     {
         SyncAppliedToPreview();
-        MigrateLegacyTargetMaterial();
     }
 
     private void Start()
@@ -243,28 +211,20 @@ public class MaterialHueController : MonoBehaviour
     {
         Color currentColor = CurrentColor;
 
-        if (applyToMaterial && targetMaterials != null)
+        if (applyToMaterial && targetMaterial != null)
         {
-            foreach (Material material in targetMaterials)
+            if (!string.IsNullOrEmpty(colorPropertyName) && targetMaterial.HasProperty(colorPropertyName))
             {
-                if (material == null)
-                {
-                    continue;
-                }
+                targetMaterial.SetColor(colorPropertyName, AppliedColor);
+            }
+            else
+            {
+                targetMaterial.color = AppliedColor;
+            }
 
-                if (!string.IsNullOrEmpty(colorPropertyName) && material.HasProperty(colorPropertyName))
-                {
-                    material.SetColor(colorPropertyName, AppliedColor);
-                }
-                else
-                {
-                    material.color = AppliedColor;
-                }
-
-                if (!string.IsNullOrEmpty(blockIndexPropertyName) && material.HasProperty(blockIndexPropertyName))
-                {
-                    material.SetFloat(blockIndexPropertyName, blockIndex);
-                }
+            if (!string.IsNullOrEmpty(blockIndexPropertyName) && targetMaterial.HasProperty(blockIndexPropertyName))
+            {
+                targetMaterial.SetFloat(blockIndexPropertyName, blockIndex);
             }
         }
 
@@ -287,7 +247,6 @@ public class MaterialHueController : MonoBehaviour
         }
 
         SyncAppliedToPreview();
-        MigrateLegacyTargetMaterial();
 
         // エディタ上で値をいじったときも UI & マテリアルに反映
         if (hueRingSelector != null)
@@ -309,16 +268,5 @@ public class MaterialHueController : MonoBehaviour
         appliedHue = hue;
         appliedSaturation = saturation;
         appliedValue = value;
-    }
-
-    private void MigrateLegacyTargetMaterial()
-    {
-        if (targetMaterial == null)
-        {
-            return;
-        }
-
-        RegisterTargetMaterial(targetMaterial);
-        targetMaterial = null;
     }
 }
