@@ -1,12 +1,6 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Drives HSV values on a renderer and writes a configurable range of slot colors so
-/// multiple controllers can target different UV segments without overwriting each other.
-/// </summary>
 public class MaterialHueController : MonoBehaviour
 {
     // PlayerPrefs のキー用プレフィックス（インスタンスごとに変えられる）
@@ -20,9 +14,6 @@ public class MaterialHueController : MonoBehaviour
     private string ValueKey => $"{playerPrefsKeyPrefix}_value";
 
     [Header("Targets")]
-    [SerializeField] private List<Renderer> targetRenderers = new();
-    [SerializeField] private Renderer targetRenderer;
-    [SerializeField] private bool autoCollectByTargetMaterial = false;
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
@@ -50,14 +41,6 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private HueRingSelector hueRingSelector;
     [SerializeField] private SaturationValuePalette saturationValuePalette;
 
-    [Header("Color Slots (split ranges when multiple controllers share a renderer)")]
-    [Tooltip("Total number of slots supported by the shader/property block. Use this to match materials that expose more than 8 segments.")]
-    [SerializeField] private int totalSlotCount = 8;
-    [Tooltip("Index of the first slot this controller writes to. Useful when multiple controllers share a renderer but target different UV ranges.")]
-    [SerializeField] private int slotStartIndex = 0;
-    [Tooltip("Number of consecutive slots this controller writes to starting from Slot Start Index.")]
-    [SerializeField] private int slotCount = 8;
-
     // 外部（プリセットマネージャなど）から参照する用
     public float Hue => hue;
     public float Saturation => saturation;
@@ -68,17 +51,8 @@ public class MaterialHueController : MonoBehaviour
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
 
-    private const int MaxSlotArraySize = 16;
-    private readonly Vector4[] slotVectorBuffer = new Vector4[MaxSlotArraySize];
-    private readonly List<Renderer> rendererBuffer = new List<Renderer>();
-    private MaterialPropertyBlock materialPropertyBlock;
-    private static readonly int SlotColorsId = Shader.PropertyToID("_SlotColors");
-    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-    private static readonly int SlotCountId = Shader.PropertyToID("_SlotCount");
-
     private void Awake()
     {
-        materialPropertyBlock = new MaterialPropertyBlock();
         SyncAppliedToPreview();
     }
 
@@ -239,11 +213,6 @@ public class MaterialHueController : MonoBehaviour
             targetMaterial.color = AppliedColor;
         }
 
-        if (applyToMaterial)
-        {
-            ApplySlotColors();
-        }
-
         if (previewImage != null)
         {
             previewImage.color = currentColor;
@@ -261,10 +230,6 @@ public class MaterialHueController : MonoBehaviour
         {
             return;
         }
-
-        totalSlotCount = ResolveTotalSlotCount();
-        slotStartIndex = ResolveSlotStartIndex(totalSlotCount);
-        slotCount = ResolveSlotCount(totalSlotCount, slotStartIndex);
 
         SyncAppliedToPreview();
 
@@ -288,121 +253,5 @@ public class MaterialHueController : MonoBehaviour
         appliedHue = hue;
         appliedSaturation = saturation;
         appliedValue = value;
-    }
-
-    private void ApplySlotColors()
-    {
-        int resolvedTotalSlots = ResolveTotalSlotCount();
-        int resolvedStartIndex = ResolveSlotStartIndex(resolvedTotalSlots);
-        int resolvedSlotCount = ResolveSlotCount(resolvedTotalSlots, resolvedStartIndex);
-
-        Color appliedColor = AppliedColor;
-        List<Renderer> resolvedRenderers = GetTargetRenderers();
-
-        if (resolvedRenderers.Count == 0)
-        {
-            return;
-        }
-
-        materialPropertyBlock ??= new MaterialPropertyBlock();
-
-        foreach (Renderer renderer in resolvedRenderers)
-        {
-            if (renderer == null)
-            {
-                continue;
-            }
-
-            renderer.GetPropertyBlock(materialPropertyBlock);
-
-            Vector4[] existingColors = materialPropertyBlock.GetVectorArray(SlotColorsId);
-
-            for (int i = 0; i < resolvedTotalSlots; i++)
-            {
-                Vector4 baseColor = existingColors != null && i < existingColors.Length
-                    ? existingColors[i]
-                    : Vector4.one;
-
-                slotVectorBuffer[i] = baseColor;
-            }
-
-            for (int i = 0; i < resolvedSlotCount; i++)
-            {
-                int slotIndex = resolvedStartIndex + i;
-                slotVectorBuffer[slotIndex] = appliedColor;
-            }
-
-            materialPropertyBlock.SetColor(BaseColorId, appliedColor);
-            materialPropertyBlock.SetFloat(SlotCountId, resolvedTotalSlots);
-
-            Vector4[] slotArray = new Vector4[resolvedTotalSlots];
-            Array.Copy(slotVectorBuffer, slotArray, resolvedTotalSlots);
-            materialPropertyBlock.SetVectorArray(SlotColorsId, slotArray);
-            renderer.SetPropertyBlock(materialPropertyBlock);
-        }
-    }
-
-    private int ResolveTotalSlotCount()
-    {
-        return Mathf.Clamp(totalSlotCount, 1, MaxSlotArraySize);
-    }
-
-    private int ResolveSlotStartIndex(int resolvedTotalSlots)
-    {
-        return Mathf.Clamp(slotStartIndex, 0, resolvedTotalSlots - 1);
-    }
-
-    private int ResolveSlotCount(int resolvedTotalSlots, int resolvedStartIndex)
-    {
-        return Mathf.Clamp(slotCount, 1, resolvedTotalSlots - resolvedStartIndex);
-    }
-
-    private List<Renderer> GetTargetRenderers()
-    {
-        rendererBuffer.Clear();
-
-        if (targetRenderers != null)
-        {
-            for (int i = 0; i < targetRenderers.Count; i++)
-            {
-                Renderer renderer = targetRenderers[i];
-
-                if (renderer != null && !rendererBuffer.Contains(renderer))
-                {
-                    rendererBuffer.Add(renderer);
-                }
-            }
-        }
-
-        if (rendererBuffer.Count == 0 && targetRenderer != null)
-        {
-            rendererBuffer.Add(targetRenderer);
-        }
-
-        if (autoCollectByTargetMaterial && targetMaterial != null)
-        {
-            Renderer[] sceneRenderers = FindObjectsOfType<Renderer>();
-
-            for (int i = 0; i < sceneRenderers.Length; i++)
-            {
-                Renderer sceneRenderer = sceneRenderers[i];
-                Material[] materials = sceneRenderer.sharedMaterials;
-
-                for (int m = 0; m < materials.Length; m++)
-                {
-                    if (materials[m] == targetMaterial)
-                    {
-                        if (!rendererBuffer.Contains(sceneRenderer))
-                        {
-                            rendererBuffer.Add(sceneRenderer);
-                        }
-
-                        break;
-                    }
-                }
-            }
-        }
-
-        return rendererBuffer;
     }
 }
