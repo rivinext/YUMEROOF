@@ -56,10 +56,17 @@ public class MaterialHueController : MonoBehaviour
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
 
+    private readonly Dictionary<Renderer, List<Material>> rendererMaterialMap = new();
+
     private void Awake()
     {
         EnsureLegacyTargetIncluded();
         SyncAppliedToPreview();
+    }
+
+    private void OnEnable()
+    {
+        RefreshRendererMaterials(GetComponent<Renderer>(), includeChildren: true);
     }
 
     private void Start()
@@ -252,6 +259,8 @@ public class MaterialHueController : MonoBehaviour
 
     private void OnValidate()
     {
+        RefreshRendererMaterials(GetComponent<Renderer>(), includeChildren: true);
+
         if (Application.isPlaying)
         {
             return;
@@ -299,14 +308,50 @@ public class MaterialHueController : MonoBehaviour
         ApplyColor();
     }
 
-    public void RegisterRenderer(Renderer renderer)
+    public void RegisterRenderer(Renderer renderer, bool includeChildren = false)
     {
         if (renderer == null)
         {
             return;
         }
 
-        RegisterMaterial(renderer.material);
+        if (includeChildren)
+        {
+            foreach (Renderer childRenderer in renderer.GetComponentsInChildren<Renderer>())
+            {
+                RegisterRendererInternal(childRenderer);
+            }
+        }
+        else
+        {
+            RegisterRendererInternal(renderer);
+        }
+
+        // Register immediately so prefab assets and scene instances both show the applied color.
+        ApplyColor();
+    }
+
+    public void RefreshRendererMaterials(Renderer renderer, bool includeChildren = false)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        if (includeChildren)
+        {
+            foreach (Renderer childRenderer in renderer.GetComponentsInChildren<Renderer>())
+            {
+                RefreshRendererInternal(childRenderer);
+            }
+        }
+        else
+        {
+            RefreshRendererInternal(renderer);
+        }
+
+        // Re-apply immediately so prefab assets and scene instances both show the applied color.
+        ApplyColor();
     }
 
     private void EnsureLegacyTargetIncluded()
@@ -332,5 +377,49 @@ public class MaterialHueController : MonoBehaviour
         EnsureLegacyTargetIncluded();
 
         return targetMaterials ?? new List<Material>();
+    }
+
+    private void RegisterRendererInternal(Renderer renderer)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        if (!rendererMaterialMap.TryGetValue(renderer, out List<Material> trackedMaterials))
+        {
+            trackedMaterials = new List<Material>();
+            rendererMaterialMap[renderer] = trackedMaterials;
+        }
+
+        foreach (Material material in renderer.materials)
+        {
+            RegisterMaterial(material);
+
+            if (material != null && !trackedMaterials.Contains(material))
+            {
+                trackedMaterials.Add(material);
+            }
+        }
+    }
+
+    private void RefreshRendererInternal(Renderer renderer)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        if (rendererMaterialMap.TryGetValue(renderer, out List<Material> trackedMaterials))
+        {
+            foreach (Material trackedMaterial in trackedMaterials)
+            {
+                targetMaterials.Remove(trackedMaterial);
+            }
+
+            trackedMaterials.Clear();
+        }
+
+        RegisterRendererInternal(renderer);
     }
 }
