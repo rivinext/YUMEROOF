@@ -34,6 +34,9 @@ public class FreePlacementSystem : MonoBehaviour
     [SerializeField] private float fastRotationStepDegrees = 90f;
     [SerializeField] private float rotationHoldInterval = 0.1f;
 
+    [Header("Color Control")]
+    [SerializeField] private MaterialHueController materialHueController;
+
     public float AnchorSnapDistance => anchorSnapDistance;
 
     private AnchorPoint snappedAnchor;
@@ -632,6 +635,8 @@ public class FreePlacementSystem : MonoBehaviour
 
         previewObject = Instantiate(furniturePrefab);
         previewObject.name = "Preview_" + data.nameID;
+
+        RegisterPlacementMaterials(previewObject);
 
         PlacedFurniture placedComp = previewObject.AddComponent<PlacedFurniture>();
         placedComp.furnitureData = data;
@@ -1570,5 +1575,19 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         return defaultValue;
+    }
+
+    private void RegisterPlacementMaterials(GameObject target)
+    {
+        if (materialHueController == null || target == null)
+        {
+            return;
+        }
+
+        Renderer[] renderers = target.GetComponentsInChildren<Renderer>();
+        foreach (var renderer in renderers)
+        {
+            materialHueController.RegisterTargetMaterial(renderer.material);
+        }
     }
 }
