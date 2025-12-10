@@ -14,6 +14,7 @@ public class MaterialHueController : MonoBehaviour
     private string ValueKey => $"{playerPrefsKeyPrefix}_value";
 
     [Header("Targets")]
+    [SerializeField] private Renderer targetRenderer;
     [SerializeField] private Material targetMaterial;
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
@@ -41,6 +42,13 @@ public class MaterialHueController : MonoBehaviour
     [SerializeField] private HueRingSelector hueRingSelector;
     [SerializeField] private SaturationValuePalette saturationValuePalette;
 
+    [Header("Color Slots")]
+    [SerializeField] private Color[] slotColors = new Color[8]
+    {
+        Color.white, Color.white, Color.white, Color.white,
+        Color.white, Color.white, Color.white, Color.white
+    };
+
     // 外部（プリセットマネージャなど）から参照する用
     public float Hue => hue;
     public float Saturation => saturation;
@@ -51,8 +59,15 @@ public class MaterialHueController : MonoBehaviour
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
 
+    private readonly Color[] colorArrayBuffer = new Color[8];
+    private MaterialPropertyBlock materialPropertyBlock;
+    private static readonly int SlotColorsId = Shader.PropertyToID("_SlotColors");
+    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
     private void Awake()
     {
+        materialPropertyBlock = new MaterialPropertyBlock();
+        EnsureSlotColorLength();
         SyncAppliedToPreview();
     }
 
@@ -213,6 +228,11 @@ public class MaterialHueController : MonoBehaviour
             targetMaterial.color = AppliedColor;
         }
 
+        if (applyToMaterial)
+        {
+            ApplySlotColors();
+        }
+
         if (previewImage != null)
         {
             previewImage.color = currentColor;
@@ -253,5 +273,43 @@ public class MaterialHueController : MonoBehaviour
         appliedHue = hue;
         appliedSaturation = saturation;
         appliedValue = value;
+    }
+
+    private void ApplySlotColors()
+    {
+        if (targetRenderer == null)
+        {
+            return;
+        }
+
+        materialPropertyBlock ??= new MaterialPropertyBlock();
+        EnsureSlotColorLength();
+        Color appliedColor = AppliedColor;
+
+        for (int i = 0; i < colorArrayBuffer.Length; i++)
+        {
+            colorArrayBuffer[i] = i < slotColors.Length ? slotColors[i] : appliedColor;
+        }
+
+        materialPropertyBlock.Clear();
+        targetRenderer.GetPropertyBlock(materialPropertyBlock);
+        materialPropertyBlock.SetColor(BaseColorId, appliedColor);
+        materialPropertyBlock.SetColorArray(SlotColorsId, colorArrayBuffer);
+        targetRenderer.SetPropertyBlock(materialPropertyBlock);
+    }
+
+    private void EnsureSlotColorLength()
+    {
+        if (slotColors == null || slotColors.Length != 8)
+        {
+            Color[] resized = new Color[8];
+            Color fillColor = AppliedColor;
+            for (int i = 0; i < resized.Length; i++)
+            {
+                resized[i] = i < (slotColors?.Length ?? 0) ? slotColors[i] : fillColor;
+            }
+
+            slotColors = resized;
+        }
     }
 }
