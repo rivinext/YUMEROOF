@@ -70,7 +70,8 @@ public class FurnitureSaveManager : MonoBehaviour
     [SerializeField, Min(1)] private int maxFurniturePerFrame = 8;
 
     [Header("Material Hue")]
-    [SerializeField] private MaterialHueController materialHueController;
+    [SerializeField] private List<MaterialHueController> materialHueControllers = new();
+    private readonly Dictionary<string, MaterialHueController> materialHueControllerLookup = new();
 
     private bool isLoadingScene = false; // シーンロード中フラグ
     private Coroutine activeLoadRoutine;
@@ -91,13 +92,15 @@ public class FurnitureSaveManager : MonoBehaviour
     void Awake()
     {
         if (instance == null)
-        {
-            instance = this;
-            DontDestroyOnLoad(gameObject);
+            {
+                instance = this;
+                DontDestroyOnLoad(gameObject);
 
-            // データは外部から読み込まれる
-            Debug.Log("[FurnitureSave] Manager initialized");
-        }
+                CacheMaterialHueControllers();
+
+                // データは外部から読み込まれる
+                Debug.Log("[FurnitureSave] Manager initialized");
+            }
         else if (instance != this)
         {
             Destroy(gameObject);
@@ -108,6 +111,8 @@ public class FurnitureSaveManager : MonoBehaviour
     {
         // シーン遷移時のイベント登録
         SceneManager.sceneLoaded += OnSceneLoaded;
+
+        CacheMaterialHueControllers();
 
         if (debugMode)
             Debug.Log("[FurnitureSave] Scene loaded event registered");
@@ -147,6 +152,8 @@ public class FurnitureSaveManager : MonoBehaviour
 
         if (debugMode)
             Debug.Log($"[FurnitureSave] Scene loaded: {scene.name}");
+
+        CacheMaterialHueControllers();
 
         // 少し遅延してから家具を復元（シーンの初期化を待つ）
         StartCoroutine(LoadFurnitureDelayed(scene.name));
@@ -512,7 +519,8 @@ public class FurnitureSaveManager : MonoBehaviour
             placementSystem.CreateCornerMarkers(placedFurniture);
         }
 
-        RegisterMaterialsToHueController(furnitureObj);
+        string hueControllerKey = GetMaterialHueKey(furniturePrefab, placedFurniture.furnitureData);
+        RegisterMaterialsToHueController(furnitureObj, hueControllerKey);
 
         // 読み込み済みリストに追加
         loadedFurnitureObjects[data.uniqueID] = furnitureObj;
@@ -552,19 +560,9 @@ public class FurnitureSaveManager : MonoBehaviour
         }
     }
 
-    private MaterialHueController ResolveMaterialHueController()
+    private void RegisterMaterialsToHueController(GameObject furnitureObj, string hueControllerKey)
     {
-        if (materialHueController == null)
-        {
-            materialHueController = FindFirstObjectByType<MaterialHueController>(FindObjectsInactive.Include);
-        }
-
-        return materialHueController;
-    }
-
-    private void RegisterMaterialsToHueController(GameObject furnitureObj)
-    {
-        MaterialHueController controller = ResolveMaterialHueController();
+        MaterialHueController controller = ResolveMaterialHueController(hueControllerKey);
 
         if (controller == null || furnitureObj == null)
         {
@@ -575,6 +573,91 @@ public class FurnitureSaveManager : MonoBehaviour
         {
             controller.RegisterRenderer(renderer);
         }
+    }
+
+    private string GetMaterialHueKey(GameObject furniturePrefab, FurnitureData furnitureData)
+    {
+        if (furnitureData != null && !string.IsNullOrEmpty(furnitureData.materialHueKey))
+        {
+            return furnitureData.materialHueKey;
+        }
+
+        if (furniturePrefab != null && !string.IsNullOrEmpty(furniturePrefab.tag) && furniturePrefab.tag != "Untagged")
+        {
+            return furniturePrefab.tag;
+        }
+
+        return string.Empty;
+    }
+
+    private MaterialHueController ResolveMaterialHueController(string hueControllerKey)
+    {
+        if (materialHueControllerLookup.Count == 0)
+        {
+            CacheMaterialHueControllers();
+        }
+
+        if (!string.IsNullOrEmpty(hueControllerKey) && materialHueControllerLookup.TryGetValue(hueControllerKey, out MaterialHueController controllerByKey))
+        {
+            return controllerByKey;
+        }
+
+        return materialHueControllerLookup.Values.FirstOrDefault();
+    }
+
+    private void CacheMaterialHueControllers()
+    {
+        materialHueControllerLookup.Clear();
+
+        var discoveredControllers = new List<MaterialHueController>();
+        if (materialHueControllers != null)
+        {
+            discoveredControllers.AddRange(materialHueControllers.Where(c => c != null));
+        }
+
+        foreach (MaterialHueController controller in FindObjectsByType<MaterialHueController>(FindObjectsInactive.Include))
+        {
+            if (controller != null && !discoveredControllers.Contains(controller))
+            {
+                discoveredControllers.Add(controller);
+            }
+        }
+
+        foreach (MaterialHueController controller in discoveredControllers)
+        {
+            string key = GetControllerLookupKey(controller);
+            if (string.IsNullOrEmpty(key))
+            {
+                continue;
+            }
+
+            materialHueControllerLookup[key] = controller;
+        }
+
+        if (debugMode)
+        {
+            Debug.Log($"[FurnitureSave] Cached {materialHueControllerLookup.Count} MaterialHueControllers");
+        }
+    }
+
+    private string GetControllerLookupKey(MaterialHueController controller)
+    {
+        if (controller == null)
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrEmpty(controller.PlayerPrefsKeyPrefix))
+        {
+            return controller.PlayerPrefsKeyPrefix;
+        }
+
+        if (!string.IsNullOrEmpty(controller.gameObject.tag) && controller.gameObject.tag != "Untagged")
+        {
+            return controller.gameObject.tag;
+        }
+
+        return controller.name;
     }
 
     // ユニークIDの取得または作成
