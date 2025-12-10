@@ -306,7 +306,14 @@ public class MaterialHueController : MonoBehaviour
             return;
         }
 
-        RegisterMaterial(renderer.material);
+        Material material = renderer.sharedMaterial;
+
+        if (material == null)
+        {
+            material = renderer.material;
+        }
+
+        RegisterMaterial(material);
     }
 
     private void EnsureLegacyTargetIncluded()
