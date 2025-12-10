@@ -157,6 +157,10 @@ public class TimeSliderController : MonoBehaviour, IPointerDownHandler, IPointer
 
         timeSlider.minValue = 0f;
         timeSlider.maxValue = 1440f;
+
+        var navigation = timeSlider.navigation;
+        navigation.mode = Navigation.Mode.None;
+        timeSlider.navigation = navigation;
     }
 
     private void EnsureUIBuilt()
