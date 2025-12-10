@@ -15,6 +15,7 @@ public class PlacedFurniture : MonoBehaviour
     private Renderer[] renderers;
     private Collider[] colliders;
     private Material[] originalMaterials;
+    private MaterialPropertyBlock propertyBlock;
 
     // コーナーマーカー用
     public GameObject[] cornerMarkers;     // 四隅のマーカー
@@ -27,12 +28,13 @@ public class PlacedFurniture : MonoBehaviour
     {
         renderers = GetComponentsInChildren<Renderer>();
         colliders = GetComponentsInChildren<Collider>();
+        propertyBlock = new MaterialPropertyBlock();
 
         // 元のマテリアルを保存
         originalMaterials = new Material[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
         {
-            originalMaterials[i] = renderers[i].material;
+            originalMaterials[i] = renderers[i].sharedMaterial;
         }
 
         // 収納ボタンコンポーネントを追加
@@ -75,7 +77,12 @@ public class PlacedFurniture : MonoBehaviour
                 {
                     var renderer = marker.GetComponent<Renderer>();
                     if (renderer != null)
-                        renderer.material.color = markerColor;
+                    {
+                        propertyBlock.Clear();
+                        renderer.GetPropertyBlock(propertyBlock);
+                        propertyBlock.SetColor("_Color", markerColor);
+                        renderer.SetPropertyBlock(propertyBlock);
+                    }
                 }
             }
         }
