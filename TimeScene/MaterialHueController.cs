@@ -56,28 +56,10 @@ public class MaterialHueController : MonoBehaviour
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
 
-    private class RendererMaterialInfo
-    {
-        public List<Material> Materials { get; } = new();
-        public List<Material> SharedMaterials { get; } = new();
-    }
-
-    private readonly Dictionary<Renderer, RendererMaterialInfo> rendererMaterialMap = new();
-
     private void Awake()
     {
         EnsureLegacyTargetIncluded();
         SyncAppliedToPreview();
-    }
-
-    private void OnEnable()
-    {
-        RefreshRendererMaterials(GetComponent<Renderer>(), includeChildren: true);
-    }
-
-    private void OnTransformChildrenChanged()
-    {
-        RefreshRendererMaterials(GetComponent<Renderer>(), includeChildren: true);
     }
 
     private void Start()
@@ -270,8 +252,6 @@ public class MaterialHueController : MonoBehaviour
 
     private void OnValidate()
     {
-        RefreshRendererMaterials(GetComponent<Renderer>(), includeChildren: true);
-
         if (Application.isPlaying)
         {
             return;
@@ -319,69 +299,14 @@ public class MaterialHueController : MonoBehaviour
         ApplyColor();
     }
 
-    public void RegisterRenderer(Renderer renderer, bool includeChildren = false)
+    public void RegisterRenderer(Renderer renderer)
     {
         if (renderer == null)
         {
             return;
         }
 
-        bool updated = false;
-
-        if (includeChildren)
-        {
-            foreach (Renderer childRenderer in renderer.GetComponentsInChildren<Renderer>())
-            {
-                updated |= RefreshRendererInternal(childRenderer);
-            }
-        }
-        else
-        {
-            updated = RefreshRendererInternal(renderer);
-        }
-
-        // Register immediately so prefab assets and scene instances both show the applied color.
-        if (updated)
-        {
-            ApplyColor();
-        }
-    }
-
-    /// <summary>
-    /// ランタイムで renderer.material または renderer.sharedMaterials が差し替えられたときに呼び出すヘルパー。
-    /// 例: <c>controller.OnMaterialChanged(changedRenderer);</c>
-    /// </summary>
-    public void OnMaterialChanged(Renderer renderer, bool includeChildren = false)
-    {
-        RefreshRendererMaterials(renderer, includeChildren);
-    }
-
-    public void RefreshRendererMaterials(Renderer renderer, bool includeChildren = false)
-    {
-        if (renderer == null)
-        {
-            return;
-        }
-
-        bool updated = false;
-
-        if (includeChildren)
-        {
-            foreach (Renderer childRenderer in renderer.GetComponentsInChildren<Renderer>())
-            {
-                updated |= RefreshRendererInternal(childRenderer);
-            }
-        }
-        else
-        {
-            updated = RefreshRendererInternal(renderer);
-        }
-
-        // Re-apply immediately so prefab assets and scene instances both show the applied color.
-        if (updated)
-        {
-            ApplyColor();
-        }
+        RegisterMaterial(renderer.material);
     }
 
     private void EnsureLegacyTargetIncluded()
@@ -407,106 +332,5 @@ public class MaterialHueController : MonoBehaviour
         EnsureLegacyTargetIncluded();
 
         return targetMaterials ?? new List<Material>();
-    }
-
-    private RendererMaterialInfo GetOrCreateRendererInfo(Renderer renderer)
-    {
-        if (!rendererMaterialMap.TryGetValue(renderer, out RendererMaterialInfo rendererInfo))
-        {
-            rendererInfo = new RendererMaterialInfo();
-            rendererMaterialMap[renderer] = rendererInfo;
-        }
-
-        return rendererInfo;
-    }
-
-    private static bool HasMaterialsChanged(Material[] newMaterials, List<Material> trackedMaterials)
-    {
-        if (newMaterials.Length != trackedMaterials.Count)
-        {
-            return true;
-        }
-
-        for (int i = 0; i < newMaterials.Length; i++)
-        {
-            if (newMaterials[i] != trackedMaterials[i])
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void RemoveTrackedMaterialsFromTargets(RendererMaterialInfo rendererInfo)
-    {
-        foreach (Material trackedMaterial in rendererInfo.Materials)
-        {
-            while (targetMaterials.Remove(trackedMaterial))
-            {
-            }
-        }
-
-        foreach (Material trackedSharedMaterial in rendererInfo.SharedMaterials)
-        {
-            while (targetMaterials.Remove(trackedSharedMaterial))
-            {
-            }
-        }
-    }
-
-    private bool RegisterRendererInternal(Renderer renderer)
-    {
-        if (renderer == null)
-        {
-            return false;
-        }
-
-        RendererMaterialInfo rendererInfo = GetOrCreateRendererInfo(renderer);
-
-        bool instanceMaterialsChanged = HasMaterialsChanged(renderer.materials, rendererInfo.Materials);
-        bool sharedMaterialsChanged = HasMaterialsChanged(renderer.sharedMaterials, rendererInfo.SharedMaterials);
-
-        if (!instanceMaterialsChanged && !sharedMaterialsChanged)
-        {
-            return false;
-        }
-
-        RemoveTrackedMaterialsFromTargets(rendererInfo);
-
-        rendererInfo.Materials.Clear();
-        rendererInfo.SharedMaterials.Clear();
-
-        foreach (Material material in renderer.materials)
-        {
-            RegisterMaterial(material);
-
-            if (material != null)
-            {
-                rendererInfo.Materials.Add(material);
-            }
-        }
-
-        foreach (Material material in renderer.sharedMaterials)
-        {
-            RegisterMaterial(material);
-
-            if (material != null)
-            {
-                rendererInfo.SharedMaterials.Add(material);
-            }
-        }
-
-        return true;
-    }
-
-    private bool RefreshRendererInternal(Renderer renderer)
-    {
-        if (renderer == null)
-        {
-            return false;
-        }
-
-        return RegisterRendererInternal(renderer);
     }
 }
