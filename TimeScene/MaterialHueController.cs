@@ -15,6 +15,9 @@ public class MaterialHueController : MonoBehaviour
 
     [Header("Targets")]
     [SerializeField] private Material targetMaterial;
+    [SerializeField] private string colorPropertyName = "_Color0";
+    [SerializeField] private string blockIndexPropertyName = "_BlockIndex0";
+    [SerializeField] private float blockIndex = 0f;
     [SerializeField] private Image previewImage;
     [SerializeField] private RawImage previewRawImage;
 
@@ -210,7 +213,19 @@ public class MaterialHueController : MonoBehaviour
 
         if (applyToMaterial && targetMaterial != null)
         {
-            targetMaterial.color = AppliedColor;
+            if (!string.IsNullOrEmpty(colorPropertyName) && targetMaterial.HasProperty(colorPropertyName))
+            {
+                targetMaterial.SetColor(colorPropertyName, AppliedColor);
+            }
+            else
+            {
+                targetMaterial.color = AppliedColor;
+            }
+
+            if (!string.IsNullOrEmpty(blockIndexPropertyName) && targetMaterial.HasProperty(blockIndexPropertyName))
+            {
+                targetMaterial.SetFloat(blockIndexPropertyName, blockIndex);
+            }
         }
 
         if (previewImage != null)
