@@ -69,6 +69,9 @@ public class FurnitureSaveManager : MonoBehaviour
     [Header("Loading Settings")]
     [SerializeField, Min(1)] private int maxFurniturePerFrame = 8;
 
+    [Header("Material Hue")]
+    [SerializeField] private MaterialHueController materialHueController;
+
     private bool isLoadingScene = false; // シーンロード中フラグ
     private Coroutine activeLoadRoutine;
     private string currentLoadingScene = string.Empty;
@@ -509,6 +512,8 @@ public class FurnitureSaveManager : MonoBehaviour
             placementSystem.CreateCornerMarkers(placedFurniture);
         }
 
+        RegisterMaterialsToHueController(furnitureObj);
+
         // 読み込み済みリストに追加
         loadedFurnitureObjects[data.uniqueID] = furnitureObj;
 
@@ -544,6 +549,31 @@ public class FurnitureSaveManager : MonoBehaviour
         foreach (Transform child in obj.transform)
         {
             SetLayerRecursively(child.gameObject, appliedLayer, anchorLayer);
+        }
+    }
+
+    private MaterialHueController ResolveMaterialHueController()
+    {
+        if (materialHueController == null)
+        {
+            materialHueController = FindFirstObjectByType<MaterialHueController>(FindObjectsInactive.Include);
+        }
+
+        return materialHueController;
+    }
+
+    private void RegisterMaterialsToHueController(GameObject furnitureObj)
+    {
+        MaterialHueController controller = ResolveMaterialHueController();
+
+        if (controller == null || furnitureObj == null)
+        {
+            return;
+        }
+
+        foreach (Renderer renderer in furnitureObj.GetComponentsInChildren<Renderer>())
+        {
+            controller.RegisterRenderer(renderer);
         }
     }
 
