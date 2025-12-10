@@ -4,6 +4,7 @@ Shader "Custom/EightSegmentColor"
     {
         _BaseMap ("Base Map", 2D) = "white" {}
         _BaseColor ("Base Color", Color) = (1,1,1,1)
+        _SlotCount ("Slot Count", Float) = 8
     }
 
     SubShader
@@ -18,10 +19,13 @@ Shader "Custom/EightSegmentColor"
             #pragma fragment frag
             #include "UnityCG.cginc"
 
+            #define SLOT_ARRAY_SIZE 16
+
             sampler2D _BaseMap;
             float4 _BaseMap_ST;
             float4 _BaseColor;
-            float4 _SlotColors[8];
+            float _SlotCount;
+            float4 _SlotColors[SLOT_ARRAY_SIZE];
 
             struct appdata
             {
@@ -47,9 +51,10 @@ Shader "Custom/EightSegmentColor"
             {
                 fixed4 col = tex2D(_BaseMap, i.uv) * _BaseColor;
 
-                float scaled = saturate(i.uv.x) * 8.0;
+                int slotCount = clamp((int)_SlotCount, 1, SLOT_ARRAY_SIZE);
+                float scaled = saturate(i.uv.x) * slotCount;
                 int index = (int)floor(scaled);
-                index = clamp(index, 0, 7);
+                index = clamp(index, 0, slotCount - 1);
 
                 col *= _SlotColors[index];
                 return col;
