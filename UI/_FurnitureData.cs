@@ -23,7 +23,6 @@ public class FurnitureData
     public bool isMovable;                 // 移動可能か
     public string descriptionID;           // 説明ID
     public WeatherAttribute weatherAttribute; // 天候属性（風/雨）
-    public string materialHueKey;          // 色設定に使用するキー
 
     // レシピ情報（新規追加）
     public string[] recipeMaterialIDs;     // レシピに必要な素材ID（最大3つ）

@@ -32,7 +32,6 @@ public class FurnitureDataSO : ScriptableObject
     public InteractionType interactionType; // インタラクションタイプ
     public string descriptionID;           // 説明ID
     public WeatherAttribute weatherAttribute; // 天候属性
-    public string materialHueKey;          // 色設定に使用するキー
 
     [Header("レシピ情報")]
     public string[] recipeMaterialIDs = new string[3];     // レシピに必要な素材ID

@@ -184,7 +184,6 @@ public class FurnitureDataManager : MonoBehaviour
             isMovable = so.isMovable,
             descriptionID = so.descriptionID,
             weatherAttribute = so.weatherAttribute,
-            materialHueKey = so.materialHueKey,
 
             // レシピ情報を追加
             recipeMaterialIDs = so.recipeMaterialIDs,

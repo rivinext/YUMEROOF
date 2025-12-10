@@ -13,7 +13,6 @@ public class FreePlacementSystem : MonoBehaviour
     public LayerMask furnitureLayer;
     public LayerMask anchorLayer;
     public GhostPreviewManager ghostManager;
-    [SerializeField] private MaterialHueController materialHueController;
 
     [Header("Highlight Settings")]
     [SerializeField] private string outlineLayerName = "Outline";
@@ -636,8 +635,6 @@ public class FreePlacementSystem : MonoBehaviour
 
         PlacedFurniture placedComp = previewObject.AddComponent<PlacedFurniture>();
         placedComp.furnitureData = data;
-
-        RegisterMaterialsToHueController(previewObject);
 
         CreateCornerMarkers(placedComp);
         placedComp.SetSelected(true);
@@ -1573,30 +1570,5 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         return defaultValue;
-    }
-
-    private MaterialHueController ResolveMaterialHueController()
-    {
-        if (materialHueController == null)
-        {
-            materialHueController = FindFirstObjectByType<MaterialHueController>(FindObjectsInactive.Include);
-        }
-
-        return materialHueController;
-    }
-
-    private void RegisterMaterialsToHueController(GameObject target)
-    {
-        MaterialHueController controller = ResolveMaterialHueController();
-
-        if (controller == null || target == null)
-        {
-            return;
-        }
-
-        foreach (Renderer renderer in target.GetComponentsInChildren<Renderer>())
-        {
-            controller.RegisterRenderer(renderer);
-        }
     }
 }
