@@ -55,6 +55,7 @@ public class MaterialHueController : MonoBehaviour
     public float AppliedValue => appliedValue;
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
+    public string PlayerPrefsKeyPrefix => playerPrefsKeyPrefix;
 
     private void Awake()
     {
