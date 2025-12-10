@@ -59,7 +59,6 @@ public class MaterialHueController : MonoBehaviour
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
 
-    private readonly Color[] colorArrayBuffer = new Color[8];
     private readonly Vector4[] slotVectorBuffer = new Vector4[8];
     private MaterialPropertyBlock materialPropertyBlock;
     private static readonly int SlotColorsId = Shader.PropertyToID("_SlotColors");
@@ -287,10 +286,10 @@ public class MaterialHueController : MonoBehaviour
         EnsureSlotColorLength();
         Color appliedColor = AppliedColor;
 
-        for (int i = 0; i < colorArrayBuffer.Length; i++)
+        for (int i = 0; i < slotVectorBuffer.Length; i++)
         {
-            colorArrayBuffer[i] = i < slotColors.Length ? slotColors[i] : appliedColor;
-            slotVectorBuffer[i] = colorArrayBuffer[i];
+            Color sourceColor = i < slotColors.Length ? slotColors[i] : appliedColor;
+            slotVectorBuffer[i] = sourceColor;
         }
 
         materialPropertyBlock.Clear();
