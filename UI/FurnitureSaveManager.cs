@@ -531,12 +531,17 @@ public class FurnitureSaveManager : MonoBehaviour
     void SetLayerRecursively(GameObject obj, int layer)
     {
         int anchorLayer = LayerMask.NameToLayer("Anchor");
+        if (anchorLayer < 0)
+        {
+            Debug.LogWarning("[FurnitureSave] 'Anchor' layer is not defined. Defaulting anchor objects to the provided target layer to keep them detectable.");
+            anchorLayer = layer;
+        }
         SetLayerRecursively(obj, layer, anchorLayer);
     }
 
     void SetLayerRecursively(GameObject obj, int targetLayer, int anchorLayer)
     {
-        bool isAnchorNode = (anchorLayer >= 0 && (obj.layer == anchorLayer || obj.GetComponent<AnchorPoint>() != null));
+        bool isAnchorNode = (obj.layer == anchorLayer || obj.GetComponent<AnchorPoint>() != null);
 
         int appliedLayer = isAnchorNode ? anchorLayer : targetLayer;
         obj.layer = appliedLayer;
