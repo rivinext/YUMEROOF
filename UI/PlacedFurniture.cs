@@ -4,6 +4,8 @@ using System.Collections.Generic;
 // 配置された家具コンポーネント
 public class PlacedFurniture : MonoBehaviour
 {
+    private static readonly int ColorPropertyId = Shader.PropertyToID("_Color");
+
     public FurnitureData furnitureData;    // 家具データ
     public string itemID => furnitureData?.itemID; // アイテムIDへのアクセス
     public bool isSelected = false;        // 選択中か
@@ -75,17 +77,21 @@ public class PlacedFurniture : MonoBehaviour
             {
                 if (marker != null)
                 {
-                    var renderer = marker.GetComponent<Renderer>();
-                    if (renderer != null)
-                    {
-                        propertyBlock.Clear();
-                        renderer.GetPropertyBlock(propertyBlock);
-                        propertyBlock.SetColor("_Color", markerColor);
-                        renderer.SetPropertyBlock(propertyBlock);
-                    }
+                    ApplyMarkerColor(marker.GetComponent<Renderer>(), markerColor);
                 }
             }
         }
+    }
+
+    private void ApplyMarkerColor(Renderer renderer, Color color)
+    {
+        if (renderer == null)
+            return;
+
+        propertyBlock.Clear();
+        renderer.GetPropertyBlock(propertyBlock);
+        propertyBlock.SetColor(ColorPropertyId, color);
+        renderer.SetPropertyBlock(propertyBlock);
     }
 
     // 親家具に追加
