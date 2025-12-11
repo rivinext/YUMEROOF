@@ -65,6 +65,8 @@ public class FreePlacementSystem : MonoBehaviour
     private FurnitureData currentFurnitureData;
     private Vector3 moveOffset;
     private bool uiSoundsMuted;
+    private PlacedFurniture lastPlacedFurniture;
+    private float placementClickBlockEndTime;
 
     // 元の位置を記憶（既存配置物の移動用）
     private Vector3 originalPosition;
@@ -544,6 +546,11 @@ public class FreePlacementSystem : MonoBehaviour
 
             if (furniture != null && furniture.furnitureData.isMovable)
             {
+                if (Time.time < placementClickBlockEndTime && furniture == lastPlacedFurniture)
+                {
+                    return;
+                }
+
                 // 前の選択を解除
                 if (selectedFurniture != null)
                 {
@@ -1228,6 +1235,9 @@ public class FreePlacementSystem : MonoBehaviour
 
             AnimatePlacementScale(placedComp);
             PlayPlacementEffect(placedComp.transform.position);
+
+            lastPlacedFurniture = placedComp;
+            placementClickBlockEndTime = Time.time + 0.5f;
 
             if (anchorUsed)
             {
