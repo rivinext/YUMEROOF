@@ -123,7 +123,7 @@ namespace Yume
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Failed to save screenshot to {path}: {ex.Message}");
+                Debug.LogError($"Failed to save screenshot to resolved path {path}: {ex.Message}");
             }
             finally
             {
@@ -149,7 +149,7 @@ namespace Yume
 
             var basePath = !string.IsNullOrWhiteSpace(customBasePath)
                 ? customBasePath
-                : Application.persistentDataPath;
+                : ResolvePlatformDefaultPath();
 
             basePath = Environment.ExpandEnvironmentVariables(basePath);
 
@@ -163,6 +163,25 @@ namespace Yume
             Directory.CreateDirectory(versionedPath);
 
             return versionedPath;
+        }
+
+        private string ResolvePlatformDefaultPath()
+        {
+            const string windowsDefaultPath = "%USERPROFILE%\\Pictures\\Screenshots";
+
+            if (Application.platform == RuntimePlatform.WindowsPlayer ||
+                Application.platform == RuntimePlatform.WindowsEditor)
+            {
+                var expandedWindowsPath = Environment.ExpandEnvironmentVariables(windowsDefaultPath);
+
+                if (!string.IsNullOrWhiteSpace(expandedWindowsPath))
+                {
+                    Directory.CreateDirectory(expandedWindowsPath);
+                    return expandedWindowsPath;
+                }
+            }
+
+            return Application.persistentDataPath;
         }
     }
 }
