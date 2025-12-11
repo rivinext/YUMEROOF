@@ -141,39 +141,28 @@ namespace Yume
 
         private string ResolveBasePath()
         {
-            string basePath;
+#if DEMO_VERSION
+            const string versionFolder = "demo";
+#else
+            const string versionFolder = "release";
+#endif
 
-            if (!string.IsNullOrWhiteSpace(customBasePath))
-            {
-                basePath = customBasePath;
-            }
-            else
-            {
-                switch (Application.platform)
-                {
-                    case RuntimePlatform.WindowsPlayer:
-                    case RuntimePlatform.WindowsEditor:
-                        var userProfile = Environment.GetEnvironmentVariable("USERPROFILE");
-                        if (string.IsNullOrWhiteSpace(userProfile))
-                        {
-                            return Application.persistentDataPath;
-                        }
-
-                        basePath = Path.Combine(userProfile, "Pictures", "Screenshots");
-                        break;
-                    default:
-                        return Application.persistentDataPath;
-                }
-            }
+            var basePath = !string.IsNullOrWhiteSpace(customBasePath)
+                ? customBasePath
+                : Application.persistentDataPath;
 
             basePath = Environment.ExpandEnvironmentVariables(basePath);
 
             if (string.IsNullOrWhiteSpace(basePath))
             {
-                return Application.persistentDataPath;
+                basePath = Application.persistentDataPath;
             }
 
-            return basePath;
+            var versionedPath = Path.Combine(basePath, versionFolder);
+
+            Directory.CreateDirectory(versionedPath);
+
+            return versionedPath;
         }
     }
 }
