@@ -133,9 +133,27 @@ public class SaveGameManager : MonoBehaviour
         }
     }
 
+    string GetSaveDirectory()
+    {
+#if DEMO_VERSION
+        string versionFolder = "demo";
+#else
+        string versionFolder = "release";
+#endif
+        string directory = Path.Combine(Application.persistentDataPath, versionFolder);
+        if (!Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+        return directory;
+    }
+
     string GetSlotPath(string slotKey)
     {
-        return Path.Combine(Application.persistentDataPath, slotKey + ".json");
+        return Path.Combine(GetSaveDirectory(), slotKey + ".json");
+    }
+
+    public string GetScreenshotPath(string screenshotFilename)
+    {
+        return Path.Combine(GetSaveDirectory(), screenshotFilename);
     }
 
     public bool HasSlot(string slotKey) => File.Exists(GetSlotPath(slotKey));
@@ -241,7 +259,7 @@ public class SaveGameManager : MonoBehaviour
         data.chapterName = milestone != null ? milestone.CurrentMilestoneID : "";
 
         data.screenshotFilename = currentSlot + "_screenshot.png";
-        var path = Path.Combine(Application.persistentDataPath, data.screenshotFilename);
+        var path = GetScreenshotPath(data.screenshotFilename);
         try
         {
             ScreenCapture.CaptureScreenshot(path);

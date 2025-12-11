@@ -125,7 +125,7 @@ public class SaveSlotUI : MonoBehaviour
                 screenshotImage.sprite = null;
                 if (!string.IsNullOrEmpty(data.screenshotFilename))
                 {
-                    string path = Path.Combine(Application.persistentDataPath, data.screenshotFilename);
+                    string path = SaveGameManager.Instance.GetScreenshotPath(data.screenshotFilename);
                     if (File.Exists(path))
                     {
                         var bytes = File.ReadAllBytes(path);
