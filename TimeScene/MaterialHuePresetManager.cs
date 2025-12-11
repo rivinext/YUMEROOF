@@ -60,6 +60,7 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
+    private string SelectedSlotKey => $"{keyPrefix}_selectedSlot";
     public int SelectedSlotIndex
     {
         get
@@ -79,13 +80,30 @@ public class MaterialHuePresetManager : MonoBehaviour
                 return;
             }
 
-            selectedSlotIndex = Mathf.Clamp(value, 0, SlotCount - 1);
+            int clampedIndex = Mathf.Clamp(value, 0, SlotCount - 1);
+            if (selectedSlotIndex == clampedIndex)
+            {
+                return;
+            }
+
+            selectedSlotIndex = clampedIndex;
+            SaveSelectedSlotIndex();
         }
     }
 
     private void Awake()
     {
         SelectedSlotIndex = ResolveInitialSlotIndex();
+    }
+
+    private void OnDisable()
+    {
+        SaveSelectedSlotIndex();
+    }
+
+    private void OnApplicationQuit()
+    {
+        SaveSelectedSlotIndex();
     }
 
     private void Start()
@@ -216,6 +234,17 @@ public class MaterialHuePresetManager : MonoBehaviour
         return false;
     }
 
+    private void SaveSelectedSlotIndex()
+    {
+        if (SlotCount <= 0)
+        {
+            return;
+        }
+
+        PlayerPrefs.SetInt(SelectedSlotKey, SelectedSlotIndex);
+        PlayerPrefs.Save();
+    }
+
     private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         IReadOnlyList<HSVColor> defaultColors = slot.DefaultColors;
@@ -335,6 +364,11 @@ public class MaterialHuePresetManager : MonoBehaviour
             return 0;
         }
 
+        if (TryGetSavedSlotIndex(out int savedSlotIndex))
+        {
+            return savedSlotIndex;
+        }
+
         if (applyFirstDefaultSlot)
         {
             int defaultSlotIndex = FindFirstDefaultSlotIndex();
@@ -354,6 +388,24 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         return initialPresetIndex;
+    }
+
+    private bool TryGetSavedSlotIndex(out int savedSlotIndex)
+    {
+        savedSlotIndex = 0;
+
+        if (SlotCount <= 0)
+        {
+            return false;
+        }
+
+        if (!PlayerPrefs.HasKey(SelectedSlotKey))
+        {
+            return false;
+        }
+
+        savedSlotIndex = Mathf.Clamp(PlayerPrefs.GetInt(SelectedSlotKey, 0), 0, SlotCount - 1);
+        return true;
     }
 
     public void ApplyDefaultPresetFallback()
