@@ -43,7 +43,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     [SerializeField] private string keyPrefix = "multi_mat_preset";
 
     [Header("Initial Load")]
-    [SerializeField] private bool applyInitialPresetOnStart = false;
+    [SerializeField] private bool applyInitialPresetOnStart = true;
     [SerializeField] private int initialPresetIndex = 0;
     [SerializeField] private bool applyFirstDefaultSlot = false;
 
@@ -90,10 +90,21 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void Start()
     {
-        if (applyInitialPresetOnStart)
+        if (!applyInitialPresetOnStart)
         {
-            LoadPreset(SelectedSlotIndex);
+            return;
         }
+
+        int slotIndex = SelectedSlotIndex;
+
+        if (IsDefaultSlot(slotIndex) || HasSavedPreset(slotIndex))
+        {
+            LoadPreset(slotIndex);
+            return;
+        }
+
+        Debug.LogWarning($"No saved preset found for slot {slotIndex}. Applying default fallback.");
+        ApplyDefaultPresetFallback();
     }
 
     public MaterialHueSaveData GetSaveData()
@@ -184,6 +195,25 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         MaterialHuePresetSlot slot = presetSlots[slotIndex];
         return slot != null && slot.IsDefaultPreset;
+    }
+
+    private bool HasSavedPreset(int slotIndex)
+    {
+        if (!TryValidateSlot(slotIndex, out int clampedSlot))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < controllers.Count; i++)
+        {
+            string baseKey = $"{keyPrefix}_{clampedSlot}_{i}_h";
+            if (PlayerPrefs.HasKey(baseKey))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
