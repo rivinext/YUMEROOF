@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// Handles highlighting of raycast targets by moving them to a dedicated Outline layer.
@@ -11,7 +12,7 @@ public class RayOutlineHighlighter : MonoBehaviour
 
     private int outlineLayer;
     private GameObject highlightedObject;
-    private int originalLayer;
+    private readonly Dictionary<Transform, int> originalLayers = new();
 
     void Awake()
     {
@@ -37,7 +38,7 @@ public class RayOutlineHighlighter : MonoBehaviour
             return;
 
         highlightedObject = obj;
-        originalLayer = obj.layer;
+        originalLayers.Clear();
         SetLayerRecursively(highlightedObject, outlineLayer);
     }
 
@@ -49,16 +50,39 @@ public class RayOutlineHighlighter : MonoBehaviour
         if (highlightedObject == null)
             return;
 
-        SetLayerRecursively(highlightedObject, originalLayer);
+        RestoreLayerRecursively(highlightedObject);
+        originalLayers.Clear();
         highlightedObject = null;
     }
 
     private void SetLayerRecursively(GameObject obj, int layer)
     {
+        if (obj.GetComponent<OutlineExclusion>() != null)
+            return;
+
+        if (!originalLayers.ContainsKey(obj.transform))
+            originalLayers[obj.transform] = obj.layer;
+
         obj.layer = layer;
         foreach (Transform child in obj.transform)
         {
             SetLayerRecursively(child.gameObject, layer);
+        }
+    }
+
+    private void RestoreLayerRecursively(GameObject obj)
+    {
+        if (obj.GetComponent<OutlineExclusion>() != null)
+            return;
+
+        if (originalLayers.TryGetValue(obj.transform, out int originalLayer))
+        {
+            obj.layer = originalLayer;
+        }
+
+        foreach (Transform child in obj.transform)
+        {
+            RestoreLayerRecursively(child.gameObject);
         }
     }
 }
