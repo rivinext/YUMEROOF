@@ -11,17 +11,20 @@ public class DevItemInjector : MonoBehaviour
         public int quantity;
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-    [SerializeField] private bool enableInjection;
+#if DISABLE_DEV_ITEM_INJECTION
+    public const bool BuildDisablesInjection = true;
 #else
-    private const bool enableInjection = false;
+    public const bool BuildDisablesInjection = false;
 #endif
+
+    [SerializeField, Tooltip("Use this even in release builds to seed inventories for demos or QA.")]
+    private bool enableInjection = true;
     [SerializeField] private List<DevEntry> furnitureItems;
     [SerializeField] private List<DevEntry> materialItems;
 
     public void Inject()
     {
-        if (!enableInjection) return;
+        if (BuildDisablesInjection || !enableInjection) return;
 
         if (InventoryManager.Instance == null) return;
 

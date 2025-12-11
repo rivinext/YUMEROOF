@@ -15,9 +15,7 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject furnitureDataManagerPrefab;
     [SerializeField] private GameObject furnitureSaveManagerPrefab;
     [SerializeField] private GameObject milestoneManagerPrefab;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private DevItemInjector devItemInjectorPrefab;
-#endif
 
     void Awake()
     {
@@ -65,19 +63,20 @@ public class GameSessionInitializer : MonoBehaviour
             return;
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        var injector = FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include);
-        if (injector == null)
+        if (!DevItemInjector.BuildDisablesInjection)
         {
-            var prefab = devItemInjectorPrefab != null ? devItemInjectorPrefab : Resources.Load<DevItemInjector>("DevItemInjector");
-            if (prefab != null)
-                injector = Instantiate(prefab);
+            var injector = FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include);
+            if (injector == null)
+            {
+                var prefab = devItemInjectorPrefab != null ? devItemInjectorPrefab : Resources.Load<DevItemInjector>("DevItemInjector");
+                if (prefab != null)
+                    injector = Instantiate(prefab);
+            }
+            else
+            {
+                injector.gameObject.SetActive(true);
+            }
         }
-        else
-        {
-            injector.gameObject.SetActive(true);
-        }
-#endif
 
         MilestoneManager.CreateIfNeeded(milestoneManagerPrefab);
         ApplyAudioSettingsToScene();
@@ -138,13 +137,11 @@ public class GameSessionInitializer : MonoBehaviour
         }
 
         bool createdNewSave = SaveGameManager.Instance.Load(slotKey);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (createdNewSave)
+        if (createdNewSave && !DevItemInjector.BuildDisablesInjection)
         {
             FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include)?.Inject();
             InventoryManager.Instance.ForceInventoryUpdate();
         }
-#endif
         initialized = true;
         slotKey = null;
     }
