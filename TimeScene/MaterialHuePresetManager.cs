@@ -108,20 +108,23 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void Start()
     {
-        if (!applyInitialPresetOnStart)
-        {
-            return;
-        }
-
         int slotIndex = SelectedSlotIndex;
 
-        if (IsDefaultSlot(slotIndex) || HasSavedPreset(slotIndex))
+        if (IsDefaultSlot(slotIndex))
         {
+            Debug.Log($"Loading default preset for slot {slotIndex} on start.");
             LoadPreset(slotIndex);
             return;
         }
 
-        Debug.LogWarning($"No saved preset found for slot {slotIndex}. Applying default fallback.");
+        if (HasSavedPreset(slotIndex))
+        {
+            Debug.Log($"Loading saved preset for slot {slotIndex} on start.");
+            LoadPreset(slotIndex);
+            return;
+        }
+
+        Debug.LogWarning($"No saved preset found for slot {slotIndex} on start. Applying default fallback.");
         ApplyDefaultPresetFallback();
     }
 
