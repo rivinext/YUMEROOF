@@ -14,7 +14,7 @@ public class PlacementScaleAnimator : MonoBehaviour
         new Keyframe(1f, 1f, 0f, 0f));
 
     private Coroutine animationRoutine;
-    private Vector3 originalScale;
+    private Vector3 baseScale;
     private bool initialized;
     private Bounds combinedBounds;
 
@@ -30,7 +30,7 @@ public class PlacementScaleAnimator : MonoBehaviour
             return;
         }
 
-        originalScale = transform.localScale;
+        baseScale = transform.localScale;
 
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         if (renderers != null && renderers.Length > 0)
@@ -62,6 +62,7 @@ public class PlacementScaleAnimator : MonoBehaviour
             ResetScale();
         }
 
+        transform.localScale = baseScale;
         animationRoutine = StartCoroutine(AnimateRoutine());
     }
 
@@ -85,18 +86,18 @@ public class PlacementScaleAnimator : MonoBehaviour
 
     private void ApplyScale(float multiplier)
     {
-        transform.localScale = originalScale * multiplier;
+        transform.localScale = baseScale * multiplier;
     }
 
     private void ResetScale()
     {
-        transform.localScale = originalScale;
+        transform.localScale = baseScale;
     }
 
     public void SetOriginalScale(Vector3 newScale)
     {
         EnsureInitialized();
-        originalScale = newScale;
+        baseScale = newScale;
     }
 
     private void OnDisable()
