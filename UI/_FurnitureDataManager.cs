@@ -2,6 +2,9 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class FurnitureDataManager : MonoBehaviour
 {
@@ -61,8 +64,7 @@ public class FurnitureDataManager : MonoBehaviour
 
     void LoadAllData()
     {
-        // ScriptableObjectデータベースの自動ロード（Editor限定）
-        #if UNITY_EDITOR
+        // ScriptableObjectデータベースの自動ロード（ビルドでも実行）
         if (furnitureDatabase == null || furnitureDatabase.Length == 0)
         {
             LoadFurnitureSODatabase();
@@ -71,26 +73,25 @@ public class FurnitureDataManager : MonoBehaviour
         {
             LoadMaterialSODatabase();
         }
-        #endif
 
         // 辞書に変換（高速アクセス用）
         BuildDictionaries();
     }
 
-    #if UNITY_EDITOR
     void LoadFurnitureSODatabase()
     {
         // ResourcesフォルダからすべてのFurnitureDataSOを自動ロード
         furnitureDatabase = Resources.LoadAll<FurnitureDataSO>("Data/ScriptableObjects/Furniture");
 
+#if UNITY_EDITOR
         // またはAssetDatabaseを使用（エディタ限定）
-        string[] guids = UnityEditor.AssetDatabase.FindAssets("t:FurnitureDataSO");
+        string[] guids = AssetDatabase.FindAssets("t:FurnitureDataSO");
         List<FurnitureDataSO> dataList = new List<FurnitureDataSO>();
 
         foreach (string guid in guids)
         {
-            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-            FurnitureDataSO data = UnityEditor.AssetDatabase.LoadAssetAtPath<FurnitureDataSO>(path);
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            FurnitureDataSO data = AssetDatabase.LoadAssetAtPath<FurnitureDataSO>(path);
             if (data != null)
             {
                 dataList.Add(data);
@@ -99,6 +100,9 @@ public class FurnitureDataManager : MonoBehaviour
 
         furnitureDatabase = dataList.ToArray();
         Debug.Log($"Loaded {furnitureDatabase.Length} furniture ScriptableObjects");
+#else
+        Debug.Log($"Loaded {furnitureDatabase.Length} furniture ScriptableObjects from Resources");
+#endif
     }
 
     void LoadMaterialSODatabase()
@@ -106,13 +110,15 @@ public class FurnitureDataManager : MonoBehaviour
         // MaterialDataSOも同様に
         materialDatabase = Resources.LoadAll<MaterialDataSO>("Data/ScriptableObjects/Materials");
 
-        string[] guids = UnityEditor.AssetDatabase.FindAssets("t:MaterialDataSO");
         List<MaterialDataSO> dataList = new List<MaterialDataSO>();
+
+#if UNITY_EDITOR
+        string[] guids = AssetDatabase.FindAssets("t:MaterialDataSO");
 
         foreach (string guid in guids)
         {
-            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-            MaterialDataSO data = UnityEditor.AssetDatabase.LoadAssetAtPath<MaterialDataSO>(path);
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            MaterialDataSO data = AssetDatabase.LoadAssetAtPath<MaterialDataSO>(path);
             if (data != null)
             {
                 dataList.Add(data);
@@ -121,8 +127,18 @@ public class FurnitureDataManager : MonoBehaviour
 
         materialDatabase = dataList.ToArray();
         Debug.Log($"Loaded {materialDatabase.Length} material ScriptableObjects");
+#else
+        foreach (var data in materialDatabase)
+        {
+            if (data != null)
+            {
+                dataList.Add(data);
+            }
+        }
+
+        Debug.Log($"Loaded {materialDatabase.Length} material ScriptableObjects from Resources");
+#endif
     }
-    #endif
 
     void BuildDictionaries()
     {
