@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -55,6 +56,8 @@ public class MaterialHueController : MonoBehaviour
     public float AppliedValue => appliedValue;
     public Color CurrentColor => Color.HSVToRGB(hue, saturation, value);
     public Color AppliedColor => Color.HSVToRGB(appliedHue, appliedSaturation, appliedValue);
+
+    public event Action<MaterialHueController> OnAppliedColorChanged;
 
     private void Awake()
     {
@@ -151,9 +154,14 @@ public class MaterialHueController : MonoBehaviour
 
         ApplyColor(applyToMaterial);
 
-        if (saveToPrefs && applyToMaterial && previewChanged)
+        if (applyToMaterial && previewChanged)
         {
-            SaveValues();
+            OnAppliedColorChanged?.Invoke(this);
+
+            if (saveToPrefs)
+            {
+                SaveValues();
+            }
         }
     }
 
