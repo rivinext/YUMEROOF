@@ -6,26 +6,39 @@ public class ResolutionDropdown : MonoBehaviour
 {
     [SerializeField] TMP_Dropdown dropdown;
     Resolution[] resolutions;
+    RefreshRate currentRefreshRate;
 
     void Start()
     {
         Resolution[] allResolutions = Screen.resolutions;
-        var currentRefreshRate = Screen.currentResolution.refreshRateRatio;
+        currentRefreshRate = Screen.currentResolution.refreshRateRatio;
 
-        // Only include resolutions that match the current refresh rate and are close to 16:9.
-        const float targetAspectRatio = 16f / 9f;
-        const float aspectRatioTolerance = 0.01f;
+        // Target list of common 16:9 resolutions to present.
+        (int width, int height)[] targetResolutions = new (int, int)[]
+        {
+            (3840, 2160),
+            (2560, 1440),
+            (1920, 1080),
+            (1600, 900),
+            (1366, 768),
+            (1280, 720),
+        };
 
         List<Resolution> filtered = new List<Resolution>();
-        foreach (var res in allResolutions)
+        foreach (var target in targetResolutions)
         {
-            float aspectRatio = (float)res.width / res.height;
-            if (res.refreshRateRatio.Equals(currentRefreshRate) &&
-                Mathf.Abs(aspectRatio - targetAspectRatio) < aspectRatioTolerance)
+            foreach (var res in allResolutions)
             {
-                filtered.Add(res);
+                if (res.width == target.width &&
+                    res.height == target.height &&
+                    res.refreshRateRatio.Equals(currentRefreshRate))
+                {
+                    filtered.Add(res);
+                    break;
+                }
             }
         }
+
         resolutions = filtered.ToArray();
 
         dropdown.options.Clear();
@@ -50,6 +63,6 @@ public class ResolutionDropdown : MonoBehaviour
 
     void ChangeResolution(int index)
     {
-        Screen.SetResolution(resolutions[index].width, resolutions[index].height, Screen.fullScreen);
+        Screen.SetResolution(resolutions[index].width, resolutions[index].height, Screen.fullScreenMode, currentRefreshRate);
     }
 }
