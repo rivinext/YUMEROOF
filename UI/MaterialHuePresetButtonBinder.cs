@@ -86,17 +86,26 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
 
-            toggleInstance.onValueChanged.AddListener(isOn =>
+        toggleInstance.onValueChanged.AddListener(isOn =>
+        {
+            if (!isOn || presetManager == null)
             {
-                if (!isOn || presetManager == null)
-                {
-                    return;
-                }
+                return;
+            }
 
-                presetManager.SelectedSlotIndex = slotIndex;
-                presetManager.PreviewPreset(slotIndex);
-                UpdateSaveButtonState();
-            });
+            int oldIndex = presetManager.SelectedSlotIndex;
+            if (!presetManager.IsDefaultSlot(oldIndex))
+            {
+                // Save before switching so edits persist even without pressing an explicit save button.
+                // If rapid slot switching causes too many saves, consider debouncing here or surfacing
+                // a "saving" indicator to inform the user.
+                presetManager.SavePreset(oldIndex);
+            }
+
+            presetManager.SelectedSlotIndex = slotIndex;
+            presetManager.PreviewPreset(slotIndex);
+            UpdateSaveButtonState();
+        });
 
         spawnedToggles.Add(toggleInstance);
     }
