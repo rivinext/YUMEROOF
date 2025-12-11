@@ -4,8 +4,6 @@ using System.Collections.Generic;
 // 配置された家具コンポーネント
 public class PlacedFurniture : MonoBehaviour
 {
-    private static readonly int ColorPropertyId = Shader.PropertyToID("_Color");
-
     public FurnitureData furnitureData;    // 家具データ
     public string itemID => furnitureData?.itemID; // アイテムIDへのアクセス
     public bool isSelected = false;        // 選択中か
@@ -17,7 +15,6 @@ public class PlacedFurniture : MonoBehaviour
     private Renderer[] renderers;
     private Collider[] colliders;
     private Material[] originalMaterials;
-    private MaterialPropertyBlock propertyBlock;
 
     // コーナーマーカー用
     public GameObject[] cornerMarkers;     // 四隅のマーカー
@@ -30,7 +27,6 @@ public class PlacedFurniture : MonoBehaviour
     {
         renderers = GetComponentsInChildren<Renderer>();
         colliders = GetComponentsInChildren<Collider>();
-        propertyBlock = new MaterialPropertyBlock();
 
         // 元のマテリアルを保存
         originalMaterials = new Material[renderers.Length];
@@ -88,10 +84,10 @@ public class PlacedFurniture : MonoBehaviour
         if (renderer == null)
             return;
 
-        propertyBlock.Clear();
-        renderer.GetPropertyBlock(propertyBlock);
-        propertyBlock.SetColor(ColorPropertyId, color);
-        renderer.SetPropertyBlock(propertyBlock);
+        // renderer.material は共有マテリアルではなく、このレンダラー用にインスタンス化されたマテリアルを返す
+        // （コーナーマーカーのカラー変更が他オブジェクトに波及しないようにするため）。
+        var material = renderer.material;
+        material.color = color;
     }
 
     // 親家具に追加
