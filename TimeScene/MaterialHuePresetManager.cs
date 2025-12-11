@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -47,6 +48,9 @@ public class MaterialHuePresetManager : MonoBehaviour
     [SerializeField] private int initialPresetIndex = 0;
     [SerializeField] private bool applyFirstDefaultSlot = false;
 
+    [Header("Auto Save")]
+    [SerializeField] private float autoSaveDebounceSeconds = 0.2f;
+
     [Header("Preset Slots")]
     [SerializeField] private List<MaterialHuePresetSlot> presetSlots = new()
     {
@@ -59,6 +63,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     [SerializeField] private int selectedSlotIndex = 0;
 
     private bool hasSavedSelectedSlotThisSession = false;
+    private Coroutine autoSaveCoroutine;
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
@@ -99,8 +104,21 @@ public class MaterialHuePresetManager : MonoBehaviour
         SelectedSlotIndex = ResolveInitialSlotIndex();
     }
 
+    private void OnEnable()
+    {
+        SubscribeToControllers();
+    }
+
     private void OnDisable()
     {
+        UnsubscribeFromControllers();
+
+        if (autoSaveCoroutine != null)
+        {
+            StopCoroutine(autoSaveCoroutine);
+            autoSaveCoroutine = null;
+        }
+
         SaveSelectedSlotIndex();
         SaveSelectedSlotIfNeeded("OnDisable");
     }
@@ -131,6 +149,33 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         Debug.LogWarning($"No saved preset found for slot {slotIndex} on start. Applying default fallback.");
         ApplyDefaultPresetFallback();
+    }
+
+    private void SubscribeToControllers()
+    {
+        foreach (MaterialHueController controller in controllers)
+        {
+            if (controller == null)
+            {
+                continue;
+            }
+
+            controller.OnAppliedColorChanged -= HandleControllerAppliedColorChanged;
+            controller.OnAppliedColorChanged += HandleControllerAppliedColorChanged;
+        }
+    }
+
+    private void UnsubscribeFromControllers()
+    {
+        foreach (MaterialHueController controller in controllers)
+        {
+            if (controller == null)
+            {
+                continue;
+            }
+
+            controller.OnAppliedColorChanged -= HandleControllerAppliedColorChanged;
+        }
     }
 
     public MaterialHueSaveData GetSaveData()
@@ -359,6 +404,42 @@ public class MaterialHuePresetManager : MonoBehaviour
         {
             SavePreset(clampedSlot);
         }
+    }
+
+    private void HandleControllerAppliedColorChanged(MaterialHueController controller)
+    {
+        int slotIndex = SelectedSlotIndex;
+
+        if (IsDefaultSlot(slotIndex))
+        {
+            return;
+        }
+
+        if (autoSaveDebounceSeconds <= 0f)
+        {
+            SavePreset(slotIndex);
+            return;
+        }
+
+        if (autoSaveCoroutine != null)
+        {
+            StopCoroutine(autoSaveCoroutine);
+        }
+
+        autoSaveCoroutine = StartCoroutine(DebouncedAutoSave());
+    }
+
+    private IEnumerator DebouncedAutoSave()
+    {
+        yield return new WaitForSeconds(autoSaveDebounceSeconds);
+
+        int slotIndex = SelectedSlotIndex;
+        if (!IsDefaultSlot(slotIndex))
+        {
+            SavePreset(slotIndex);
+        }
+
+        autoSaveCoroutine = null;
     }
 
     private bool TryValidateSlot(int slotIndex, out int validSlotIndex)
