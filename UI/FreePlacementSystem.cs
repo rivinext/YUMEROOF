@@ -600,11 +600,6 @@ public class FreePlacementSystem : MonoBehaviour
 
         isMovingFurniture = true;
 
-        if (EnsurePlayerControl())
-        {
-            playerControl.DisableControl();
-        }
-
         SetUiSoundMuted(true);
 
         previewObject = furniture.gameObject;
@@ -646,10 +641,6 @@ public class FreePlacementSystem : MonoBehaviour
         CreateCornerMarkers(placedComp);
         placedComp.SetSelected(true);
 
-        if (EnsurePlayerControl())
-        {
-            playerControl.DisableControl();
-        }
     }
 
     void UpdateFurniturePosition()
