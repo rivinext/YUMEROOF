@@ -12,10 +12,16 @@ public class ResolutionDropdown : MonoBehaviour
         Resolution[] allResolutions = Screen.resolutions;
         var currentRefreshRate = Screen.currentResolution.refreshRateRatio;
 
+        // Only include resolutions that match the current refresh rate and are close to 16:9.
+        const float targetAspectRatio = 16f / 9f;
+        const float aspectRatioTolerance = 0.01f;
+
         List<Resolution> filtered = new List<Resolution>();
         foreach (var res in allResolutions)
         {
-            if (res.refreshRateRatio.Equals(currentRefreshRate))
+            float aspectRatio = (float)res.width / res.height;
+            if (res.refreshRateRatio.Equals(currentRefreshRate) &&
+                Mathf.Abs(aspectRatio - targetAspectRatio) < aspectRatioTolerance)
             {
                 filtered.Add(res);
             }
