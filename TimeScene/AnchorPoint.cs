@@ -17,13 +17,13 @@ public class AnchorPoint : MonoBehaviour
 
     void Awake()
     {
-        gameObject.layer = LayerMask.NameToLayer("Anchor");
+        ApplyAnchorLayer();
         SetupCollider();
     }
 
     void OnValidate()
     {
-        gameObject.layer = LayerMask.NameToLayer("Anchor");
+        ApplyAnchorLayer();
         SetupCollider();
     }
 
@@ -45,6 +45,24 @@ public class AnchorPoint : MonoBehaviour
     public void SetOccupied(bool value)
     {
         IsOccupied = value;
+    }
+
+    void ApplyAnchorLayer()
+    {
+        int anchorLayer = LayerMask.NameToLayer("Anchor");
+
+        if (anchorLayer < 0)
+        {
+            Debug.LogWarning("[AnchorPoint] 'Anchor' layer is not defined. Assigning to Default layer to keep anchors functional.");
+            anchorLayer = LayerMask.NameToLayer("Default");
+
+            if (anchorLayer < 0)
+            {
+                anchorLayer = 0; // Default layer should exist, but fall back to 0 just in case
+            }
+        }
+
+        gameObject.layer = anchorLayer;
     }
 
     private void OnDrawGizmos()
