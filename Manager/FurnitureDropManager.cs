@@ -12,9 +12,7 @@ public class FurnitureDropManager : MonoBehaviour
 
     [SerializeField] private float spawnRadius = 1f;
     [SerializeField] private float spawnYOffset = 1f;
-    [SerializeField] private string dropPrefabPath = "Materials/DropMaterial";
-
-    private GameObject dropPrefab;
+    [SerializeField] private GameObject dropPrefab;
     private GameClock clock;
     private Coroutine clockRetryCoroutine;
     private int lastProcessedDay = -1;
@@ -29,14 +27,9 @@ public class FurnitureDropManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        dropPrefab = Resources.Load<GameObject>(dropPrefabPath);
-        if (dropPrefab != null)
+        if (dropPrefab == null)
         {
-            Debug.Log($"[FurnitureDropManager] Successfully loaded drop prefab at Resources/{dropPrefabPath}");
-        }
-        else
-        {
-            Debug.LogError($"[FurnitureDropManager] Drop prefab not found at Resources/{dropPrefabPath}");
+            Debug.LogError("[FurnitureDropManager] Drop prefab is not assigned in the inspector.");
         }
     }
 
