@@ -13,6 +13,7 @@ namespace Yume
         [SerializeField] private int superSize = 1;
         [SerializeField] private string fileNamePrefix = "screenshot";
         [SerializeField] private LayerMask additionalExcludedLayers;
+        [SerializeField] private string customBasePath = string.Empty;
 
         private void Awake()
         {
@@ -103,19 +104,76 @@ namespace Yume
 
             var bytes = texture.EncodeToPNG();
             var fileName = string.Format("{0}_{1:yyyyMMdd_HHmmss}.png", fileNamePrefix, DateTime.Now);
-            var path = Path.Combine(Application.persistentDataPath, fileName);
-            File.WriteAllBytes(path, bytes);
 
-            foreach (var canvas in hiddenCanvases)
+            var basePath = ResolveBasePath();
+            var path = Path.Combine(basePath, fileName);
+
+            Debug.Log($"Resolved screenshot path: {path}");
+
+            try
             {
-                if (canvas != null)
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory))
                 {
-                    canvas.enabled = true;
+                    Directory.CreateDirectory(directory);
+                }
+
+                File.WriteAllBytes(path, bytes);
+                Debug.Log($"Screenshot saved to: {path}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Failed to save screenshot to {path}: {ex.Message}");
+            }
+            finally
+            {
+                foreach (var canvas in hiddenCanvases)
+                {
+                    if (canvas != null)
+                    {
+                        canvas.enabled = true;
+                    }
+                }
+
+                Destroy(texture);
+            }
+        }
+
+        private string ResolveBasePath()
+        {
+            string basePath;
+
+            if (!string.IsNullOrWhiteSpace(customBasePath))
+            {
+                basePath = customBasePath;
+            }
+            else
+            {
+                switch (Application.platform)
+                {
+                    case RuntimePlatform.WindowsPlayer:
+                    case RuntimePlatform.WindowsEditor:
+                        var userProfile = Environment.GetEnvironmentVariable("USERPROFILE");
+                        if (string.IsNullOrWhiteSpace(userProfile))
+                        {
+                            return Application.persistentDataPath;
+                        }
+
+                        basePath = Path.Combine(userProfile, "Pictures", "Screenshots");
+                        break;
+                    default:
+                        return Application.persistentDataPath;
                 }
             }
 
-            Destroy(texture);
-            Debug.Log($"Screenshot saved to: {path}");
+            basePath = Environment.ExpandEnvironmentVariables(basePath);
+
+            if (string.IsNullOrWhiteSpace(basePath))
+            {
+                return Application.persistentDataPath;
+            }
+
+            return basePath;
         }
     }
 }
