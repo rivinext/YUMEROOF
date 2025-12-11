@@ -58,6 +58,8 @@ public class MaterialHuePresetManager : MonoBehaviour
     [Header("Selection")]
     [SerializeField] private int selectedSlotIndex = 0;
 
+    private bool hasSavedSelectedSlotThisSession = false;
+
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
     private string SelectedSlotKey => $"{keyPrefix}_selectedSlot";
@@ -87,6 +89,7 @@ public class MaterialHuePresetManager : MonoBehaviour
             }
 
             selectedSlotIndex = clampedIndex;
+            hasSavedSelectedSlotThisSession = false;
             SaveSelectedSlotIndex();
         }
     }
@@ -99,11 +102,13 @@ public class MaterialHuePresetManager : MonoBehaviour
     private void OnDisable()
     {
         SaveSelectedSlotIndex();
+        SaveSelectedSlotIfNeeded("OnDisable");
     }
 
     private void OnApplicationQuit()
     {
         SaveSelectedSlotIndex();
+        SaveSelectedSlotIfNeeded("OnApplicationQuit");
     }
 
     private void Start()
@@ -175,6 +180,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         PlayerPrefs.Save();
+        hasSavedSelectedSlotThisSession = clampedSlot == SelectedSlotIndex;
         Debug.Log($"Saved preset slot {clampedSlot}");
     }
 
@@ -246,6 +252,26 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         PlayerPrefs.SetInt(SelectedSlotKey, SelectedSlotIndex);
         PlayerPrefs.Save();
+    }
+
+    private void SaveSelectedSlotIfNeeded(string triggerLabel)
+    {
+        int slotIndex = SelectedSlotIndex;
+
+        if (IsDefaultSlot(slotIndex))
+        {
+            Debug.Log($"Auto-save skipped on {triggerLabel}: selected slot {slotIndex} is default.");
+            return;
+        }
+
+        if (hasSavedSelectedSlotThisSession)
+        {
+            Debug.Log($"Auto-save skipped on {triggerLabel}: slot {slotIndex} was already saved this session.");
+            return;
+        }
+
+        Debug.Log($"Auto-saving preset slot {slotIndex} on {triggerLabel}.");
+        SavePreset(slotIndex);
     }
 
     private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
