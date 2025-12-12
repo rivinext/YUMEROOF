@@ -153,10 +153,14 @@ public class SaveGameManager : MonoBehaviour
 
     string GetSaveDirectory()
     {
+#if UNITY_EDITOR
+        string versionFolder = "editor";
+#else
 #if DEMO_VERSION
         string versionFolder = "demo";
 #else
         string versionFolder = "release";
+#endif
 #endif
         string directory = Path.Combine(Application.persistentDataPath, versionFolder);
         if (!Directory.Exists(directory))
