@@ -45,6 +45,7 @@ public class StorySaveData : BaseSaveData
     public MaterialHueSaveData materialHue;
     public IndependentMaterialColorSaveData independentMaterialColors;
     public List<WardrobeSelectionSaveEntry> wardrobeSelections = new();
+    public bool hasWardrobeSelections;
 
     public static StorySaveData FromJson(string json)
     {
@@ -66,6 +67,7 @@ public class CreativeSaveData : BaseSaveData
     public MaterialHueSaveData materialHue;
     public IndependentMaterialColorSaveData independentMaterialColors;
     public List<WardrobeSelectionSaveEntry> wardrobeSelections = new();
+    public bool hasWardrobeSelections;
 
     public static CreativeSaveData FromJson(string json)
     {
