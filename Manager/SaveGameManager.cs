@@ -131,6 +131,7 @@ public class SaveGameManager : MonoBehaviour
         if (changed && !string.IsNullOrEmpty(slotKey))
         {
             OnSlotKeyChanged?.Invoke(slotKey);
+            MaterialHuePresetManager.EnsureAllManagersInitialized();
         }
     }
 
@@ -461,20 +462,7 @@ public class SaveGameManager : MonoBehaviour
 
     void ApplyHuePresets(MaterialHueSaveData data)
     {
-        var huePresetManager = FindFirstObjectByType<MaterialHuePresetManager>();
-        if (huePresetManager == null)
-        {
-            return;
-        }
-
-        if (data != null)
-        {
-            huePresetManager.ApplyFromSaveData(data);
-        }
-        else
-        {
-            huePresetManager.ApplyDefaultPresetFallback();
-        }
+        MaterialHuePresetManager.ApplySaveDataToAllManagers(data);
     }
 
     void ApplyInventory(List<string> items)

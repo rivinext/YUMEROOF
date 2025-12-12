@@ -66,7 +66,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool hasSavedSelectedSlotThisSession = false;
     private Coroutine autoSaveCoroutine;
     private bool isWaitingForSlotKey = false;
-    private bool pendingInitialLoad = false;
+    private bool pendingInitialLoad = true;
     private bool hasPendingSaveData = false;
     private MaterialHueSaveData pendingSaveData;
 
@@ -111,6 +111,8 @@ public class MaterialHuePresetManager : MonoBehaviour
         {
             selectedSlotIndex = Mathf.Clamp(initialPresetIndex, 0, SlotCount - 1);
         }
+
+        pendingInitialLoad = true;
     }
 
     private void OnEnable()
@@ -141,14 +143,20 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void Start()
     {
-        if (hasAppliedSaveData)
+        EnsureInitialLoadWhenReady();
+    }
+
+    public void EnsureInitialLoadWhenReady()
+    {
+        if (hasAppliedSaveData || !pendingInitialLoad)
         {
             return;
         }
 
+        pendingInitialLoad = true;
+
         if (!IsSaveSlotReady())
         {
-            pendingInitialLoad = true;
             WaitForSaveSlotKey();
             return;
         }
@@ -156,11 +164,41 @@ public class MaterialHuePresetManager : MonoBehaviour
         PerformInitialLoad();
     }
 
+    public static void EnsureAllManagersInitialized()
+    {
+        foreach (MaterialHuePresetManager manager in Resources.FindObjectsOfTypeAll<MaterialHuePresetManager>())
+        {
+            if (manager == null)
+            {
+                continue;
+            }
+
+            manager.EnsureInitialLoadWhenReady();
+        }
+    }
+
+    public static void ApplySaveDataToAllManagers(MaterialHueSaveData data)
+    {
+        foreach (MaterialHuePresetManager manager in Resources.FindObjectsOfTypeAll<MaterialHuePresetManager>())
+        {
+            if (manager == null)
+            {
+                continue;
+            }
+
+            manager.ApplyFromSaveData(data);
+        }
+    }
+
     private void PerformInitialLoad()
     {
+        if (hasAppliedSaveData || !pendingInitialLoad)
+        {
+            return;
+        }
+
         if (!IsSaveSlotReady())
         {
-            pendingInitialLoad = true;
             WaitForSaveSlotKey();
             return;
         }
@@ -435,6 +473,11 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     public void ApplyFromSaveData(MaterialHueSaveData data)
     {
+        if (hasAppliedSaveData && !pendingInitialLoad)
+        {
+            return;
+        }
+
         if (!IsSaveSlotReady())
         {
             pendingSaveData = data;
