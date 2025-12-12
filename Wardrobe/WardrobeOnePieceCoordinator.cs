@@ -61,6 +61,7 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
 
     private void Start()
     {
+        InitializeHasWardrobeSaveFromCurrentSlot();
         RebuildItemLookup();
         ApplyInitialEquipment();
     }
@@ -128,6 +129,40 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
     public void SetHasWardrobeSave(bool value)
     {
         hasWardrobeSave = value;
+    }
+
+    private void InitializeHasWardrobeSaveFromCurrentSlot()
+    {
+        try
+        {
+            SaveGameManager saveGameManager = SaveGameManager.Instance;
+            if (saveGameManager == null)
+            {
+                return;
+            }
+
+            string slotKey = saveGameManager.CurrentSlotKey;
+            if (string.IsNullOrEmpty(slotKey))
+            {
+                return;
+            }
+
+            BaseSaveData metadata = saveGameManager.LoadMetadata(slotKey);
+            if (metadata is StorySaveData storyData)
+            {
+                SetHasWardrobeSave(storyData.hasWardrobeSelections);
+                return;
+            }
+
+            if (metadata is CreativeSaveData creativeData)
+            {
+                SetHasWardrobeSave(creativeData.hasWardrobeSelections);
+            }
+        }
+        catch
+        {
+            // Do not log errors to avoid noisy startup when metadata is unavailable.
+        }
     }
 
     private void ApplyInitialEquipmentForCategory(WardrobeTabType category, string itemId)
