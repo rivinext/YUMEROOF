@@ -19,6 +19,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
     private readonly Dictionary<string, IndependentMaterialColorSaveData> independentColorSaveCache = new();
+    private readonly Dictionary<string, List<WardrobeSelectionSaveEntry>> wardrobeSelectionCacheBySlot = new(StringComparer.Ordinal);
     public static SaveGameManager Instance
     {
         get
@@ -327,11 +328,11 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeSelections = CollectWardrobeSelectionsWithFallback();
-        if (wardrobeSelections != null)
+        var wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out bool hasWardrobeSelections);
+        data.hasWardrobeSelections = hasWardrobeSelections;
+        if (hasWardrobeSelections)
         {
             data.wardrobeSelections = wardrobeSelections;
-            data.hasWardrobeSelections = true;
         }
 
         var huePresetManagers = FindObjectsOfType<MaterialHuePresetManager>(includeInactive: true);
@@ -383,11 +384,11 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        wardrobeSelections = CollectWardrobeSelectionsWithFallback();
-        if (wardrobeSelections != null)
+        wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out bool hasWardrobeSelections);
+        data.hasWardrobeSelections = hasWardrobeSelections;
+        if (hasWardrobeSelections)
         {
             data.wardrobeSelections = wardrobeSelections;
-            data.hasWardrobeSelections = true;
         }
 
         var huePresetManagers = FindObjectsOfType<MaterialHuePresetManager>(includeInactive: true);
@@ -412,12 +413,48 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
     }
 
-    List<WardrobeSelectionSaveEntry> CollectWardrobeSelectionsWithFallback()
+    List<WardrobeSelectionSaveEntry> CollectWardrobeSelectionsForCurrentSlot(out bool hasWardrobeSelections)
+    {
+        string slotKey = CurrentSlotKey;
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            hasWardrobeSelections = false;
+            return null;
+        }
+
+        var selections = CollectWardrobeSelectionsWithFallback(slotKey);
+        hasWardrobeSelections = selections != null;
+        if (hasWardrobeSelections)
+        {
+            CacheWardrobeSelectionsForSlot(slotKey, selections);
+        }
+
+        return selections;
+    }
+
+    void CacheWardrobeSelectionsForSlot(string slotKey, List<WardrobeSelectionSaveEntry> selections)
+    {
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            return;
+        }
+
+        if (selections == null)
+        {
+            wardrobeSelectionCacheBySlot.Remove(slotKey);
+            return;
+        }
+
+        wardrobeSelectionCacheBySlot[slotKey] = new List<WardrobeSelectionSaveEntry>(selections);
+    }
+
+    List<WardrobeSelectionSaveEntry> CollectWardrobeSelectionsWithFallback(string slotKey)
     {
         var wardrobeController = FindObjectsOfType<WardrobeUIController>(includeInactive: true).FirstOrDefault();
         if (wardrobeController != null)
         {
-            return new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
+            wardrobeController.SetCurrentSlotKey(slotKey);
+            return new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries(slotKey));
         }
 
         return GenerateWardrobeSelectionsFromPlayerState();
@@ -436,7 +473,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         var playerWardrobe = player.GetComponentInChildren<WardrobeUIController>(true);
         if (playerWardrobe != null)
         {
-            entries.AddRange(playerWardrobe.GetSelectionSaveEntries());
+            playerWardrobe.SetCurrentSlotKey(CurrentSlotKey);
+            entries.AddRange(playerWardrobe.GetSelectionSaveEntries(CurrentSlotKey));
             return entries;
         }
 
@@ -547,7 +585,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyIndependentMaterialColors(data.independentMaterialColors);
-        ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
+        ApplyWardrobeSelections(CurrentSlotKey, data.wardrobeSelections, data.hasWardrobeSelections);
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -582,7 +620,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyIndependentMaterialColors(data.independentMaterialColors);
-        ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
+        ApplyWardrobeSelections(CurrentSlotKey, data.wardrobeSelections, data.hasWardrobeSelections);
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)
@@ -595,12 +633,14 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         SetIndependentColorDataForSlot(CurrentSlotKey, data);
     }
 
-    void ApplyWardrobeSelections(List<WardrobeSelectionSaveEntry> selections, bool hasWardrobeSelections)
+    void ApplyWardrobeSelections(string slotKey, List<WardrobeSelectionSaveEntry> selections, bool hasWardrobeSelections)
     {
-        if (!hasWardrobeSelections)
+        if (!hasWardrobeSelections || string.IsNullOrEmpty(slotKey))
         {
             return;
         }
+
+        CacheWardrobeSelectionsForSlot(slotKey, selections);
 
         var onePieceCoordinator = FindFirstObjectByType<WardrobeOnePieceCoordinator>(FindObjectsInactive.Include);
         if (onePieceCoordinator != null)
@@ -619,12 +659,17 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             StopCoroutine(wardrobeSelectionRoutine);
         }
 
-        wardrobeSelectionRoutine = StartCoroutine(ApplyWardrobeSelectionsRoutine(wardrobeController, selections));
+        if (!string.Equals(CurrentSlotKey, slotKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        wardrobeSelectionRoutine = StartCoroutine(ApplyWardrobeSelectionsRoutine(wardrobeController, slotKey, selections));
     }
 
     private Coroutine wardrobeSelectionRoutine;
 
-    private IEnumerator ApplyWardrobeSelectionsRoutine(WardrobeUIController controller, List<WardrobeSelectionSaveEntry> selections)
+    private IEnumerator ApplyWardrobeSelectionsRoutine(WardrobeUIController controller, string slotKey, List<WardrobeSelectionSaveEntry> selections)
     {
         while (controller != null && !controller.IsInitialized)
         {
@@ -635,7 +680,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         if (controller != null && controller.isActiveAndEnabled)
         {
-            controller.ApplySelectionEntries(selections);
+            controller.SetCurrentSlotKey(slotKey);
+            controller.ApplySelectionEntries(selections, slotKey);
         }
     }
 

@@ -231,17 +231,62 @@ public class WardrobeUIController : MonoBehaviour
     private void OnEnable()
     {
         onItemEquipped.AddListener(HandleEquipmentEquipped);
+        SubscribeSlotChangeEvents();
     }
 
     private void OnDisable()
     {
         onItemEquipped.RemoveListener(HandleEquipmentEquipped);
+        UnsubscribeSlotChangeEvents();
+        StopEquipmentSaveRoutine();
+    }
 
-        if (equipmentSaveRoutine != null)
+    private void SubscribeSlotChangeEvents()
+    {
+        try
         {
-            StopCoroutine(equipmentSaveRoutine);
-            equipmentSaveRoutine = null;
+            SaveGameManager manager = SaveGameManager.Instance;
+            if (manager != null)
+            {
+                manager.OnSlotKeyChanged -= HandleSlotKeyChanged;
+                manager.OnSlotKeyChanged += HandleSlotKeyChanged;
+
+                if (!string.IsNullOrEmpty(manager.CurrentSlotKey) && string.IsNullOrEmpty(currentSlotKey))
+                {
+                    currentSlotKey = NormalizeSlotKey(manager.CurrentSlotKey);
+                }
+            }
         }
+        catch
+        {
+            // Ignore initialization errors when the save manager is not available yet.
+        }
+    }
+
+    private void UnsubscribeSlotChangeEvents()
+    {
+        try
+        {
+            SaveGameManager manager = SaveGameManager.Instance;
+            if (manager != null)
+            {
+                manager.OnSlotKeyChanged -= HandleSlotKeyChanged;
+            }
+        }
+        catch
+        {
+            // Ignore shutdown errors when the save manager is not available anymore.
+        }
+    }
+
+    private void HandleSlotKeyChanged(string slotKey)
+    {
+        if (string.Equals(currentSlotKey, NormalizeSlotKey(slotKey), StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        SetCurrentSlotKey(slotKey);
     }
 
     private void Start()
@@ -249,6 +294,76 @@ public class WardrobeUIController : MonoBehaviour
         EnsureAnyTabIsActive();
 
         MarkInitialized();
+    }
+
+    public void SetCurrentSlotKey(string slotKey)
+    {
+        string normalizedKey = NormalizeSlotKey(slotKey);
+        if (string.Equals(currentSlotKey, normalizedKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        ResetEquippedItemsForSlotChange();
+        currentSlotKey = normalizedKey;
+        ApplyPendingSelectionsForCurrentSlot();
+    }
+
+    private static string NormalizeSlotKey(string slotKey)
+    {
+        return string.IsNullOrEmpty(slotKey) ? string.Empty : slotKey;
+    }
+
+    private bool IsSlotContextMatching(string slotKey)
+    {
+        return string.Equals(currentSlotKey, NormalizeSlotKey(slotKey), StringComparison.Ordinal);
+    }
+
+    private void StopEquipmentSaveRoutine()
+    {
+        if (equipmentSaveRoutine != null)
+        {
+            StopCoroutine(equipmentSaveRoutine);
+            equipmentSaveRoutine = null;
+        }
+    }
+
+    private void ResetEquippedItemsForSlotChange()
+    {
+        StopEquipmentSaveRoutine();
+
+        foreach (var set in previewEquippedInstances.Values)
+        {
+            set?.DestroyAll(DestroyInstance);
+        }
+
+        previewEquippedInstances.Clear();
+
+        foreach (var set in gameEquippedInstances.Values)
+        {
+            set?.DestroyAll(DestroyInstance);
+        }
+
+        gameEquippedInstances.Clear();
+        activeSelections.Clear();
+        UpdateDescription(null);
+    }
+
+    private void ApplyPendingSelectionsForCurrentSlot()
+    {
+        if (!isInitialized)
+        {
+            return;
+        }
+
+        if (!pendingSelectionEntriesBySlot.TryGetValue(currentSlotKey, out var pendingEntries) || pendingEntries == null || pendingEntries.Count == 0)
+        {
+            return;
+        }
+
+        List<WardrobeSelectionSaveEntry> bufferedSelections = new List<WardrobeSelectionSaveEntry>(pendingEntries);
+        pendingSelectionEntriesBySlot.Remove(currentSlotKey);
+        ApplySelectionEntries(bufferedSelections, currentSlotKey);
     }
 
     private void OnDestroy()
@@ -296,6 +411,7 @@ public class WardrobeUIController : MonoBehaviour
     public bool IsOpen => IsShown;
     public bool IsInitialized => isInitialized;
     public UnityEvent OnInitialized => onInitialized;
+    public string CurrentSlotKey => currentSlotKey;
 
     public void ShowPanel(bool instant = false)
     {
@@ -618,7 +734,8 @@ public class WardrobeUIController : MonoBehaviour
 
     private static readonly List<ExtractedPart> s_extractedPartsBuffer = new List<ExtractedPart>();
     private static readonly Dictionary<string, ExtractedPart> s_extractedPartsLookup = new Dictionary<string, ExtractedPart>();
-    private readonly List<WardrobeSelectionSaveEntry> pendingSelectionEntries = new List<WardrobeSelectionSaveEntry>();
+    private readonly Dictionary<string, List<WardrobeSelectionSaveEntry>> pendingSelectionEntriesBySlot = new Dictionary<string, List<WardrobeSelectionSaveEntry>>(StringComparer.Ordinal);
+    private string currentSlotKey = string.Empty;
     private bool isInitialized;
 
     private static bool TryResolvePartNameFromTransform(Transform transform, out string partName)
@@ -1136,18 +1253,23 @@ public class WardrobeUIController : MonoBehaviour
 
         isInitialized = true;
 
-        if (pendingSelectionEntries.Count > 0)
-        {
-            List<WardrobeSelectionSaveEntry> bufferedSelections = new List<WardrobeSelectionSaveEntry>(pendingSelectionEntries);
-            pendingSelectionEntries.Clear();
-            ApplySelectionEntries(bufferedSelections);
-        }
+        ApplyPendingSelectionsForCurrentSlot();
 
         onInitialized?.Invoke();
     }
 
     public IEnumerable<WardrobeSelectionSaveEntry> GetSelectionSaveEntries()
     {
+        return GetSelectionSaveEntries(currentSlotKey);
+    }
+
+    public IEnumerable<WardrobeSelectionSaveEntry> GetSelectionSaveEntries(string slotKey)
+    {
+        if (!IsSlotContextMatching(slotKey))
+        {
+            return Array.Empty<WardrobeSelectionSaveEntry>();
+        }
+
         List<WardrobeSelectionSaveEntry> entries = new List<WardrobeSelectionSaveEntry>();
         foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
         {
@@ -1167,9 +1289,20 @@ public class WardrobeUIController : MonoBehaviour
 
     public void ApplySelectionEntries(IEnumerable<WardrobeSelectionSaveEntry> selections)
     {
+        ApplySelectionEntries(selections, currentSlotKey);
+    }
+
+    public void ApplySelectionEntries(IEnumerable<WardrobeSelectionSaveEntry> selections, string slotKey)
+    {
+        if (!IsSlotContextMatching(slotKey))
+        {
+            BufferSelections(selections, slotKey);
+            return;
+        }
+
         if (!isInitialized)
         {
-            BufferSelections(selections);
+            BufferSelections(selections, slotKey);
             return;
         }
 
@@ -1190,9 +1323,19 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
-    private void BufferSelections(IEnumerable<WardrobeSelectionSaveEntry> selections)
+    private void BufferSelections(IEnumerable<WardrobeSelectionSaveEntry> selections, string slotKey)
     {
-        pendingSelectionEntries.Clear();
+        string normalizedSlotKey = NormalizeSlotKey(slotKey);
+        List<WardrobeSelectionSaveEntry> pendingList;
+        if (!pendingSelectionEntriesBySlot.TryGetValue(normalizedSlotKey, out pendingList) || pendingList == null)
+        {
+            pendingList = new List<WardrobeSelectionSaveEntry>();
+            pendingSelectionEntriesBySlot[normalizedSlotKey] = pendingList;
+        }
+        else
+        {
+            pendingList.Clear();
+        }
 
         if (selections == null)
         {
@@ -1201,7 +1344,7 @@ public class WardrobeUIController : MonoBehaviour
 
         foreach (WardrobeSelectionSaveEntry entry in selections)
         {
-            pendingSelectionEntries.Add(entry);
+            pendingList.Add(entry);
         }
     }
 
