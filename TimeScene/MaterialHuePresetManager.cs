@@ -636,6 +636,12 @@ public class MaterialHuePresetManager : MonoBehaviour
             return true;
         }
 
+        bool hasSaveSlotKey = !string.IsNullOrWhiteSpace(SaveGameManager.Instance?.CurrentSlotKey);
+        if (hasSaveSlotKey)
+        {
+            return false;
+        }
+
         return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
     }
 
