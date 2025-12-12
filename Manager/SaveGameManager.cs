@@ -382,7 +382,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        wardrobeSelections = CollectWardrobeSelectionsWithFallback();
+        var wardrobeSelections = CollectWardrobeSelectionsWithFallback();
         if (wardrobeSelections != null)
         {
             data.wardrobeSelections = wardrobeSelections;
