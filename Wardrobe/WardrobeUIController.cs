@@ -38,6 +38,7 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private AudioSource toggleButtonAudioSource;
     [SerializeField] private AudioSource closeButtonAudioSource;
     [SerializeField] private float equipmentSaveCooldownSeconds = 0.5f;
+    [SerializeField] private UnityEvent onInitialized = new UnityEvent();
 
     [Serializable]
     private class CategoryTab
@@ -223,6 +224,8 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         ClearLegacySavedSelections();
+
+        MarkInitialized();
     }
 
     private void OnEnable()
@@ -244,6 +247,8 @@ public class WardrobeUIController : MonoBehaviour
     private void Start()
     {
         EnsureAnyTabIsActive();
+
+        MarkInitialized();
     }
 
     private void OnDestroy()
@@ -289,6 +294,8 @@ public class WardrobeUIController : MonoBehaviour
     }
 
     public bool IsOpen => IsShown;
+    public bool IsInitialized => isInitialized;
+    public UnityEvent OnInitialized => onInitialized;
 
     public void ShowPanel(bool instant = false)
     {
@@ -611,6 +618,8 @@ public class WardrobeUIController : MonoBehaviour
 
     private static readonly List<ExtractedPart> s_extractedPartsBuffer = new List<ExtractedPart>();
     private static readonly Dictionary<string, ExtractedPart> s_extractedPartsLookup = new Dictionary<string, ExtractedPart>();
+    private readonly List<WardrobeSelectionSaveEntry> pendingSelectionEntries = new List<WardrobeSelectionSaveEntry>();
+    private bool isInitialized;
 
     private static bool TryResolvePartNameFromTransform(Transform transform, out string partName)
     {
@@ -1118,6 +1127,25 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
+    private void MarkInitialized()
+    {
+        if (isInitialized)
+        {
+            return;
+        }
+
+        isInitialized = true;
+
+        if (pendingSelectionEntries.Count > 0)
+        {
+            List<WardrobeSelectionSaveEntry> bufferedSelections = new List<WardrobeSelectionSaveEntry>(pendingSelectionEntries);
+            pendingSelectionEntries.Clear();
+            ApplySelectionEntries(bufferedSelections);
+        }
+
+        onInitialized?.Invoke();
+    }
+
     public IEnumerable<WardrobeSelectionSaveEntry> GetSelectionSaveEntries()
     {
         List<WardrobeSelectionSaveEntry> entries = new List<WardrobeSelectionSaveEntry>();
@@ -1139,6 +1167,12 @@ public class WardrobeUIController : MonoBehaviour
 
     public void ApplySelectionEntries(IEnumerable<WardrobeSelectionSaveEntry> selections)
     {
+        if (!isInitialized)
+        {
+            BufferSelections(selections);
+            return;
+        }
+
         Dictionary<WardrobeTabType, string> lookup = new Dictionary<WardrobeTabType, string>();
         if (selections != null)
         {
@@ -1156,6 +1190,21 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
+    private void BufferSelections(IEnumerable<WardrobeSelectionSaveEntry> selections)
+    {
+        pendingSelectionEntries.Clear();
+
+        if (selections == null)
+        {
+            return;
+        }
+
+        foreach (WardrobeSelectionSaveEntry entry in selections)
+        {
+            pendingSelectionEntries.Add(entry);
+        }
+    }
+
     private void ApplySelection(WardrobeTabType category, string itemId)
     {
         if (string.IsNullOrEmpty(itemId))
@@ -1170,6 +1219,11 @@ public class WardrobeUIController : MonoBehaviour
         {
             EquipItem(category, itemView.WearablePrefab, itemView);
             return;
+        }
+
+        if (isInitialized)
+        {
+            Debug.LogWarning($"[WardrobeUIController] ItemView for category {category} with itemId '{itemId}' was not found after catalog initialization.");
         }
 
         WardrobeItemView fallbackEmpty = FindItemView(category, null);
