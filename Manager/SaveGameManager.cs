@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
@@ -608,9 +609,33 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         var wardrobeController = FindFirstObjectByType<WardrobeUIController>(FindObjectsInactive.Include);
-        if (wardrobeController != null)
+        if (wardrobeController == null)
         {
-            wardrobeController.ApplySelectionEntries(selections);
+            return;
+        }
+
+        if (wardrobeSelectionRoutine != null)
+        {
+            StopCoroutine(wardrobeSelectionRoutine);
+        }
+
+        wardrobeSelectionRoutine = StartCoroutine(ApplyWardrobeSelectionsRoutine(wardrobeController, selections));
+    }
+
+    private Coroutine wardrobeSelectionRoutine;
+
+    private IEnumerator ApplyWardrobeSelectionsRoutine(WardrobeUIController controller, List<WardrobeSelectionSaveEntry> selections)
+    {
+        while (controller != null && !controller.IsInitialized)
+        {
+            yield return null;
+        }
+
+        wardrobeSelectionRoutine = null;
+
+        if (controller != null && controller.isActiveAndEnabled)
+        {
+            controller.ApplySelectionEntries(selections);
         }
     }
 
