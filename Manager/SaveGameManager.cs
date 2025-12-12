@@ -326,10 +326,10 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeController = FindObjectsOfType<WardrobeUIController>(includeInactive: true).FirstOrDefault();
-        if (wardrobeController != null)
+        var wardrobeSelections = CollectWardrobeSelectionsWithFallback();
+        if (wardrobeSelections != null)
         {
-            data.wardrobeSelections = new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
+            data.wardrobeSelections = wardrobeSelections;
             data.hasWardrobeSelections = true;
         }
 
@@ -382,10 +382,10 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(FindObjectsInactive.Include);
-        if (wardrobeController != null)
+        wardrobeSelections = CollectWardrobeSelectionsWithFallback();
+        if (wardrobeSelections != null)
         {
-            data.wardrobeSelections = new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
+            data.wardrobeSelections = wardrobeSelections;
             data.hasWardrobeSelections = true;
         }
 
@@ -409,6 +409,46 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
+    }
+
+    List<WardrobeSelectionSaveEntry> CollectWardrobeSelectionsWithFallback()
+    {
+        var wardrobeController = FindObjectsOfType<WardrobeUIController>(includeInactive: true).FirstOrDefault();
+        if (wardrobeController != null)
+        {
+            return new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
+        }
+
+        return GenerateWardrobeSelectionsFromPlayerState();
+    }
+
+    List<WardrobeSelectionSaveEntry> GenerateWardrobeSelectionsFromPlayerState()
+    {
+        List<WardrobeSelectionSaveEntry> entries = new();
+
+        var player = FindFirstObjectByType<PlayerManager>();
+        if (player == null)
+        {
+            return entries;
+        }
+
+        var playerWardrobe = player.GetComponentInChildren<WardrobeUIController>(true);
+        if (playerWardrobe != null)
+        {
+            entries.AddRange(playerWardrobe.GetSelectionSaveEntries());
+            return entries;
+        }
+
+        foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
+        {
+            entries.Add(new WardrobeSelectionSaveEntry
+            {
+                category = category,
+                itemId = null
+            });
+        }
+
+        return entries;
     }
 
     void ClearWardrobeData(BaseSaveData data)
