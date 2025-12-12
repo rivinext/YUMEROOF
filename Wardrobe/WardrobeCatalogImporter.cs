@@ -8,7 +8,7 @@ using UnityEngine;
 public static class WardrobeCatalogImporter
 {
     private const string CsvAssetPath = "Assets/Resources/Data/YUME_ROOF - Wardrobe.csv";
-    internal const string CatalogAssetPath = "Assets/Data/ScriptableObjects/Wardrobe/WardrobeCatalog.asset";
+    internal const string CatalogAssetPath = "Assets/Resources/Data/ScriptableObjects/Wardrobe/WardrobeCatalog.asset";
 
     [MenuItem("Tools/Wardrobe/Import Catalog")]
     public static void ImportCatalog()
