@@ -37,9 +37,6 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private AudioSource toggleButtonAudioSource;
     [SerializeField] private AudioSource closeButtonAudioSource;
 
-    private const string SelectionKeyPrefix = "WardrobeSelection_";
-    private const string EmptySelectionToken = "__EMPTY__";
-
     [Serializable]
     private class CategoryTab
     {
@@ -221,7 +218,7 @@ public class WardrobeUIController : MonoBehaviour
             previewController.SetupPreviewEventTrigger();
         }
 
-        RestoreSavedSelections();
+        ClearLegacySavedSelections();
     }
 
     private void Start()
@@ -444,7 +441,6 @@ public class WardrobeUIController : MonoBehaviour
         UpdateSelectionState(category, source);
         onItemEquipped.Invoke(category, newPreviewInstance, source);
         UpdateDescription(source);
-        SaveSelectionState(category, source != null && !source.IsEmpty && !string.IsNullOrEmpty(source.ItemId) ? source.ItemId : null);
     }
 
     private void ApplyLayerRecursively(GameObject target, int layer)
@@ -1083,82 +1079,81 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
-    private string GetSelectionKey(WardrobeTabType category)
+    private void ClearLegacySavedSelections()
     {
-        return SelectionKeyPrefix + category.ToString();
-    }
-
-    public static bool HasSavedSelection(WardrobeTabType category)
-    {
-        string key = SelectionKeyPrefix + category.ToString();
-        return PlayerPrefs.HasKey(key);
-    }
-
-    public static bool HasAnySavedSelections()
-    {
+        bool cleared = false;
         foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
         {
-            if (HasSavedSelection(category))
+            string key = $"WardrobeSelection_{category}";
+            if (PlayerPrefs.HasKey(key))
             {
-                return true;
+                PlayerPrefs.DeleteKey(key);
+                cleared = true;
             }
         }
 
-        return false;
-    }
-
-    private static bool IsEmptySelectionValue(string storedValue)
-    {
-        return string.IsNullOrEmpty(storedValue) || string.Equals(storedValue, EmptySelectionToken, StringComparison.Ordinal);
-    }
-
-    private void SaveSelectionState(WardrobeTabType category, string itemId)
-    {
-        string key = GetSelectionKey(category);
-        string valueToStore = string.IsNullOrEmpty(itemId) ? EmptySelectionToken : itemId;
-
-        bool hasKey = PlayerPrefs.HasKey(key);
-        if (hasKey)
+        if (cleared)
         {
-            string existingValue = PlayerPrefs.GetString(key);
-            if (string.Equals(existingValue, valueToStore, StringComparison.Ordinal))
+            PlayerPrefs.Save();
+        }
+    }
+
+    public IEnumerable<WardrobeSelectionSaveEntry> GetSelectionSaveEntries()
+    {
+        List<WardrobeSelectionSaveEntry> entries = new List<WardrobeSelectionSaveEntry>();
+        foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
+        {
+            WardrobeItemView active;
+            activeSelections.TryGetValue(category, out active);
+            string itemId = active != null && !active.IsEmpty && !string.IsNullOrEmpty(active.ItemId) ? active.ItemId : null;
+
+            entries.Add(new WardrobeSelectionSaveEntry
             {
-                return;
+                category = category,
+                itemId = itemId
+            });
+        }
+
+        return entries;
+    }
+
+    public void ApplySelectionEntries(IEnumerable<WardrobeSelectionSaveEntry> selections)
+    {
+        Dictionary<WardrobeTabType, string> lookup = new Dictionary<WardrobeTabType, string>();
+        if (selections != null)
+        {
+            foreach (WardrobeSelectionSaveEntry entry in selections)
+            {
+                lookup[entry.category] = entry.itemId;
             }
         }
 
-        PlayerPrefs.SetString(key, valueToStore);
-        PlayerPrefs.Save();
-    }
-
-    private void RestoreSavedSelections()
-    {
         foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
         {
-            string key = GetSelectionKey(category);
-            if (!PlayerPrefs.HasKey(key))
-            {
-                continue;
-            }
+            string itemId;
+            lookup.TryGetValue(category, out itemId);
+            ApplySelection(category, itemId);
+        }
+    }
 
-            string storedValue = PlayerPrefs.GetString(key);
-            if (IsEmptySelectionValue(storedValue))
-            {
-                WardrobeItemView emptyView = FindItemView(category, null);
-                EquipItem(category, null, emptyView);
-                continue;
-            }
+    private void ApplySelection(WardrobeTabType category, string itemId)
+    {
+        if (string.IsNullOrEmpty(itemId))
+        {
+            WardrobeItemView emptyView = FindItemView(category, null);
+            EquipItem(category, null, emptyView);
+            return;
+        }
 
-            WardrobeItemView itemView = FindItemViewByItemId(category, storedValue);
-            if (itemView == null)
-            {
-                WardrobeItemView emptyView = FindItemView(category, null);
-                EquipItem(category, null, emptyView);
-                continue;
-            }
-
+        WardrobeItemView itemView = FindItemViewByItemId(category, itemId);
+        if (itemView != null)
+        {
             EquipItem(category, itemView.WearablePrefab, itemView);
+            return;
         }
+
+        WardrobeItemView fallbackEmpty = FindItemView(category, null);
+        EquipItem(category, null, fallbackEmpty);
     }
 
     private WardrobeItemView FindItemViewByItemId(WardrobeTabType category, string targetItemId)

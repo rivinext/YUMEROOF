@@ -44,6 +44,7 @@ public class StorySaveData : BaseSaveData
     public int nature;
     public MaterialHueSaveData materialHue;
     public IndependentMaterialColorSaveData independentMaterialColors;
+    public List<WardrobeSelectionSaveEntry> wardrobeSelections = new();
 
     public static StorySaveData FromJson(string json)
     {
@@ -64,6 +65,7 @@ public class CreativeSaveData : BaseSaveData
     public int nature;
     public MaterialHueSaveData materialHue;
     public IndependentMaterialColorSaveData independentMaterialColors;
+    public List<WardrobeSelectionSaveEntry> wardrobeSelections = new();
 
     public static CreativeSaveData FromJson(string json)
     {
@@ -100,4 +102,11 @@ public class IndependentMaterialColorSaveEntry
 {
     public string identifier;
     public HSVColor color;
+}
+
+[Serializable]
+public class WardrobeSelectionSaveEntry
+{
+    public WardrobeTabType category;
+    public string itemId;
 }

@@ -216,8 +216,12 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             string json = File.ReadAllText(path);
             bool creative = slotKey.StartsWith("Creative", StringComparison.OrdinalIgnoreCase);
-            return creative ? (BaseSaveData)CreativeSaveData.FromJson(json)
-                            : StorySaveData.FromJson(json);
+            BaseSaveData baseData = creative ? (BaseSaveData)CreativeSaveData.FromJson(json)
+                                             : StorySaveData.FromJson(json);
+
+            ApplyWardrobeSelections(ExtractWardrobeSelections(baseData));
+
+            return baseData;
         }
         catch
         {
@@ -341,6 +345,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
+        data.wardrobeSelections = CollectWardrobeSelections();
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -390,6 +395,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
+        data.wardrobeSelections = CollectWardrobeSelections();
     }
 
     List<string> CollectInventory()
@@ -464,6 +470,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyIndependentMaterialColors(data.independentMaterialColors);
+        ApplyWardrobeSelections(data.wardrobeSelections);
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -498,6 +505,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyIndependentMaterialColors(data.independentMaterialColors);
+        ApplyWardrobeSelections(data.wardrobeSelections);
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)
@@ -508,6 +516,46 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     void ApplyIndependentMaterialColors(IndependentMaterialColorSaveData data)
     {
         SetIndependentColorDataForSlot(CurrentSlotKey, data);
+    }
+
+    List<WardrobeSelectionSaveEntry> CollectWardrobeSelections()
+    {
+        var wardrobe = FindObjectOfType<WardrobeUIController>(includeInactive: true);
+        if (wardrobe == null)
+        {
+            return new List<WardrobeSelectionSaveEntry>();
+        }
+
+        return new List<WardrobeSelectionSaveEntry>(wardrobe.GetSelectionSaveEntries());
+    }
+
+    void ApplyWardrobeSelections(List<WardrobeSelectionSaveEntry> selections)
+    {
+        if (selections == null)
+        {
+            selections = new List<WardrobeSelectionSaveEntry>();
+        }
+
+        var wardrobe = FindObjectOfType<WardrobeUIController>(includeInactive: true);
+        if (wardrobe != null)
+        {
+            wardrobe.ApplySelectionEntries(selections);
+        }
+    }
+
+    List<WardrobeSelectionSaveEntry> ExtractWardrobeSelections(BaseSaveData data)
+    {
+        if (data is StorySaveData storyData)
+        {
+            return storyData.wardrobeSelections ?? new List<WardrobeSelectionSaveEntry>();
+        }
+
+        if (data is CreativeSaveData creativeData)
+        {
+            return creativeData.wardrobeSelections ?? new List<WardrobeSelectionSaveEntry>();
+        }
+
+        return new List<WardrobeSelectionSaveEntry>();
     }
 
     public bool TryGetColor(string slotKey, string identifier, out HSVColor color)
