@@ -158,6 +158,13 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void PerformInitialLoad()
     {
+        if (!IsSaveSlotReady())
+        {
+            pendingInitialLoad = true;
+            WaitForSaveSlotKey();
+            return;
+        }
+
         pendingInitialLoad = false;
 
         if (applyInitialPresetOnStart)
@@ -631,15 +638,14 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private bool TryLoadUserPresetFromPrefs(int slotIndex, string actionLabel, bool applyToMaterial)
     {
+        if (string.IsNullOrWhiteSpace(SaveGameManager.Instance?.CurrentSlotKey))
+        {
+            return false;
+        }
+
         if (LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: false))
         {
             return true;
-        }
-
-        bool hasSaveSlotKey = !string.IsNullOrWhiteSpace(SaveGameManager.Instance?.CurrentSlotKey);
-        if (hasSaveSlotKey)
-        {
-            return false;
         }
 
         return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
@@ -647,11 +653,21 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void ApplyFromSaveDataInternal(MaterialHueSaveData data)
     {
+        if (!IsSaveSlotReady())
+        {
+            pendingSaveData = data;
+            hasPendingSaveData = true;
+            pendingInitialLoad = true;
+            WaitForSaveSlotKey();
+            return;
+        }
+
         if (!TryValidateSlot(data?.selectedSlotIndex ?? SelectedSlotIndex, out int clampedSlot))
         {
             return;
         }
 
+        pendingInitialLoad = false;
         hasAppliedSaveData = true;
         SelectedSlotIndex = clampedSlot;
 
