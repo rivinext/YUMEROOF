@@ -62,12 +62,14 @@ public class MaterialHuePresetManager : MonoBehaviour
     [Header("Selection")]
     [SerializeField] private int selectedSlotIndex = 0;
 
+    private bool hasAppliedSaveData = false;
     private bool hasSavedSelectedSlotThisSession = false;
     private Coroutine autoSaveCoroutine;
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
-    private string SelectedSlotKey => $"{keyPrefix}_selectedSlot";
+    private string SelectedSlotKey => GetNamespacedKey("selectedSlot");
+    private string LegacySelectedSlotKey => $"{keyPrefix}_selectedSlot";
     public int SelectedSlotIndex
     {
         get
@@ -131,6 +133,11 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void Start()
     {
+        if (hasAppliedSaveData)
+        {
+            return;
+        }
+
         int slotIndex = SelectedSlotIndex;
 
         if (IsDefaultSlot(slotIndex))
@@ -213,12 +220,14 @@ public class MaterialHuePresetManager : MonoBehaviour
             return;
         }
 
+        ClearLegacyPresetKeys(clampedSlot);
+
         for (int i = 0; i < controllers.Count; i++)
         {
             MaterialHueController controller = controllers[i];
             if (controller == null) continue;
 
-            string baseKey = $"{keyPrefix}_{clampedSlot}_{i}";
+            string baseKey = GetPresetBaseKey(clampedSlot, i);
             PlayerPrefs.SetFloat(baseKey + "_h", controller.AppliedHue);
             PlayerPrefs.SetFloat(baseKey + "_s", controller.AppliedSaturation);
             PlayerPrefs.SetFloat(baseKey + "_v", controller.AppliedValue);
@@ -278,8 +287,17 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         for (int i = 0; i < controllers.Count; i++)
         {
-            string baseKey = $"{keyPrefix}_{clampedSlot}_{i}_h";
+            string baseKey = GetPresetBaseKey(clampedSlot, i) + "_h";
             if (PlayerPrefs.HasKey(baseKey))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < controllers.Count; i++)
+        {
+            string legacyBaseKey = $"{keyPrefix}_{clampedSlot}_{i}_h";
+            if (PlayerPrefs.HasKey(legacyBaseKey))
             {
                 return true;
             }
@@ -296,6 +314,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         PlayerPrefs.SetInt(SelectedSlotKey, SelectedSlotIndex);
+        PlayerPrefs.DeleteKey(LegacySelectedSlotKey);
         PlayerPrefs.Save();
     }
 
@@ -351,26 +370,12 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void LoadUserPreset(int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
-        for (int i = 0; i < controllers.Count; i++)
+        if (TryLoadUserPresetFromPrefs(slotIndex, actionLabel, applyToMaterial))
         {
-            MaterialHueController controller = controllers[i];
-            if (controller == null) continue;
-
-            string baseKey = $"{keyPrefix}_{slotIndex}_{i}";
-            string hueKey = baseKey + "_h";
-
-            // そのスロットにまだ保存されていない場合はスキップ
-            if (!PlayerPrefs.HasKey(hueKey))
-                continue;
-
-            float h = PlayerPrefs.GetFloat(hueKey, controller.Hue);
-            float s = PlayerPrefs.GetFloat(baseKey + "_s", controller.Saturation);
-            float v = PlayerPrefs.GetFloat(baseKey + "_v", controller.Value);
-
-            controller.SetHSV(h, s, v, applyToMaterial: applyToMaterial);
+            return;
         }
 
-        Debug.Log($"{actionLabel} preset slot {slotIndex}");
+        Debug.LogWarning($"No saved preset found for slot {slotIndex}.");
     }
 
     public void ApplyFromSaveData(MaterialHueSaveData data)
@@ -380,15 +385,25 @@ public class MaterialHuePresetManager : MonoBehaviour
             return;
         }
 
+        hasAppliedSaveData = true;
         SelectedSlotIndex = clampedSlot;
 
         if (data == null || data.controllerColors == null || data.controllerColors.Count == 0)
         {
-            ApplyDefaultPresetFallback();
+            if (!TryLoadUserPresetFromPrefs(clampedSlot, "Loaded from PlayerPrefs fallback", applyToMaterial: true))
+            {
+                ApplyDefaultPresetFallback();
+            }
             return;
         }
 
-        for (int i = 0; i < controllers.Count && i < data.controllerColors.Count; i++)
+        if (data.controllerColors.Count < controllers.Count)
+        {
+            Debug.LogWarning($"Save data color count ({data.controllerColors.Count}) is less than controller count ({controllers.Count}). Missing controllers will keep current values.");
+        }
+
+        int colorCount = Mathf.Min(controllers.Count, data.controllerColors.Count);
+        for (int i = 0; i < colorCount; i++)
         {
             MaterialHueController controller = controllers[i];
             if (controller == null)
@@ -511,11 +526,99 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         if (!PlayerPrefs.HasKey(SelectedSlotKey))
         {
+            if (PlayerPrefs.HasKey(LegacySelectedSlotKey))
+            {
+                savedSlotIndex = Mathf.Clamp(PlayerPrefs.GetInt(LegacySelectedSlotKey, 0), 0, SlotCount - 1);
+                PlayerPrefs.SetInt(SelectedSlotKey, savedSlotIndex);
+                PlayerPrefs.DeleteKey(LegacySelectedSlotKey);
+                PlayerPrefs.Save();
+                return true;
+            }
+
             return false;
         }
 
         savedSlotIndex = Mathf.Clamp(PlayerPrefs.GetInt(SelectedSlotKey, 0), 0, SlotCount - 1);
         return true;
+    }
+
+    private string GetSaveSlotNamespace()
+    {
+        string slotKey = SaveGameManager.Instance?.CurrentSlotKey;
+        return string.IsNullOrWhiteSpace(slotKey) ? "global" : slotKey;
+    }
+
+    private string GetNamespacedKey(string suffix)
+    {
+        return $"{keyPrefix}_{GetSaveSlotNamespace()}_{suffix}";
+    }
+
+    private string GetPresetBaseKey(int slotIndex, int controllerIndex)
+    {
+        return GetNamespacedKey($"{slotIndex}_{controllerIndex}");
+    }
+
+    private void ClearLegacyPresetKeys(int slotIndex)
+    {
+        for (int i = 0; i < controllers.Count; i++)
+        {
+            string legacyBaseKey = $"{keyPrefix}_{slotIndex}_{i}";
+            PlayerPrefs.DeleteKey(legacyBaseKey + "_h");
+            PlayerPrefs.DeleteKey(legacyBaseKey + "_s");
+            PlayerPrefs.DeleteKey(legacyBaseKey + "_v");
+        }
+    }
+
+    private bool LoadPresetFromPlayerPrefs(int slotIndex, string actionLabel, bool applyToMaterial, bool useLegacyKeys)
+    {
+        bool loadedAny = false;
+
+        for (int i = 0; i < controllers.Count; i++)
+        {
+            MaterialHueController controller = controllers[i];
+            if (controller == null)
+            {
+                continue;
+            }
+
+            string baseKey = useLegacyKeys ? $"{keyPrefix}_{slotIndex}_{i}" : GetPresetBaseKey(slotIndex, i);
+            string hueKey = baseKey + "_h";
+
+            if (!PlayerPrefs.HasKey(hueKey))
+            {
+                continue;
+            }
+
+            float h = PlayerPrefs.GetFloat(hueKey, controller.Hue);
+            float s = PlayerPrefs.GetFloat(baseKey + "_s", controller.Saturation);
+            float v = PlayerPrefs.GetFloat(baseKey + "_v", controller.Value);
+
+            controller.SetHSV(h, s, v, applyToMaterial: applyToMaterial);
+            loadedAny = true;
+        }
+
+        if (loadedAny)
+        {
+            string label = useLegacyKeys ? $"{actionLabel} (legacy PlayerPrefs)" : actionLabel;
+            Debug.Log($"{label} preset slot {slotIndex}");
+
+            if (useLegacyKeys && !IsDefaultSlot(slotIndex))
+            {
+                SavePreset(slotIndex);
+            }
+        }
+
+        return loadedAny;
+    }
+
+    private bool TryLoadUserPresetFromPrefs(int slotIndex, string actionLabel, bool applyToMaterial)
+    {
+        if (LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: false))
+        {
+            return true;
+        }
+
+        return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
     }
 
     public void ApplyDefaultPresetFallback()
