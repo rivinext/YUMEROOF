@@ -13,6 +13,8 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
     [SerializeField] private WardrobeUIController wardrobeUIController;
 
     [Header("初期装備に使用する itemId（WardrobeCatalog に登録された値）")]
+    [Tooltip("初期状態で着用させる OnePiece カテゴリの itemId。空欄の場合は未装備。")]
+    [SerializeField] private string initialOnePieceItemId;
     [Tooltip("初期状態で着用させる Hair カテゴリの itemId。空欄の場合は未装備。")]
     [SerializeField] private string initialHairItemId;
     [Tooltip("初期状態で着用させる Tops カテゴリの itemId。空欄の場合は未装備。")]
@@ -30,6 +32,8 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
     private bool isProcessingAutoChange;
     private bool isOnePieceEquipped;
     private bool hasWardrobeSave;
+
+    public string InitialOnePieceItemId => initialOnePieceItemId;
 
     private void Reset()
     {

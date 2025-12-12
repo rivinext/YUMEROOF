@@ -17,7 +17,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
     private readonly Dictionary<string, IndependentMaterialColorSaveData> independentColorSaveCache = new();
-    private const string DefaultOutfitId = "wardrobe one piece";
+    private const string FallbackOutfitId = "wardrobe one piece";
     private WardrobeUIController wardrobeController;
     private string lastKnownOutfitId;
     public static SaveGameManager Instance
@@ -626,21 +626,44 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
     void InitializeWardrobeForNewSave(BaseSaveData data)
     {
-        lastKnownOutfitId = DefaultOutfitId;
-        data.currentOutfit = DefaultOutfitId;
+        string defaultOutfitId = ResolveDefaultOutfitId();
+
+        lastKnownOutfitId = defaultOutfitId;
+        data.currentOutfit = defaultOutfitId;
 
         if (data is StorySaveData storyData)
         {
-            storyData.wardrobeSelections = CreateDefaultWardrobeSelections(DefaultOutfitId);
+            storyData.wardrobeSelections = CreateDefaultWardrobeSelections(defaultOutfitId);
             storyData.hasWardrobeSelections = true;
             return;
         }
 
         if (data is CreativeSaveData creativeData)
         {
-            creativeData.wardrobeSelections = CreateDefaultWardrobeSelections(DefaultOutfitId);
+            creativeData.wardrobeSelections = CreateDefaultWardrobeSelections(defaultOutfitId);
             creativeData.hasWardrobeSelections = true;
         }
+    }
+
+    string ResolveDefaultOutfitId()
+    {
+        var coordinator = FindObjectOfType<WardrobeOnePieceCoordinator>(includeInactive: true);
+        if (coordinator != null)
+        {
+            string initialOutfitId = coordinator.InitialOnePieceItemId;
+            if (!string.IsNullOrEmpty(initialOutfitId))
+            {
+                return initialOutfitId;
+            }
+
+            Debug.LogWarning("[SaveGameManager] InitialOnePieceItemId is not set on WardrobeOnePieceCoordinator. Using fallback default outfit ID.");
+        }
+        else
+        {
+            Debug.LogWarning("[SaveGameManager] WardrobeOnePieceCoordinator was not found in the scene. Using fallback default outfit ID.");
+        }
+
+        return FallbackOutfitId;
     }
 
     void ApplyWardrobeSelections(List<WardrobeSelectionSaveEntry> selections, string currentOutfitId)
