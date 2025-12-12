@@ -134,6 +134,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             OnSlotKeyChanged?.Invoke(slotKey);
             MaterialHuePresetManager.EnsureAllManagersInitialized();
             IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
+            NotifyWardrobeSlotHasSaveData(false);
         }
     }
 
@@ -219,6 +220,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             BaseSaveData baseData = creative ? (BaseSaveData)CreativeSaveData.FromJson(json)
                                              : StorySaveData.FromJson(json);
 
+            NotifyWardrobeSlotHasSaveData(ExtractWardrobeSavePresence(baseData));
             ApplyWardrobeSelections(ExtractWardrobeSelections(baseData));
 
             return baseData;
@@ -242,11 +244,13 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             if (creative)
             {
                 var emptyData = new CreativeSaveData();
+                NotifyWardrobeSlotHasSaveData(ExtractWardrobeSavePresence(emptyData));
                 ApplyManagers(emptyData);
             }
             else
             {
                 var emptyData = new StorySaveData();
+                NotifyWardrobeSlotHasSaveData(ExtractWardrobeSavePresence(emptyData));
                 ApplyManagers(emptyData);
             }
             return createdNewSave;
@@ -256,11 +260,13 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (creative)
         {
             var data = CreativeSaveData.FromJson(json);
+            NotifyWardrobeSlotHasSaveData(ExtractWardrobeSavePresence(data));
             ApplyManagers(data);
         }
         else
         {
             var data = StorySaveData.FromJson(json);
+            NotifyWardrobeSlotHasSaveData(ExtractWardrobeSavePresence(data));
             ApplyManagers(data);
         }
 
@@ -346,6 +352,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
         data.wardrobeSelections = CollectWardrobeSelections();
+        data.hasWardrobeSelections = true;
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -396,6 +403,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
         data.wardrobeSelections = CollectWardrobeSelections();
+        data.hasWardrobeSelections = true;
     }
 
     List<string> CollectInventory()
@@ -543,6 +551,15 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
     }
 
+    void NotifyWardrobeSlotHasSaveData(bool hasSaveData)
+    {
+        var coordinator = FindObjectOfType<WardrobeOnePieceCoordinator>(includeInactive: true);
+        if (coordinator != null)
+        {
+            coordinator.SetHasWardrobeSave(hasSaveData);
+        }
+    }
+
     List<WardrobeSelectionSaveEntry> ExtractWardrobeSelections(BaseSaveData data)
     {
         if (data is StorySaveData storyData)
@@ -556,6 +573,21 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         return new List<WardrobeSelectionSaveEntry>();
+    }
+
+    bool ExtractWardrobeSavePresence(BaseSaveData data)
+    {
+        if (data is StorySaveData storyData)
+        {
+            return storyData.hasWardrobeSelections;
+        }
+
+        if (data is CreativeSaveData creativeData)
+        {
+            return creativeData.hasWardrobeSelections;
+        }
+
+        return false;
     }
 
     public bool TryGetColor(string slotKey, string identifier, out HSVColor color)
