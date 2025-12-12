@@ -382,7 +382,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(includeInactive: true);
+        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(FindObjectsInactive.Include);
         if (wardrobeController != null)
         {
             data.wardrobeSelections = new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
@@ -561,13 +561,13 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             return;
         }
 
-        var onePieceCoordinator = FindFirstObjectByType<WardrobeOnePieceCoordinator>(includeInactive: true);
+        var onePieceCoordinator = FindFirstObjectByType<WardrobeOnePieceCoordinator>(FindObjectsInactive.Include);
         if (onePieceCoordinator != null)
         {
             onePieceCoordinator.SetHasWardrobeSave(true);
         }
 
-        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(includeInactive: true);
+        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(FindObjectsInactive.Include);
         if (wardrobeController != null)
         {
             wardrobeController.ApplySelectionEntries(selections);
