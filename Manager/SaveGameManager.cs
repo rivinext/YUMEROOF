@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -325,7 +326,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(includeInactive: true);
+        var wardrobeController = FindObjectsOfType<WardrobeUIController>(includeInactive: true).FirstOrDefault();
         if (wardrobeController != null)
         {
             data.wardrobeSelections = new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
