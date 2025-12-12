@@ -313,10 +313,23 @@ public class SaveGameManager : MonoBehaviour
             data.nature = env.NatureTotal;
         }
 
-        var huePresetManager = FindFirstObjectByType<MaterialHuePresetManager>();
-        if (huePresetManager != null)
+        var huePresetManagers = FindObjectsOfType<MaterialHuePresetManager>(includeInactive: true);
+        if (huePresetManagers != null && huePresetManagers.Length > 0)
         {
-            data.materialHue = huePresetManager.GetSaveData();
+            data.materialHue = new MaterialHueSaveData();
+            foreach (var huePresetManager in huePresetManagers)
+            {
+                if (huePresetManager == null)
+                {
+                    continue;
+                }
+
+                var managerSaveData = huePresetManager.GetSaveData();
+                if (managerSaveData != null)
+                {
+                    data.materialHue.managers.Add(managerSaveData);
+                }
+            }
         }
     }
 
@@ -347,10 +360,23 @@ public class SaveGameManager : MonoBehaviour
             data.nature = env.NatureTotal;
         }
 
-        var huePresetManager = FindFirstObjectByType<MaterialHuePresetManager>();
-        if (huePresetManager != null)
+        var huePresetManagers = FindObjectsOfType<MaterialHuePresetManager>(includeInactive: true);
+        if (huePresetManagers != null && huePresetManagers.Length > 0)
         {
-            data.materialHue = huePresetManager.GetSaveData();
+            data.materialHue = new MaterialHueSaveData();
+            foreach (var huePresetManager in huePresetManagers)
+            {
+                if (huePresetManager == null)
+                {
+                    continue;
+                }
+
+                var managerSaveData = huePresetManager.GetSaveData();
+                if (managerSaveData != null)
+                {
+                    data.materialHue.managers.Add(managerSaveData);
+                }
+            }
         }
     }
 
