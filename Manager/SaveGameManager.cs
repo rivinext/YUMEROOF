@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -325,14 +326,14 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(includeInactive: true);
+        var wardrobeController = FindSceneObjectsIncludingInactive<WardrobeUIController>().FirstOrDefault();
         if (wardrobeController != null)
         {
             data.wardrobeSelections = new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
             data.hasWardrobeSelections = true;
         }
 
-        var huePresetManagers = FindObjectsOfType<MaterialHuePresetManager>(includeInactive: true);
+        var huePresetManagers = FindSceneObjectsIncludingInactive<MaterialHuePresetManager>();
         if (huePresetManagers != null && huePresetManagers.Length > 0)
         {
             data.materialHue = new MaterialHueSaveData();
@@ -381,14 +382,14 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(includeInactive: true);
+        var wardrobeController = FindSceneObjectsIncludingInactive<WardrobeUIController>().FirstOrDefault();
         if (wardrobeController != null)
         {
             data.wardrobeSelections = new List<WardrobeSelectionSaveEntry>(wardrobeController.GetSelectionSaveEntries());
             data.hasWardrobeSelections = true;
         }
 
-        var huePresetManagers = FindObjectsOfType<MaterialHuePresetManager>(includeInactive: true);
+        var huePresetManagers = FindSceneObjectsIncludingInactive<MaterialHuePresetManager>();
         if (huePresetManagers != null && huePresetManagers.Length > 0)
         {
             data.materialHue = new MaterialHueSaveData();
@@ -560,13 +561,13 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             return;
         }
 
-        var onePieceCoordinator = FindFirstObjectByType<WardrobeOnePieceCoordinator>(includeInactive: true);
+        var onePieceCoordinator = FindSceneObjectsIncludingInactive<WardrobeOnePieceCoordinator>().FirstOrDefault();
         if (onePieceCoordinator != null)
         {
             onePieceCoordinator.SetHasWardrobeSave(true);
         }
 
-        var wardrobeController = FindFirstObjectByType<WardrobeUIController>(includeInactive: true);
+        var wardrobeController = FindSceneObjectsIncludingInactive<WardrobeUIController>().FirstOrDefault();
         if (wardrobeController != null)
         {
             wardrobeController.ApplySelectionEntries(selections);
@@ -696,6 +697,14 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         mgr.LoadFromData(json);
         var sceneName = SceneManager.GetActiveScene().name;
         mgr.LoadFurnitureForSceneAsync(sceneName);
+    }
+
+    private static T[] FindSceneObjectsIncludingInactive<T>() where T : Component
+    {
+        return Resources
+            .FindObjectsOfTypeAll<T>()
+            .Where(obj => obj != null && obj.gameObject.scene.IsValid() && obj.hideFlags == HideFlags.None)
+            .ToArray();
     }
 
     void ApplyTime(GameClock.ClockData savedData)
