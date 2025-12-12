@@ -24,6 +24,7 @@ public class BaseSaveData
     public string chapterName;
     public string location;
     public string screenshotFilename;
+    public string currentOutfit;
 
     public string ToJson()
     {
