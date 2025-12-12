@@ -7,15 +7,14 @@ using UnityEngine.UI;
 public class IndependentMaterialColorController : MonoBehaviour
 {
     [Header("保存設定")]
-    [SerializeField, Tooltip("PlayerPrefs に保存するときのキー プレフィックス。インスタンスごとに変えてください。")]
-    private string playerPrefsKeyPrefix = "independent_material";
+    [SerializeField, Tooltip("セーブデータ内で識別するためのキー。インスタンスごとに重複しない値を設定してください。")]
+    private string saveIdentifier = "independent_material";
 
-    [SerializeField, Tooltip("起動時に PlayerPrefs から HSV を自動で読み込むかどうか。")]
-    private bool loadFromPrefsOnAwake = true;
+    [SerializeField, Tooltip("現在のセーブスロット ID（SaveGameManager のキーなど）")]
+    private string currentSlotId;
 
-    private string HueKey => $"{playerPrefsKeyPrefix}_hue";
-    private string SaturationKey => $"{playerPrefsKeyPrefix}_saturation";
-    private string ValueKey => $"{playerPrefsKeyPrefix}_value";
+    [SerializeField, Tooltip("セーブデータへの読み書きを行うアクセサ")]
+    private MonoBehaviour saveAccessorBehaviour;
 
     [Header("対象マテリアル")]
     [SerializeField, Tooltip("色を変更したいマテリアルをアタッチしてください。")]
@@ -41,17 +40,15 @@ public class IndependentMaterialColorController : MonoBehaviour
     private float currentSaturation;
     private float currentValue;
 
+    private IIndependentMaterialColorSaveAccessor SaveAccessor => saveAccessorBehaviour as IIndependentMaterialColorSaveAccessor;
+
     private void Awake()
     {
         currentHue = Mathf.Repeat(initialHue, 1f);
         currentSaturation = Mathf.Clamp01(initialSaturation);
         currentValue = Mathf.Clamp01(initialValue);
 
-        if (loadFromPrefsOnAwake)
-        {
-            ApplySavedValuesFromPrefs();
-        }
-
+        ApplyInitialLoad();
         ApplySelectors();
         ApplyColor();
     }
@@ -99,7 +96,7 @@ public class IndependentMaterialColorController : MonoBehaviour
         SetHSV(currentHue, currentSaturation, newValue);
     }
 
-    public void SetHSV(float hue, float saturation, float value, bool saveToPrefs = true)
+    public void SetHSV(float hue, float saturation, float value, bool saveToData = true)
     {
         float clampedHue = Mathf.Repeat(hue, 1f);
         float clampedSaturation = Mathf.Clamp01(saturation);
@@ -117,7 +114,7 @@ public class IndependentMaterialColorController : MonoBehaviour
         ApplySelectors();
         ApplyColor();
 
-        if (hasChanged && saveToPrefs)
+        if (hasChanged && saveToData)
         {
             SaveValues();
         }
@@ -125,47 +122,68 @@ public class IndependentMaterialColorController : MonoBehaviour
 
     private void SaveValues()
     {
-        PlayerPrefs.SetFloat(HueKey, currentHue);
-        PlayerPrefs.SetFloat(SaturationKey, currentSaturation);
-        PlayerPrefs.SetFloat(ValueKey, currentValue);
-        PlayerPrefs.Save();
+        if (SaveAccessor == null || string.IsNullOrEmpty(currentSlotId))
+        {
+            return;
+        }
+
+        SaveAccessor.SaveColor(currentSlotId, GetNamespacedIdentifier(), new HSVColor(currentHue, currentSaturation, currentValue));
     }
 
-    private void ApplySavedValuesFromPrefs()
+    private void ApplyInitialLoad()
     {
-        if (TryGetSavedValues(out float savedHue, out float savedSaturation, out float savedValue))
+        if (!TryApplySavedValues())
         {
-            SetHSV(savedHue, savedSaturation, savedValue, saveToPrefs: false);
+            SetHSV(initialHue, initialSaturation, initialValue, saveToData: false);
         }
     }
 
-    private bool TryGetSavedValues(out float savedHue, out float savedSaturation, out float savedValue)
+    private bool TryApplySavedValues()
     {
-        bool hasSaved = false;
-
-        savedHue = currentHue;
-        savedSaturation = currentSaturation;
-        savedValue = currentValue;
-
-        if (PlayerPrefs.HasKey(HueKey))
+        if (SaveAccessor == null || string.IsNullOrEmpty(currentSlotId))
         {
-            savedHue = PlayerPrefs.GetFloat(HueKey);
-            hasSaved = true;
+            return false;
         }
 
-        if (PlayerPrefs.HasKey(SaturationKey))
+        if (SaveAccessor.TryGetColor(currentSlotId, GetNamespacedIdentifier(), out var savedColor))
         {
-            savedSaturation = PlayerPrefs.GetFloat(SaturationKey);
-            hasSaved = true;
+            SetHSV(savedColor.H, savedColor.S, savedColor.V, saveToData: false);
+            return true;
         }
 
-        if (PlayerPrefs.HasKey(ValueKey))
+        return false;
+    }
+
+    private string GetNamespacedIdentifier()
+    {
+        return string.IsNullOrWhiteSpace(saveIdentifier) ? name : saveIdentifier.Trim();
+    }
+
+    public void SetSaveContext(string slotId, IIndependentMaterialColorSaveAccessor accessor)
+    {
+        currentSlotId = slotId;
+        saveAccessorBehaviour = accessor as MonoBehaviour;
+        ApplyInitialLoad();
+        ApplySelectors();
+        ApplyColor();
+    }
+
+    public static void SetSaveContextForAllControllers(string slotId, IIndependentMaterialColorSaveAccessor accessor)
+    {
+        if (string.IsNullOrEmpty(slotId) || accessor == null)
         {
-            savedValue = PlayerPrefs.GetFloat(ValueKey);
-            hasSaved = true;
+            return;
         }
 
-        return hasSaved;
+        foreach (var controller in Resources.FindObjectsOfTypeAll<IndependentMaterialColorController>())
+        {
+            if (controller == null)
+            {
+                continue;
+            }
+
+            controller.SetSaveContext(slotId, accessor);
+        }
     }
 
     private void ApplySelectors()
