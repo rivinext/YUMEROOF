@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -36,6 +37,7 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private AudioClip closeButtonClip;
     [SerializeField] private AudioSource toggleButtonAudioSource;
     [SerializeField] private AudioSource closeButtonAudioSource;
+    [SerializeField] private float equipmentSaveCooldownSeconds = 0.5f;
 
     [Serializable]
     private class CategoryTab
@@ -121,6 +123,8 @@ public class WardrobeUIController : MonoBehaviour
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
+
+    private Coroutine equipmentSaveRoutine;
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -219,6 +223,22 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         ClearLegacySavedSelections();
+    }
+
+    private void OnEnable()
+    {
+        onItemEquipped.AddListener(HandleEquipmentEquipped);
+    }
+
+    private void OnDisable()
+    {
+        onItemEquipped.RemoveListener(HandleEquipmentEquipped);
+
+        if (equipmentSaveRoutine != null)
+        {
+            StopCoroutine(equipmentSaveRoutine);
+            equipmentSaveRoutine = null;
+        }
     }
 
     private void Start()
@@ -1200,6 +1220,68 @@ public class WardrobeUIController : MonoBehaviour
     {
         UpdatePreviewActivation(visible);
         PlayerController.SetGlobalInputEnabled(!visible);
+    }
+
+    private void HandleEquipmentEquipped(WardrobeTabType category, GameObject instance, WardrobeItemView source)
+    {
+        if (!isActiveAndEnabled)
+        {
+            return;
+        }
+
+        if (equipmentSaveRoutine != null)
+        {
+            return;
+        }
+
+        equipmentSaveRoutine = StartCoroutine(SaveWardrobeAfterCooldown());
+    }
+
+    private IEnumerator SaveWardrobeAfterCooldown()
+    {
+        float delay = Mathf.Max(0f, equipmentSaveCooldownSeconds);
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        equipmentSaveRoutine = null;
+        TrySaveCurrentSlot();
+    }
+
+    private void TrySaveCurrentSlot()
+    {
+        SaveGameManager manager = null;
+
+        try
+        {
+            manager = SaveGameManager.Instance;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to access SaveGameManager instance: {ex}");
+            return;
+        }
+
+        if (manager == null)
+        {
+            return;
+        }
+
+        string slotKey = manager.CurrentSlotKey;
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            return;
+        }
+
+        try
+        {
+            manager.Save(slotKey);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to save wardrobe changes for slot '{slotKey}': {ex}");
+        }
     }
 
     /// <summary>
