@@ -328,7 +328,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out bool hasWardrobeSelections);
+        bool hasWardrobeSelections;
+        List<WardrobeSelectionSaveEntry> wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out hasWardrobeSelections);
         data.hasWardrobeSelections = hasWardrobeSelections;
         if (hasWardrobeSelections)
         {
@@ -384,7 +385,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        var wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out bool hasWardrobeSelections);
+        bool hasWardrobeSelections;
+        List<WardrobeSelectionSaveEntry> wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out hasWardrobeSelections);
         data.hasWardrobeSelections = hasWardrobeSelections;
         if (hasWardrobeSelections)
         {
