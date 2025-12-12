@@ -65,6 +65,10 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool hasAppliedSaveData = false;
     private bool hasSavedSelectedSlotThisSession = false;
     private Coroutine autoSaveCoroutine;
+    private bool isWaitingForSlotKey = false;
+    private bool pendingInitialLoad = false;
+    private bool hasPendingSaveData = false;
+    private MaterialHueSaveData pendingSaveData;
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
@@ -103,7 +107,10 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void Awake()
     {
-        SelectedSlotIndex = ResolveInitialSlotIndex();
+        if (SlotCount > 0)
+        {
+            selectedSlotIndex = Mathf.Clamp(initialPresetIndex, 0, SlotCount - 1);
+        }
     }
 
     private void OnEnable()
@@ -114,6 +121,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     private void OnDisable()
     {
         UnsubscribeFromControllers();
+        UnsubscribeFromSlotKeyChanged();
 
         if (autoSaveCoroutine != null)
         {
@@ -136,6 +144,25 @@ public class MaterialHuePresetManager : MonoBehaviour
         if (hasAppliedSaveData)
         {
             return;
+        }
+
+        if (!IsSaveSlotReady())
+        {
+            pendingInitialLoad = true;
+            WaitForSaveSlotKey();
+            return;
+        }
+
+        PerformInitialLoad();
+    }
+
+    private void PerformInitialLoad()
+    {
+        pendingInitialLoad = false;
+
+        if (applyInitialPresetOnStart)
+        {
+            SelectedSlotIndex = ResolveInitialSlotIndex();
         }
 
         int slotIndex = SelectedSlotIndex;
@@ -209,6 +236,12 @@ public class MaterialHuePresetManager : MonoBehaviour
     // 指定スロットに、すべての MaterialHueController の色を保存
     public void SavePreset(int slotIndex)
     {
+        if (!IsSaveSlotReady())
+        {
+            Debug.LogWarning("Cannot save preset before a save slot key is set.");
+            return;
+        }
+
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
             return;
@@ -280,6 +313,11 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private bool HasSavedPreset(int slotIndex)
     {
+        if (!IsSaveSlotReady())
+        {
+            return false;
+        }
+
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
             return false;
@@ -308,6 +346,11 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void SaveSelectedSlotIndex()
     {
+        if (!IsSaveSlotReady())
+        {
+            return;
+        }
+
         if (SlotCount <= 0)
         {
             return;
@@ -320,6 +363,11 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void SaveSelectedSlotIfNeeded(string triggerLabel)
     {
+        if (!IsSaveSlotReady())
+        {
+            return;
+        }
+
         int slotIndex = SelectedSlotIndex;
 
         if (IsDefaultSlot(slotIndex))
@@ -380,45 +428,15 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     public void ApplyFromSaveData(MaterialHueSaveData data)
     {
-        if (!TryValidateSlot(data?.selectedSlotIndex ?? SelectedSlotIndex, out int clampedSlot))
+        if (!IsSaveSlotReady())
         {
+            pendingSaveData = data;
+            hasPendingSaveData = true;
+            WaitForSaveSlotKey();
             return;
         }
 
-        hasAppliedSaveData = true;
-        SelectedSlotIndex = clampedSlot;
-
-        if (data == null || data.controllerColors == null || data.controllerColors.Count == 0)
-        {
-            if (!TryLoadUserPresetFromPrefs(clampedSlot, "Loaded from PlayerPrefs fallback", applyToMaterial: true))
-            {
-                ApplyDefaultPresetFallback();
-            }
-            return;
-        }
-
-        if (data.controllerColors.Count < controllers.Count)
-        {
-            Debug.LogWarning($"Save data color count ({data.controllerColors.Count}) is less than controller count ({controllers.Count}). Missing controllers will keep current values.");
-        }
-
-        int colorCount = Mathf.Min(controllers.Count, data.controllerColors.Count);
-        for (int i = 0; i < colorCount; i++)
-        {
-            MaterialHueController controller = controllers[i];
-            if (controller == null)
-            {
-                continue;
-            }
-
-            HSVColor savedColor = data.controllerColors[i];
-            controller.SetHSV(savedColor.H, savedColor.S, savedColor.V);
-        }
-
-        if (!IsDefaultSlot(clampedSlot))
-        {
-            SavePreset(clampedSlot);
-        }
+        ApplyFromSaveDataInternal(data);
     }
 
     private void HandleControllerAppliedColorChanged(MaterialHueController controller)
@@ -619,6 +637,113 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
+    }
+
+    private void ApplyFromSaveDataInternal(MaterialHueSaveData data)
+    {
+        if (!TryValidateSlot(data?.selectedSlotIndex ?? SelectedSlotIndex, out int clampedSlot))
+        {
+            return;
+        }
+
+        hasAppliedSaveData = true;
+        SelectedSlotIndex = clampedSlot;
+
+        if (data == null || data.controllerColors == null || data.controllerColors.Count == 0)
+        {
+            if (!TryLoadUserPresetFromPrefs(clampedSlot, "Loaded from PlayerPrefs fallback", applyToMaterial: true))
+            {
+                ApplyDefaultPresetFallback();
+            }
+            return;
+        }
+
+        if (data.controllerColors.Count < controllers.Count)
+        {
+            Debug.LogWarning($"Save data color count ({data.controllerColors.Count}) is less than controller count ({controllers.Count}). Missing controllers will keep current values.");
+        }
+
+        int colorCount = Mathf.Min(controllers.Count, data.controllerColors.Count);
+        for (int i = 0; i < colorCount; i++)
+        {
+            MaterialHueController controller = controllers[i];
+            if (controller == null)
+            {
+                continue;
+            }
+
+            HSVColor savedColor = data.controllerColors[i];
+            controller.SetHSV(savedColor.H, savedColor.S, savedColor.V);
+        }
+
+        if (!IsDefaultSlot(clampedSlot))
+        {
+            SavePreset(clampedSlot);
+        }
+    }
+
+    private void WaitForSaveSlotKey()
+    {
+        if (isWaitingForSlotKey)
+        {
+            return;
+        }
+
+        var saveManager = SaveGameManager.Instance;
+        if (saveManager == null)
+        {
+            return;
+        }
+
+        saveManager.OnSlotKeyChanged -= HandleSlotKeyChanged;
+        saveManager.OnSlotKeyChanged += HandleSlotKeyChanged;
+        isWaitingForSlotKey = true;
+    }
+
+    private void UnsubscribeFromSlotKeyChanged()
+    {
+        if (!isWaitingForSlotKey)
+        {
+            return;
+        }
+
+        var saveManager = SaveGameManager.Instance;
+        if (saveManager != null)
+        {
+            saveManager.OnSlotKeyChanged -= HandleSlotKeyChanged;
+        }
+
+        isWaitingForSlotKey = false;
+    }
+
+    private void HandleSlotKeyChanged(string slotKey)
+    {
+        if (string.IsNullOrWhiteSpace(slotKey))
+        {
+            return;
+        }
+
+        UnsubscribeFromSlotKeyChanged();
+
+        if (hasPendingSaveData)
+        {
+            var data = pendingSaveData;
+            pendingSaveData = null;
+            hasPendingSaveData = false;
+            ApplyFromSaveDataInternal(data);
+            return;
+        }
+
+        if (pendingInitialLoad && !hasAppliedSaveData)
+        {
+            PerformInitialLoad();
+        }
+    }
+
+    private bool IsSaveSlotReady()
+    {
+        string slotKey = SaveGameManager.Instance?.CurrentSlotKey;
+        return !string.IsNullOrWhiteSpace(slotKey);
     }
 
     public void ApplyDefaultPresetFallback()

@@ -14,6 +14,7 @@ public class SaveGameManager : MonoBehaviour
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
     private string currentSlot;
     public string CurrentSlotKey => currentSlot;
+    public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
     public static SaveGameManager Instance
     {
@@ -117,6 +118,22 @@ public class SaveGameManager : MonoBehaviour
 
     public void SaveCurrentSlot() => TriggerSave();
 
+    public void SetCurrentSlotKey(string slotKey, bool ensureAutoSave = false)
+    {
+        bool changed = currentSlot != slotKey;
+        currentSlot = slotKey;
+
+        if (ensureAutoSave && !string.IsNullOrEmpty(slotKey))
+        {
+            EnsureAutoSave();
+        }
+
+        if (changed && !string.IsNullOrEmpty(slotKey))
+        {
+            OnSlotKeyChanged?.Invoke(slotKey);
+        }
+    }
+
     void EnsureAutoSave()
     {
         if (autoSaveCoroutine == null)
@@ -161,8 +178,7 @@ public class SaveGameManager : MonoBehaviour
     public void Save(string slotKey)
     {
         if (string.IsNullOrEmpty(slotKey)) return;
-        currentSlot = slotKey;
-        EnsureAutoSave();
+        SetCurrentSlotKey(slotKey, ensureAutoSave: true);
 
         BaseSaveData baseData;
         bool creative = slotKey.StartsWith("Creative", StringComparison.OrdinalIgnoreCase);
@@ -205,8 +221,7 @@ public class SaveGameManager : MonoBehaviour
     public bool Load(string slotKey)
     {
         string path = GetSlotPath(slotKey);
-        currentSlot = slotKey;
-        EnsureAutoSave();
+        SetCurrentSlotKey(slotKey, ensureAutoSave: true);
         bool creative = slotKey.StartsWith("Creative", StringComparison.OrdinalIgnoreCase);
         bool createdNewSave = false;
 
