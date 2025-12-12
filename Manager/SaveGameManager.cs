@@ -384,7 +384,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.nature = env.NatureTotal;
         }
 
-        wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out bool hasWardrobeSelections);
+        var wardrobeSelections = CollectWardrobeSelectionsForCurrentSlot(out bool hasWardrobeSelections);
         data.hasWardrobeSelections = hasWardrobeSelections;
         if (hasWardrobeSelections)
         {
