@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 /// Handles game save/load/delete using json files in Application.persistentDataPath.
 /// Collects data from PlayerManager, InventoryManager, FurnitureSaveManager and GameClock.
 /// </summary>
-public class SaveGameManager : MonoBehaviour
+public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAccessor
 {
     private static SaveGameManager instance;
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
@@ -16,6 +16,7 @@ public class SaveGameManager : MonoBehaviour
     public string CurrentSlotKey => currentSlot;
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
+    private readonly Dictionary<string, IndependentMaterialColorSaveData> independentColorSaveCache = new();
     public static SaveGameManager Instance
     {
         get
@@ -132,6 +133,7 @@ public class SaveGameManager : MonoBehaviour
         {
             OnSlotKeyChanged?.Invoke(slotKey);
             MaterialHuePresetManager.EnsureAllManagersInitialized();
+            IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
         }
     }
 
@@ -258,6 +260,8 @@ public class SaveGameManager : MonoBehaviour
             ApplyManagers(data);
         }
 
+        IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
+
         return createdNewSave;
     }
 
@@ -335,6 +339,8 @@ public class SaveGameManager : MonoBehaviour
                 }
             }
         }
+
+        data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -382,6 +388,8 @@ public class SaveGameManager : MonoBehaviour
                 }
             }
         }
+
+        data.independentMaterialColors = GetSaveDataForSlot(CurrentSlotKey);
     }
 
     List<string> CollectInventory()
@@ -455,6 +463,7 @@ public class SaveGameManager : MonoBehaviour
         }
 
         ApplyHuePresets(data.materialHue);
+        ApplyIndependentMaterialColors(data.independentMaterialColors);
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -488,11 +497,86 @@ public class SaveGameManager : MonoBehaviour
         }
 
         ApplyHuePresets(data.materialHue);
+        ApplyIndependentMaterialColors(data.independentMaterialColors);
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)
     {
         MaterialHuePresetManager.ApplySaveDataToAllManagers(data);
+    }
+
+    void ApplyIndependentMaterialColors(IndependentMaterialColorSaveData data)
+    {
+        SetIndependentColorDataForSlot(CurrentSlotKey, data);
+    }
+
+    public bool TryGetColor(string slotKey, string identifier, out HSVColor color)
+    {
+        var data = GetSaveDataForSlot(slotKey);
+        var entry = data.entries.Find(e => e.identifier == identifier);
+        if (entry != null)
+        {
+            color = entry.color;
+            return true;
+        }
+
+        color = default;
+        return false;
+    }
+
+    public void SaveColor(string slotKey, string identifier, HSVColor color)
+    {
+        if (string.IsNullOrEmpty(slotKey) || string.IsNullOrEmpty(identifier))
+        {
+            return;
+        }
+
+        var data = GetSaveDataForSlot(slotKey);
+        var entry = data.entries.Find(e => e.identifier == identifier);
+        if (entry == null)
+        {
+            data.entries.Add(new IndependentMaterialColorSaveEntry
+            {
+                identifier = identifier,
+                color = color
+            });
+        }
+        else
+        {
+            entry.color = color;
+        }
+    }
+
+    public IndependentMaterialColorSaveData GetSaveDataForSlot(string slotKey)
+    {
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            return new IndependentMaterialColorSaveData();
+        }
+
+        if (!independentColorSaveCache.TryGetValue(slotKey, out var saveData) || saveData == null)
+        {
+            saveData = new IndependentMaterialColorSaveData();
+            independentColorSaveCache[slotKey] = saveData;
+        }
+
+        return saveData;
+    }
+
+    void SetIndependentColorDataForSlot(string slotKey, IndependentMaterialColorSaveData data)
+    {
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            return;
+        }
+
+        if (data == null)
+        {
+            data = new IndependentMaterialColorSaveData();
+        }
+
+        independentColorSaveCache[slotKey] = data;
+        IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
     }
 
     void ApplyInventory(List<string> items)

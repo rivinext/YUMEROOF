@@ -43,6 +43,7 @@ public class StorySaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public IndependentMaterialColorSaveData independentMaterialColors;
 
     public static StorySaveData FromJson(string json)
     {
@@ -62,6 +63,7 @@ public class CreativeSaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public IndependentMaterialColorSaveData independentMaterialColors;
 
     public static CreativeSaveData FromJson(string json)
     {
@@ -85,4 +87,17 @@ public class MaterialHueManagerSaveData
     public string keyPrefix;
     public int selectedSlotIndex;
     public List<HSVColor> controllerColors = new();
+}
+
+[Serializable]
+public class IndependentMaterialColorSaveData
+{
+    public List<IndependentMaterialColorSaveEntry> entries = new();
+}
+
+[Serializable]
+public class IndependentMaterialColorSaveEntry
+{
+    public string identifier;
+    public HSVColor color;
 }
