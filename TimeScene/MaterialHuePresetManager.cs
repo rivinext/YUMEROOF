@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -68,10 +69,11 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool isWaitingForSlotKey = false;
     private bool pendingInitialLoad = true;
     private bool hasPendingSaveData = false;
-    private MaterialHueSaveData pendingSaveData;
+    private MaterialHueManagerSaveData pendingSaveData;
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
+    public string KeyPrefix => keyPrefix;
     private string SelectedSlotKey => GetNamespacedKey("selectedSlot");
     private string LegacySelectedSlotKey => $"{keyPrefix}_selectedSlot";
     public int SelectedSlotIndex
@@ -179,6 +181,19 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     public static void ApplySaveDataToAllManagers(MaterialHueSaveData data)
     {
+        List<MaterialHueManagerSaveData> managerSaveData = data?.managers;
+        bool hasManagerList = managerSaveData != null && managerSaveData.Count > 0;
+        MaterialHueManagerSaveData legacyData = null;
+
+        if (!hasManagerList && data != null)
+        {
+            legacyData = new MaterialHueManagerSaveData
+            {
+                selectedSlotIndex = data.selectedSlotIndex,
+                controllerColors = data.controllerColors
+            };
+        }
+
         foreach (MaterialHuePresetManager manager in Resources.FindObjectsOfTypeAll<MaterialHuePresetManager>())
         {
             if (manager == null)
@@ -186,7 +201,33 @@ public class MaterialHuePresetManager : MonoBehaviour
                 continue;
             }
 
-            manager.ApplyFromSaveData(data);
+            MaterialHueManagerSaveData matchingData = null;
+
+            if (hasManagerList)
+            {
+                foreach (MaterialHueManagerSaveData saveData in managerSaveData)
+                {
+                    if (saveData == null)
+                    {
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(saveData.keyPrefix)
+                        && string.Equals(saveData.keyPrefix, manager.KeyPrefix, StringComparison.Ordinal))
+                    {
+                        matchingData = saveData;
+                        break;
+                    }
+                }
+
+                matchingData ??= managerSaveData[0];
+            }
+            else
+            {
+                matchingData = legacyData;
+            }
+
+            manager.ApplyFromSaveData(matchingData);
         }
     }
 
@@ -257,10 +298,11 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
     }
 
-    public MaterialHueSaveData GetSaveData()
+    public MaterialHueManagerSaveData GetSaveData()
     {
-        var data = new MaterialHueSaveData
+        var data = new MaterialHueManagerSaveData
         {
+            keyPrefix = KeyPrefix,
             selectedSlotIndex = SelectedSlotIndex
         };
 
@@ -471,7 +513,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         Debug.LogWarning($"No saved preset found for slot {slotIndex}.");
     }
 
-    public void ApplyFromSaveData(MaterialHueSaveData data)
+    public void ApplyFromSaveData(MaterialHueManagerSaveData data)
     {
         if (hasAppliedSaveData && !pendingInitialLoad)
         {
@@ -694,7 +736,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
     }
 
-    private void ApplyFromSaveDataInternal(MaterialHueSaveData data)
+    private void ApplyFromSaveDataInternal(MaterialHueManagerSaveData data)
     {
         if (!IsSaveSlotReady())
         {

@@ -72,6 +72,17 @@ public class CreativeSaveData : BaseSaveData
 [Serializable]
 public class MaterialHueSaveData
 {
+    // Legacy support for single manager saves
+    public int selectedSlotIndex;
+    public List<HSVColor> controllerColors = new();
+
+    public List<MaterialHueManagerSaveData> managers = new();
+}
+
+[Serializable]
+public class MaterialHueManagerSaveData
+{
+    public string keyPrefix;
     public int selectedSlotIndex;
     public List<HSVColor> controllerColors = new();
 }
