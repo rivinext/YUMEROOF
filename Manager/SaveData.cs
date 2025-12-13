@@ -43,6 +43,7 @@ public class StorySaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public IndependentMaterialColorSaveData independentMaterialColors = new();
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
 
@@ -64,6 +65,7 @@ public class CreativeSaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public IndependentMaterialColorSaveData independentMaterialColors = new();
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
 
@@ -89,4 +91,85 @@ public class MaterialHueManagerSaveData
     public string keyPrefix;
     public int selectedSlotIndex;
     public List<HSVColor> controllerColors = new();
+}
+
+[Serializable]
+public class IndependentMaterialColorEntry
+{
+    public string key;
+    public HSVColor color;
+}
+
+[Serializable]
+public class IndependentMaterialColorSaveData
+{
+    public List<IndependentMaterialColorEntry> colors = new();
+
+    public IndependentMaterialColorSaveData()
+    {
+    }
+
+    public IndependentMaterialColorSaveData(IndependentMaterialColorSaveData other)
+    {
+        if (other?.colors == null)
+        {
+            return;
+        }
+
+        foreach (var entry in other.colors)
+        {
+            if (entry == null || string.IsNullOrWhiteSpace(entry.key))
+            {
+                continue;
+            }
+
+            SetColor(entry.key, entry.color);
+        }
+    }
+
+    public void SetColor(string key, HSVColor color)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        string trimmedKey = key.Trim();
+        for (int i = 0; i < colors.Count; i++)
+        {
+            if (colors[i] != null && colors[i].key == trimmedKey)
+            {
+                colors[i].color = color;
+                return;
+            }
+        }
+
+        colors.Add(new IndependentMaterialColorEntry
+        {
+            key = trimmedKey,
+            color = color
+        });
+    }
+
+    public bool TryGetColor(string key, out HSVColor color)
+    {
+        color = default;
+
+        if (string.IsNullOrWhiteSpace(key) || colors == null)
+        {
+            return false;
+        }
+
+        string trimmedKey = key.Trim();
+        foreach (var entry in colors)
+        {
+            if (entry != null && entry.key == trimmedKey)
+            {
+                color = entry.color;
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 /// Handles game save/load/delete using json files in Application.persistentDataPath.
 /// Collects data from PlayerManager, InventoryManager, FurnitureSaveManager and GameClock.
 /// </summary>
-public class SaveGameManager : MonoBehaviour
+public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAccessor
 {
     private static SaveGameManager instance;
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
@@ -16,6 +16,7 @@ public class SaveGameManager : MonoBehaviour
     public string CurrentSlotKey => currentSlot;
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
+    private readonly Dictionary<string, IndependentMaterialColorSaveData> independentMaterialColorStore = new();
     public static SaveGameManager Instance
     {
         get
@@ -130,6 +131,7 @@ public class SaveGameManager : MonoBehaviour
 
         if (changed && !string.IsNullOrEmpty(slotKey))
         {
+            IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
             OnSlotKeyChanged?.Invoke(slotKey);
             MaterialHuePresetManager.EnsureAllManagersInitialized();
         }
@@ -192,6 +194,7 @@ public class SaveGameManager : MonoBehaviour
             var data = new CreativeSaveData();
             FillCommon(data);
             SaveManagers(data);
+            data.independentMaterialColors = GetCachedIndependentMaterialColors(slotKey);
             baseData = data;
         }
         else
@@ -199,6 +202,7 @@ public class SaveGameManager : MonoBehaviour
             var data = new StorySaveData();
             FillCommon(data);
             SaveManagers(data);
+            data.independentMaterialColors = GetCachedIndependentMaterialColors(slotKey);
             baseData = data;
         }
 
@@ -236,13 +240,16 @@ public class SaveGameManager : MonoBehaviour
             if (creative)
             {
                 var emptyData = new CreativeSaveData();
+                CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors);
                 ApplyManagers(emptyData);
             }
             else
             {
                 var emptyData = new StorySaveData();
+                CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors);
                 ApplyManagers(emptyData);
             }
+            IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
             return createdNewSave;
         }
 
@@ -250,13 +257,17 @@ public class SaveGameManager : MonoBehaviour
         if (creative)
         {
             var data = CreativeSaveData.FromJson(json);
+            CacheIndependentMaterialColors(slotKey, data.independentMaterialColors);
             ApplyManagers(data);
         }
         else
         {
             var data = StorySaveData.FromJson(json);
+            CacheIndependentMaterialColors(slotKey, data.independentMaterialColors);
             ApplyManagers(data);
         }
+
+        IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
 
         return createdNewSave;
     }
@@ -595,5 +606,76 @@ public class SaveGameManager : MonoBehaviour
         {
             wardrobe.ApplySelectionEntries(entries);
         }
+    }
+
+    public void SaveColor(string slotId, string key, HSVColor color)
+    {
+        if (string.IsNullOrEmpty(slotId) || string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        var data = GetOrCreateIndependentMaterialColors(slotId);
+        data.SetColor(key, color);
+    }
+
+    public bool TryGetColor(string slotId, string key, out HSVColor color)
+    {
+        color = default;
+
+        if (string.IsNullOrEmpty(slotId) || string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        if (independentMaterialColorStore.TryGetValue(slotId, out var data) && data != null)
+        {
+            return data.TryGetColor(key, out color);
+        }
+
+        return false;
+    }
+
+    private IndependentMaterialColorSaveData GetOrCreateIndependentMaterialColors(string slotId)
+    {
+        if (string.IsNullOrEmpty(slotId))
+        {
+            return new IndependentMaterialColorSaveData();
+        }
+
+        if (!independentMaterialColorStore.TryGetValue(slotId, out var data) || data == null)
+        {
+            data = new IndependentMaterialColorSaveData();
+            independentMaterialColorStore[slotId] = data;
+        }
+
+        return data;
+    }
+
+    private void CacheIndependentMaterialColors(string slotId, IndependentMaterialColorSaveData data)
+    {
+        if (string.IsNullOrEmpty(slotId))
+        {
+            return;
+        }
+
+        independentMaterialColorStore[slotId] = data != null
+            ? new IndependentMaterialColorSaveData(data)
+            : new IndependentMaterialColorSaveData();
+    }
+
+    private IndependentMaterialColorSaveData GetCachedIndependentMaterialColors(string slotId)
+    {
+        if (string.IsNullOrEmpty(slotId))
+        {
+            return new IndependentMaterialColorSaveData();
+        }
+
+        if (independentMaterialColorStore.TryGetValue(slotId, out var data) && data != null)
+        {
+            return new IndependentMaterialColorSaveData(data);
+        }
+
+        return new IndependentMaterialColorSaveData();
     }
 }
