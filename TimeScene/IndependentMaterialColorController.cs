@@ -177,11 +177,6 @@ public class IndependentMaterialColorController : MonoBehaviour
 
         foreach (var controller in Resources.FindObjectsOfTypeAll<IndependentMaterialColorController>())
         {
-            if (controller == null)
-            {
-                continue;
-            }
-
             controller.SetSaveContext(slotId, accessor);
         }
     }
