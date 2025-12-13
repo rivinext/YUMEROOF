@@ -43,6 +43,7 @@ public class StorySaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public List<IndependentMaterialColorSlotEntry> independentMaterialColorSlots = new();
     public IndependentMaterialColorSaveData independentMaterialColors = new();
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
@@ -65,6 +66,7 @@ public class CreativeSaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public List<IndependentMaterialColorSlotEntry> independentMaterialColorSlots = new();
     public IndependentMaterialColorSaveData independentMaterialColors = new();
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
@@ -98,6 +100,13 @@ public class IndependentMaterialColorEntry
 {
     public string key;
     public HSVColor color;
+}
+
+[Serializable]
+public class IndependentMaterialColorSlotEntry
+{
+    public string slotKey;
+    public IndependentMaterialColorSaveData colors = new();
 }
 
 [Serializable]
