@@ -43,6 +43,8 @@ public class StorySaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public List<WardrobeSelectionEntry> wardrobeSelections = new();
+    public bool hasWardrobeSelections;
 
     public static StorySaveData FromJson(string json)
     {
@@ -62,6 +64,8 @@ public class CreativeSaveData : BaseSaveData
     public int cozy;
     public int nature;
     public MaterialHueSaveData materialHue;
+    public List<WardrobeSelectionEntry> wardrobeSelections = new();
+    public bool hasWardrobeSelections;
 
     public static CreativeSaveData FromJson(string json)
     {
@@ -85,4 +89,11 @@ public class MaterialHueManagerSaveData
     public string keyPrefix;
     public int selectedSlotIndex;
     public List<HSVColor> controllerColors = new();
+}
+
+[Serializable]
+public class WardrobeSelectionEntry
+{
+    public WardrobeTabType category;
+    public string itemId;
 }

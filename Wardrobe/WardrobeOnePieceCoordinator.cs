@@ -29,6 +29,7 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
 
     private bool isProcessingAutoChange;
     private bool isOnePieceEquipped;
+    private bool hasWardrobeSave;
 
     private void Reset()
     {
@@ -117,7 +118,12 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
 
     private bool ShouldSkipInitialEquipment()
     {
-        return WardrobeUIController.HasAnySavedSelections();
+        return hasWardrobeSave;
+    }
+
+    public void SetHasWardrobeSave(bool hasSave)
+    {
+        hasWardrobeSave = hasSave;
     }
 
     private void ApplyInitialEquipmentForCategory(WardrobeTabType category, string itemId)
