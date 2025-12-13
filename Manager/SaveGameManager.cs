@@ -194,7 +194,9 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             var data = new CreativeSaveData();
             FillCommon(data);
             SaveManagers(data);
+            EnsureIndependentMaterialColorSlotCached(slotKey);
             data.independentMaterialColors = GetCachedIndependentMaterialColors(slotKey);
+            data.independentMaterialColorSlots = GetCachedIndependentMaterialColorSlots();
             baseData = data;
         }
         else
@@ -202,7 +204,9 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             var data = new StorySaveData();
             FillCommon(data);
             SaveManagers(data);
+            EnsureIndependentMaterialColorSlotCached(slotKey);
             data.independentMaterialColors = GetCachedIndependentMaterialColors(slotKey);
+            data.independentMaterialColorSlots = GetCachedIndependentMaterialColorSlots();
             baseData = data;
         }
 
@@ -240,13 +244,13 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             if (creative)
             {
                 var emptyData = new CreativeSaveData();
-                CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors);
+                CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
             else
             {
                 var emptyData = new StorySaveData();
-                CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors);
+                CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
             IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
@@ -257,13 +261,13 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (creative)
         {
             var data = CreativeSaveData.FromJson(json);
-            CacheIndependentMaterialColors(slotKey, data.independentMaterialColors);
+            CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }
         else
         {
             var data = StorySaveData.FromJson(json);
-            CacheIndependentMaterialColors(slotKey, data.independentMaterialColors);
+            CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }
 
@@ -652,11 +656,26 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         return data;
     }
 
-    private void CacheIndependentMaterialColors(string slotId, IndependentMaterialColorSaveData data)
+    private void CacheIndependentMaterialColors(string slotId, IndependentMaterialColorSaveData data, List<IndependentMaterialColorSlotEntry> slots)
     {
         if (string.IsNullOrEmpty(slotId))
         {
             return;
+        }
+
+        if (slots != null)
+        {
+            foreach (var slotEntry in slots)
+            {
+                if (slotEntry == null || string.IsNullOrWhiteSpace(slotEntry.slotKey))
+                {
+                    continue;
+                }
+
+                independentMaterialColorStore[slotEntry.slotKey.Trim()] = slotEntry.colors != null
+                    ? new IndependentMaterialColorSaveData(slotEntry.colors)
+                    : new IndependentMaterialColorSaveData();
+            }
         }
 
         independentMaterialColorStore[slotId] = data != null
@@ -677,5 +696,38 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         return new IndependentMaterialColorSaveData();
+    }
+
+    private List<IndependentMaterialColorSlotEntry> GetCachedIndependentMaterialColorSlots()
+    {
+        List<IndependentMaterialColorSlotEntry> slots = new();
+        foreach (var kvp in independentMaterialColorStore)
+        {
+            if (string.IsNullOrWhiteSpace(kvp.Key))
+            {
+                continue;
+            }
+
+            slots.Add(new IndependentMaterialColorSlotEntry
+            {
+                slotKey = kvp.Key.Trim(),
+                colors = kvp.Value != null ? new IndependentMaterialColorSaveData(kvp.Value) : new IndependentMaterialColorSaveData()
+            });
+        }
+
+        return slots;
+    }
+
+    private void EnsureIndependentMaterialColorSlotCached(string slotId)
+    {
+        if (string.IsNullOrEmpty(slotId))
+        {
+            return;
+        }
+
+        if (!independentMaterialColorStore.ContainsKey(slotId))
+        {
+            independentMaterialColorStore[slotId] = new IndependentMaterialColorSaveData();
+        }
     }
 }
