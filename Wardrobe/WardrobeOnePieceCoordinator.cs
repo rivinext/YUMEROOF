@@ -117,7 +117,7 @@ public class WardrobeOnePieceCoordinator : MonoBehaviour
 
     private bool ShouldSkipInitialEquipment()
     {
-        return WardrobeUIController.HasAnySavedSelections();
+        return wardrobeUIController != null && wardrobeUIController.HasLoadedSelections;
     }
 
     private void ApplyInitialEquipmentForCategory(WardrobeTabType category, string itemId)

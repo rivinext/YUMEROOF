@@ -335,6 +335,8 @@ public class SaveGameManager : MonoBehaviour
                 }
             }
         }
+
+        SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -382,6 +384,8 @@ public class SaveGameManager : MonoBehaviour
                 }
             }
         }
+
+        SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
     }
 
     List<string> CollectInventory()
@@ -455,6 +459,7 @@ public class SaveGameManager : MonoBehaviour
         }
 
         ApplyHuePresets(data.materialHue);
+        ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -488,6 +493,7 @@ public class SaveGameManager : MonoBehaviour
         }
 
         ApplyHuePresets(data.materialHue);
+        ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)
@@ -555,5 +561,39 @@ public class SaveGameManager : MonoBehaviour
         var clock = FindFirstObjectByType<GameClock>();
         if (clock != null)
             clock.ApplySaveData(savedData);
+    }
+
+    void SaveWardrobeSelections(List<WardrobeSelectionEntry> target, out bool hasSelections)
+    {
+        hasSelections = false;
+        if (target == null)
+        {
+            return;
+        }
+
+        target.Clear();
+
+        var wardrobe = FindFirstObjectByType<WardrobeUIController>();
+        if (wardrobe == null)
+        {
+            return;
+        }
+
+        wardrobe.CollectSelectionEntries(target);
+        hasSelections = target.Count > 0;
+    }
+
+    void ApplyWardrobeSelections(List<WardrobeSelectionEntry> entries, bool hasSelections)
+    {
+        if (!hasSelections || entries == null)
+        {
+            return;
+        }
+
+        var wardrobe = FindFirstObjectByType<WardrobeUIController>();
+        if (wardrobe != null)
+        {
+            wardrobe.ApplySelectionEntries(entries);
+        }
     }
 }
