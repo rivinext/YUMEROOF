@@ -277,13 +277,21 @@ public class WardrobeUIController : MonoBehaviour
     {
         if (panelAnimator != null)
         {
-            if (!panelAnimator.IsShown || instant)
+            bool wasInactive = panelRoot != null && !panelRoot.activeInHierarchy;
+            if (wasInactive)
+            {
+                panelRoot.SetActive(true);
+            }
+
+            bool forceInstant = instant || !panelAnimator.isActiveAndEnabled || !panelAnimator.gameObject.activeInHierarchy || wasInactive;
+
+            if (!panelAnimator.IsShown || forceInstant)
             {
                 UpdatePreviewActivation(true);
             }
 
             UIPanelExclusionManager.Instance?.NotifyOpened(this);
-            panelAnimator.Show(instant);
+            panelAnimator.Show(forceInstant);
         }
         else if (panelRoot != null)
         {
@@ -297,8 +305,10 @@ public class WardrobeUIController : MonoBehaviour
     {
         if (panelAnimator != null)
         {
-            panelAnimator.Hide(instant);
-            if (instant)
+            bool forceInstant = instant || !panelAnimator.isActiveAndEnabled || !panelAnimator.gameObject.activeInHierarchy;
+
+            panelAnimator.Hide(forceInstant);
+            if (forceInstant)
             {
                 UpdatePreviewActivation(false);
             }

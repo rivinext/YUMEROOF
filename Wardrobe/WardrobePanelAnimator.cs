@@ -79,7 +79,9 @@ public class WardrobePanelAnimator : MonoBehaviour
             animationRoutine = null;
         }
 
-        if (instant || animationDuration <= 0f)
+        bool skipAnimation = instant || animationDuration <= 0f || !gameObject.activeInHierarchy || !isActiveAndEnabled;
+
+        if (skipAnimation)
         {
             isShown = targetShown;
             SetAnchoredPosition(isShown ? shownAnchoredPosition : hiddenAnchoredPosition);
