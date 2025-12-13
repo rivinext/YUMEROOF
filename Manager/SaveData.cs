@@ -90,10 +90,3 @@ public class MaterialHueManagerSaveData
     public int selectedSlotIndex;
     public List<HSVColor> controllerColors = new();
 }
-
-[Serializable]
-public class WardrobeSelectionEntry
-{
-    public WardrobeTabType category;
-    public string itemId;
-}
