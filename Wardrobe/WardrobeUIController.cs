@@ -124,6 +124,7 @@ public class WardrobeUIController : MonoBehaviour
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
+    private bool isRestoringSelections;
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -1085,12 +1086,21 @@ public class WardrobeUIController : MonoBehaviour
 
     private string GetSelectionKey(WardrobeTabType category)
     {
-        return SelectionKeyPrefix + category.ToString();
+        string slotKey = SaveGameManager.Instance != null ? SaveGameManager.Instance.CurrentSlotKey : string.Empty;
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            return SelectionKeyPrefix + category.ToString();
+        }
+
+        return $"{SelectionKeyPrefix}{slotKey}_{category}";
     }
 
     public static bool HasSavedSelection(WardrobeTabType category)
     {
-        string key = SelectionKeyPrefix + category.ToString();
+        string slotKey = SaveGameManager.Instance != null ? SaveGameManager.Instance.CurrentSlotKey : string.Empty;
+        string key = string.IsNullOrEmpty(slotKey)
+            ? SelectionKeyPrefix + category.ToString()
+            : $"{SelectionKeyPrefix}{slotKey}_{category}";
         return PlayerPrefs.HasKey(key);
     }
 
@@ -1129,35 +1139,109 @@ public class WardrobeUIController : MonoBehaviour
 
         PlayerPrefs.SetString(key, valueToStore);
         PlayerPrefs.Save();
+
+        if (!isRestoringSelections)
+        {
+            SaveGameManager.Instance?.SaveCurrentSlot();
+        }
     }
 
     private void RestoreSavedSelections()
     {
+        isRestoringSelections = true;
+        try
+        {
+            foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
+            {
+                string key = GetSelectionKey(category);
+                if (!PlayerPrefs.HasKey(key))
+                {
+                    continue;
+                }
+
+                string storedValue = PlayerPrefs.GetString(key);
+                if (IsEmptySelectionValue(storedValue))
+                {
+                    WardrobeItemView emptyView = FindItemView(category, null);
+                    EquipItem(category, null, emptyView);
+                    continue;
+                }
+
+                WardrobeItemView itemView = FindItemViewByItemId(category, storedValue);
+                if (itemView == null)
+                {
+                    WardrobeItemView emptyView = FindItemView(category, null);
+                    EquipItem(category, null, emptyView);
+                    continue;
+                }
+
+                EquipItem(category, itemView.WearablePrefab, itemView);
+            }
+        }
+        finally
+        {
+            isRestoringSelections = false;
+        }
+    }
+
+    public List<WardrobeSelectionEntry> GetSelectionSaveEntries(string slotKey)
+    {
+        List<WardrobeSelectionEntry> entries = new List<WardrobeSelectionEntry>();
+
         foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
         {
-            string key = GetSelectionKey(category);
-            if (!PlayerPrefs.HasKey(key))
+            string itemId = null;
+            WardrobeItemView itemView;
+            if (activeSelections.TryGetValue(category, out itemView) && itemView != null && !itemView.IsEmpty && !string.IsNullOrEmpty(itemView.ItemId))
             {
-                continue;
+                itemId = itemView.ItemId;
             }
 
-            string storedValue = PlayerPrefs.GetString(key);
-            if (IsEmptySelectionValue(storedValue))
+            entries.Add(new WardrobeSelectionEntry
             {
-                WardrobeItemView emptyView = FindItemView(category, null);
-                EquipItem(category, null, emptyView);
-                continue;
-            }
+                category = category,
+                itemId = itemId
+            });
+        }
 
-            WardrobeItemView itemView = FindItemViewByItemId(category, storedValue);
-            if (itemView == null)
+        return entries;
+    }
+
+    public void ApplySelectionEntries(IEnumerable<WardrobeSelectionEntry> entries, string slotKey)
+    {
+        if (entries == null)
+        {
+            return;
+        }
+
+        isRestoringSelections = true;
+        try
+        {
+            foreach (WardrobeSelectionEntry entry in entries)
             {
-                WardrobeItemView emptyView = FindItemView(category, null);
-                EquipItem(category, null, emptyView);
-                continue;
-            }
+                if (entry == null)
+                {
+                    continue;
+                }
 
-            EquipItem(category, itemView.WearablePrefab, itemView);
+                WardrobeItemView targetView = null;
+                if (!string.IsNullOrEmpty(entry.itemId))
+                {
+                    targetView = FindItemViewByItemId(entry.category, entry.itemId);
+                }
+
+                GameObject prefab = targetView != null ? targetView.WearablePrefab : null;
+                if (targetView == null)
+                {
+                    targetView = FindItemView(entry.category, null);
+                }
+
+                EquipItem(entry.category, prefab, targetView);
+            }
+        }
+        finally
+        {
+            isRestoringSelections = false;
         }
     }
 
