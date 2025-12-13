@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -37,8 +36,9 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private AudioClip closeButtonClip;
     [SerializeField] private AudioSource toggleButtonAudioSource;
     [SerializeField] private AudioSource closeButtonAudioSource;
-    [SerializeField] private float equipmentSaveCooldownSeconds = 0.5f;
-    [SerializeField] private UnityEvent onInitialized = new UnityEvent();
+
+    private const string SelectionKeyPrefix = "WardrobeSelection_";
+    private const string EmptySelectionToken = "__EMPTY__";
 
     [Serializable]
     private class CategoryTab
@@ -124,8 +124,6 @@ public class WardrobeUIController : MonoBehaviour
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
-
-    private Coroutine equipmentSaveRoutine;
 
     public WardrobeEquipEvent OnItemEquipped
     {
@@ -223,147 +221,12 @@ public class WardrobeUIController : MonoBehaviour
             previewController.SetupPreviewEventTrigger();
         }
 
-        ClearLegacySavedSelections();
-
-        MarkInitialized();
-    }
-
-    private void OnEnable()
-    {
-        onItemEquipped.AddListener(HandleEquipmentEquipped);
-        SubscribeSlotChangeEvents();
-    }
-
-    private void OnDisable()
-    {
-        onItemEquipped.RemoveListener(HandleEquipmentEquipped);
-        UnsubscribeSlotChangeEvents();
-        StopEquipmentSaveRoutine();
-    }
-
-    private void SubscribeSlotChangeEvents()
-    {
-        try
-        {
-            SaveGameManager manager = SaveGameManager.Instance;
-            if (manager != null)
-            {
-                manager.OnSlotKeyChanged -= HandleSlotKeyChanged;
-                manager.OnSlotKeyChanged += HandleSlotKeyChanged;
-
-                if (!string.IsNullOrEmpty(manager.CurrentSlotKey) && string.IsNullOrEmpty(currentSlotKey))
-                {
-                    currentSlotKey = NormalizeSlotKey(manager.CurrentSlotKey);
-                }
-            }
-        }
-        catch
-        {
-            // Ignore initialization errors when the save manager is not available yet.
-        }
-    }
-
-    private void UnsubscribeSlotChangeEvents()
-    {
-        try
-        {
-            SaveGameManager manager = SaveGameManager.Instance;
-            if (manager != null)
-            {
-                manager.OnSlotKeyChanged -= HandleSlotKeyChanged;
-            }
-        }
-        catch
-        {
-            // Ignore shutdown errors when the save manager is not available anymore.
-        }
-    }
-
-    private void HandleSlotKeyChanged(string slotKey)
-    {
-        if (string.Equals(currentSlotKey, NormalizeSlotKey(slotKey), StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        SetCurrentSlotKey(slotKey);
+        RestoreSavedSelections();
     }
 
     private void Start()
     {
         EnsureAnyTabIsActive();
-
-        MarkInitialized();
-    }
-
-    public void SetCurrentSlotKey(string slotKey)
-    {
-        string normalizedKey = NormalizeSlotKey(slotKey);
-        if (string.Equals(currentSlotKey, normalizedKey, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        ResetEquippedItemsForSlotChange();
-        currentSlotKey = normalizedKey;
-        ApplyPendingSelectionsForCurrentSlot();
-    }
-
-    private static string NormalizeSlotKey(string slotKey)
-    {
-        return string.IsNullOrEmpty(slotKey) ? string.Empty : slotKey;
-    }
-
-    private bool IsSlotContextMatching(string slotKey)
-    {
-        return string.Equals(currentSlotKey, NormalizeSlotKey(slotKey), StringComparison.Ordinal);
-    }
-
-    private void StopEquipmentSaveRoutine()
-    {
-        if (equipmentSaveRoutine != null)
-        {
-            StopCoroutine(equipmentSaveRoutine);
-            equipmentSaveRoutine = null;
-        }
-    }
-
-    private void ResetEquippedItemsForSlotChange()
-    {
-        StopEquipmentSaveRoutine();
-
-        foreach (var set in previewEquippedInstances.Values)
-        {
-            set?.DestroyAll(DestroyInstance);
-        }
-
-        previewEquippedInstances.Clear();
-
-        foreach (var set in gameEquippedInstances.Values)
-        {
-            set?.DestroyAll(DestroyInstance);
-        }
-
-        gameEquippedInstances.Clear();
-        activeSelections.Clear();
-        UpdateDescription(null);
-    }
-
-    private void ApplyPendingSelectionsForCurrentSlot()
-    {
-        if (!isInitialized)
-        {
-            return;
-        }
-
-        if (!pendingSelectionEntriesBySlot.TryGetValue(currentSlotKey, out var pendingEntries) || pendingEntries == null || pendingEntries.Count == 0)
-        {
-            return;
-        }
-
-        List<WardrobeSelectionSaveEntry> bufferedSelections = new List<WardrobeSelectionSaveEntry>(pendingEntries);
-        pendingSelectionEntriesBySlot.Remove(currentSlotKey);
-        ApplySelectionEntries(bufferedSelections, currentSlotKey);
     }
 
     private void OnDestroy()
@@ -409,9 +272,6 @@ public class WardrobeUIController : MonoBehaviour
     }
 
     public bool IsOpen => IsShown;
-    public bool IsInitialized => isInitialized;
-    public UnityEvent OnInitialized => onInitialized;
-    public string CurrentSlotKey => currentSlotKey;
 
     public void ShowPanel(bool instant = false)
     {
@@ -584,6 +444,7 @@ public class WardrobeUIController : MonoBehaviour
         UpdateSelectionState(category, source);
         onItemEquipped.Invoke(category, newPreviewInstance, source);
         UpdateDescription(source);
+        SaveSelectionState(category, source != null && !source.IsEmpty && !string.IsNullOrEmpty(source.ItemId) ? source.ItemId : null);
     }
 
     private void ApplyLayerRecursively(GameObject target, int layer)
@@ -734,9 +595,6 @@ public class WardrobeUIController : MonoBehaviour
 
     private static readonly List<ExtractedPart> s_extractedPartsBuffer = new List<ExtractedPart>();
     private static readonly Dictionary<string, ExtractedPart> s_extractedPartsLookup = new Dictionary<string, ExtractedPart>();
-    private readonly Dictionary<string, List<WardrobeSelectionSaveEntry>> pendingSelectionEntriesBySlot = new Dictionary<string, List<WardrobeSelectionSaveEntry>>(StringComparer.Ordinal);
-    private string currentSlotKey = string.Empty;
-    private bool isInitialized;
 
     private static bool TryResolvePartNameFromTransform(Transform transform, out string partName)
     {
@@ -1225,152 +1083,82 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
-    private void ClearLegacySavedSelections()
+    private string GetSelectionKey(WardrobeTabType category)
     {
-        bool cleared = false;
+        return SelectionKeyPrefix + category.ToString();
+    }
+
+    public static bool HasSavedSelection(WardrobeTabType category)
+    {
+        string key = SelectionKeyPrefix + category.ToString();
+        return PlayerPrefs.HasKey(key);
+    }
+
+    public static bool HasAnySavedSelections()
+    {
         foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
         {
-            string key = $"WardrobeSelection_{category}";
-            if (PlayerPrefs.HasKey(key))
+            if (HasSavedSelection(category))
             {
-                PlayerPrefs.DeleteKey(key);
-                cleared = true;
+                return true;
             }
         }
 
-        if (cleared)
-        {
-            PlayerPrefs.Save();
-        }
+        return false;
     }
 
-    private void MarkInitialized()
+    private static bool IsEmptySelectionValue(string storedValue)
     {
-        if (isInitialized)
-        {
-            return;
-        }
-
-        isInitialized = true;
-
-        ApplyPendingSelectionsForCurrentSlot();
-
-        onInitialized?.Invoke();
+        return string.IsNullOrEmpty(storedValue) || string.Equals(storedValue, EmptySelectionToken, StringComparison.Ordinal);
     }
 
-    public IEnumerable<WardrobeSelectionSaveEntry> GetSelectionSaveEntries()
+    private void SaveSelectionState(WardrobeTabType category, string itemId)
     {
-        return GetSelectionSaveEntries(currentSlotKey);
-    }
+        string key = GetSelectionKey(category);
+        string valueToStore = string.IsNullOrEmpty(itemId) ? EmptySelectionToken : itemId;
 
-    public IEnumerable<WardrobeSelectionSaveEntry> GetSelectionSaveEntries(string slotKey)
-    {
-        if (!IsSlotContextMatching(slotKey))
+        bool hasKey = PlayerPrefs.HasKey(key);
+        if (hasKey)
         {
-            return Array.Empty<WardrobeSelectionSaveEntry>();
-        }
-
-        List<WardrobeSelectionSaveEntry> entries = new List<WardrobeSelectionSaveEntry>();
-        foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
-        {
-            WardrobeItemView active;
-            activeSelections.TryGetValue(category, out active);
-            string itemId = active != null && !active.IsEmpty && !string.IsNullOrEmpty(active.ItemId) ? active.ItemId : null;
-
-            entries.Add(new WardrobeSelectionSaveEntry
+            string existingValue = PlayerPrefs.GetString(key);
+            if (string.Equals(existingValue, valueToStore, StringComparison.Ordinal))
             {
-                category = category,
-                itemId = itemId
-            });
-        }
-
-        return entries;
-    }
-
-    public void ApplySelectionEntries(IEnumerable<WardrobeSelectionSaveEntry> selections)
-    {
-        ApplySelectionEntries(selections, currentSlotKey);
-    }
-
-    public void ApplySelectionEntries(IEnumerable<WardrobeSelectionSaveEntry> selections, string slotKey)
-    {
-        if (!IsSlotContextMatching(slotKey))
-        {
-            BufferSelections(selections, slotKey);
-            return;
-        }
-
-        if (!isInitialized)
-        {
-            BufferSelections(selections, slotKey);
-            return;
-        }
-
-        Dictionary<WardrobeTabType, string> lookup = new Dictionary<WardrobeTabType, string>();
-        if (selections != null)
-        {
-            foreach (WardrobeSelectionSaveEntry entry in selections)
-            {
-                lookup[entry.category] = entry.itemId;
+                return;
             }
         }
 
+        PlayerPrefs.SetString(key, valueToStore);
+        PlayerPrefs.Save();
+    }
+
+    private void RestoreSavedSelections()
+    {
         foreach (WardrobeTabType category in Enum.GetValues(typeof(WardrobeTabType)))
         {
-            string itemId;
-            lookup.TryGetValue(category, out itemId);
-            ApplySelection(category, itemId);
-        }
-    }
+            string key = GetSelectionKey(category);
+            if (!PlayerPrefs.HasKey(key))
+            {
+                continue;
+            }
 
-    private void BufferSelections(IEnumerable<WardrobeSelectionSaveEntry> selections, string slotKey)
-    {
-        string normalizedSlotKey = NormalizeSlotKey(slotKey);
-        List<WardrobeSelectionSaveEntry> pendingList;
-        if (!pendingSelectionEntriesBySlot.TryGetValue(normalizedSlotKey, out pendingList) || pendingList == null)
-        {
-            pendingList = new List<WardrobeSelectionSaveEntry>();
-            pendingSelectionEntriesBySlot[normalizedSlotKey] = pendingList;
-        }
-        else
-        {
-            pendingList.Clear();
-        }
+            string storedValue = PlayerPrefs.GetString(key);
+            if (IsEmptySelectionValue(storedValue))
+            {
+                WardrobeItemView emptyView = FindItemView(category, null);
+                EquipItem(category, null, emptyView);
+                continue;
+            }
 
-        if (selections == null)
-        {
-            return;
-        }
+            WardrobeItemView itemView = FindItemViewByItemId(category, storedValue);
+            if (itemView == null)
+            {
+                WardrobeItemView emptyView = FindItemView(category, null);
+                EquipItem(category, null, emptyView);
+                continue;
+            }
 
-        foreach (WardrobeSelectionSaveEntry entry in selections)
-        {
-            pendingList.Add(entry);
-        }
-    }
-
-    private void ApplySelection(WardrobeTabType category, string itemId)
-    {
-        if (string.IsNullOrEmpty(itemId))
-        {
-            WardrobeItemView emptyView = FindItemView(category, null);
-            EquipItem(category, null, emptyView);
-            return;
-        }
-
-        WardrobeItemView itemView = FindItemViewByItemId(category, itemId);
-        if (itemView != null)
-        {
             EquipItem(category, itemView.WearablePrefab, itemView);
-            return;
         }
-
-        if (isInitialized)
-        {
-            Debug.LogWarning($"[WardrobeUIController] ItemView for category {category} with itemId '{itemId}' was not found after catalog initialization.");
-        }
-
-        WardrobeItemView fallbackEmpty = FindItemView(category, null);
-        EquipItem(category, null, fallbackEmpty);
     }
 
     private WardrobeItemView FindItemViewByItemId(WardrobeTabType category, string targetItemId)
@@ -1417,68 +1205,6 @@ public class WardrobeUIController : MonoBehaviour
     {
         UpdatePreviewActivation(visible);
         PlayerController.SetGlobalInputEnabled(!visible);
-    }
-
-    private void HandleEquipmentEquipped(WardrobeTabType category, GameObject instance, WardrobeItemView source)
-    {
-        if (!isActiveAndEnabled)
-        {
-            return;
-        }
-
-        if (equipmentSaveRoutine != null)
-        {
-            return;
-        }
-
-        equipmentSaveRoutine = StartCoroutine(SaveWardrobeAfterCooldown());
-    }
-
-    private IEnumerator SaveWardrobeAfterCooldown()
-    {
-        float delay = Mathf.Max(0f, equipmentSaveCooldownSeconds);
-        if (delay > 0f)
-        {
-            yield return new WaitForSeconds(delay);
-        }
-
-        equipmentSaveRoutine = null;
-        TrySaveCurrentSlot();
-    }
-
-    private void TrySaveCurrentSlot()
-    {
-        SaveGameManager manager = null;
-
-        try
-        {
-            manager = SaveGameManager.Instance;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Failed to access SaveGameManager instance: {ex}");
-            return;
-        }
-
-        if (manager == null)
-        {
-            return;
-        }
-
-        string slotKey = manager.CurrentSlotKey;
-        if (string.IsNullOrEmpty(slotKey))
-        {
-            return;
-        }
-
-        try
-        {
-            manager.Save(slotKey);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Failed to save wardrobe changes for slot '{slotKey}': {ex}");
-        }
     }
 
     /// <summary>

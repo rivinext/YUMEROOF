@@ -79,7 +79,7 @@ public class WardrobePanelAnimator : MonoBehaviour
             animationRoutine = null;
         }
 
-        if (instant || animationDuration <= 0f || !isActiveAndEnabled)
+        if (instant || animationDuration <= 0f)
         {
             isShown = targetShown;
             SetAnchoredPosition(isShown ? shownAnchoredPosition : hiddenAnchoredPosition);
