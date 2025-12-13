@@ -25,10 +25,20 @@ public class BaseSaveData
     public string location;
     public string screenshotFilename;
 
+    public List<WardrobeSelectionEntry> wardrobeSelections = new();
+    public bool hasWardrobeSelections;
+
     public string ToJson()
     {
         return JsonUtility.ToJson(this);
     }
+}
+
+[Serializable]
+public class WardrobeSelectionEntry
+{
+    public WardrobeTabType category;
+    public string itemId;
 }
 
 [Serializable]
@@ -86,3 +96,4 @@ public class MaterialHueManagerSaveData
     public int selectedSlotIndex;
     public List<HSVColor> controllerColors = new();
 }
+

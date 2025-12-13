@@ -299,6 +299,7 @@ public class SaveGameManager : MonoBehaviour
 
         data.inventory = CollectInventory();
         SaveFurniture(data.furniture);
+        SaveWardrobe(data.wardrobeSelections, out data.hasWardrobeSelections);
 
         var clock = GameClock.Instance;
         if (clock != null)
@@ -346,6 +347,7 @@ public class SaveGameManager : MonoBehaviour
 
         data.ownedItems = CollectInventory();
         SaveFurniture(data.furniture);
+        SaveWardrobe(data.wardrobeSelections, out data.hasWardrobeSelections);
 
         var clock = GameClock.Instance;
         if (clock != null)
@@ -434,6 +436,7 @@ public class SaveGameManager : MonoBehaviour
         ApplyInventory(data.inventory);
         ApplyFurniture(data.furniture);
         ApplyTime(data.clock);
+        ApplyWardrobe(data.wardrobeSelections, data.hasWardrobeSelections);
 
         var money = MoneyManager.Instance;
         if (money != null)
@@ -467,6 +470,7 @@ public class SaveGameManager : MonoBehaviour
         ApplyInventory(data.ownedItems);
         ApplyFurniture(data.furniture);
         ApplyTime(data.clock);
+        ApplyWardrobe(data.wardrobeSelections, data.hasWardrobeSelections);
 
         var money = MoneyManager.Instance;
         if (money != null)
@@ -555,5 +559,49 @@ public class SaveGameManager : MonoBehaviour
         var clock = FindFirstObjectByType<GameClock>();
         if (clock != null)
             clock.ApplySaveData(savedData);
+    }
+
+    void SaveWardrobe(List<WardrobeSelectionEntry> target, out bool hasWardrobeSelections)
+    {
+        target.Clear();
+        hasWardrobeSelections = false;
+
+        var wardrobe = FindFirstObjectByType<WardrobeUIController>();
+        if (wardrobe == null)
+        {
+            return;
+        }
+
+        string slotKey = CurrentSlotKey;
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            return;
+        }
+
+        target.AddRange(wardrobe.GetSelectionSaveEntries(slotKey));
+        hasWardrobeSelections = target.Count > 0;
+    }
+
+    void ApplyWardrobe(List<WardrobeSelectionEntry> selections, bool hasWardrobeSelections)
+    {
+        var coordinator = FindFirstObjectByType<WardrobeOnePieceCoordinator>();
+        if (coordinator != null)
+        {
+            coordinator.SetHasWardrobeSave(hasWardrobeSelections);
+        }
+
+        if (!hasWardrobeSelections)
+        {
+            return;
+        }
+
+        var wardrobe = FindFirstObjectByType<WardrobeUIController>();
+        if (wardrobe == null)
+        {
+            return;
+        }
+
+        string slotKey = CurrentSlotKey;
+        wardrobe.ApplySelectionEntries(selections, slotKey);
     }
 }
