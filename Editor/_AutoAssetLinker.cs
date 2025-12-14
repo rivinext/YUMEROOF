@@ -31,6 +31,12 @@ public class AutoAssetLinker : EditorWindow
         GetWindow<AutoAssetLinker>("Auto Asset Linker");
     }
 
+    private void OnEnable()
+    {
+        minSize = new Vector2(600f, 500f);
+        maxSize = new Vector2(1400f, 1000f);
+    }
+
     void OnGUI()
     {
         GUILayout.Label("自動アセットリンクツール", EditorStyles.boldLabel);
