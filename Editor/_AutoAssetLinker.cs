@@ -15,6 +15,7 @@ public class AutoAssetLinker : EditorWindow
 
     private List<LinkResult> linkResults = new List<LinkResult>();
     private Vector2 scrollPos;
+    private bool showSuccess = true;
 
     [MenuItem("Tools/Yume Roof/Auto Asset Linker")]
     public static void ShowWindow()
@@ -64,10 +65,17 @@ public class AutoAssetLinker : EditorWindow
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("リンク結果", EditorStyles.boldLabel);
 
+            showSuccess = EditorGUILayout.ToggleLeft("成功した結果も表示", showSuccess);
+
             scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(200));
 
             foreach (var result in linkResults)
             {
+                if (!showSuccess && result.success)
+                {
+                    continue;
+                }
+
                 EditorGUILayout.BeginHorizontal();
 
                 // アイコン表示
