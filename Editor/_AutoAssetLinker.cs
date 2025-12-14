@@ -23,7 +23,6 @@ public class AutoAssetLinker : EditorWindow
 
     private List<LinkResult> linkResults = new List<LinkResult>();
     private Vector2 scrollPos;
-    private bool showSuccess = true;
 
     [MenuItem("Tools/Yume Roof/Auto Asset Linker")]
     public static void ShowWindow()
@@ -69,8 +68,8 @@ public class AutoAssetLinker : EditorWindow
         if (GUILayout.Button("すべて自動リンク", GUILayout.Height(40)))
         {
             linkResults.Clear();
-            LinkFurnitureAssets();
-            LinkMaterialAssets();
+            LinkFurnitureAssets(false);
+            LinkMaterialAssets(false);
         }
 
         // 結果表示
@@ -89,17 +88,10 @@ public class AutoAssetLinker : EditorWindow
             EditorGUILayout.LabelField("Prefabリンク済み", $"{linkedPrefabsCount}/{totalFurnitureCount}");
             EditorGUILayout.LabelField("アイコンリンク済み", $"{linkedIconsCount}/{totalFurnitureCount}");
 
-            showSuccess = EditorGUILayout.ToggleLeft("成功した結果も表示", showSuccess);
-
             scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(200));
 
             foreach (var result in linkResults)
             {
-                if (!showSuccess && result.success)
-                {
-                    continue;
-                }
-
                 EditorGUILayout.BeginHorizontal();
 
                 // アイコン表示
@@ -117,9 +109,12 @@ public class AutoAssetLinker : EditorWindow
         }
     }
 
-    void LinkFurnitureAssets()
+    void LinkFurnitureAssets(bool clearPrevious = true)
     {
-        linkResults.Clear();
+        if (clearPrevious)
+        {
+            linkResults.Clear();
+        }
 
         // すべてのFurnitureDataSOを取得
         string[] guids = AssetDatabase.FindAssets("t:FurnitureDataSO", new[] { furnitureSOFolder });
@@ -143,21 +138,17 @@ public class AutoAssetLinker : EditorWindow
             }
             else
             {
-                // デバッグ情報を追加
-                linkResults.Add(new LinkResult(false, $"検索中: ModelName={data.modelName}, NameID={data.nameID}"));
-
                 string searchFolder = prefabFolder.TrimEnd('/', '\\');
                 string[] prefabGuids;
 
                 if (string.IsNullOrEmpty(searchFolder))
                 {
                     prefabGuids = System.Array.Empty<string>();
-                    linkResults.Add(new LinkResult(false, "  検索フォルダが未設定です"));
+                    linkResults.Add(new LinkResult(false, "Prefab検索フォルダが未設定です"));
                 }
                 else
                 {
                     prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { searchFolder });
-                    linkResults.Add(new LinkResult(false, $"  検索対象フォルダ: {searchFolder} (ヒット数: {prefabGuids.Length})"));
                 }
 
                 foreach (string prefabGuid in prefabGuids)
@@ -171,7 +162,6 @@ public class AutoAssetLinker : EditorWindow
                     {
                         data.prefab = prefab;
                         prefabLinked = true;
-                        linkResults.Add(new LinkResult(true, $"{data.nameID}: Prefab接続成功 ({prefab.name})"));
                         break;
                     }
                 }
@@ -190,7 +180,6 @@ public class AutoAssetLinker : EditorWindow
                         {
                             data.prefab = newPrefab;
                             prefabLinked = true;
-                            linkResults.Add(new LinkResult(true, $"{data.nameID}: FBXからPrefab自動生成"));
                         }
                     }
                     else
@@ -207,7 +196,6 @@ public class AutoAssetLinker : EditorWindow
                     {
                         prefabContents.AddComponent<SitTrigger>();
                         PrefabUtility.SaveAsPrefabAsset(prefabContents, prefabPath);
-                        linkResults.Add(new LinkResult(true, $"{data.nameID}: SitTrigger追加"));
                     }
                     PrefabUtility.UnloadPrefabContents(prefabContents);
                 }
@@ -234,7 +222,6 @@ public class AutoAssetLinker : EditorWindow
                 {
                     data.icon = icon;
                     iconLinked = true;
-                    linkResults.Add(new LinkResult(true, $"{data.nameID}: アイコン接続成功 ({icon.name})"));
                 }
 
                 if (!iconLinked)
@@ -248,7 +235,6 @@ public class AutoAssetLinker : EditorWindow
                         {
                             data.icon = convertedIcon;
                             iconLinked = true;
-                            linkResults.Add(new LinkResult(true, $"{data.nameID}: テクスチャをSpriteに変換して接続"));
                         }
                     }
 
@@ -274,12 +260,16 @@ public class AutoAssetLinker : EditorWindow
         furnitureLinkTotalCount = totalCount;
         UpdateAssetLinkStatusFields();
 
-        linkResults.Add(new LinkResult(true, $"===== 完了: {successCount}/{totalCount} 個の家具をリンク ====="));
         Debug.Log($"家具アセットリンク完了: {successCount}/{totalCount}");
     }
 
-    void LinkMaterialAssets()
+    void LinkMaterialAssets(bool clearPrevious = true)
     {
+        if (clearPrevious)
+        {
+            linkResults.Clear();
+        }
+
         // すべてのMaterialDataSOを取得
         string[] guids = AssetDatabase.FindAssets("t:MaterialDataSO", new[] { materialSOFolder });
         int successCount = 0;
@@ -309,7 +299,6 @@ public class AutoAssetLinker : EditorWindow
                 {
                     data.icon = icon;
                     iconLinked = true;
-                    linkResults.Add(new LinkResult(true, $"{data.materialID}: アイコン接続成功"));
                 }
                 else
                 {
@@ -331,7 +320,6 @@ public class AutoAssetLinker : EditorWindow
         materialLinkTotalCount = totalCount;
         UpdateAssetLinkStatusFields();
 
-        linkResults.Add(new LinkResult(true, $"===== 完了: {successCount}/{totalCount} 個の素材をリンク ====="));
         Debug.Log($"素材アセットリンク完了: {successCount}/{totalCount}");
     }
 
