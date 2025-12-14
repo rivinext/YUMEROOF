@@ -13,6 +13,14 @@ public class AutoAssetLinker : EditorWindow
     private string furnitureSOFolder = "Assets/Resources/Data/ScriptableObjects/Furniture/";
     private string materialSOFolder = "Assets/Resources/Data/ScriptableObjects/Materials/";
 
+    private int furnitureLinkSuccessCount;
+    private int furnitureLinkTotalCount;
+    private int materialLinkSuccessCount;
+    private int materialLinkTotalCount;
+    private int totalFurnitureCount;
+    private int linkedPrefabsCount;
+    private int linkedIconsCount;
+
     private List<LinkResult> linkResults = new List<LinkResult>();
     private Vector2 scrollPos;
     private bool showSuccess = true;
@@ -64,6 +72,16 @@ public class AutoAssetLinker : EditorWindow
         {
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("リンク結果", EditorStyles.boldLabel);
+
+            EditorGUILayout.LabelField("概要", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("家具リンク", $"{furnitureLinkSuccessCount}/{furnitureLinkTotalCount}");
+            EditorGUILayout.LabelField("素材リンク", $"{materialLinkSuccessCount}/{materialLinkTotalCount}");
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("=== アセットリンク状態 ===", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("家具総数", totalFurnitureCount.ToString());
+            EditorGUILayout.LabelField("Prefabリンク済み", $"{linkedPrefabsCount}/{totalFurnitureCount}");
+            EditorGUILayout.LabelField("アイコンリンク済み", $"{linkedIconsCount}/{totalFurnitureCount}");
 
             showSuccess = EditorGUILayout.ToggleLeft("成功した結果も表示", showSuccess);
 
@@ -246,6 +264,10 @@ public class AutoAssetLinker : EditorWindow
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
+        furnitureLinkSuccessCount = successCount;
+        furnitureLinkTotalCount = totalCount;
+        UpdateAssetLinkStatusFields();
+
         linkResults.Add(new LinkResult(true, $"===== 完了: {successCount}/{totalCount} 個の家具をリンク ====="));
         Debug.Log($"家具アセットリンク完了: {successCount}/{totalCount}");
     }
@@ -298,6 +320,10 @@ public class AutoAssetLinker : EditorWindow
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+
+        materialLinkSuccessCount = successCount;
+        materialLinkTotalCount = totalCount;
+        UpdateAssetLinkStatusFields();
 
         linkResults.Add(new LinkResult(true, $"===== 完了: {successCount}/{totalCount} 個の素材をリンク ====="));
         Debug.Log($"素材アセットリンク完了: {successCount}/{totalCount}");
@@ -442,6 +468,16 @@ public class AutoAssetLinker : EditorWindow
     [MenuItem("Tools/Yume Roof/Check Asset Links")]
     public static void CheckAssetLinks()
     {
+        AssetLinkStatus status = CalculateAssetLinkStatus();
+
+        Debug.Log($"=== アセットリンク状態 ===");
+        Debug.Log($"家具総数: {status.Total}");
+        Debug.Log($"Prefabリンク済み: {status.LinkedPrefabs}/{status.Total}");
+        Debug.Log($"アイコンリンク済み: {status.LinkedIcons}/{status.Total}");
+    }
+
+    private static AssetLinkStatus CalculateAssetLinkStatus()
+    {
         string[] furnitureGuids = AssetDatabase.FindAssets("t:FurnitureDataSO");
         int linkedPrefabs = 0;
         int linkedIcons = 0;
@@ -456,9 +492,26 @@ public class AutoAssetLinker : EditorWindow
             if (data.icon != null) linkedIcons++;
         }
 
-        Debug.Log($"=== アセットリンク状態 ===");
-        Debug.Log($"家具総数: {total}");
-        Debug.Log($"Prefabリンク済み: {linkedPrefabs}/{total}");
-        Debug.Log($"アイコンリンク済み: {linkedIcons}/{total}");
+        return new AssetLinkStatus
+        {
+            Total = total,
+            LinkedPrefabs = linkedPrefabs,
+            LinkedIcons = linkedIcons
+        };
+    }
+
+    private void UpdateAssetLinkStatusFields()
+    {
+        AssetLinkStatus status = CalculateAssetLinkStatus();
+        totalFurnitureCount = status.Total;
+        linkedPrefabsCount = status.LinkedPrefabs;
+        linkedIconsCount = status.LinkedIcons;
+    }
+
+    private struct AssetLinkStatus
+    {
+        public int Total;
+        public int LinkedPrefabs;
+        public int LinkedIcons;
     }
 }
