@@ -9,7 +9,7 @@ using System.Linq;
 public class AutoAssetLinker : EditorWindow
 {
     private string prefabFolder = "Assets/Resources/Furniture/";
-    private string iconFolder = "Assets/Sprites/Icons/";
+    private string iconFolder = "Assets/Sprites/";
     private string furnitureSOFolder = "Assets/Resources/Data/ScriptableObjects/Furniture/";
     private string materialSOFolder = "Assets/Resources/Data/ScriptableObjects/Materials/";
 
