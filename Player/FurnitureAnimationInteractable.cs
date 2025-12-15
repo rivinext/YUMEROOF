@@ -46,6 +46,17 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     [Tooltip("シーン開始時にループを有効にしたい場合は true。")]
     [SerializeField] private bool startLoopActive = false;
 
+    [Header("Audio Settings")]
+    [Tooltip("Eキーでインタラクトした際に再生する効果音。")]
+    [SerializeField] private AudioClip interactSfx;
+    [Range(0f, 1f)]
+    [SerializeField] private float interactSfxVolume = 1f;
+    [Tooltip("同じオブジェクトを連打した際のクールダウン時間(秒)。0 で無効。")]
+    [SerializeField] private float interactSfxCooldown = 0.1f;
+
+    private AudioSource audioSource;
+    private float nextPlayableSfxTime;
+
     private bool isLooping;
 
     /// <summary>
@@ -79,6 +90,18 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
         }
     }
 
+    private void OnEnable()
+    {
+        SetupAudioSource();
+        AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
+        HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+    }
+
+    private void OnDisable()
+    {
+        AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+    }
+
     private void TryAssignAnimator()
     {
         if (targetAnimator == null)
@@ -94,6 +117,8 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
             Debug.LogWarning($"[{nameof(FurnitureAnimationInteractable)}] Animator が見つかりません。", this);
             return;
         }
+
+        PlayInteractSfx();
 
         switch (interactionMode)
         {
@@ -144,6 +169,46 @@ public class FurnitureAnimationInteractable : MonoBehaviour, IInteractable
     {
         isLooping = !isLooping;
         ApplyLoopState();
+    }
+
+    private void SetupAudioSource()
+    {
+        audioSource = GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+        audioSource.loop = false;
+        audioSource.spatialBlend = 0f;
+    }
+
+    private void HandleSfxVolumeChanged(float volume)
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        audioSource.volume = Mathf.Clamp01(volume);
+    }
+
+    private void PlayInteractSfx()
+    {
+        if (interactSfx == null || audioSource == null)
+        {
+            return;
+        }
+
+        if (interactSfxCooldown > 0f && Time.time < nextPlayableSfxTime)
+        {
+            return;
+        }
+
+        float volume = interactSfxVolume * AudioManager.CurrentSfxVolume;
+        if (volume <= 0f)
+        {
+            return;
+        }
+
+        audioSource.PlayOneShot(interactSfx, volume);
+        nextPlayableSfxTime = Time.time + Mathf.Max(0f, interactSfxCooldown);
     }
 
     /// <summary>
