@@ -206,10 +206,6 @@ public class OrthographicCameraController : MonoBehaviour
             {
                 shouldBlockCamera = UIInteractionManager.Instance.ShouldBlockCameraControl();
 
-                if (debugUIDetection && shouldBlockCamera)
-                {
-                    Debug.Log("[CameraController] Blocking new camera operation via UIInteractionManager");
-                }
             }
             else
             {
