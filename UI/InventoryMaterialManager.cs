@@ -10,6 +10,10 @@ public class InventoryMaterialManager : MonoBehaviour
     public GameObject materialIconPrefab;
 
     [SerializeField]
+    [Tooltip("Enable detailed debug logs for material icon refresh operations.")]
+    private bool enableDebugLogging = false;
+
+    [SerializeField]
     public MaterialDescriptionPanel materialDescPanel;
 
     // アイコンのキャッシュ
@@ -59,8 +63,11 @@ public class InventoryMaterialManager : MonoBehaviour
 
     public void RefreshMaterialIcons(List<InventoryItem> items)
     {
-        Debug.Log($"RefreshMaterialIcons called with {items.Count} items");
-        Debug.Log($"Material slots available: {materialSlots?.Length ?? 0}");
+        if (ShouldLogDebug())
+        {
+            Debug.Log($"RefreshMaterialIcons called with {items.Count} items");
+            Debug.Log($"Material slots available: {materialSlots?.Length ?? 0}");
+        }
         // 既存のアイコンをクリア
         foreach (var kvp in materialIcons)
         {
@@ -87,10 +94,18 @@ public class InventoryMaterialManager : MonoBehaviour
             icon.SetActive(true);
         }
         // 各アイテムの詳細をログ出力
-        foreach (var item in items)
+        if (ShouldLogDebug())
         {
-            Debug.Log($"Material: {item.itemID}, Quantity: {item.quantity}");
+            foreach (var item in items)
+            {
+                Debug.Log($"Material: {item.itemID}, Quantity: {item.quantity}");
+            }
         }
+    }
+
+    private bool ShouldLogDebug()
+    {
+        return enableDebugLogging || Debug.isDebugBuild;
     }
 
     GameObject GetOrCreateMaterialIcon()
