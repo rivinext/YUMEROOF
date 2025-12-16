@@ -103,13 +103,49 @@ public class InventoryManager : MonoBehaviour
 
     void LoadMaterialData()
     {
-        TextAsset csvFile = Resources.Load<TextAsset>(materialsCSVPath);
-        if (csvFile == null)
+        materialDatabase.Clear();
+
+        var dataManager = FurnitureDataManager.Instance;
+        var materialSOs = Resources.LoadAll<MaterialDataSO>("Data/ScriptableObjects/Materials");
+
+        if (materialSOs == null || materialSOs.Length == 0)
         {
-            Debug.LogError($"Materials CSV file not found: {materialsCSVPath}");
+            Debug.LogWarning("No MaterialDataSO assets found in Resources/ Data/ScriptableObjects/Materials");
             return;
         }
-        // CSV解析実装...
+
+        foreach (var so in materialSOs)
+        {
+            if (so == null || string.IsNullOrEmpty(so.materialID))
+                continue;
+
+            // FurnitureDataManagerにある辞書を優先して利用する
+            var data = dataManager?.GetMaterialData(so.materialID);
+
+            // 辞書にまだ存在しない場合はScriptableObjectから生成
+            if (data == null)
+            {
+                data = new MaterialData
+                {
+                    materialID = so.materialID,
+                    nameID = so.nameID,
+                    materialName = so.materialName,
+                    category = so.category,
+                    maxStack = so.maxStack,
+                    sellPrice = so.sellPrice,
+                    iconName = so.iconName,
+                    rarity = so.rarity,
+                    descriptionID = so.descriptionID,
+                    weatherAttribute = so.weatherAttribute,
+                    sourceItems = so.sourceItems,
+                    dropRates = so.dropRates
+                };
+            }
+
+            materialDatabase[so.materialID] = data;
+        }
+
+        Debug.Log($"Loaded {materialDatabase.Count} materials into materialDatabase.");
     }
 
     // å®¶å…·ã‚’è¿½åŠ
@@ -364,7 +400,21 @@ public class InventoryManager : MonoBehaviour
     // ç´ æãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—
     public MaterialData GetMaterialData(string materialID)
     {
-        return materialDatabase.ContainsKey(materialID) ? materialDatabase[materialID] : null;
+        if (string.IsNullOrEmpty(materialID)) return null;
+
+        if (materialDatabase.TryGetValue(materialID, out var data))
+            return data;
+
+        // 未登録の場合はFurnitureDataManager経由で取得して辞書に追加する
+        var dataManager = FurnitureDataManager.Instance;
+        data = dataManager?.GetMaterialData(materialID);
+        if (data != null)
+        {
+            materialDatabase[materialID] = data;
+            return data;
+        }
+
+        return null;
     }
 
     // お気に入り切り替え
