@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// Spawns a random prefab in the scene based on weighted selection.
@@ -19,6 +22,15 @@ public class RandomSceneSpawnManager : MonoBehaviour
     [SerializeField] private Collider randomAreaCollider;
 
     private bool hasSpawned;
+
+#if UNITY_EDITOR
+    private static readonly GUIStyle SpawnLabelStyle = new GUIStyle
+    {
+        alignment = TextAnchor.MiddleCenter,
+        normal = { textColor = Color.cyan },
+        fontStyle = FontStyle.Bold
+    };
+#endif
 
     /// <summary>
     /// Performs a weighted random selection and spawns the selected prefab once.
@@ -100,5 +112,40 @@ public class RandomSceneSpawnManager : MonoBehaviour
         }
 
         return (transform.position, transform.rotation);
+    }
+
+    private void OnDrawGizmos()
+    {
+        DrawSpawnGizmos(false);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        DrawSpawnGizmos(true);
+    }
+
+    private void DrawSpawnGizmos(bool isSelected)
+    {
+        if (spawnPoints == null || spawnPoints.Length == 0)
+            return;
+
+        Gizmos.color = isSelected ? new Color(0.2f, 1f, 0.8f, 0.6f) : new Color(0.2f, 0.7f, 1f, 0.4f);
+
+        for (int i = 0; i < spawnPoints.Length; i++)
+        {
+            var point = spawnPoints[i];
+            if (point == null)
+                continue;
+
+            Gizmos.DrawSphere(point.position, 0.2f);
+            Gizmos.DrawLine(transform.position, point.position);
+
+#if UNITY_EDITOR
+            if (isSelected)
+            {
+                Handles.Label(point.position + Vector3.up * 0.15f, $"Spawn {i + 1}", SpawnLabelStyle);
+            }
+#endif
+        }
     }
 }
