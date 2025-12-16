@@ -193,11 +193,6 @@ public class OrthographicCameraController : MonoBehaviour
         {
             // 既に操作中の場合は、UI上でも継続を許可
             shouldBlockCamera = false;
-
-            if (debugUIDetection)
-            {
-                Debug.Log($"[CameraController] Continuing operation - Rotating: {isRotating}, Panning: {isPanning}");
-            }
         }
         else
         {
