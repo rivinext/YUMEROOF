@@ -102,6 +102,13 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     public event Action<InventoryItem> OnItemDragged;
     public event Action<InventoryItem> OnFavoriteToggled;
 
+#if UNITY_EDITOR
+    [Header("Debug")]
+    [SerializeField] private bool debugMode = false;
+#else
+    private const bool debugMode = false;
+#endif
+
     // 現在のアイテム
     public InventoryItem currentItem;
     private bool isMaterialCard;
@@ -405,7 +412,10 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             }
 
             // デバッグログ
-            Debug.Log($"Item: {currentItem.itemID}, Favorite: {currentItem.isFavorite}");
+            if (debugMode)
+            {
+                Debug.Log($"Item: {currentItem.itemID}, Favorite: {currentItem.isFavorite}");
+            }
         }
     }
 
