@@ -39,6 +39,8 @@ public class SlideTransitionManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        EnsureLoadingIndicatorReferences();
     }
 
     /// <summary>
@@ -106,6 +108,8 @@ public class SlideTransitionManager : MonoBehaviour
 
     void ShowLoadingIndicator(string message)
     {
+        EnsureLoadingIndicatorReferences();
+
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(true);
 
@@ -137,6 +141,21 @@ public class SlideTransitionManager : MonoBehaviour
             loadingImage.enabled = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
             loadingImage.sprite = null;
         }
+    }
+
+    void EnsureLoadingIndicatorReferences()
+    {
+        if (loadingIndicatorRoot == null)
+            return;
+
+        if (loadingStatusText == null)
+            loadingStatusText = loadingIndicatorRoot.GetComponentInChildren<TMP_Text>(true);
+
+        if (loadingProgressSlider == null)
+            loadingProgressSlider = loadingIndicatorRoot.GetComponentInChildren<Slider>(true);
+
+        if (loadingImage == null)
+            loadingImage = loadingIndicatorRoot.GetComponentInChildren<Image>(true);
     }
 
     IEnumerator WaitForFurnitureLoad(float sceneWeight)
