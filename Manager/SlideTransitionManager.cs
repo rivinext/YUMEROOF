@@ -88,6 +88,9 @@ public class SlideTransitionManager : MonoBehaviour
         yield return WaitForFurnitureLoad(clampedSceneWeight);
         HideLoadingIndicator();
 
+        var spawnManager = FindFirstObjectByType<RandomSceneSpawnManager>();
+        spawnManager?.SpawnOnce();
+
         var mgr = SlideTransitionManager.Instance;
         if (mgr != null && mgr != this)
         {

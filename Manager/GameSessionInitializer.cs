@@ -85,6 +85,8 @@ public class GameSessionInitializer : MonoBehaviour
         {
             StartCoroutine(DelayedLoad());
         }
+
+        FindFirstObjectByType<RandomSceneSpawnManager>(FindObjectsInactive.Include)?.SpawnOnce();
     }
 
     private System.Collections.IEnumerator DelayedLoad()
