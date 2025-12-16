@@ -38,6 +38,9 @@ public class InventoryManager : MonoBehaviour
     public event Action<InventoryItem> OnItemUpdated;
     public event Action OnInventoryChanged;
 
+    private int bulkUpdateDepth = 0;
+    private bool inventoryChangedDuringBulk = false;
+
     [Header("CSV File Paths")]
     public string materialsCSVPath = "Data/YUME_ROOF_Materials";
 
@@ -156,16 +159,16 @@ public class InventoryManager : MonoBehaviour
         if (furnitureInventory.ContainsKey(furnitureID))
         {
             furnitureInventory[furnitureID].AddQuantity(quantity);
-            OnItemUpdated?.Invoke(furnitureInventory[furnitureID]);
+            NotifyItemUpdated(furnitureInventory[furnitureID]);
         }
         else
         {
             var newItem = new InventoryItem(InventoryItem.ItemType.Furniture, furnitureID, quantity);
             furnitureInventory[furnitureID] = newItem;
-            OnItemAdded?.Invoke(newItem);
+            NotifyItemAdded(newItem);
         }
 
-        OnInventoryChanged?.Invoke();
+        NotifyInventoryChanged();
         return true;
     }
 
@@ -177,16 +180,16 @@ public class InventoryManager : MonoBehaviour
         if (materialInventory.ContainsKey(materialID))
         {
             materialInventory[materialID].AddQuantity(quantity);
-            OnItemUpdated?.Invoke(materialInventory[materialID]);
+            NotifyItemUpdated(materialInventory[materialID]);
         }
         else
         {
             var newItem = new InventoryItem(InventoryItem.ItemType.Material, materialID, quantity);
             materialInventory[materialID] = newItem;
-            OnItemAdded?.Invoke(newItem);
+            NotifyItemAdded(newItem);
         }
 
-        OnInventoryChanged?.Invoke();
+        NotifyInventoryChanged();
         return true;
     }
 
@@ -210,8 +213,8 @@ public class InventoryManager : MonoBehaviour
             item.quantity = 0;
         }
 
-        OnItemUpdated?.Invoke(item);
-        OnInventoryChanged?.Invoke();
+        NotifyItemUpdated(item);
+        NotifyInventoryChanged();
         return true;
     }
 
@@ -226,16 +229,72 @@ public class InventoryManager : MonoBehaviour
             if (item.quantity <= 0)
             {
                 materialInventory.Remove(materialID);
-                OnItemRemoved?.Invoke(item);
+                NotifyItemRemoved(item);
             }
             else
             {
-                OnItemUpdated?.Invoke(item);
+                NotifyItemUpdated(item);
             }
-            OnInventoryChanged?.Invoke();
+            NotifyInventoryChanged();
             return true;
         }
         return false;
+    }
+
+    public void BeginBulkUpdate()
+    {
+        bulkUpdateDepth++;
+    }
+
+    public void EndBulkUpdate()
+    {
+        if (bulkUpdateDepth == 0)
+        {
+            return;
+        }
+
+        bulkUpdateDepth--;
+
+        if (bulkUpdateDepth == 0 && inventoryChangedDuringBulk)
+        {
+            inventoryChangedDuringBulk = false;
+            OnInventoryChanged?.Invoke();
+        }
+    }
+
+    private void NotifyItemAdded(InventoryItem item)
+    {
+        if (bulkUpdateDepth == 0)
+        {
+            OnItemAdded?.Invoke(item);
+        }
+    }
+
+    private void NotifyItemRemoved(InventoryItem item)
+    {
+        if (bulkUpdateDepth == 0)
+        {
+            OnItemRemoved?.Invoke(item);
+        }
+    }
+
+    private void NotifyItemUpdated(InventoryItem item)
+    {
+        if (bulkUpdateDepth == 0)
+        {
+            OnItemUpdated?.Invoke(item);
+        }
+    }
+
+    private void NotifyInventoryChanged()
+    {
+        if (bulkUpdateDepth > 0)
+        {
+            inventoryChangedDuringBulk = true;
+            return;
+        }
+
+        OnInventoryChanged?.Invoke();
     }
 
     // ã‚¢ã‚¤ãƒ†ãƒ ã®æ‰€æŒæ•°ã‚’å–å¾—

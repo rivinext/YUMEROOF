@@ -521,6 +521,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         var inv = InventoryManager.Instance;
         if (inv == null) return;
 
+        inv.BeginBulkUpdate();
+
         foreach (var item in inv.GetFurnitureList())
             inv.RemoveFurniture(item.itemID, item.quantity);
         foreach (var item in inv.GetMaterialList())
@@ -550,7 +552,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
                 Debug.LogWarning($"SaveGameManager.ApplyInventory: Unknown item ID '{id}'");
             }
         }
-        inv.ForceInventoryUpdate();
+
+        inv.EndBulkUpdate();
     }
 
     void ApplyFurniture(List<SaveSystem.PlacedFurniture> list)
