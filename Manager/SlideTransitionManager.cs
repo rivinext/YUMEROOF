@@ -20,6 +20,8 @@ public class SlideTransitionManager : MonoBehaviour
     [SerializeField] private GameObject loadingIndicatorRoot;
     [SerializeField] private TMP_Text loadingStatusText;
     [SerializeField] private Slider loadingProgressSlider;
+    [SerializeField] private Image loadingImage;
+    [SerializeField] private Sprite loadingSprite;
     [SerializeField, Range(0f, 1f)] private float sceneProgressWeight = 0.5f;
     [SerializeField] private string sceneLoadingMessage = "Loading scene...";
     [SerializeField] private string furnitureLoadingMessage = "Placing furniture...";
@@ -107,6 +109,12 @@ public class SlideTransitionManager : MonoBehaviour
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(true);
 
+        if (loadingImage != null)
+        {
+            loadingImage.sprite = loadingSprite;
+            loadingImage.enabled = loadingSprite != null;
+        }
+
         UpdateLoadingIndicator(0f, message);
     }
 
@@ -123,6 +131,12 @@ public class SlideTransitionManager : MonoBehaviour
     {
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(false);
+
+        if (loadingImage != null)
+        {
+            loadingImage.enabled = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
+            loadingImage.sprite = null;
+        }
     }
 
     IEnumerator WaitForFurnitureLoad(float sceneWeight)
