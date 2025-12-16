@@ -154,12 +154,6 @@ public class UIInteractionManager : MonoBehaviour
         {
             if (EventSystem.current.IsPointerOverGameObject())
             {
-#if UNITY_EDITOR
-                if (debugMode)
-                {
-                    Debug.Log("[UIInteractionManager] Pointer is over a UI element via EventSystem");
-                }
-#endif
                 return true;
             }
         }
