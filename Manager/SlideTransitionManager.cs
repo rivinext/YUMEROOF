@@ -20,10 +20,6 @@ public class SlideTransitionManager : MonoBehaviour
     [SerializeField] private GameObject loadingIndicatorRoot;
     [SerializeField] private TMP_Text loadingStatusText;
     [SerializeField] private Slider loadingProgressSlider;
-    [SerializeField] private Image loadingImage;
-    [SerializeField] private Sprite loadingSprite;
-    [SerializeField, Tooltip("Optional animated rect to show while loading instead of a static image.")]
-    private RectTransform loadingGraphic;
     [SerializeField, Range(0f, 1f)] private float sceneProgressWeight = 0.5f;
     [SerializeField] private string sceneLoadingMessage = "Loading scene...";
     [SerializeField] private string furnitureLoadingMessage = "Placing furniture...";
@@ -41,9 +37,6 @@ public class SlideTransitionManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-
-        EnsureLoadingIndicatorReferences();
-        HideLoadingIndicator();
     }
 
     /// <summary>
@@ -65,9 +58,6 @@ public class SlideTransitionManager : MonoBehaviour
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
         yield return RunSlideSequence(slideIn: true);
-
-        // Ensure the slide-in animation has fully applied before showing the loading indicator.
-        yield return null;
 
         SaveGameManager.Instance.SaveCurrentSlot();
 
@@ -114,24 +104,8 @@ public class SlideTransitionManager : MonoBehaviour
 
     void ShowLoadingIndicator(string message)
     {
-        EnsureLoadingIndicatorReferences();
-
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(true);
-
-        bool shouldShowGraphic = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
-
-        if (loadingImage != null)
-        {
-            loadingImage.sprite = loadingSprite;
-            loadingImage.enabled = loadingSprite != null && shouldShowGraphic;
-        }
-
-        if (loadingGraphic != null)
-            loadingGraphic.gameObject.SetActive(shouldShowGraphic);
-
-        if (loadingStatusText != null)
-            loadingStatusText.enabled = true;
 
         UpdateLoadingIndicator(0f, message);
     }
@@ -149,33 +123,6 @@ public class SlideTransitionManager : MonoBehaviour
     {
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(false);
-
-        if (loadingImage != null)
-        {
-            loadingImage.enabled = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
-            loadingImage.sprite = null;
-        }
-
-        if (loadingGraphic != null)
-            loadingGraphic.gameObject.SetActive(false);
-
-        if (loadingStatusText != null)
-            loadingStatusText.enabled = false;
-    }
-
-    void EnsureLoadingIndicatorReferences()
-    {
-        if (loadingIndicatorRoot == null)
-            return;
-
-        if (loadingStatusText == null)
-            loadingStatusText = loadingIndicatorRoot.GetComponentInChildren<TMP_Text>(true);
-
-        if (loadingProgressSlider == null)
-            loadingProgressSlider = loadingIndicatorRoot.GetComponentInChildren<Slider>(true);
-
-        if (loadingImage == null)
-            loadingImage = loadingIndicatorRoot.GetComponentInChildren<Image>(true);
     }
 
     IEnumerator WaitForFurnitureLoad(float sceneWeight)
