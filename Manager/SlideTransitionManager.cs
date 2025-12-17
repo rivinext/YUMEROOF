@@ -22,6 +22,8 @@ public class SlideTransitionManager : MonoBehaviour
     [SerializeField] private Slider loadingProgressSlider;
     [SerializeField] private Image loadingImage;
     [SerializeField] private Sprite loadingSprite;
+    [SerializeField, Tooltip("Optional animated rect to show while loading instead of a static image.")]
+    private RectTransform loadingGraphic;
     [SerializeField, Range(0f, 1f)] private float sceneProgressWeight = 0.5f;
     [SerializeField] private string sceneLoadingMessage = "Loading scene...";
     [SerializeField] private string furnitureLoadingMessage = "Placing furniture...";
@@ -117,11 +119,16 @@ public class SlideTransitionManager : MonoBehaviour
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(true);
 
+        bool shouldShowGraphic = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
+
         if (loadingImage != null)
         {
             loadingImage.sprite = loadingSprite;
-            loadingImage.enabled = loadingSprite != null;
+            loadingImage.enabled = loadingSprite != null && shouldShowGraphic;
         }
+
+        if (loadingGraphic != null)
+            loadingGraphic.gameObject.SetActive(shouldShowGraphic);
 
         if (loadingStatusText != null)
             loadingStatusText.enabled = true;
@@ -148,6 +155,9 @@ public class SlideTransitionManager : MonoBehaviour
             loadingImage.enabled = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
             loadingImage.sprite = null;
         }
+
+        if (loadingGraphic != null)
+            loadingGraphic.gameObject.SetActive(false);
 
         if (loadingStatusText != null)
             loadingStatusText.enabled = false;
