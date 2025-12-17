@@ -21,13 +21,17 @@ public class SlideTransitionManager : MonoBehaviour
     [SerializeField] private TMP_Text loadingStatusText;
     [SerializeField] private Slider loadingProgressSlider;
     [SerializeField] private Image loadingImage;
+    [SerializeField] private Sprite[] loadingSprites;
     [SerializeField] private Sprite loadingSprite;
+    [SerializeField, Min(0f)] private float loadingSpriteFrameInterval = 0.1f;
     [SerializeField, Range(0f, 1f)] private float sceneProgressWeight = 0.5f;
     [SerializeField] private string sceneLoadingMessage = "Loading scene...";
     [SerializeField] private string furnitureLoadingMessage = "Placing furniture...";
     [SerializeField] private string finishingLoadingMessage = "Ready!";
 
     private readonly List<UISlidePanel> orderedSlidePanels = new(2);
+    private Coroutine loadingAnimationCoroutine;
+    private int loadingSpriteIndex;
 
     private void Awake()
     {
@@ -117,14 +121,17 @@ public class SlideTransitionManager : MonoBehaviour
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(true);
 
-        if (loadingImage != null)
-        {
-            loadingImage.sprite = loadingSprite;
-            loadingImage.enabled = loadingSprite != null;
-        }
-
         if (loadingStatusText != null)
             loadingStatusText.enabled = true;
+
+        Sprite initialSprite = GetInitialLoadingSprite();
+        if (loadingImage != null)
+        {
+            loadingImage.sprite = initialSprite;
+            loadingImage.enabled = initialSprite != null;
+        }
+
+        StartLoadingAnimation();
 
         UpdateLoadingIndicator(0f, message);
     }
@@ -140,17 +147,78 @@ public class SlideTransitionManager : MonoBehaviour
 
     void HideLoadingIndicator()
     {
+        StopLoadingAnimation();
+
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(false);
 
         if (loadingImage != null)
         {
-            loadingImage.enabled = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
-            loadingImage.sprite = null;
+            Sprite resetSprite = GetInitialLoadingSprite();
+            loadingImage.enabled = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf && resetSprite != null;
+            loadingImage.sprite = resetSprite;
         }
 
         if (loadingStatusText != null)
             loadingStatusText.enabled = false;
+    }
+
+    void StartLoadingAnimation()
+    {
+        if (loadingImage == null)
+            return;
+
+        StopLoadingAnimation();
+
+        if (loadingSprites != null && loadingSprites.Length > 0)
+        {
+            loadingSpriteIndex = 0;
+            loadingAnimationCoroutine = StartCoroutine(AnimateLoadingSprites());
+        }
+        else if (loadingSprite != null)
+        {
+            loadingImage.sprite = loadingSprite;
+        }
+    }
+
+    void StopLoadingAnimation()
+    {
+        if (loadingAnimationCoroutine != null)
+        {
+            StopCoroutine(loadingAnimationCoroutine);
+            loadingAnimationCoroutine = null;
+        }
+
+        loadingSpriteIndex = 0;
+    }
+
+    IEnumerator AnimateLoadingSprites()
+    {
+        if (loadingSprites == null || loadingSprites.Length == 0)
+            yield break;
+
+        while (true)
+        {
+            loadingImage.sprite = loadingSprites[loadingSpriteIndex];
+            loadingSpriteIndex = (loadingSpriteIndex + 1) % loadingSprites.Length;
+
+            if (loadingSpriteFrameInterval > 0f)
+            {
+                yield return new WaitForSecondsRealtime(loadingSpriteFrameInterval);
+            }
+            else
+            {
+                yield return null;
+            }
+        }
+    }
+
+    Sprite GetInitialLoadingSprite()
+    {
+        if (loadingSprites != null && loadingSprites.Length > 0)
+            return loadingSprites[0];
+
+        return loadingSprite;
     }
 
     void EnsureLoadingIndicatorReferences()
