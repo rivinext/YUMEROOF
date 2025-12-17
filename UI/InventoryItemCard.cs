@@ -6,6 +6,9 @@ using System;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization;
 using DG.Tweening;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler,
     IPointerEnterHandler, IPointerExitHandler
@@ -171,6 +174,17 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         EnsureHoverScaleMinimum(MinHoverScaleValue);
         EnsureHoverDurationMinimum(MinHoverDurationValue);
         EnsureHoverTargetAssigned();
+        hoverSfxVolume = Mathf.Clamp01(hoverSfxVolume);
+        hoverSfxCooldown = Mathf.Max(hoverSfxCooldown, 0f);
+
+#if UNITY_EDITOR
+        if (hoverSfx != null && disableHoverSfx)
+        {
+            disableHoverSfx = false;
+        }
+
+        EnsureHoverAudioSourceInEditor();
+#endif
     }
 
     protected virtual void Reset()
@@ -579,6 +593,30 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             hoverAudioSource.spatialBlend = 0f;
         }
     }
+
+#if UNITY_EDITOR
+    void EnsureHoverAudioSourceInEditor()
+    {
+        if (hoverAudioSource == null)
+        {
+            hoverAudioSource = GetComponent<AudioSource>();
+            if (hoverAudioSource == null)
+            {
+                hoverAudioSource = Undo.AddComponent<AudioSource>(gameObject);
+            }
+        }
+
+        if (hoverAudioSource != null)
+        {
+            hoverAudioSource.playOnAwake = false;
+            hoverAudioSource.loop = false;
+            hoverAudioSource.spatialBlend = 0f;
+
+            EditorUtility.SetDirty(hoverAudioSource);
+            EditorUtility.SetDirty(this);
+        }
+    }
+#endif
 
     void HandleSfxVolumeChanged(float value)
     {
