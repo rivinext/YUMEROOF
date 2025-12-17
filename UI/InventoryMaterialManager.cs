@@ -16,6 +16,13 @@ public class InventoryMaterialManager : MonoBehaviour
     [SerializeField]
     public MaterialDescriptionPanel materialDescPanel;
 
+    [Header("Material Icon Hover Settings")]
+    [SerializeField] private float materialIconHoverScale = 1.1f;
+    [SerializeField] private float materialIconHoverTilt = 6f;
+    [SerializeField] private float materialIconHoverDuration = 0.1f;
+    [SerializeField] private AudioClip materialIconHoverSfx;
+    [SerializeField] private AudioClip materialIconClickSfx;
+
     // アイコンのキャッシュ
     private Dictionary<Transform, GameObject> materialIcons = new Dictionary<Transform, GameObject>();
     private Queue<GameObject> materialIconPool = new Queue<GameObject>();
@@ -191,6 +198,8 @@ public class InventoryMaterialManager : MonoBehaviour
         }
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() => OnMaterialClicked(item));
+
+        ConfigureHoverAnimator(iconObj);
     }
 
     void OnMaterialClicked(InventoryItem item)
@@ -249,5 +258,35 @@ public class InventoryMaterialManager : MonoBehaviour
         {
             RefreshMaterialIcons(items);
         }
+    }
+
+    private void ConfigureHoverAnimator(GameObject iconObj)
+    {
+        var rectTransform = iconObj.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            return;
+        }
+
+        var hoverAnimator = iconObj.GetComponent<CommonHoverAnimator>();
+        if (hoverAnimator == null)
+        {
+            hoverAnimator = iconObj.AddComponent<CommonHoverAnimator>();
+        }
+
+        var iconAudioSource = iconObj.GetComponent<AudioSource>();
+        if (iconAudioSource == null)
+        {
+            iconAudioSource = iconObj.AddComponent<AudioSource>();
+        }
+
+        hoverAnimator.ApplyConfiguration(
+            rectTransform,
+            materialIconHoverScale,
+            materialIconHoverTilt,
+            materialIconHoverDuration,
+            materialIconHoverSfx,
+            materialIconClickSfx,
+            iconAudioSource);
     }
 }

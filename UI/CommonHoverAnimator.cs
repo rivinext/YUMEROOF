@@ -52,6 +52,43 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
         SetupClickAudioSource();
     }
 
+    public void ApplyConfiguration(
+        RectTransform hoverTargetOverride,
+        float targetHoverScale,
+        float targetHoverTilt,
+        float targetHoverDuration,
+        AudioClip hoverClip,
+        AudioClip clickClip,
+        AudioSource sharedAudioSource = null)
+    {
+        hoverTarget = hoverTargetOverride;
+        hoverScale = Mathf.Max(targetHoverScale, MinHoverScaleValue);
+        hoverTilt = targetHoverTilt;
+        hoverDuration = Mathf.Max(targetHoverDuration, MinHoverDurationValue);
+        hoverSfx = hoverClip;
+        clickSfx = clickClip;
+
+        if (sharedAudioSource != null)
+        {
+            hoverAudioSource = sharedAudioSource;
+            clickAudioSource = sharedAudioSource;
+        }
+
+        resolvedHoverTarget = hoverTarget != null ? hoverTarget : transform as RectTransform;
+
+        if (resolvedHoverTarget != null)
+        {
+            baseScale = resolvedHoverTarget.localScale;
+            baseEulerAngles = resolvedHoverTarget.localEulerAngles;
+        }
+
+        KillHoverTween();
+        ResetHoverTargetTransform();
+
+        SetupHoverAudioSource();
+        SetupClickAudioSource();
+    }
+
     private void OnValidate()
     {
         hoverScale = Mathf.Max(hoverScale, MinHoverScaleValue);
