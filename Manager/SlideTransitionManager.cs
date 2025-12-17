@@ -41,6 +41,7 @@ public class SlideTransitionManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         EnsureLoadingIndicatorReferences();
+        HideLoadingIndicator();
     }
 
     /// <summary>
@@ -62,6 +63,9 @@ public class SlideTransitionManager : MonoBehaviour
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
         yield return RunSlideSequence(slideIn: true);
+
+        // Ensure the slide-in animation has fully applied before showing the loading indicator.
+        yield return null;
 
         SaveGameManager.Instance.SaveCurrentSlot();
 
@@ -119,6 +123,9 @@ public class SlideTransitionManager : MonoBehaviour
             loadingImage.enabled = loadingSprite != null;
         }
 
+        if (loadingStatusText != null)
+            loadingStatusText.enabled = true;
+
         UpdateLoadingIndicator(0f, message);
     }
 
@@ -141,6 +148,9 @@ public class SlideTransitionManager : MonoBehaviour
             loadingImage.enabled = loadingIndicatorRoot != null && loadingIndicatorRoot.activeSelf;
             loadingImage.sprite = null;
         }
+
+        if (loadingStatusText != null)
+            loadingStatusText.enabled = false;
     }
 
     void EnsureLoadingIndicatorReferences()
