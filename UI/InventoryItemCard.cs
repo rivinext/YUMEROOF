@@ -12,8 +12,9 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 {
     private const float MinHoverScaleValue = 0.01f;
     private const float MinHoverDurationValue = 0.01f;
-    protected const float DefaultHoverScaleValue = 1.05f;
-    protected const float DefaultHoverDurationValue = 0.18f;
+    protected const float DefaultHoverScaleValue = 1.1f;
+    protected const float DefaultHoverTiltValue = 6f;
+    protected const float DefaultHoverDurationValue = 0.1f;
 
     [Header("UI Elements")]
     public Image itemImage;
@@ -35,9 +36,9 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     [Header("Hover Animation")]
     [SerializeField] private RectTransform hoverTarget;
-    [SerializeField] private float hoverScale = 1.05f;
-    [SerializeField] private float hoverTilt = 5f;
-    [SerializeField] private float hoverDuration = 0.18f;
+    [SerializeField] private float hoverScale = 1.1f;
+    [SerializeField] private float hoverTilt = 6f;
+    [SerializeField] private float hoverDuration = 0.1f;
     [SerializeField] private bool disableHoverAnimation = false;
 
     protected bool DisableHoverAnimation
@@ -169,12 +170,16 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         EnsureHoverScaleMinimum(MinHoverScaleValue);
         EnsureHoverDurationMinimum(MinHoverDurationValue);
+        EnsureHoverTargetAssigned();
     }
 
     protected virtual void Reset()
     {
         hoverScale = DefaultHoverScaleValue;
+        hoverTilt = DefaultHoverTiltValue;
         hoverDuration = DefaultHoverDurationValue;
+
+        EnsureHoverTargetAssigned();
     }
 
     protected void EnsureHoverScaleMinimum(float minimumScale)
@@ -187,6 +192,14 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         float clampedMinimum = Mathf.Max(minimumDuration, MinHoverDurationValue);
         hoverDuration = Mathf.Max(hoverDuration, clampedMinimum);
+    }
+
+    private void EnsureHoverTargetAssigned()
+    {
+        if (hoverTarget == null && itemImage != null)
+        {
+            hoverTarget = itemImage.rectTransform;
+        }
     }
 
     void OnEnable()
