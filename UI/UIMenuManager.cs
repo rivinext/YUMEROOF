@@ -4,7 +4,9 @@ using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using DG.Tweening;
+#if STEAMWORKS
 using Steamworks;
+#endif
 
 /// <summary>
 /// メインメニューのUIパネル管理とPost Processing制御
@@ -489,19 +491,21 @@ public class UIMenuManager : MonoBehaviour
             return;
         }
 
+#if STEAMWORKS
         if (CanUseSteamOverlay())
         {
             SteamFriends.ActivateGameOverlayToStore(new AppId_t(steamAppId), EOverlayToStoreFlag.k_EOverlayToStoreFlag_None);
+            return;
         }
-        else
-        {
-            var targetUrl = string.IsNullOrEmpty(fallbackStorePageUrl)
-                ? $"https://store.steampowered.com/app/{steamAppId}/"
-                : fallbackStorePageUrl;
-            Application.OpenURL(targetUrl);
-        }
+#endif
+
+        var targetUrl = string.IsNullOrEmpty(fallbackStorePageUrl)
+            ? $"https://store.steampowered.com/app/{steamAppId}/"
+            : fallbackStorePageUrl;
+        Application.OpenURL(targetUrl);
     }
 
+#if STEAMWORKS
     private bool CanUseSteamOverlay()
     {
         if (!SteamAPI.IsSteamRunning())
@@ -509,6 +513,9 @@ public class UIMenuManager : MonoBehaviour
 
         return SteamUtils.IsOverlayEnabled();
     }
+#else
+    private bool CanUseSteamOverlay() => false;
+#endif
 
     /// <summary>
     /// ゲームを終了する
