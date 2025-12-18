@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using DG.Tweening;
+using Steamworks;
 
 /// <summary>
 /// メインメニューのUIパネル管理とPost Processing制御
@@ -33,6 +34,11 @@ public class UIMenuManager : MonoBehaviour
     [SerializeField] private Button storyButton;
     [SerializeField] private Button creativeButton;
     [SerializeField] private Button exitButton;
+
+    [Header("Wishlist")]
+    [SerializeField] private Button wishlistButton;
+    [SerializeField] private uint steamAppId;
+    [SerializeField] private string fallbackStorePageUrl;
 
     [Header("Close Buttons")]
     [SerializeField] private Button creditCloseButton;
@@ -146,6 +152,9 @@ public class UIMenuManager : MonoBehaviour
 
         if (exitButton != null)
             exitButton.onClick.AddListener(ExitGame);
+
+        if (wishlistButton != null)
+            wishlistButton.onClick.AddListener(OpenWishlistPage);
 
         // 閉じるボタン
         if (creditCloseButton != null)
@@ -472,6 +481,35 @@ public class UIMenuManager : MonoBehaviour
         }
     }
 
+    private void OpenWishlistPage()
+    {
+        if (steamAppId == 0 && string.IsNullOrEmpty(fallbackStorePageUrl))
+        {
+            Debug.LogWarning("Wishlist button clicked, but Steam App ID and fallback URL are not set.");
+            return;
+        }
+
+        if (CanUseSteamOverlay())
+        {
+            SteamFriends.ActivateGameOverlayToStore(new AppId_t(steamAppId), EOverlayToStoreFlag.k_EOverlayToStoreFlag_None);
+        }
+        else
+        {
+            var targetUrl = string.IsNullOrEmpty(fallbackStorePageUrl)
+                ? $"https://store.steampowered.com/app/{steamAppId}/"
+                : fallbackStorePageUrl;
+            Application.OpenURL(targetUrl);
+        }
+    }
+
+    private bool CanUseSteamOverlay()
+    {
+        if (!SteamAPI.IsSteamRunning())
+            return false;
+
+        return SteamUtils.IsOverlayEnabled();
+    }
+
     /// <summary>
     /// ゲームを終了する
     /// </summary>
@@ -494,6 +532,7 @@ public class UIMenuManager : MonoBehaviour
         if (creativeButton != null) creativeButton.onClick.RemoveAllListeners();
         if (exitButton != null) exitButton.onClick.RemoveAllListeners();
         if (creditButton != null) creditButton.onClick.RemoveAllListeners();
+        if (wishlistButton != null) wishlistButton.onClick.RemoveAllListeners();
         if (optionCloseButton != null) optionCloseButton.onClick.RemoveAllListeners();
         if (storyCloseButton != null) storyCloseButton.onClick.RemoveAllListeners();
         if (creativeCloseButton != null) creativeCloseButton.onClick.RemoveAllListeners();
