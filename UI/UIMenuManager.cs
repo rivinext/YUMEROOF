@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,7 +5,6 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using DG.Tweening;
 using Steamworks;
-using System.Diagnostics;
 
 /// <summary>
 /// メインメニューのUIパネル管理とPost Processing制御
@@ -491,73 +489,25 @@ public class UIMenuManager : MonoBehaviour
             return;
         }
 
-        if (TryOpenSteamOverlay())
-            return;
-
-        var targetUrl = string.IsNullOrEmpty(fallbackStorePageUrl)
-            ? $"https://store.steampowered.com/app/{steamAppId}/"
-            : fallbackStorePageUrl;
-
-        var confirmMessage = "Steamオーバーレイを使用できないため、外部ブラウザでストアページを開きますか？";
-        if (confirmPopup != null)
+        if (CanUseSteamOverlay())
         {
-            confirmPopup.Open(confirmMessage, () => OpenStorePageInBrowser(targetUrl));
+            SteamFriends.ActivateGameOverlayToStore(new AppId_t(steamAppId), EOverlayToStoreFlag.k_EOverlayToStoreFlag_None);
         }
         else
         {
-            Debug.LogWarning("ConfirmationPopup is not assigned. Opening store page in external browser without confirmation.");
-            OpenStorePageInBrowser(targetUrl);
+            var targetUrl = string.IsNullOrEmpty(fallbackStorePageUrl)
+                ? $"https://store.steampowered.com/app/{steamAppId}/"
+                : fallbackStorePageUrl;
+            Application.OpenURL(targetUrl);
         }
     }
 
-    private bool TryOpenSteamOverlay()
+    private bool CanUseSteamOverlay()
     {
         if (!SteamAPI.IsSteamRunning())
-        {
-            Debug.LogWarning("Steam client is not running. Cannot open overlay; will use external browser fallback.");
             return false;
-        }
 
-        if (!SteamUser.BLoggedOn())
-        {
-            Debug.LogWarning("Steam user is offline or not logged in. Cannot open overlay; will use external browser fallback.");
-            return false;
-        }
-
-        if (!SteamUtils.IsOverlayEnabled())
-        {
-            Debug.LogWarning("Steam overlay is disabled. Cannot open overlay; will use external browser fallback.");
-            return false;
-        }
-
-        SteamFriends.ActivateGameOverlayToStore(new AppId_t(steamAppId), EOverlayToStoreFlag.k_EOverlayToStoreFlag_None);
-        return true;
-    }
-
-    private void OpenStorePageInBrowser(string url)
-    {
-        try
-        {
-#if UNITY_STANDALONE_WIN
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = url,
-                UseShellExecute = true
-            });
-#elif UNITY_STANDALONE_OSX
-            Process.Start("open", url);
-#elif UNITY_STANDALONE_LINUX
-            Process.Start("xdg-open", url);
-#else
-            Application.OpenURL(url);
-#endif
-            Debug.Log($"Opened store page in external browser: {url}");
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"Failed to open store page in external browser: {url}. Exception: {ex}");
-            Application.OpenURL(url);
-        }
+        return SteamUtils.IsOverlayEnabled();
     }
 
     /// <summary>
