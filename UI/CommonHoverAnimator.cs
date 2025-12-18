@@ -21,8 +21,6 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
     [SerializeField, Min(0f)] private float hoverSfxCooldown = 0.1f;
     [SerializeField] private bool disableHoverSfx = false;
 
-    private static float lastGlobalHoverSfxTime = -10f;
-
     [Header("Click Audio")]
     [SerializeField] private AudioClip clickSfx;
     [SerializeField] private AudioSource clickAudioSource;
@@ -32,6 +30,7 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
     private Vector3 baseScale = Vector3.one;
     private Vector3 baseEulerAngles = Vector3.zero;
     private Tween hoverTween;
+    private float lastHoverSfxTime = -10f;
 
     private float SafeHoverScale => Mathf.Max(hoverScale, MinHoverScaleValue);
     private float SafeHoverDuration => Mathf.Max(hoverDuration, MinHoverDurationValue);
@@ -188,7 +187,7 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
             return;
         }
 
-        float elapsed = Time.unscaledTime - lastGlobalHoverSfxTime;
+        float elapsed = Time.unscaledTime - lastHoverSfxTime;
         if (elapsed < hoverSfxCooldown)
         {
             return;
@@ -201,7 +200,7 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
         }
 
         hoverAudioSource.PlayOneShot(hoverSfx, volume);
-        lastGlobalHoverSfxTime = Time.unscaledTime;
+        lastHoverSfxTime = Time.unscaledTime;
     }
 
     private void PlayClickSfx()
