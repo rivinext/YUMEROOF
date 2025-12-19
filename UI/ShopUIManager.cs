@@ -525,7 +525,7 @@ public class ShopUIManager : MonoBehaviour
             return items;
         }
 
-        var furniture = inventory.GetFurnitureList(sellSortType, false, sellShowOnlyFavorites, sellSortAscending);
+        var furniture = inventory.GetFurnitureList("ALL", sellSortType, false, sellShowOnlyFavorites, sellSortAscending);
         if (furniture != null)
         {
             foreach (var item in furniture)

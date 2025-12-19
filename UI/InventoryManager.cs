@@ -311,10 +311,23 @@ public class InventoryManager : MonoBehaviour
     }
 
     // 家具リストを取得（ソート・フィルター機能付き）
-    public List<InventoryItem> GetFurnitureList(string sortType = "name", bool showOnlyCraftable = false, bool showOnlyFavorites = false, bool ascending = true)
+    public List<InventoryItem> GetFurnitureList(string categoryId = "ALL", string sortType = "name", bool showOnlyCraftable = false, bool showOnlyFavorites = false, bool ascending = true)
     {
         // すべての家具を取得（数量0も含む）
         var list = furnitureInventory.Values.ToList();
+
+        // カテゴリフィルタ
+        bool filterByCategory = !string.IsNullOrEmpty(categoryId) && !string.Equals(categoryId, "ALL", StringComparison.OrdinalIgnoreCase);
+        if (filterByCategory)
+        {
+            var dataManager = FurnitureDataManager.Instance;
+            list = list.Where(item =>
+            {
+                var data = dataManager?.GetFurnitureData(item.itemID);
+                var category = data?.category;
+                return !string.IsNullOrEmpty(category) && string.Equals(category, categoryId, StringComparison.OrdinalIgnoreCase);
+            }).ToList();
+        }
 
         // フィルタリング
         if (showOnlyCraftable)
