@@ -6,6 +6,8 @@ using System.Linq;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Localization.Settings;
+using System.Globalization;
 
 
 public class InventoryUI : MonoBehaviour
@@ -1050,13 +1052,14 @@ public class InventoryUI : MonoBehaviour
         var items = GetSortedMaterialList();
 
         // 検索フィルター適用
-        if (!string.IsNullOrEmpty(searchQuery))
+        var normalizedQuery = NormalizeSearchText(searchQuery);
+        if (!string.IsNullOrEmpty(normalizedQuery))
         {
             items = items.Where(item =>
             {
                 var materialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
                 return materialData != null &&
-                       materialData.materialName.ToLower().Contains(searchQuery.ToLower());
+                       MatchesSearch(materialData.materialName, normalizedQuery);
             }).ToList();
         }
 
@@ -1087,11 +1090,22 @@ public class InventoryUI : MonoBehaviour
         }
 
         // 検索フィルター適用
-        if (!string.IsNullOrEmpty(searchQuery))
+        var normalizedQuery = NormalizeSearchText(searchQuery);
+        if (!string.IsNullOrEmpty(normalizedQuery))
         {
+            var dataManager = FurnitureDataManager.Instance;
             items = items.Where(item =>
             {
-                return item.itemID.ToLower().Contains(searchQuery.ToLower());
+                var data = dataManager?.GetFurnitureData(item.itemID);
+
+                var candidates = new List<string>
+                {
+                    item.itemID,
+                    data?.nameID,
+                    GetFurnitureDisplayName(data)
+                };
+
+                return candidates.Any(candidate => MatchesSearch(candidate, normalizedQuery));
             }).ToList();
         }
 
@@ -1141,6 +1155,34 @@ public class InventoryUI : MonoBehaviour
 #endif
 
         return list;
+    }
+
+    string NormalizeSearchText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        return text.Trim().Normalize(NormalizationForm.FormKC).ToLowerInvariant();
+    }
+
+    bool MatchesSearch(string candidate, string normalizedQuery)
+    {
+        if (string.IsNullOrEmpty(candidate) || string.IsNullOrEmpty(normalizedQuery))
+            return false;
+
+        return NormalizeSearchText(candidate).Contains(normalizedQuery);
+    }
+
+    string GetFurnitureDisplayName(FurnitureData data)
+    {
+        if (data == null || string.IsNullOrEmpty(data.nameID))
+            return string.Empty;
+
+        var localizedName = LocalizationSettings.StringDatabase?.GetLocalizedString("ItemNames", data.nameID);
+        if (!string.IsNullOrEmpty(localizedName))
+            return localizedName;
+
+        return data.nameID;
     }
 
     public bool IsPointerOverInventoryWindow(Vector2 screenPosition, Camera camera = null)
