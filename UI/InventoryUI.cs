@@ -66,7 +66,6 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private string allCategoryKey = "ALL";
     [SerializeField] private string allCategoryLabel = "ALL";
     [SerializeField] private Sprite allCategoryIcon;
-    [SerializeField] private bool useIconForAllCategoryTab;
     [SerializeField] private List<CategoryDisplaySetting> categoryDisplaySettings = new List<CategoryDisplaySetting>();
 
 
@@ -435,8 +434,7 @@ public class InventoryUI : MonoBehaviour
         ClearFurnitureCategoryTabs();
 
         var categories = GetFurnitureCategories();
-        var allCategorySprite = useIconForAllCategoryTab ? allCategoryIcon ?? defaultCategoryIcon : null;
-        CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategorySprite);
+        CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategoryIcon ?? defaultCategoryIcon);
 
         foreach (var category in categories)
         {
