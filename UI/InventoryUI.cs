@@ -481,10 +481,12 @@ public class InventoryUI : MonoBehaviour
             categoryToggle = toggleObj.AddComponent<FurnitureCategoryToggle>();
         }
 
+        bool showLabel = string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase);
+
         categoryToggle.Initialize(categoryId, displayName, icon, furnitureCategoryToggleGroup, selectedCategory =>
         {
             SelectFurnitureCategory(selectedCategory);
-        });
+        }, showLabel);
 
         categoryToggles.Add(categoryToggle);
     }
