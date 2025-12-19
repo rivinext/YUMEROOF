@@ -175,11 +175,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         return Path.Combine(GetSaveDirectory(), slotKey + ".json");
     }
 
-    public string GetScreenshotPath(string screenshotFilename)
-    {
-        return Path.Combine(GetSaveDirectory(), screenshotFilename);
-    }
-
     public bool HasSlot(string slotKey) => File.Exists(GetSlotPath(slotKey));
 
     public void Save(string slotKey)
@@ -292,17 +287,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         data.location = SceneManager.GetActiveScene().name;
         var milestone = FindFirstObjectByType<MilestoneManager>();
         data.chapterName = milestone != null ? milestone.CurrentMilestoneID : "";
-
-        data.screenshotFilename = currentSlot + "_screenshot.png";
-        var path = GetScreenshotPath(data.screenshotFilename);
-        try
-        {
-            ScreenCapture.CaptureScreenshot(path);
-        }
-        catch (Exception)
-        {
-            // ignore screenshot errors
-        }
     }
 
     void SaveManagers(StorySaveData data)

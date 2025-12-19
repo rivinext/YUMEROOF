@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,7 +22,6 @@ public class SaveSlotUI : MonoBehaviour
     [SerializeField] private TMP_Text chapterText;
     [SerializeField] private TMP_Text locationText;
     [SerializeField] private TMP_Text playTimeText;
-    [SerializeField] private Image screenshotImage;
     [SerializeField] private Button selectButton;
     [SerializeField] private Button deleteButton;
 
@@ -119,25 +117,6 @@ public class SaveSlotUI : MonoBehaviour
                 var ts = TimeSpan.FromSeconds(data.playTime);
                 playTimeText.text = ts.ToString(@"hh\:mm\:ss");
             }
-
-            if (screenshotImage != null)
-            {
-                screenshotImage.sprite = null;
-                if (!string.IsNullOrEmpty(data.screenshotFilename))
-                {
-                    string path = SaveGameManager.Instance.GetScreenshotPath(data.screenshotFilename);
-                    if (File.Exists(path))
-                    {
-                        var bytes = File.ReadAllBytes(path);
-                        Texture2D tex = new Texture2D(2, 2);
-                        if (tex.LoadImage(bytes))
-                        {
-                            var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-                            screenshotImage.sprite = sprite;
-                        }
-                    }
-                }
-            }
         }
         else
         {
@@ -156,8 +135,6 @@ public class SaveSlotUI : MonoBehaviour
                 locationText.text = string.Empty;
             if (playTimeText != null)
                 playTimeText.text = string.Empty;
-            if (screenshotImage != null)
-                screenshotImage.sprite = null;
         }
     }
 
