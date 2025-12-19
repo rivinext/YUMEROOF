@@ -23,7 +23,6 @@ public class BaseSaveData
     public float playTime;
     public string chapterName;
     public string location;
-    public string screenshotFilename;
 
     public string ToJson()
     {
