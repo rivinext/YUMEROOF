@@ -1,5 +1,4 @@
 using UnityEngine;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.SceneManagement;
@@ -174,21 +173,6 @@ public class FurnitureDataManager : MonoBehaviour
         }
 
         Debug.Log($"Dictionary built: {furnitureDict.Count} furniture, {materialDict.Count} materials");
-    }
-
-    public List<string> GetFurnitureCategories()
-    {
-        var categories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var data in furnitureDict.Values)
-        {
-            if (data != null && !string.IsNullOrEmpty(data.category))
-            {
-                categories.Add(data.category);
-            }
-        }
-
-        return categories.ToList();
     }
 
     // 旧FurnitureData形式への変換（互換性維持）
