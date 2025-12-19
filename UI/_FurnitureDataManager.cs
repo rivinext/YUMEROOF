@@ -175,6 +175,38 @@ public class FurnitureDataManager : MonoBehaviour
         Debug.Log($"Dictionary built: {furnitureDict.Count} furniture, {materialDict.Count} materials");
     }
 
+    /// <summary>
+    /// すべての家具データ(SO)を返す（nullを除外）。
+    /// </summary>
+    public IEnumerable<FurnitureDataSO> GetAllFurnitureDataSO()
+    {
+        if (furnitureDatabase == null)
+        {
+            yield break;
+        }
+
+        foreach (var data in furnitureDatabase)
+        {
+            if (data != null)
+            {
+                yield return data;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 家具カテゴリの一覧を返す（重複除去・空文字除外済み）。
+    /// </summary>
+    public IReadOnlyList<string> GetFurnitureCategories()
+    {
+        return GetAllFurnitureDataSO()
+            .Select(data => data.category)
+            .Where(category => !string.IsNullOrEmpty(category))
+            .Distinct()
+            .OrderBy(category => category)
+            .ToList();
+    }
+
     // 旧FurnitureData形式への変換（互換性維持）
     public FurnitureData GetFurnitureData(string idOrName)
     {

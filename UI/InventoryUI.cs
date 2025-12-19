@@ -26,6 +26,14 @@ public class InventoryUI : MonoBehaviour
         public GameObject content;
     }
 
+    [Serializable]
+    private class CategoryDisplaySetting
+    {
+        public string categoryId;
+        public string displayName;
+        public Sprite icon;
+    }
+
     public enum InventoryTabType
     {
         Material,
@@ -49,6 +57,16 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
     public TMP_InputField furnitureSearchField;
+
+    [Header("Furniture Category Tabs")]
+    [SerializeField] private Transform furnitureCategoryTabContainer;
+    [SerializeField] private ToggleGroup furnitureCategoryToggleGroup;
+    [SerializeField] private GameObject furnitureCategoryTogglePrefab;
+    [SerializeField] private Sprite defaultCategoryIcon;
+    [SerializeField] private string allCategoryKey = "ALL";
+    [SerializeField] private string allCategoryLabel = "ALL";
+    [SerializeField] private Sprite allCategoryIcon;
+    [SerializeField] private List<CategoryDisplaySetting> categoryDisplaySettings = new List<CategoryDisplaySetting>();
 
 
     [Header("Prefabs")]
@@ -108,10 +126,12 @@ public class InventoryUI : MonoBehaviour
     private bool isSearchEditing = false;
     private TMP_InputField currentSearchField;
     private InventoryItem selectedFurnitureItem;
+    private string selectedFurnitureCategory;
     private bool autoReopenEnabled = false;
     private float currentSfxVolume = 1f;
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
+    private readonly List<FurnitureCategoryToggle> categoryToggles = new List<FurnitureCategoryToggle>();
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -140,6 +160,7 @@ public class InventoryUI : MonoBehaviour
         SetupSortButtons();
         SetupSearchFields();
         SetupFilters();
+        SetupFurnitureCategoryTabs();
         SetupCraftButton();
         SetupAutoReopenControl();
         RegisterEvents();
@@ -400,6 +421,114 @@ public class InventoryUI : MonoBehaviour
             apply(value);
             RefreshInventoryDisplay();
         });
+    }
+
+    void SetupFurnitureCategoryTabs()
+    {
+        if (furnitureCategoryTabContainer == null || furnitureCategoryTogglePrefab == null || furnitureCategoryToggleGroup == null)
+        {
+            if (debugMode) Debug.LogWarning("[CATEGORY] Furniture category tab references are missing.");
+            return;
+        }
+
+        ClearFurnitureCategoryTabs();
+
+        var categories = GetFurnitureCategories();
+        CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategoryIcon ?? defaultCategoryIcon);
+
+        foreach (var category in categories)
+        {
+            CreateFurnitureCategoryToggle(category, ResolveCategoryDisplayName(category), ResolveCategoryIcon(category));
+        }
+
+        SelectFurnitureCategory(allCategoryKey, false);
+        if (categoryToggles.Count > 0)
+        {
+            categoryToggles[0].SetIsOn(true, false);
+        }
+    }
+
+    void ClearFurnitureCategoryTabs()
+    {
+        foreach (var toggle in categoryToggles)
+        {
+            if (toggle != null)
+            {
+                Destroy(toggle.gameObject);
+            }
+        }
+
+        categoryToggles.Clear();
+    }
+
+    IEnumerable<string> GetFurnitureCategories()
+    {
+        var categories = FurnitureDataManager.Instance?.GetFurnitureCategories();
+        return categories ?? Array.Empty<string>();
+    }
+
+    void CreateFurnitureCategoryToggle(string categoryId, string displayName, Sprite icon)
+    {
+        if (string.IsNullOrEmpty(categoryId) || furnitureCategoryTogglePrefab == null || furnitureCategoryTabContainer == null)
+        {
+            return;
+        }
+
+        var toggleObj = Instantiate(furnitureCategoryTogglePrefab, furnitureCategoryTabContainer);
+        var categoryToggle = toggleObj.GetComponent<FurnitureCategoryToggle>();
+        if (categoryToggle == null)
+        {
+            categoryToggle = toggleObj.AddComponent<FurnitureCategoryToggle>();
+        }
+
+        categoryToggle.Initialize(categoryId, displayName, icon, furnitureCategoryToggleGroup, selectedCategory =>
+        {
+            SelectFurnitureCategory(selectedCategory);
+        });
+
+        categoryToggles.Add(categoryToggle);
+    }
+
+    string ResolveCategoryDisplayName(string categoryId)
+    {
+        var setting = FindCategoryDisplaySetting(categoryId);
+        return setting != null && !string.IsNullOrEmpty(setting.displayName) ? setting.displayName : categoryId;
+    }
+
+    Sprite ResolveCategoryIcon(string categoryId)
+    {
+        var setting = FindCategoryDisplaySetting(categoryId);
+        return setting != null && setting.icon != null ? setting.icon : defaultCategoryIcon;
+    }
+
+    CategoryDisplaySetting FindCategoryDisplaySetting(string categoryId)
+    {
+        return categoryDisplaySettings
+            .FirstOrDefault(setting => !string.IsNullOrEmpty(setting.categoryId) &&
+                                       string.Equals(setting.categoryId, categoryId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    void SelectFurnitureCategory(string categoryId, bool refresh = true)
+    {
+        selectedFurnitureCategory = categoryId;
+
+        if (refresh)
+        {
+            RefreshFurnitureDisplay();
+        }
+    }
+
+    void ResetFurnitureCategorySelection()
+    {
+        SelectFurnitureCategory(allCategoryKey, false);
+
+        var toggle = categoryToggles
+            .FirstOrDefault(ct => string.Equals(ct.CategoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase));
+
+        if (toggle != null)
+        {
+            toggle.SetIsOn(true, false);
+        }
     }
 
     void SetupCraftButton()
@@ -912,6 +1041,11 @@ public class InventoryUI : MonoBehaviour
         isMaterialTab = targetType == InventoryTabType.Material;
         searchQuery = "";  // タブ切り替え時に検索をクリア
 
+        if (!isMaterialTab)
+        {
+            ResetFurnitureCategorySelection();
+        }
+
         UpdateTabToggleVisuals(targetType);
 
         materialManager?.ClearSelection();
@@ -965,6 +1099,13 @@ public class InventoryUI : MonoBehaviour
     {
         var items = GetSortedFurnitureList();
 
+        // カテゴリフィルターを適用
+        if (!string.IsNullOrEmpty(selectedFurnitureCategory) &&
+            !string.Equals(selectedFurnitureCategory, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            items = items.Where(ItemMatchesSelectedCategory).ToList();
+        }
+
         // 検索フィルター適用
         if (!string.IsNullOrEmpty(searchQuery))
         {
@@ -977,6 +1118,17 @@ public class InventoryUI : MonoBehaviour
         if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}");
 
         cardManager?.RefreshFurnitureCards(items);
+    }
+
+    bool ItemMatchesSelectedCategory(InventoryItem item)
+    {
+        var data = FurnitureDataManager.Instance?.GetFurnitureDataSO(item.itemID);
+        if (data == null)
+        {
+            return false;
+        }
+
+        return string.Equals(data.category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase);
     }
 
     // Material用の説明エリア更新（新規追加）
@@ -1057,5 +1209,7 @@ public class InventoryUI : MonoBehaviour
         }
 
         tabToggleListeners.Clear();
+
+        ClearFurnitureCategoryTabs();
     }
 }
