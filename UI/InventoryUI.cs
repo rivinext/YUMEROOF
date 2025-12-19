@@ -6,8 +6,6 @@ using System.Linq;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
-using UnityEngine.Localization.Settings;
-using System.Globalization;
 
 
 public class InventoryUI : MonoBehaviour
@@ -51,11 +49,6 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
     public TMP_InputField furnitureSearchField;
-
-    [Header("Furniture Category Filters")]
-    public ToggleGroup furnitureCategoryToggleGroup;
-    public Transform furnitureCategoryContainer;
-    public GameObject furnitureCategoryTogglePrefab;
 
 
     [Header("Prefabs")]
@@ -119,9 +112,6 @@ public class InventoryUI : MonoBehaviour
     private float currentSfxVolume = 1f;
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
-    private readonly Dictionary<Toggle, UnityAction<bool>> furnitureCategoryToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
-    private const string AllFurnitureCategoryId = "ALL";
-    private string currentFurnitureCategoryId = AllFurnitureCategoryId;
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -150,7 +140,6 @@ public class InventoryUI : MonoBehaviour
         SetupSortButtons();
         SetupSearchFields();
         SetupFilters();
-        SetupFurnitureCategoryFilters();
         SetupCraftButton();
         SetupAutoReopenControl();
         RegisterEvents();
@@ -398,102 +387,6 @@ public class InventoryUI : MonoBehaviour
     {
         ConfigureFilterToggle(craftableToggle, value => showOnlyCraftable = value, "Craftable toggle");
         ConfigureFilterToggle(favoriteToggle, value => showOnlyFavorites = value, "Favorite toggle");
-    }
-
-    void SetupFurnitureCategoryFilters()
-    {
-        currentFurnitureCategoryId = AllFurnitureCategoryId;
-
-        if (furnitureCategoryContainer == null || furnitureCategoryTogglePrefab == null)
-        {
-            if (debugMode) Debug.LogWarning("Furniture category UI references are missing. Skipping category filter setup.");
-            return;
-        }
-
-        ClearFurnitureCategoryToggles();
-
-        var categories = FurnitureDataManager.Instance?.GetFurnitureCategories() ?? new List<string>();
-        if (categories.Count == 0 && debugMode)
-        {
-            Debug.LogWarning("Furniture category list is empty. Using ALL as fallback.");
-        }
-
-        CreateFurnitureCategoryToggle(AllFurnitureCategoryId, true);
-
-        foreach (var category in categories.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(c => c))
-        {
-            if (string.IsNullOrEmpty(category))
-                continue;
-
-            CreateFurnitureCategoryToggle(category, false);
-        }
-
-        var rect = furnitureCategoryContainer.GetComponent<RectTransform>();
-        if (rect != null)
-        {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
-        }
-    }
-
-    void ClearFurnitureCategoryToggles()
-    {
-        foreach (var pair in furnitureCategoryToggleListeners)
-        {
-            if (pair.Key != null)
-            {
-                pair.Key.onValueChanged.RemoveListener(pair.Value);
-            }
-        }
-
-        furnitureCategoryToggleListeners.Clear();
-
-        if (furnitureCategoryContainer == null)
-            return;
-
-        foreach (Transform child in furnitureCategoryContainer)
-        {
-            Destroy(child.gameObject);
-        }
-    }
-
-    void CreateFurnitureCategoryToggle(string categoryId, bool isSelected)
-    {
-        if (furnitureCategoryTogglePrefab == null || furnitureCategoryContainer == null)
-            return;
-
-        var toggleObj = Instantiate(furnitureCategoryTogglePrefab, furnitureCategoryContainer);
-        toggleObj.name = $"CategoryToggle_{categoryId}";
-        var toggle = toggleObj.GetComponent<Toggle>();
-
-        if (toggle == null)
-            return;
-
-        if (furnitureCategoryToggleGroup != null)
-        {
-            toggle.group = furnitureCategoryToggleGroup;
-        }
-
-        var label = toggle.GetComponentInChildren<TMP_Text>(true);
-        if (label != null)
-        {
-            label.text = categoryId;
-        }
-
-        bool shouldSelect = isSelected || string.Equals(categoryId, currentFurnitureCategoryId, StringComparison.OrdinalIgnoreCase);
-        toggle.SetIsOnWithoutNotify(shouldSelect);
-
-        UnityAction<bool> listener = isOn =>
-        {
-            if (!isOn)
-                return;
-
-            currentFurnitureCategoryId = categoryId;
-            if (debugMode) Debug.Log($"[CATEGORY] Furniture category changed to: {currentFurnitureCategoryId}");
-            RefreshFurnitureDisplay();
-        };
-
-        furnitureCategoryToggleListeners[toggle] = listener;
-        toggle.onValueChanged.AddListener(listener);
     }
 
     void ConfigureFilterToggle(Toggle toggle, Action<bool> apply, string debugLabel)
@@ -1052,14 +945,13 @@ public class InventoryUI : MonoBehaviour
         var items = GetSortedMaterialList();
 
         // 検索フィルター適用
-        var normalizedQuery = NormalizeSearchText(searchQuery);
-        if (!string.IsNullOrEmpty(normalizedQuery))
+        if (!string.IsNullOrEmpty(searchQuery))
         {
             items = items.Where(item =>
             {
                 var materialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
                 return materialData != null &&
-                       MatchesSearch(materialData.materialName, normalizedQuery);
+                       materialData.materialName.ToLower().Contains(searchQuery.ToLower());
             }).ToList();
         }
 
@@ -1073,39 +965,12 @@ public class InventoryUI : MonoBehaviour
     {
         var items = GetSortedFurnitureList();
 
-        if (!string.Equals(currentFurnitureCategoryId, AllFurnitureCategoryId, StringComparison.OrdinalIgnoreCase))
-        {
-            var dataManager = FurnitureDataManager.Instance;
-            items = items.Where(item =>
-            {
-                var data = dataManager?.GetFurnitureData(item.itemID);
-                var category = data?.category ?? string.Empty;
-                return string.Equals(category, currentFurnitureCategoryId, StringComparison.OrdinalIgnoreCase);
-            }).ToList();
-
-            if (debugMode)
-            {
-                Debug.Log($"[CATEGORY] Applied category filter '{currentFurnitureCategoryId}' - Remaining items: {items.Count}");
-            }
-        }
-
         // 検索フィルター適用
-        var normalizedQuery = NormalizeSearchText(searchQuery);
-        if (!string.IsNullOrEmpty(normalizedQuery))
+        if (!string.IsNullOrEmpty(searchQuery))
         {
-            var dataManager = FurnitureDataManager.Instance;
             items = items.Where(item =>
             {
-                var data = dataManager?.GetFurnitureData(item.itemID);
-
-                var candidates = new List<string>
-                {
-                    item.itemID,
-                    data?.nameID,
-                    GetFurnitureDisplayName(data)
-                };
-
-                return candidates.Any(candidate => MatchesSearch(candidate, normalizedQuery));
+                return item.itemID.ToLower().Contains(searchQuery.ToLower());
             }).ToList();
         }
 
@@ -1139,8 +1004,8 @@ public class InventoryUI : MonoBehaviour
 
     List<InventoryItem> GetSortedFurnitureList()
     {
-        if (debugMode) Debug.Log($"GetSortedFurnitureList - Sort: {currentSortType}, Category: {currentFurnitureCategoryId}, Craftable: {showOnlyCraftable}, Favorites: {showOnlyFavorites}, Ascending: {sortAscending}");
-        var list = InventoryManager.Instance?.GetFurnitureList(currentFurnitureCategoryId, currentSortType, showOnlyCraftable, showOnlyFavorites, sortAscending)
+        if (debugMode) Debug.Log($"GetSortedFurnitureList - Sort: {currentSortType}, Craftable: {showOnlyCraftable}, Favorites: {showOnlyFavorites}, Ascending: {sortAscending}");
+        var list = InventoryManager.Instance?.GetFurnitureList(currentSortType, showOnlyCraftable, showOnlyFavorites, sortAscending)
                    ?? new List<InventoryItem>();
 
         // デバッグ用：取得したリストの内容を確認（エディター専用）
@@ -1155,34 +1020,6 @@ public class InventoryUI : MonoBehaviour
 #endif
 
         return list;
-    }
-
-    string NormalizeSearchText(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return string.Empty;
-
-        return text.Trim().Normalize(NormalizationForm.FormKC).ToLowerInvariant();
-    }
-
-    bool MatchesSearch(string candidate, string normalizedQuery)
-    {
-        if (string.IsNullOrEmpty(candidate) || string.IsNullOrEmpty(normalizedQuery))
-            return false;
-
-        return NormalizeSearchText(candidate).Contains(normalizedQuery);
-    }
-
-    string GetFurnitureDisplayName(FurnitureData data)
-    {
-        if (data == null || string.IsNullOrEmpty(data.nameID))
-            return string.Empty;
-
-        var localizedName = LocalizationSettings.StringDatabase?.GetLocalizedString("ItemNames", data.nameID);
-        if (!string.IsNullOrEmpty(localizedName))
-            return localizedName;
-
-        return data.nameID;
     }
 
     public bool IsPointerOverInventoryWindow(Vector2 screenPosition, Camera camera = null)
@@ -1220,15 +1057,5 @@ public class InventoryUI : MonoBehaviour
         }
 
         tabToggleListeners.Clear();
-
-        foreach (var pair in furnitureCategoryToggleListeners)
-        {
-            if (pair.Key != null)
-            {
-                pair.Key.onValueChanged.RemoveListener(pair.Value);
-            }
-        }
-
-        furnitureCategoryToggleListeners.Clear();
     }
 }
