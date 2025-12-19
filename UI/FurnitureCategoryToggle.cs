@@ -29,7 +29,7 @@ public class FurnitureCategoryToggle : MonoBehaviour
     /// <summary>
     /// トグルを初期化し、表示とイベントを設定する。
     /// </summary>
-    public void Initialize(string id, string displayName, Sprite sprite, ToggleGroup group, UnityAction<string> onSelected)
+    public void Initialize(string id, string displayName, Sprite sprite, ToggleGroup group, UnityAction<string> onSelected, bool showLabel = true)
     {
         categoryId = id;
         Awake();
@@ -50,6 +50,7 @@ public class FurnitureCategoryToggle : MonoBehaviour
         if (label != null)
         {
             label.text = string.IsNullOrEmpty(displayName) ? id : displayName;
+            label.gameObject.SetActive(showLabel);
         }
 
         if (icon != null)
