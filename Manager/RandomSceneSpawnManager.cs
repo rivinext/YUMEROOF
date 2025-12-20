@@ -35,7 +35,8 @@ public class RandomSceneSpawnManager : MonoBehaviour
             return;
 
         var pose = GetSpawnPose();
-        Instantiate(selection.Value.prefab, pose.position, pose.rotation);
+        var rotation = pose.rotation * selection.Value.prefab.transform.rotation;
+        Instantiate(selection.Value.prefab, pose.position, rotation);
     }
 
     private Candidate? SelectCandidate()
