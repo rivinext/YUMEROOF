@@ -209,7 +209,7 @@ public class InventoryCardManager : MonoBehaviour
         var inventoryUI = GetComponentInParent<InventoryUI>();
         if (inventoryUI != null)
         {
-            inventoryUI.RefreshInventoryDisplay();
+            inventoryUI.UpdateCraftButtonState();
             if (debugMode) Debug.Log("[CardManager] Triggered craft button update");
         }
     }
