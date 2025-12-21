@@ -91,6 +91,8 @@ public class InventoryUI : MonoBehaviour
     [Header("Filters")]
     public Toggle craftableToggle;
     public Toggle favoriteToggle;
+    public Toggle wallPlacementToggle;
+    public Toggle ceilingPlacementToggle;
     public Button craftButton;
 
     [Header("Audio")]
@@ -121,6 +123,8 @@ public class InventoryUI : MonoBehaviour
     private bool sortAscending = true;
     private bool showOnlyCraftable = false;
     private bool showOnlyFavorites = false;
+    private bool showOnlyWallPlacement = false;
+    private bool showOnlyCeilingPlacement = false;
     private bool isPlacingItem = false;
     private string searchQuery = "";
     private bool isSearchEditing = false;
@@ -408,6 +412,8 @@ public class InventoryUI : MonoBehaviour
     {
         ConfigureFilterToggle(craftableToggle, value => showOnlyCraftable = value, "Craftable toggle");
         ConfigureFilterToggle(favoriteToggle, value => showOnlyFavorites = value, "Favorite toggle");
+        ConfigureFilterToggle(wallPlacementToggle, value => showOnlyWallPlacement = value, "Wall placement toggle");
+        ConfigureFilterToggle(ceilingPlacementToggle, value => showOnlyCeilingPlacement = value, "Ceiling placement toggle");
     }
 
     void ConfigureFilterToggle(Toggle toggle, Action<bool> apply, string debugLabel)
@@ -1101,6 +1107,12 @@ public class InventoryUI : MonoBehaviour
     {
         var items = GetSortedFurnitureList();
 
+        // 壁・天井フィルターを適用
+        if (showOnlyWallPlacement || showOnlyCeilingPlacement)
+        {
+            items = items.Where(ItemMatchesPlacementFilters).ToList();
+        }
+
         // カテゴリフィルターを適用
         if (!string.IsNullOrEmpty(selectedFurnitureCategory) &&
             !string.Equals(selectedFurnitureCategory, allCategoryKey, StringComparison.OrdinalIgnoreCase))
@@ -1117,7 +1129,7 @@ public class InventoryUI : MonoBehaviour
             }).ToList();
         }
 
-        if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}");
+        if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}, Wall filter: {showOnlyWallPlacement}, Ceiling filter: {showOnlyCeilingPlacement}");
 
         cardManager?.RefreshFurnitureCards(items);
     }
@@ -1131,6 +1143,34 @@ public class InventoryUI : MonoBehaviour
         }
 
         return string.Equals(data.category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase);
+    }
+
+    bool ItemMatchesPlacementFilters(InventoryItem item)
+    {
+        if (!showOnlyWallPlacement && !showOnlyCeilingPlacement)
+        {
+            return true;
+        }
+
+        var data = FurnitureDataManager.Instance?.GetFurnitureDataSO(item.itemID);
+        if (data == null)
+        {
+            return false;
+        }
+
+        PlacementRule rule = data.placementRules;
+
+        if (showOnlyWallPlacement && !(rule == PlacementRule.Wall || rule == PlacementRule.Both))
+        {
+            return false;
+        }
+
+        if (showOnlyCeilingPlacement && !(rule == PlacementRule.Ceiling || rule == PlacementRule.Both))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     // Material用の説明エリア更新（新規追加）
