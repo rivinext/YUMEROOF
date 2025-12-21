@@ -83,6 +83,12 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     public TMP_Text natureText;
     public Image weatherIcon;
 
+    [Header("Placement Icons")]
+    [SerializeField] private GameObject placementIconContainer;
+    [SerializeField] private Image placementIcon;
+    [SerializeField] private Sprite wallPlacementIcon;
+    [SerializeField] private Sprite ceilingPlacementIcon;
+
     [Header("Card States")]
     public Sprite defaultBackground;
     public Sprite selectedBackground;
@@ -481,6 +487,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             }
         }
 
+        UpdatePlacementIcon(furnitureData.placementRules);
+
         // クラフト可能状態をチェック（レシピがある場合）
         if (HasRecipe())
         {
@@ -492,6 +500,29 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
         // Favoriteボタンを最前面に
         EnsureFavoriteOnTop();
+    }
+
+    private void UpdatePlacementIcon(PlacementRule placementRule)
+    {
+        if (placementIconContainer == null || placementIcon == null)
+        {
+            return;
+        }
+
+        switch (placementRule)
+        {
+            case PlacementRule.Wall:
+                placementIconContainer.SetActive(true);
+                placementIcon.sprite = wallPlacementIcon;
+                break;
+            case PlacementRule.Ceiling:
+                placementIconContainer.SetActive(true);
+                placementIcon.sprite = ceilingPlacementIcon;
+                break;
+            default:
+                placementIconContainer.SetActive(false);
+                break;
+        }
     }
 
     // クラフト可能状態をチェック
