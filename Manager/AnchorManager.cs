@@ -13,16 +13,35 @@ public static class AnchorManager
     {
         if (obj == null || targetAnchor == null) return;
 
-        Quaternion wallRotation = targetAnchor.rotation;
+        AlignToWall(obj, anchor, -targetAnchor.forward, targetAnchor.rotation);
+    }
+
+    /// <summary>
+    /// Aligns an object using the given wall normal and the desired wall rotation, avoiding deriving rotation from the normal.
+    /// </summary>
+    /// <param name="obj">The root object to align.</param>
+    /// <param name="anchor">Anchor transform inside the object.</param>
+    /// <param name="wallNormal">The outward normal of the wall.</param>
+    /// <param name="wallRotation">Rotation representing the wall basis (forward, up, right).</param>
+    public static void AlignToWall(GameObject obj, Transform anchor, Vector3 wallNormal, Quaternion wallRotation)
+    {
+        if (obj == null) return;
+
+        Quaternion targetRotation = wallRotation;
+
+        if (targetRotation == Quaternion.identity && wallNormal != Vector3.zero)
+        {
+            targetRotation = Quaternion.LookRotation(-wallNormal);
+        }
 
         if (anchor != null)
         {
             // Adjust by inverse of anchor's local rotation so that the anchor matches the target anchor's pose.
-            obj.transform.rotation = wallRotation * Quaternion.Inverse(anchor.localRotation);
+            obj.transform.rotation = targetRotation * Quaternion.Inverse(anchor.localRotation);
         }
         else
         {
-            obj.transform.rotation = wallRotation;
+            obj.transform.rotation = targetRotation;
         }
     }
 }
