@@ -311,7 +311,14 @@ public class InventoryManager : MonoBehaviour
     }
 
     // 家具リストを取得（ソート・フィルター機能付き）
-    public List<InventoryItem> GetFurnitureList(string sortType = "name", bool showOnlyCraftable = false, bool showOnlyFavorites = false, bool ascending = true)
+    public List<InventoryItem> GetFurnitureList(
+        string sortType = "name",
+        bool showOnlyCraftable = false,
+        bool showOnlyFavorites = false,
+        bool ascending = true,
+        bool showOnlyWallPlacement = false,
+        bool showOnlyCeilingPlacement = false,
+        Predicate<PlacementRule> placementRuleFilter = null)
     {
         // すべての家具を取得（数量0も含む）
         var list = furnitureInventory.Values.ToList();
@@ -325,6 +332,38 @@ public class InventoryManager : MonoBehaviour
         if (showOnlyFavorites)
         {
             list = list.Where(item => item.isFavorite).ToList();
+        }
+
+        // 配置ルールフィルター（クラフト可・お気に入りフィルター後に適用）
+        if (placementRuleFilter != null || showOnlyWallPlacement || showOnlyCeilingPlacement)
+        {
+            list = list.Where(item =>
+            {
+                var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+                if (data == null)
+                {
+                    return false;
+                }
+
+                var rule = data.placementRules;
+
+                if (placementRuleFilter != null && !placementRuleFilter(rule))
+                {
+                    return false;
+                }
+
+                if (showOnlyWallPlacement && !(rule == PlacementRule.Wall || rule == PlacementRule.Both))
+                {
+                    return false;
+                }
+
+                if (showOnlyCeilingPlacement && !(rule == PlacementRule.Ceiling || rule == PlacementRule.Both))
+                {
+                    return false;
+                }
+
+                return true;
+            }).ToList();
         }
 
         // ソート（昇順・降順対応）

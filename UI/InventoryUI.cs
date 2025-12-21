@@ -1107,12 +1107,6 @@ public class InventoryUI : MonoBehaviour
     {
         var items = GetSortedFurnitureList();
 
-        // 壁・天井フィルターを適用
-        if (showOnlyWallPlacement || showOnlyCeilingPlacement)
-        {
-            items = items.Where(ItemMatchesPlacementFilters).ToList();
-        }
-
         // カテゴリフィルターを適用
         if (!string.IsNullOrEmpty(selectedFurnitureCategory) &&
             !string.Equals(selectedFurnitureCategory, allCategoryKey, StringComparison.OrdinalIgnoreCase))
@@ -1145,34 +1139,6 @@ public class InventoryUI : MonoBehaviour
         return string.Equals(data.category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase);
     }
 
-    bool ItemMatchesPlacementFilters(InventoryItem item)
-    {
-        if (!showOnlyWallPlacement && !showOnlyCeilingPlacement)
-        {
-            return true;
-        }
-
-        var data = FurnitureDataManager.Instance?.GetFurnitureDataSO(item.itemID);
-        if (data == null)
-        {
-            return false;
-        }
-
-        PlacementRule rule = data.placementRules;
-
-        if (showOnlyWallPlacement && !(rule == PlacementRule.Wall || rule == PlacementRule.Both))
-        {
-            return false;
-        }
-
-        if (showOnlyCeilingPlacement && !(rule == PlacementRule.Ceiling || rule == PlacementRule.Both))
-        {
-            return false;
-        }
-
-        return true;
-    }
-
     // Material用の説明エリア更新（新規追加）
     void UpdateMaterialDescriptionArea()
     {
@@ -1199,7 +1165,13 @@ public class InventoryUI : MonoBehaviour
     List<InventoryItem> GetSortedFurnitureList()
     {
         if (debugMode) Debug.Log($"GetSortedFurnitureList - Sort: {currentSortType}, Craftable: {showOnlyCraftable}, Favorites: {showOnlyFavorites}, Ascending: {sortAscending}");
-        var list = InventoryManager.Instance?.GetFurnitureList(currentSortType, showOnlyCraftable, showOnlyFavorites, sortAscending)
+        var list = InventoryManager.Instance?.GetFurnitureList(
+                       currentSortType,
+                       showOnlyCraftable,
+                       showOnlyFavorites,
+                       sortAscending,
+                       showOnlyWallPlacement,
+                       showOnlyCeilingPlacement)
                    ?? new List<InventoryItem>();
 
         // デバッグ用：取得したリストの内容を確認（エディター専用）
