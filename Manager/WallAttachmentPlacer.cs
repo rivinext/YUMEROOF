@@ -149,14 +149,14 @@ public class WallAttachmentPlacer : MonoBehaviour
 
         if (itemAnchor != null)
         {
-            AnchorManager.AlignToWall(obj, itemAnchor, targetAnchor.forward);
+            AnchorManager.AlignToWall(obj, itemAnchor, targetAnchor);
 
             Vector3 offset = itemAnchor.position - obj.transform.position;
             obj.transform.position = targetAnchor.position - offset;
         }
         else
         {
-            AnchorManager.AlignToWall(obj, null, targetAnchor.forward);
+            AnchorManager.AlignToWall(obj, null, targetAnchor);
             obj.transform.position = targetAnchor.position;
         }
     }
