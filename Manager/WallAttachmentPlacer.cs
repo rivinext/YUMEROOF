@@ -147,16 +147,19 @@ public class WallAttachmentPlacer : MonoBehaviour
             return;
         }
 
+        Quaternion targetRotation = targetAnchor.rotation;
+        Vector3 wallNormal = -targetAnchor.forward;
+
         if (itemAnchor != null)
         {
-            AnchorManager.AlignToWall(obj, itemAnchor, targetAnchor);
+            AnchorManager.AlignToWall(obj, itemAnchor, wallNormal, targetRotation);
 
             Vector3 offset = itemAnchor.position - obj.transform.position;
             obj.transform.position = targetAnchor.position - offset;
         }
         else
         {
-            AnchorManager.AlignToWall(obj, null, targetAnchor);
+            AnchorManager.AlignToWall(obj, null, wallNormal, targetRotation);
             obj.transform.position = targetAnchor.position;
         }
     }
