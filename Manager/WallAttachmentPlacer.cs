@@ -48,6 +48,16 @@ public class WallAttachmentPlacer : MonoBehaviour
     /// <returns>配置できた場合は true。</returns>
     public bool TryPlace(GameObject wallItemPrefab, out GameObject placedInstance)
     {
+        placedInstance = null;
+
+        if (!IsWallPlaceable(wallItemPrefab))
+        {
+#if UNITY_EDITOR
+            Debug.LogWarning($"[WallAttachmentPlacer] 壁用以外のプレハブ '{wallItemPrefab?.name ?? "(null)"}' を配置しようとしました。", this);
+#endif
+            return false;
+        }
+
         AnchorPoint anchor = FindFirstAvailableAnchor();
         return TryPlaceAtAnchor(wallItemPrefab, anchor, out placedInstance);
     }
@@ -63,6 +73,12 @@ public class WallAttachmentPlacer : MonoBehaviour
     public bool TryPlaceAtAnchor(GameObject wallItemPrefab, AnchorPoint anchor, out GameObject placedInstance, Transform itemAnchorOverride = null)
     {
         placedInstance = null;
+
+        if (!IsWallPlaceable(wallItemPrefab))
+        {
+            Debug.LogWarning($"[WallAttachmentPlacer] 壁用ではないオブジェクト '{wallItemPrefab?.name ?? "(null)"}' は設置できません。", this);
+            return false;
+        }
 
         if (wallItemPrefab == null || anchor == null)
         {
@@ -159,5 +175,25 @@ public class WallAttachmentPlacer : MonoBehaviour
             AnchorManager.AlignToWall(obj, null, targetAnchor.rotation);
             obj.transform.position = targetAnchor.position;
         }
+    }
+
+    private bool IsWallPlaceable(GameObject wallItemPrefab)
+    {
+        if (wallItemPrefab == null)
+        {
+            return false;
+        }
+
+        if (wallItemPrefab.CompareTag("Wall"))
+        {
+            return true;
+        }
+
+        if (wallItemPrefab.TryGetComponent<IWallPlaceable>(out _))
+        {
+            return true;
+        }
+
+        return wallItemPrefab.TryGetComponent<WallOnly>(out _);
     }
 }
