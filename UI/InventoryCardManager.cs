@@ -41,9 +41,16 @@ public class InventoryCardManager : MonoBehaviour
     {
         if (debugMode) Debug.Log($"[CardManager] RefreshFurnitureCards: {items.Count} items");
 
+        if (selectedFurnitureItem != null && !items.Contains(selectedFurnitureItem))
+        {
+            selectedFurnitureItem = null;
+            selectedFurnitureCard = null;
+        }
+
         // 既存のカードをプールに戻す
         foreach (var card in activeFurnitureCards)
         {
+            card.SetSelected(false);
             card.gameObject.SetActive(false);
             furnitureCardPool.Enqueue(card);
         }
@@ -55,6 +62,7 @@ public class InventoryCardManager : MonoBehaviour
             var card = GetOrCreateFurnitureCard();
             if (card == null) continue;
 
+            card.SetSelected(false);
             card.transform.SetParent(furnitureContent.transform, false);
             card.transform.SetAsLastSibling();
             card.SetItem(item, false);
