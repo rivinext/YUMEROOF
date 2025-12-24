@@ -19,46 +19,7 @@ namespace Yume
         {
             if (captureCamera == null)
             {
-                var mainCamera = Camera.main;
-                if (mainCamera != null)
-                {
-                    var screenshotObj = Instantiate(
-                        mainCamera.gameObject,
-                        mainCamera.transform.position,
-                        mainCamera.transform.rotation,
-                        mainCamera.transform);
-                    screenshotObj.name = "ScreenshotCamera";
-                    screenshotObj.transform.SetParent(mainCamera.transform, false);
-                    screenshotObj.transform.localPosition = Vector3.zero;
-                    screenshotObj.transform.localRotation = Quaternion.identity;
-                    screenshotObj.transform.localScale = Vector3.one;
-
-                    captureCamera = screenshotObj.GetComponent<Camera>();
-                    if (captureCamera != null)
-                    {
-                        captureCamera.enabled = false;
-
-                        var uiLayer = LayerMask.NameToLayer("UI");
-                        var excludeMask = additionalExcludedLayers;
-                        if (uiLayer >= 0)
-                        {
-                            excludeMask |= 1 << uiLayer;
-                        }
-                        captureCamera.cullingMask &= ~excludeMask;
-                    }
-
-                    var audioListener = screenshotObj.GetComponent<AudioListener>();
-                    if (audioListener != null)
-                    {
-                        Destroy(audioListener);
-                    }
-
-                    var flareLayer = screenshotObj.GetComponent<FlareLayer>();
-                    if (flareLayer != null)
-                    {
-                        Destroy(flareLayer);
-                    }
-                }
+                captureCamera = Camera.main;
             }
         }
 
@@ -87,19 +48,35 @@ namespace Yume
                 var renderTexture = new RenderTexture(width, height, 24);
 
                 var previousTarget = captureCamera.targetTexture;
-                captureCamera.targetTexture = renderTexture;
-                captureCamera.Render();
-
                 var previousActive = RenderTexture.active;
-                RenderTexture.active = renderTexture;
+                var previousCullingMask = captureCamera.cullingMask;
 
-                texture = new Texture2D(width, height, TextureFormat.RGB24, false);
-                texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                texture.Apply();
+                try
+                {
+                    var uiLayer = LayerMask.NameToLayer("UI");
+                    var excludeMask = additionalExcludedLayers;
+                    if (uiLayer >= 0)
+                    {
+                        excludeMask |= 1 << uiLayer;
+                    }
+                    captureCamera.cullingMask &= ~excludeMask;
 
-                captureCamera.targetTexture = previousTarget;
-                RenderTexture.active = previousActive;
-                Destroy(renderTexture);
+                    captureCamera.targetTexture = renderTexture;
+                    captureCamera.Render();
+
+                    RenderTexture.active = renderTexture;
+
+                    texture = new Texture2D(width, height, TextureFormat.RGB24, false);
+                    texture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                    texture.Apply();
+                }
+                finally
+                {
+                    captureCamera.targetTexture = previousTarget;
+                    captureCamera.cullingMask = previousCullingMask;
+                    RenderTexture.active = previousActive;
+                    Destroy(renderTexture);
+                }
             }
             else
             {
