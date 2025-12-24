@@ -26,11 +26,12 @@ namespace Yume
                         mainCamera.gameObject,
                         mainCamera.transform.position,
                         mainCamera.transform.rotation,
-                        mainCamera.transform.parent);
+                        mainCamera.transform);
                     screenshotObj.name = "ScreenshotCamera";
                     screenshotObj.transform.SetParent(mainCamera.transform, false);
                     screenshotObj.transform.localPosition = Vector3.zero;
                     screenshotObj.transform.localRotation = Quaternion.identity;
+                    screenshotObj.transform.localScale = Vector3.one;
 
                     captureCamera = screenshotObj.GetComponent<Camera>();
                     if (captureCamera != null)
