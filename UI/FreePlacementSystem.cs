@@ -1212,11 +1212,6 @@ public class FreePlacementSystem : MonoBehaviour
                 snappedParentFurniture = null;
             }
 
-            if (isPlacingNewFurniture && placedComp.furnitureData.isMovable)
-            {
-                var storeButton = placedComp.gameObject.AddComponent<StoreToInventoryButton>();
-            }
-
             if (isPlacingNewFurniture && placedComp.furnitureData != null)
             {
                 EnvironmentStatsManager.Instance?.AddValues(
