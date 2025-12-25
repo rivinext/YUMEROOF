@@ -20,9 +20,6 @@ public class PlacedFurniture : MonoBehaviour
     public GameObject[] cornerMarkers;     // 四隅のマーカー
     public GameObject removeButton;        // 削除ボタンUI
 
-    // 収納ボタン
-    private StoreToInventoryButton storeButton;
-
     void Awake()
     {
         renderers = GetComponentsInChildren<Renderer>();
@@ -33,13 +30,6 @@ public class PlacedFurniture : MonoBehaviour
         for (int i = 0; i < renderers.Length; i++)
         {
             originalMaterials[i] = renderers[i].sharedMaterial;
-        }
-
-        // 収納ボタンコンポーネントを追加
-        storeButton = GetComponent<StoreToInventoryButton>();
-        if (storeButton == null && furnitureData != null && furnitureData.isMovable)
-        {
-            storeButton = gameObject.AddComponent<StoreToInventoryButton>();
         }
     }
 
