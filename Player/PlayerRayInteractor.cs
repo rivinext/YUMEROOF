@@ -71,6 +71,22 @@ public class PlayerRayInteractor : MonoBehaviour
 
     void Update()
     {
+        var placementSystem = FindFirstObjectByType<FreePlacementSystem>();
+        if (placementSystem != null && placementSystem.IsPlacing())
+        {
+            if (currentTarget != null)
+            {
+                SetHighlight(currentTarget, false);
+                NotifyBlur(currentTarget);
+                currentTarget = null;
+                currentFocusable = null;
+            }
+
+            interactionUIController?.CloseInteraction();
+            TargetChanged?.Invoke(null);
+            return;
+        }
+
         if (playerController != null && playerController.IsSitting)
         {
             if (currentTarget != null)
