@@ -387,21 +387,29 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
     }
 
-    List<string> CollectInventory()
+    List<InventoryEntry> CollectInventory()
     {
-        List<string> list = new();
+        List<InventoryEntry> list = new();
         var inv = InventoryManager.Instance;
         if (inv != null)
         {
             foreach (var item in inv.GetFurnitureList())
             {
-                for (int i = 0; i < item.quantity; i++)
-                    list.Add(item.itemID);
+                list.Add(new InventoryEntry
+                {
+                    itemID = item.itemID,
+                    quantity = item.quantity,
+                    isMaterial = false
+                });
             }
             foreach (var item in inv.GetMaterialList())
             {
-                for (int i = 0; i < item.quantity; i++)
-                    list.Add(item.itemID);
+                list.Add(new InventoryEntry
+                {
+                    itemID = item.itemID,
+                    quantity = item.quantity,
+                    isMaterial = true
+                });
             }
         }
         return list;
@@ -434,7 +442,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (player != null)
             player.ApplySaveData(data.player);
 
-        ApplyInventory(data.inventory);
+        ApplyInventory(data.inventory, data.legacyInventory);
         ApplyFurniture(data.furniture);
         ApplyTime(data.clock);
 
@@ -468,7 +476,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (player != null)
             player.ApplySaveData(data.player);
 
-        ApplyInventory(data.ownedItems);
+        ApplyInventory(data.ownedItems, data.legacyOwnedItems);
         ApplyFurniture(data.furniture);
         ApplyTime(data.clock);
 
@@ -500,44 +508,80 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         MaterialHuePresetManager.ApplySaveDataToAllManagers(data);
     }
 
-    void ApplyInventory(List<string> items)
+    void ApplyInventory(List<InventoryEntry> items, List<string> legacyItems)
     {
         var inv = InventoryManager.Instance;
         if (inv == null) return;
 
         inv.BeginBulkUpdate();
 
-        foreach (var item in inv.GetFurnitureList())
-            inv.RemoveFurniture(item.itemID, item.quantity);
-        foreach (var item in inv.GetMaterialList())
-            inv.RemoveMaterial(item.itemID, item.quantity);
+        inv.ClearAllInventory();
 
+        if (items != null && items.Count > 0)
+        {
+            foreach (var item in items)
+            {
+                if (item == null || string.IsNullOrWhiteSpace(item.itemID))
+                {
+                    continue;
+                }
+
+                if (item.isMaterial)
+                {
+                    inv.AddMaterial(item.itemID, item.quantity);
+                }
+                else
+                {
+                    inv.AddFurniture(item.itemID, item.quantity);
+                }
+            }
+        }
+        else if (legacyItems != null && legacyItems.Count > 0)
+        {
+            ApplyLegacyInventory(inv, legacyItems);
+        }
+
+        inv.EndBulkUpdate();
+    }
+
+    void ApplyLegacyInventory(InventoryManager inv, List<string> items)
+    {
+        var counts = new Dictionary<string, int>();
         foreach (var id in items)
         {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            string trimmed = id.Trim();
+            counts[trimmed] = counts.TryGetValue(trimmed, out var count) ? count + 1 : 1;
+        }
+
+        foreach (var kvp in counts)
+        {
             bool added = false;
-            var materialData = inv.GetMaterialData(id);
+            var materialData = inv.GetMaterialData(kvp.Key);
             if (materialData != null)
             {
-                inv.AddMaterial(id, 1);
+                inv.AddMaterial(kvp.Key, kvp.Value);
                 added = true;
             }
             else
             {
                 var furnitureMgr = FurnitureDataManager.Instance;
-                if (furnitureMgr != null && furnitureMgr.GetFurnitureData(id) != null)
+                if (furnitureMgr != null && furnitureMgr.GetFurnitureData(kvp.Key) != null)
                 {
-                    inv.AddFurniture(id, 1);
+                    inv.AddFurniture(kvp.Key, kvp.Value);
                     added = true;
                 }
             }
 
             if (!added)
             {
-                Debug.LogWarning($"SaveGameManager.ApplyInventory: Unknown item ID '{id}'");
+                Debug.LogWarning($"SaveGameManager.ApplyInventory: Unknown item ID '{kvp.Key}'");
             }
         }
-
-        inv.EndBulkUpdate();
     }
 
     void ApplyFurniture(List<SaveSystem.PlacedFurniture> list)

@@ -228,21 +228,26 @@ public class InventoryManager : MonoBehaviour
         if (!materialInventory.ContainsKey(materialID)) return false;
 
         var item = materialInventory[materialID];
-        if (item.RemoveQuantity(quantity))
+        if (!item.RemoveQuantity(quantity))
         {
-            if (item.quantity <= 0)
-            {
-                materialInventory.Remove(materialID);
-                NotifyItemRemoved(item);
-            }
-            else
-            {
-                NotifyItemUpdated(item);
-            }
-            NotifyInventoryChanged();
-            return true;
+            return false;
         }
-        return false;
+
+        if (item.quantity < 0)
+        {
+            item.quantity = 0;
+        }
+
+        NotifyItemUpdated(item);
+        NotifyInventoryChanged();
+        return true;
+    }
+
+    public void ClearAllInventory()
+    {
+        furnitureInventory.Clear();
+        materialInventory.Clear();
+        NotifyInventoryChanged();
     }
 
     public void BeginBulkUpdate()
