@@ -17,6 +17,14 @@ namespace SaveSystem
 }
 
 [Serializable]
+public class InventoryEntry
+{
+    public string itemID;
+    public int quantity;
+    public bool isMaterial;
+}
+
+[Serializable]
 public class BaseSaveData
 {
     public string saveDate;
@@ -34,7 +42,8 @@ public class BaseSaveData
 public class StorySaveData : BaseSaveData
 {
     public PlayerManager.PlayerData player;
-    public List<string> inventory = new();
+    public List<InventoryEntry> inventory = new();
+    [NonSerialized] public List<string> legacyInventory;
     public List<SaveSystem.PlacedFurniture> furniture = new();
     public GameClock.ClockData clock;
     public int money;
@@ -49,7 +58,22 @@ public class StorySaveData : BaseSaveData
 
     public static StorySaveData FromJson(string json)
     {
-        return JsonUtility.FromJson<StorySaveData>(json);
+        var data = JsonUtility.FromJson<StorySaveData>(json);
+        if (data == null)
+        {
+            return null;
+        }
+
+        if (data.inventory == null || data.inventory.Count == 0)
+        {
+            var legacy = JsonUtility.FromJson<StorySaveDataLegacy>(json);
+            if (legacy != null && legacy.inventory != null && legacy.inventory.Count > 0)
+            {
+                data.legacyInventory = new List<string>(legacy.inventory);
+            }
+        }
+
+        return data;
     }
 }
 
@@ -57,7 +81,8 @@ public class StorySaveData : BaseSaveData
 public class CreativeSaveData : BaseSaveData
 {
     public PlayerManager.PlayerData player;
-    public List<string> ownedItems = new();
+    public List<InventoryEntry> ownedItems = new();
+    [NonSerialized] public List<string> legacyOwnedItems;
     public List<SaveSystem.PlacedFurniture> furniture = new();
     public GameClock.ClockData clock;
     public int money;
@@ -72,8 +97,35 @@ public class CreativeSaveData : BaseSaveData
 
     public static CreativeSaveData FromJson(string json)
     {
-        return JsonUtility.FromJson<CreativeSaveData>(json);
+        var data = JsonUtility.FromJson<CreativeSaveData>(json);
+        if (data == null)
+        {
+            return null;
+        }
+
+        if (data.ownedItems == null || data.ownedItems.Count == 0)
+        {
+            var legacy = JsonUtility.FromJson<CreativeSaveDataLegacy>(json);
+            if (legacy != null && legacy.ownedItems != null && legacy.ownedItems.Count > 0)
+            {
+                data.legacyOwnedItems = new List<string>(legacy.ownedItems);
+            }
+        }
+
+        return data;
     }
+}
+
+[Serializable]
+internal class StorySaveDataLegacy
+{
+    public List<string> inventory = new();
+}
+
+[Serializable]
+internal class CreativeSaveDataLegacy
+{
+    public List<string> ownedItems = new();
 }
 
 [Serializable]
