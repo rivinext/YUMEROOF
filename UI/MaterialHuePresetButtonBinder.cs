@@ -119,14 +119,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
 
         MaterialHuePresetSlot slot = presetManager.PresetSlots[slotIndex];
         string slotLabel = slot?.Label?.Trim() ?? string.Empty;
-        string resolvedLabel = string.IsNullOrWhiteSpace(slotLabel) ? defaultLabel : slotLabel;
-
-        if (slot != null && slot.IsDefaultPreset)
-        {
-            resolvedLabel = $"{resolvedLabel} (Default)";
-        }
-
-        return resolvedLabel;
+        return string.IsNullOrWhiteSpace(slotLabel) ? defaultLabel : slotLabel;
     }
 
     private void BindActionButtons()
