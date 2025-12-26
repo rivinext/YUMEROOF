@@ -66,6 +66,10 @@ public class SlideTransitionManager : MonoBehaviour
         {
             slotKey = SaveGameManager.Instance?.CurrentSlotKey;
         }
+        if (!string.IsNullOrEmpty(slotKey))
+        {
+            SaveGameManager.Instance.SetCurrentSlotKey(slotKey, ensureAutoSave: true);
+        }
         GameSessionInitializer.CreateIfNeeded(slotKey);
         UIMenuManager.ClearSelectedSlot();
 
