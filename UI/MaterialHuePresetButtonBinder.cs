@@ -115,6 +115,13 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             }
 
             presetManager.SelectedSlotIndex = slotIndex;
+            if (!presetManager.IsDefaultSlot(slotIndex) && !presetManager.HasSavedPreset(slotIndex))
+            {
+                ShowSaveWarning($"スロット {slotIndex + 1} は未保存です。");
+                UpdateSaveButtonState();
+                return;
+            }
+
             presetManager.PreviewPreset(slotIndex);
             UpdateSaveButtonState();
         });
@@ -220,6 +227,11 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
     }
 
     private void HandleSaveSlotWarning(string message)
+    {
+        ShowSaveWarning(message);
+    }
+
+    private void ShowSaveWarning(string message)
     {
         if (saveWarningText == null)
         {

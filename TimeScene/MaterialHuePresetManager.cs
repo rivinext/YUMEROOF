@@ -377,21 +377,26 @@ public class MaterialHuePresetManager : MonoBehaviour
         ApplyPresetToControllers(slotIndex, "Loaded", applyToMaterial: true);
     }
 
-    private void ApplyPresetToControllers(int slotIndex, string actionLabel, bool applyToMaterial)
+    private bool ApplyPresetToControllers(int slotIndex, string actionLabel, bool applyToMaterial)
     {
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
-            return;
+            ResetPreviewToAppliedColors("Failed to apply preset (invalid slot)", slotIndex);
+            return false;
         }
 
         MaterialHuePresetSlot slot = presetSlots[clampedSlot];
         if (slot != null && slot.IsDefaultPreset)
         {
-            LoadDefaultPreset(slot, clampedSlot, actionLabel, applyToMaterial);
-            return;
+            bool loadedDefault = LoadDefaultPreset(slot, clampedSlot, actionLabel, applyToMaterial);
+            if (!loadedDefault)
+            {
+                ResetPreviewToAppliedColors($"Failed to apply default preset ({actionLabel.ToLowerInvariant()})", clampedSlot);
+            }
+            return loadedDefault;
         }
 
-        LoadUserPreset(clampedSlot, actionLabel, applyToMaterial);
+        return LoadUserPreset(clampedSlot, actionLabel, applyToMaterial);
     }
 
     public bool IsDefaultSlot(int slotIndex)
@@ -405,7 +410,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         return slot != null && slot.IsDefaultPreset;
     }
 
-    private bool HasSavedPreset(int slotIndex)
+    public bool HasSavedPreset(int slotIndex)
     {
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
@@ -470,14 +475,14 @@ public class MaterialHuePresetManager : MonoBehaviour
         SavePreset(slotIndex);
     }
 
-    private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
+    private bool LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         IReadOnlyList<HSVColor> defaultColors = slot.DefaultColors;
 
         if (defaultColors == null || defaultColors.Count == 0)
         {
             Debug.LogWarning($"No default colors configured for slot index {slotIndex}.");
-            return;
+            return false;
         }
 
         if (defaultColors.Count < controllers.Count)
@@ -498,16 +503,18 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         Debug.Log($"{actionLabel} default preset slot {slotIndex}");
+        return true;
     }
 
-    private void LoadUserPreset(int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
+    private bool LoadUserPreset(int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         if (TryLoadUserPresetFromPrefs(slotIndex, actionLabel, applyToMaterial))
         {
-            return;
+            return true;
         }
 
         Debug.LogWarning($"No saved preset found for slot {slotIndex}.");
+        return false;
     }
 
     public void ApplyFromSaveData(MaterialHueManagerSaveData data)
@@ -725,7 +732,34 @@ public class MaterialHuePresetManager : MonoBehaviour
             return true;
         }
 
-        return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
+        if (LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true))
+        {
+            return true;
+        }
+
+        ResetPreviewToAppliedColors($"Failed to apply preset ({actionLabel.ToLowerInvariant()})", slotIndex);
+        return false;
+    }
+
+    private void ResetPreviewToAppliedColors(string reason, int slotIndex)
+    {
+        if (controllers == null || controllers.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < controllers.Count; i++)
+        {
+            MaterialHueController controller = controllers[i];
+            if (controller == null)
+            {
+                continue;
+            }
+
+            controller.SetHSV(controller.AppliedHue, controller.AppliedSaturation, controller.AppliedValue, applyToMaterial: false);
+        }
+
+        Debug.LogWarning($"{reason}. Reset preview to applied colors for slot {slotIndex}.");
     }
 
     private void ApplyFromSaveDataInternal(MaterialHueManagerSaveData data)
