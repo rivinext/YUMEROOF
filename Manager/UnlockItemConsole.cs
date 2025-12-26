@@ -40,7 +40,27 @@ public class UnlockItemConsole : MonoBehaviour
         string[] lines = csvAsset.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
         for (int i = 1; i < lines.Length; i++)
         {
+            if (string.IsNullOrWhiteSpace(lines[i]))
+            {
+                continue;
+            }
+
             string[] tokens = lines[i].Split(',');
+            bool allEmpty = true;
+            foreach (string token in tokens)
+            {
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    allEmpty = false;
+                    break;
+                }
+            }
+
+            if (allEmpty)
+            {
+                continue;
+            }
+
             if (tokens.Length >= 5)
             {
                 UnlockData data = new UnlockData
