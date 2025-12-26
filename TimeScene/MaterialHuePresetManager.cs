@@ -41,6 +41,13 @@ public class MaterialHuePresetSlot
 
 public class MaterialHuePresetManager : MonoBehaviour
 {
+    private enum UserPresetFallbackSource
+    {
+        TemporarySlotMemory,
+        CurrentAppliedColor,
+        InitialControllerColor
+    }
+
     [SerializeField] private List<MaterialHueController> controllers = new();
     [SerializeField] private string keyPrefix = "multi_mat_preset";
 
@@ -63,6 +70,10 @@ public class MaterialHuePresetManager : MonoBehaviour
     [Header("Selection")]
     [SerializeField] private int selectedSlotIndex = 0;
 
+    [Header("Fallback")]
+    [SerializeField]
+    private UserPresetFallbackSource userPresetFallbackSource = UserPresetFallbackSource.TemporarySlotMemory;
+
     private bool hasAppliedSaveData = false;
     private bool hasSavedSelectedSlotThisSession = false;
     private Coroutine autoSaveCoroutine;
@@ -70,6 +81,8 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool pendingInitialLoad = true;
     private bool hasPendingSaveData = false;
     private MaterialHueManagerSaveData pendingSaveData;
+    private readonly List<HSVColor> initialControllerColors = new();
+    private readonly Dictionary<int, List<HSVColor>> slotTemporaryColors = new();
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
@@ -114,6 +127,7 @@ public class MaterialHuePresetManager : MonoBehaviour
             selectedSlotIndex = Mathf.Clamp(initialPresetIndex, 0, SlotCount - 1);
         }
 
+        CacheInitialControllerColors();
         pendingInitialLoad = true;
     }
 
@@ -484,6 +498,7 @@ public class MaterialHuePresetManager : MonoBehaviour
             controller.SetHSV(defaultColor.H, defaultColor.S, defaultColor.V, applyToMaterial: applyToMaterial);
         }
 
+        StoreSlotTemporaryColors(slotIndex);
         Debug.Log($"{actionLabel} default preset slot {slotIndex}");
     }
 
@@ -491,10 +506,12 @@ public class MaterialHuePresetManager : MonoBehaviour
     {
         if (TryLoadUserPresetFromPrefs(slotIndex, actionLabel, applyToMaterial))
         {
+            StoreSlotTemporaryColors(slotIndex);
             return;
         }
 
         Debug.LogWarning($"No saved preset found for slot {slotIndex}.");
+        ApplyUserPresetFallback(slotIndex, actionLabel, applyToMaterial);
     }
 
     public void ApplyFromSaveData(MaterialHueManagerSaveData data)
@@ -523,6 +540,8 @@ public class MaterialHuePresetManager : MonoBehaviour
         {
             return;
         }
+
+        StoreSlotTemporaryColors(slotIndex);
 
         if (autoSaveDebounceSeconds <= 0f)
         {
@@ -700,6 +719,8 @@ public class MaterialHuePresetManager : MonoBehaviour
             {
                 SavePreset(slotIndex);
             }
+
+            StoreSlotTemporaryColors(slotIndex);
         }
 
         return loadedAny;
@@ -761,6 +782,8 @@ public class MaterialHuePresetManager : MonoBehaviour
             HSVColor savedColor = data.controllerColors[i];
             controller.SetHSV(savedColor.H, savedColor.S, savedColor.V);
         }
+
+        StoreSlotTemporaryColors(clampedSlot);
 
         if (!IsDefaultSlot(clampedSlot))
         {
@@ -861,5 +884,119 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         return -1;
+    }
+
+    private void CacheInitialControllerColors()
+    {
+        initialControllerColors.Clear();
+
+        foreach (MaterialHueController controller in controllers)
+        {
+            if (controller == null)
+            {
+                initialControllerColors.Add(new HSVColor());
+                continue;
+            }
+
+            initialControllerColors.Add(new HSVColor(controller.AppliedHue, controller.AppliedSaturation, controller.AppliedValue));
+        }
+    }
+
+    private void StoreSlotTemporaryColors(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= SlotCount)
+        {
+            return;
+        }
+
+        var colors = new List<HSVColor>(controllers.Count);
+        foreach (MaterialHueController controller in controllers)
+        {
+            if (controller == null)
+            {
+                colors.Add(new HSVColor());
+                continue;
+            }
+
+            colors.Add(new HSVColor(controller.Hue, controller.Saturation, controller.Value));
+        }
+
+        slotTemporaryColors[slotIndex] = colors;
+    }
+
+    private void ApplyUserPresetFallback(int slotIndex, string actionLabel, bool applyToMaterial)
+    {
+        if (controllers == null || controllers.Count == 0)
+        {
+            return;
+        }
+
+        IReadOnlyList<HSVColor> fallbackColors = userPresetFallbackSource switch
+        {
+            UserPresetFallbackSource.TemporarySlotMemory => TryGetTemporarySlotColors(slotIndex, out var storedColors)
+                ? storedColors
+                : GetCurrentAppliedColors(),
+            UserPresetFallbackSource.CurrentAppliedColor => GetCurrentAppliedColors(),
+            UserPresetFallbackSource.InitialControllerColor => initialControllerColors,
+            _ => GetCurrentAppliedColors()
+        };
+
+        if (fallbackColors == null || fallbackColors.Count == 0)
+        {
+            fallbackColors = GetCurrentAppliedColors();
+        }
+
+        int colorCount = Mathf.Min(controllers.Count, fallbackColors.Count);
+        if (fallbackColors.Count < controllers.Count)
+        {
+            Debug.LogWarning($"Fallback color count ({fallbackColors.Count}) is less than controller count ({controllers.Count}) for slot {slotIndex}.");
+        }
+
+        for (int i = 0; i < colorCount; i++)
+        {
+            MaterialHueController controller = controllers[i];
+            if (controller == null)
+            {
+                continue;
+            }
+
+            HSVColor fallbackColor = fallbackColors[i];
+            controller.SetHSV(fallbackColor.H, fallbackColor.S, fallbackColor.V, applyToMaterial: applyToMaterial);
+        }
+
+        StoreSlotTemporaryColors(slotIndex);
+        Debug.Log($"{actionLabel} user preset fallback slot {slotIndex} ({userPresetFallbackSource}).");
+    }
+
+    private bool TryGetTemporarySlotColors(int slotIndex, out IReadOnlyList<HSVColor> colors)
+    {
+        colors = null;
+
+        if (slotTemporaryColors.TryGetValue(slotIndex, out List<HSVColor> storedColors)
+            && storedColors != null
+            && storedColors.Count > 0)
+        {
+            colors = storedColors;
+            return true;
+        }
+
+        return false;
+    }
+
+    private IReadOnlyList<HSVColor> GetCurrentAppliedColors()
+    {
+        var colors = new List<HSVColor>(controllers.Count);
+        foreach (MaterialHueController controller in controllers)
+        {
+            if (controller == null)
+            {
+                colors.Add(new HSVColor());
+                continue;
+            }
+
+            colors.Add(new HSVColor(controller.AppliedHue, controller.AppliedSaturation, controller.AppliedValue));
+        }
+
+        return colors;
     }
 }
