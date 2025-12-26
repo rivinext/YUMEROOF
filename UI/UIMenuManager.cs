@@ -236,7 +236,6 @@ public class UIMenuManager : MonoBehaviour
     private void HandleSlotSelected(string slotKey)
     {
         SelectedSlotKey = slotKey;
-        SaveGameManager.Instance.SetCurrentSlotKey(slotKey, ensureAutoSave: true);
 
         BaseSaveData data = null;
         if (SaveGameManager.Instance.HasSlot(slotKey))
