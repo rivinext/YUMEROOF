@@ -323,12 +323,6 @@ public class MaterialHuePresetManager : MonoBehaviour
     // 指定スロットに、すべての MaterialHueController の色を保存
     public void SavePreset(int slotIndex)
     {
-        if (!IsSaveSlotReady())
-        {
-            Debug.LogWarning("Cannot save preset before a save slot key is set.");
-            return;
-        }
-
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
             return;
@@ -400,11 +394,6 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private bool HasSavedPreset(int slotIndex)
     {
-        if (!IsSaveSlotReady())
-        {
-            return false;
-        }
-
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
             return false;
@@ -433,11 +422,6 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void SaveSelectedSlotIndex()
     {
-        if (!IsSaveSlotReady())
-        {
-            return;
-        }
-
         if (SlotCount <= 0)
         {
             return;
@@ -723,11 +707,6 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private bool TryLoadUserPresetFromPrefs(int slotIndex, string actionLabel, bool applyToMaterial)
     {
-        if (string.IsNullOrWhiteSpace(SaveGameManager.Instance?.CurrentSlotKey))
-        {
-            return false;
-        }
-
         if (LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: false))
         {
             return true;
