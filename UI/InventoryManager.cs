@@ -177,14 +177,18 @@ public class InventoryManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(materialID)) return false;
 
+        var materialData = GetMaterialData(materialID);
+        var maxStack = materialData?.maxStack ?? 0;
+
         if (materialInventory.ContainsKey(materialID))
         {
+            materialInventory[materialID].maxStack = maxStack;
             materialInventory[materialID].AddQuantity(quantity);
             NotifyItemUpdated(materialInventory[materialID]);
         }
         else
         {
-            var newItem = new InventoryItem(InventoryItem.ItemType.Material, materialID, quantity);
+            var newItem = new InventoryItem(InventoryItem.ItemType.Material, materialID, quantity, maxStack);
             materialInventory[materialID] = newItem;
             NotifyItemAdded(newItem);
         }
