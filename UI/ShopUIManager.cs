@@ -41,6 +41,9 @@ public class ShopUIManager : MonoBehaviour
     public Button sellRarityUpButton;
     public Button sellRarityDownButton;
     public Toggle sellFavoriteToggle;
+    public Toggle sellCraftableToggle;
+    public Toggle sellWallPlacementToggle;
+    public Toggle sellCeilingPlacementToggle;
     public InputField sellSearchField;
 
     [Header("CSV Paths")]
@@ -75,7 +78,10 @@ public class ShopUIManager : MonoBehaviour
     // Sell tab filter state
     private string sellSortType = "name";
     private bool sellSortAscending = true;
+    private bool sellShowOnlyCraftable = false;
     private bool sellShowOnlyFavorites = false;
+    private bool sellShowOnlyWallPlacement = false;
+    private bool sellShowOnlyCeilingPlacement = false;
     private string sellSearchQuery = "";
 
     public bool IsOpen => isOpen;
@@ -525,7 +531,13 @@ public class ShopUIManager : MonoBehaviour
             return items;
         }
 
-        var furniture = inventory.GetFurnitureList(sellSortType, false, sellShowOnlyFavorites, sellSortAscending);
+        var furniture = inventory.GetFurnitureList(
+            sellSortType,
+            sellShowOnlyCraftable,
+            sellShowOnlyFavorites,
+            sellSortAscending,
+            sellShowOnlyWallPlacement,
+            sellShowOnlyCeilingPlacement);
         if (furniture != null)
         {
             foreach (var item in furniture)
@@ -836,6 +848,36 @@ public class ShopUIManager : MonoBehaviour
             sellFavoriteToggle.onValueChanged.AddListener(value =>
             {
                 sellShowOnlyFavorites = value;
+                PopulateSellTab();
+            });
+        }
+
+        if (sellCraftableToggle != null)
+        {
+            sellCraftableToggle.onValueChanged.RemoveAllListeners();
+            sellCraftableToggle.onValueChanged.AddListener(value =>
+            {
+                sellShowOnlyCraftable = value;
+                PopulateSellTab();
+            });
+        }
+
+        if (sellWallPlacementToggle != null)
+        {
+            sellWallPlacementToggle.onValueChanged.RemoveAllListeners();
+            sellWallPlacementToggle.onValueChanged.AddListener(value =>
+            {
+                sellShowOnlyWallPlacement = value;
+                PopulateSellTab();
+            });
+        }
+
+        if (sellCeilingPlacementToggle != null)
+        {
+            sellCeilingPlacementToggle.onValueChanged.RemoveAllListeners();
+            sellCeilingPlacementToggle.onValueChanged.AddListener(value =>
+            {
+                sellShowOnlyCeilingPlacement = value;
                 PopulateSellTab();
             });
         }
