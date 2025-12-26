@@ -57,6 +57,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     [SerializeField] private bool applyFirstDefaultSlot = false;
 
     [Header("Auto Save")]
+    [SerializeField] private bool enableAutoSave = false;
     [SerializeField] private float autoSaveDebounceSeconds = 0.2f;
 
     [Header("Preset Slots")]
@@ -448,6 +449,11 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void SaveSelectedSlotIfNeeded(string triggerLabel)
     {
+        if (!enableAutoSave)
+        {
+            return;
+        }
+
         if (!IsSaveSlotReady())
         {
             return;
@@ -542,6 +548,11 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         StoreSlotTemporaryColors(slotIndex);
+
+        if (!enableAutoSave)
+        {
+            return;
+        }
 
         if (autoSaveDebounceSeconds <= 0f)
         {
@@ -717,7 +728,10 @@ public class MaterialHuePresetManager : MonoBehaviour
 
             if (useLegacyKeys && !IsDefaultSlot(slotIndex))
             {
-                SavePreset(slotIndex);
+                if (enableAutoSave)
+                {
+                    SavePreset(slotIndex);
+                }
             }
 
             StoreSlotTemporaryColors(slotIndex);
@@ -785,7 +799,7 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         StoreSlotTemporaryColors(clampedSlot);
 
-        if (!IsDefaultSlot(clampedSlot))
+        if (enableAutoSave && !IsDefaultSlot(clampedSlot))
         {
             SavePreset(clampedSlot);
         }

@@ -15,6 +15,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
 
     [Header("Options")]
     [SerializeField] private bool rebuildOnEnable = true;
+    [SerializeField] private bool saveBeforeSwitchingSlots = false;
 
     private readonly List<Toggle> spawnedToggles = new();
 
@@ -94,11 +95,8 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             }
 
             int oldIndex = presetManager.SelectedSlotIndex;
-            if (!presetManager.IsDefaultSlot(oldIndex))
+            if (saveBeforeSwitchingSlots && !presetManager.IsDefaultSlot(oldIndex))
             {
-                // Save before switching so edits persist even without pressing an explicit save button.
-                // If rapid slot switching causes too many saves, consider debouncing here or surfacing
-                // a "saving" indicator to inform the user.
                 presetManager.SavePreset(oldIndex);
             }
 
