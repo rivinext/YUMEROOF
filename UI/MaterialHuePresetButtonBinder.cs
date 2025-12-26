@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -13,14 +12,11 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
     [SerializeField] private ToggleGroup toggleGroup;
     [SerializeField] private Button saveButton;
     [SerializeField] private Button loadButton;
-    [SerializeField] private TMP_Text saveWarningText;
-    [SerializeField, Min(0f)] private float saveWarningDurationSeconds = 2f;
 
     [Header("Options")]
     [SerializeField] private bool rebuildOnEnable = true;
 
     private readonly List<Toggle> spawnedToggles = new();
-    private Coroutine warningCoroutine;
 
     private void OnEnable()
     {
@@ -30,15 +26,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
 
         BindActionButtons();
-        BindWarningEvents();
         UpdateSaveButtonState();
-        ClearSaveWarning();
-    }
-
-    private void OnDisable()
-    {
-        UnbindWarningEvents();
-        ClearSaveWarning();
     }
 
     public void RebuildToggles()
@@ -115,13 +103,6 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             }
 
             presetManager.SelectedSlotIndex = slotIndex;
-            if (!presetManager.IsDefaultSlot(slotIndex) && !presetManager.HasSavedPreset(slotIndex))
-            {
-                ShowSaveWarning($"スロット {slotIndex + 1} は未保存です。");
-                UpdateSaveButtonState();
-                return;
-            }
-
             presetManager.PreviewPreset(slotIndex);
             UpdateSaveButtonState();
         });
@@ -190,92 +171,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             return;
         }
 
-        bool hasSlotKey = !string.IsNullOrWhiteSpace(SaveGameManager.Instance?.CurrentSlotKey);
-        saveButton.interactable = hasSlotKey && !presetManager.IsDefaultSlot(presetManager.SelectedSlotIndex);
-        if (hasSlotKey)
-        {
-            ClearSaveWarning();
-        }
-    }
-
-    private void BindWarningEvents()
-    {
-        if (presetManager != null)
-        {
-            presetManager.OnSaveSlotWarning -= HandleSaveSlotWarning;
-            presetManager.OnSaveSlotWarning += HandleSaveSlotWarning;
-        }
-
-        if (SaveGameManager.Instance != null)
-        {
-            SaveGameManager.Instance.OnSlotKeyChanged -= HandleSlotKeyChanged;
-            SaveGameManager.Instance.OnSlotKeyChanged += HandleSlotKeyChanged;
-        }
-    }
-
-    private void UnbindWarningEvents()
-    {
-        if (presetManager != null)
-        {
-            presetManager.OnSaveSlotWarning -= HandleSaveSlotWarning;
-        }
-
-        if (SaveGameManager.Instance != null)
-        {
-            SaveGameManager.Instance.OnSlotKeyChanged -= HandleSlotKeyChanged;
-        }
-    }
-
-    private void HandleSaveSlotWarning(string message)
-    {
-        ShowSaveWarning(message);
-    }
-
-    private void ShowSaveWarning(string message)
-    {
-        if (saveWarningText == null)
-        {
-            return;
-        }
-
-        saveWarningText.text = message;
-        saveWarningText.gameObject.SetActive(true);
-
-        if (warningCoroutine != null)
-        {
-            StopCoroutine(warningCoroutine);
-        }
-
-        warningCoroutine = StartCoroutine(HideSaveWarningAfterDelay());
-    }
-
-    private IEnumerator HideSaveWarningAfterDelay()
-    {
-        if (saveWarningDurationSeconds > 0f)
-        {
-            yield return new WaitForSeconds(saveWarningDurationSeconds);
-        }
-
-        ClearSaveWarning();
-    }
-
-    private void ClearSaveWarning()
-    {
-        if (warningCoroutine != null)
-        {
-            StopCoroutine(warningCoroutine);
-            warningCoroutine = null;
-        }
-
-        if (saveWarningText != null)
-        {
-            saveWarningText.gameObject.SetActive(false);
-        }
-    }
-
-    private void HandleSlotKeyChanged(string slotKey)
-    {
-        UpdateSaveButtonState();
+        saveButton.interactable = !presetManager.IsDefaultSlot(presetManager.SelectedSlotIndex);
     }
 
     private void ClearSpawnedToggles()
