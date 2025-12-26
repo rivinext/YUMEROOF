@@ -124,6 +124,10 @@ public class SceneTransitionManager : MonoBehaviour
 
         // シーン読み込み
         var slotKey = SaveGameManager.Instance?.CurrentSlotKey;
+        if (!string.IsNullOrEmpty(slotKey))
+        {
+            SaveGameManager.Instance.SetCurrentSlotKey(slotKey, ensureAutoSave: true);
+        }
         GameSessionInitializer.CreateIfNeeded(slotKey);
         AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName);
         while (!asyncLoad.isDone)

@@ -63,6 +63,9 @@ public class MaterialHuePresetManager : MonoBehaviour
     [Header("Selection")]
     [SerializeField] private int selectedSlotIndex = 0;
 
+    [Header("Save Slot Behavior")]
+    [SerializeField] private bool allowGlobalSaveWhenSlotEmpty = true;
+
     private bool hasAppliedSaveData = false;
     private bool hasSavedSelectedSlotThisSession = false;
     private Coroutine autoSaveCoroutine;
@@ -70,6 +73,8 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool pendingInitialLoad = true;
     private bool hasPendingSaveData = false;
     private MaterialHueManagerSaveData pendingSaveData;
+
+    public event Action<string> OnSaveSlotWarning;
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
@@ -325,6 +330,14 @@ public class MaterialHuePresetManager : MonoBehaviour
     {
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
+            return;
+        }
+
+        if (!IsSaveSlotReady())
+        {
+            string message = "Save slot is not selected. Please select a slot before saving.";
+            Debug.LogWarning(message);
+            OnSaveSlotWarning?.Invoke(message);
             return;
         }
 
@@ -829,7 +842,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool IsSaveSlotReady()
     {
         string slotKey = SaveGameManager.Instance?.CurrentSlotKey;
-        return !string.IsNullOrWhiteSpace(slotKey);
+        return !string.IsNullOrWhiteSpace(slotKey) || allowGlobalSaveWhenSlotEmpty;
     }
 
     public void ApplyDefaultPresetFallback()
