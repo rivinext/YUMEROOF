@@ -63,9 +63,6 @@ public class MaterialHuePresetManager : MonoBehaviour
     [Header("Selection")]
     [SerializeField] private int selectedSlotIndex = 0;
 
-    [Header("Save Slot Behavior")]
-    [SerializeField] private bool allowGlobalSaveWhenSlotEmpty = true;
-
     private bool hasAppliedSaveData = false;
     private bool hasSavedSelectedSlotThisSession = false;
     private Coroutine autoSaveCoroutine;
@@ -73,8 +70,6 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool pendingInitialLoad = true;
     private bool hasPendingSaveData = false;
     private MaterialHueManagerSaveData pendingSaveData;
-
-    public event Action<string> OnSaveSlotWarning;
 
     public int SlotCount => presetSlots?.Count ?? 0;
     public IReadOnlyList<MaterialHuePresetSlot> PresetSlots => presetSlots;
@@ -333,14 +328,6 @@ public class MaterialHuePresetManager : MonoBehaviour
             return;
         }
 
-        if (!IsSaveSlotReady())
-        {
-            string message = "Save slot is not selected. Please select a slot before saving.";
-            Debug.LogWarning(message);
-            OnSaveSlotWarning?.Invoke(message);
-            return;
-        }
-
         if (IsDefaultSlot(clampedSlot))
         {
             Debug.LogWarning($"Slot index {clampedSlot} is configured as default and cannot be saved.");
@@ -377,26 +364,21 @@ public class MaterialHuePresetManager : MonoBehaviour
         ApplyPresetToControllers(slotIndex, "Loaded", applyToMaterial: true);
     }
 
-    private bool ApplyPresetToControllers(int slotIndex, string actionLabel, bool applyToMaterial)
+    private void ApplyPresetToControllers(int slotIndex, string actionLabel, bool applyToMaterial)
     {
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
-            ResetPreviewToAppliedColors("Failed to apply preset (invalid slot)", slotIndex);
-            return false;
+            return;
         }
 
         MaterialHuePresetSlot slot = presetSlots[clampedSlot];
         if (slot != null && slot.IsDefaultPreset)
         {
-            bool loadedDefault = LoadDefaultPreset(slot, clampedSlot, actionLabel, applyToMaterial);
-            if (!loadedDefault)
-            {
-                ResetPreviewToAppliedColors($"Failed to apply default preset ({actionLabel.ToLowerInvariant()})", clampedSlot);
-            }
-            return loadedDefault;
+            LoadDefaultPreset(slot, clampedSlot, actionLabel, applyToMaterial);
+            return;
         }
 
-        return LoadUserPreset(clampedSlot, actionLabel, applyToMaterial);
+        LoadUserPreset(clampedSlot, actionLabel, applyToMaterial);
     }
 
     public bool IsDefaultSlot(int slotIndex)
@@ -410,7 +392,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         return slot != null && slot.IsDefaultPreset;
     }
 
-    public bool HasSavedPreset(int slotIndex)
+    private bool HasSavedPreset(int slotIndex)
     {
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
@@ -475,14 +457,14 @@ public class MaterialHuePresetManager : MonoBehaviour
         SavePreset(slotIndex);
     }
 
-    private bool LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
+    private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         IReadOnlyList<HSVColor> defaultColors = slot.DefaultColors;
 
         if (defaultColors == null || defaultColors.Count == 0)
         {
             Debug.LogWarning($"No default colors configured for slot index {slotIndex}.");
-            return false;
+            return;
         }
 
         if (defaultColors.Count < controllers.Count)
@@ -503,18 +485,16 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         Debug.Log($"{actionLabel} default preset slot {slotIndex}");
-        return true;
     }
 
-    private bool LoadUserPreset(int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
+    private void LoadUserPreset(int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         if (TryLoadUserPresetFromPrefs(slotIndex, actionLabel, applyToMaterial))
         {
-            return true;
+            return;
         }
 
         Debug.LogWarning($"No saved preset found for slot {slotIndex}.");
-        return false;
     }
 
     public void ApplyFromSaveData(MaterialHueManagerSaveData data)
@@ -732,34 +712,7 @@ public class MaterialHuePresetManager : MonoBehaviour
             return true;
         }
 
-        if (LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true))
-        {
-            return true;
-        }
-
-        ResetPreviewToAppliedColors($"Failed to apply preset ({actionLabel.ToLowerInvariant()})", slotIndex);
-        return false;
-    }
-
-    private void ResetPreviewToAppliedColors(string reason, int slotIndex)
-    {
-        if (controllers == null || controllers.Count == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < controllers.Count; i++)
-        {
-            MaterialHueController controller = controllers[i];
-            if (controller == null)
-            {
-                continue;
-            }
-
-            controller.SetHSV(controller.AppliedHue, controller.AppliedSaturation, controller.AppliedValue, applyToMaterial: false);
-        }
-
-        Debug.LogWarning($"{reason}. Reset preview to applied colors for slot {slotIndex}.");
+        return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
     }
 
     private void ApplyFromSaveDataInternal(MaterialHueManagerSaveData data)
@@ -876,7 +829,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool IsSaveSlotReady()
     {
         string slotKey = SaveGameManager.Instance?.CurrentSlotKey;
-        return !string.IsNullOrWhiteSpace(slotKey) || allowGlobalSaveWhenSlotEmpty;
+        return !string.IsNullOrWhiteSpace(slotKey);
     }
 
     public void ApplyDefaultPresetFallback()
