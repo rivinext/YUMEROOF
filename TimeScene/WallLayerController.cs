@@ -43,8 +43,20 @@ public class WallLayerController : MonoBehaviour
         // 元レイヤーを保存
         foreach (var wall in walls)
         {
+            if (wall.renderer == null)
+            {
+                continue;
+            }
+
             wall.originalLayer = wall.renderer.gameObject.layer;
             wall.originalShadowCastingMode = wall.renderer.shadowCastingMode;
+
+            var deactivationHandler = wall.renderer.GetComponent<WallDeactivationHandler>();
+            if (deactivationHandler == null)
+            {
+                deactivationHandler = wall.renderer.gameObject.AddComponent<WallDeactivationHandler>();
+            }
+            deactivationHandler.SetWallTransform(wall.renderer.transform);
         }
     }
 
