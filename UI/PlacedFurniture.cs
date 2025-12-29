@@ -11,6 +11,7 @@ public class PlacedFurniture : MonoBehaviour
     public PlacedFurniture parentFurniture; // 親となる家具（上に置かれている場合）
     public List<PlacedFurniture> childFurnitures = new List<PlacedFurniture>(); // 上に置かれた家具
     public AnchorPoint attachedAnchor;      // 設置時に使用したアンカーポイント
+    public Transform wallParentTransform;   // 壁配置時の親Transform
 
     private Renderer[] renderers;
     private Collider[] colliders;

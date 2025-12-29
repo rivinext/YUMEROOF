@@ -67,6 +67,7 @@ public class FreePlacementSystem : MonoBehaviour
     private bool uiSoundsMuted;
     private PlacedFurniture lastPlacedFurniture;
     private float placementClickBlockEndTime;
+    private Transform lastWallHitTransform;
 
     // 元の位置を記憶（既存配置物の移動用）
     private Vector3 originalPosition;
@@ -597,6 +598,13 @@ public class FreePlacementSystem : MonoBehaviour
         originalParentFurniture = furniture.parentFurniture;
         furniture.SetParentFurniture(null);
         snappedAnchor = null;
+        lastWallHitTransform = null;
+
+        if (furniture.wallParentTransform != null)
+        {
+            furniture.transform.SetParent(null);
+            furniture.wallParentTransform = null;
+        }
 
         isMovingFurniture = true;
 
@@ -733,6 +741,7 @@ public class FreePlacementSystem : MonoBehaviour
             if (currentFurnitureData.placementRules == PlacementRule.Wall &&
                 ((1 << hit.collider.gameObject.layer) & wallLayer) != 0)
             {
+                lastWallHitTransform = GetWallHitTransform(hit);
                 Vector3 projected = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
                 if (projected.sqrMagnitude < Mathf.Epsilon)
                 {
@@ -746,6 +755,7 @@ public class FreePlacementSystem : MonoBehaviour
             }
             else if (currentFurnitureData.placementRules == PlacementRule.Ceiling)
             {
+                lastWallHitTransform = null;
                 if (ceilingPlacementMask == 0)
                 {
                     return;
@@ -798,6 +808,10 @@ public class FreePlacementSystem : MonoBehaviour
 
                 targetPosition = CalculateCeilingSnapPosition(previewObject, targetPosition, hit.point, hit.normal);
             }
+            else
+            {
+                lastWallHitTransform = null;
+            }
 
             if (currentFurnitureData.placementRules != PlacementRule.Ceiling)
             {
@@ -816,6 +830,10 @@ public class FreePlacementSystem : MonoBehaviour
                 bool canPlace = !placedComp.IsOverlapping();
                 placedComp.SetPlacementValid(canPlace);
             }
+        }
+        else
+        {
+            lastWallHitTransform = null;
         }
     }
 
@@ -1203,13 +1221,26 @@ public class FreePlacementSystem : MonoBehaviour
             {
                 var parentPF = snappedAnchor.GetComponentInParent<PlacedFurniture>();
                 if (parentPF != null) placedComp.SetParentFurniture(parentPF);
+                placedComp.wallParentTransform = null;
                 snappedParentFurniture = null;
             }
             else if (snappedParentFurniture != null)
             {
                 placedComp.SetParentFurniture(snappedParentFurniture);
                 Debug.Log($"PlaceFurniture: Set parent to {snappedParentFurniture.name}");
+                placedComp.wallParentTransform = null;
                 snappedParentFurniture = null;
+            }
+            else if (currentFurnitureData != null &&
+                currentFurnitureData.placementRules == PlacementRule.Wall &&
+                lastWallHitTransform != null)
+            {
+                previewObject.transform.SetParent(lastWallHitTransform);
+                placedComp.wallParentTransform = lastWallHitTransform;
+            }
+            else
+            {
+                placedComp.wallParentTransform = null;
             }
 
             if (isPlacingNewFurniture && placedComp.furnitureData != null)
@@ -1231,6 +1262,7 @@ public class FreePlacementSystem : MonoBehaviour
             }
             snappedAnchor = null;
             originalAttachedAnchor = null;
+            lastWallHitTransform = null;
 
             OnPlacementCompleted?.Invoke();
 
@@ -1566,5 +1598,22 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         return defaultValue;
+    }
+
+    private Transform GetWallHitTransform(RaycastHit hit)
+    {
+        if (hit.collider == null)
+        {
+            return null;
+        }
+
+        Transform wallTransform = hit.collider.transform;
+        while (wallTransform.parent != null &&
+            wallTransform.parent.gameObject.layer == wallTransform.gameObject.layer)
+        {
+            wallTransform = wallTransform.parent;
+        }
+
+        return wallTransform;
     }
 }
