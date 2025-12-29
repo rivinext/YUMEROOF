@@ -176,9 +176,6 @@ public class StoreToInventoryButton : MonoBehaviour
     {
         if (targetFurniture == null || targetFurniture.furnitureData == null) return;
 
-        // インベントリに追加
-        InventoryManager.Instance?.AddFurniture(targetFurniture.furnitureData.itemID, 1);
-
         // 配置システムから削除
         targetFurniture.StoreToInventory();
 

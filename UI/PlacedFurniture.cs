@@ -116,13 +116,16 @@ public class PlacedFurniture : MonoBehaviour
     // インベントリに収納
     public void StoreToInventory()
     {
+        if (furnitureData != null)
+        {
+            InventoryManager.Instance?.AddFurniture(furnitureData.itemID, 1);
+        }
+
         // 子オブジェクトも一緒に収納
         foreach (var child in childFurnitures.ToArray())
         {
             if (child != null)
             {
-                if (child.furnitureData != null)
-                    InventoryManager.Instance?.AddFurniture(child.furnitureData.itemID, 1);
                 child.StoreToInventory();
             }
         }
