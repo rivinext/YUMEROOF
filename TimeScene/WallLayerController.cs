@@ -11,6 +11,7 @@ public class WallLayerController : MonoBehaviour
         // 1:右前　2:左前　3:左後　4:右後
         [HideInInspector] public int originalLayer;
         [HideInInspector] public ShadowCastingMode originalShadowCastingMode;
+        [HideInInspector] public bool isHidden;
     }
 
     public Wall[] walls;
@@ -68,13 +69,20 @@ public class WallLayerController : MonoBehaviour
 
             if (isFront)
             {
+                if (!wall.isHidden)
+                {
+                    StoreWallMountedFurniture(wall.renderer.transform);
+                }
+
                 wall.renderer.gameObject.layer = LayerMask.NameToLayer(invisibleLayerName);
                 wall.renderer.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
+                wall.isHidden = true;
             }
             else
             {
                 wall.renderer.gameObject.layer = wall.originalLayer;
                 wall.renderer.shadowCastingMode = wall.originalShadowCastingMode;
+                wall.isHidden = false;
             }
         }
     }
@@ -90,6 +98,41 @@ public class WallLayerController : MonoBehaviour
         {
             wall.renderer.gameObject.layer = wall.originalLayer;
             wall.renderer.shadowCastingMode = wall.originalShadowCastingMode;
+            wall.isHidden = false;
+        }
+    }
+
+    private void StoreWallMountedFurniture(Transform wallTransform)
+    {
+        if (wallTransform == null)
+        {
+            return;
+        }
+
+        var placedFurnitures = wallTransform.GetComponentsInChildren<PlacedFurniture>(true);
+        foreach (var furniture in placedFurnitures)
+        {
+            if (furniture == null)
+            {
+                continue;
+            }
+
+            if (furniture.furnitureData == null)
+            {
+                continue;
+            }
+
+            if (furniture.furnitureData.placementRules != PlacementRule.Wall)
+            {
+                continue;
+            }
+
+            if (!furniture.transform.IsChildOf(wallTransform))
+            {
+                continue;
+            }
+
+            furniture.StoreToInventory();
         }
     }
 }
