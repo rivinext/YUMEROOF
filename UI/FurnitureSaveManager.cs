@@ -43,8 +43,21 @@ public class FurnitureSaveManager : MonoBehaviour
         public int layer;
         public string parentFurnitureID; // 親家具のユニークID（スタック配置用）
         public string uniqueID; // このオブジェクト固有のID
+        public int wallParentId; // 壁親の安定ID
+        public string wallParentName; // 壁親の名前
+        public string wallParentPath; // 壁親の階層パス
 
-        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, int layerIndex = 0, string parentID = "", string uid = "")
+        public FurnitureSaveData(
+            string id,
+            string scene,
+            Vector3 pos,
+            Quaternion rot,
+            int layerIndex = 0,
+            string parentID = "",
+            string uid = "",
+            int wallId = 0,
+            string wallName = "",
+            string wallPath = "")
         {
             furnitureID = id;
             sceneName = scene;
@@ -53,6 +66,9 @@ public class FurnitureSaveManager : MonoBehaviour
             layer = layerIndex;
             parentFurnitureID = parentID;
             uniqueID = string.IsNullOrEmpty(uid) ? System.Guid.NewGuid().ToString() : uid;
+            wallParentId = wallId;
+            wallParentName = wallName;
+            wallParentPath = wallPath;
         }
 
         public Vector3 GetPosition() => new Vector3(posX, posY, posZ);
@@ -194,11 +210,21 @@ public class FurnitureSaveManager : MonoBehaviour
     {
         string uniqueID = GetOrCreateUniqueID(furniture);
         string parentID = "";
+        int wallParentId = 0;
+        string wallParentName = string.Empty;
+        string wallParentPath = string.Empty;
 
         // 親家具がある場合はそのIDを取得
         if (furniture.parentFurniture != null)
         {
             parentID = GetOrCreateUniqueID(furniture.parentFurniture);
+        }
+
+        if (furniture.wallParentTransform != null)
+        {
+            wallParentId = GetWallParentId(furniture.wallParentTransform);
+            wallParentName = furniture.wallParentTransform.name;
+            wallParentPath = GetTransformPath(furniture.wallParentTransform);
         }
 
         // 既存データを検索して更新または新規追加
@@ -216,6 +242,9 @@ public class FurnitureSaveManager : MonoBehaviour
             existingData.rotW = furniture.transform.rotation.w;
             existingData.layer = furniture.gameObject.layer;
             existingData.parentFurnitureID = parentID;
+            existingData.wallParentId = wallParentId;
+            existingData.wallParentName = wallParentName;
+            existingData.wallParentPath = wallParentPath;
         }
         else
         {
@@ -227,7 +256,10 @@ public class FurnitureSaveManager : MonoBehaviour
                 furniture.transform.rotation,
                 furniture.gameObject.layer,
                 parentID,
-                uniqueID
+                uniqueID,
+                wallParentId,
+                wallParentName,
+                wallParentPath
             );
             allFurnitureData.furnitureList.Add(newData);
         }
@@ -516,6 +548,17 @@ public class FurnitureSaveManager : MonoBehaviour
         // 読み込み済みリストに追加
         loadedFurnitureObjects[data.uniqueID] = furnitureObj;
 
+        Transform wallTransform = ResolveWallParentTransform(data);
+        if (wallTransform != null)
+        {
+            placedFurniture.transform.SetParent(wallTransform);
+            placedFurniture.wallParentTransform = wallTransform;
+        }
+        else
+        {
+            placedFurniture.wallParentTransform = null;
+        }
+
         // 親家具の設定（親が既に読み込まれている場合）
         if (!string.IsNullOrEmpty(data.parentFurnitureID) && loadedFurnitureObjects.ContainsKey(data.parentFurnitureID))
         {
@@ -554,6 +597,110 @@ public class FurnitureSaveManager : MonoBehaviour
         {
             SetLayerRecursively(child.gameObject, appliedLayer, anchorLayer);
         }
+    }
+
+    int GetWallParentId(Transform wallTransform)
+    {
+        if (wallTransform == null)
+        {
+            return 0;
+        }
+
+        WallLayerController wallController = FindFirstObjectByType<WallLayerController>();
+        if (wallController == null || wallController.walls == null)
+        {
+            return 0;
+        }
+
+        foreach (var wall in wallController.walls)
+        {
+            if (wall?.renderer == null)
+            {
+                continue;
+            }
+
+            Transform wallRoot = wall.renderer.transform;
+            if (wallTransform == wallRoot || wallTransform.IsChildOf(wallRoot))
+            {
+                return wall.id;
+            }
+        }
+
+        return 0;
+    }
+
+    Transform ResolveWallParentTransform(FurnitureSaveData data)
+    {
+        if (data == null)
+        {
+            return null;
+        }
+
+        WallLayerController wallController = FindFirstObjectByType<WallLayerController>();
+        if (wallController != null && wallController.walls != null)
+        {
+            if (data.wallParentId > 0)
+            {
+                foreach (var wall in wallController.walls)
+                {
+                    if (wall?.renderer == null)
+                    {
+                        continue;
+                    }
+
+                    if (wall.id == data.wallParentId)
+                    {
+                        return wall.renderer.transform;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(data.wallParentName))
+            {
+                foreach (var wall in wallController.walls)
+                {
+                    if (wall?.renderer == null)
+                    {
+                        continue;
+                    }
+
+                    if (wall.renderer.name == data.wallParentName)
+                    {
+                        return wall.renderer.transform;
+                    }
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(data.wallParentPath))
+        {
+            GameObject wallObject = GameObject.Find(data.wallParentPath);
+            if (wallObject != null)
+            {
+                return wallObject.transform;
+            }
+        }
+
+        return null;
+    }
+
+    string GetTransformPath(Transform target)
+    {
+        if (target == null)
+        {
+            return string.Empty;
+        }
+
+        var segments = new List<string>();
+        Transform current = target;
+        while (current != null)
+        {
+            segments.Add(current.name);
+            current = current.parent;
+        }
+
+        segments.Reverse();
+        return string.Join("/", segments);
     }
 
     // ユニークIDの取得または作成
