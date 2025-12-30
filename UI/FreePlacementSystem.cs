@@ -1237,6 +1237,12 @@ public class FreePlacementSystem : MonoBehaviour
             {
                 previewObject.transform.SetParent(lastWallHitTransform);
                 placedComp.wallParentTransform = lastWallHitTransform;
+
+                var wallParentFurniture = lastWallHitTransform.GetComponentInParent<PlacedFurniture>();
+                if (wallParentFurniture != null && wallParentFurniture != placedComp)
+                {
+                    placedComp.SetParentFurniture(wallParentFurniture);
+                }
             }
             else
             {
