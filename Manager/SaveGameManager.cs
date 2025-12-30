@@ -430,7 +430,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
                 rotation = f.GetRotation(),
                 sceneName = f.sceneName,
                 parentUID = f.parentFurnitureID,
-                uniqueID = f.uniqueID
+                uniqueID = f.uniqueID,
+                layer = f.layer
             });
         }
     }
@@ -594,7 +595,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         foreach (var f in list)
         {
             allData.furnitureList.Add(new FurnitureSaveManager.FurnitureSaveData(
-                f.id, f.sceneName, f.position, f.rotation, f.parentUID, f.uniqueID));
+                f.id, f.sceneName, f.position, f.rotation, f.parentUID, f.uniqueID, f.layer));
         }
         string json = JsonUtility.ToJson(allData);
         mgr.LoadFromData(json);
