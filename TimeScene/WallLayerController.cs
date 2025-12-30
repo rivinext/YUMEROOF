@@ -57,13 +57,6 @@ public class WallLayerController : MonoBehaviour
                 deactivationHandler = wall.renderer.gameObject.AddComponent<WallDeactivationHandler>();
             }
             deactivationHandler.SetWallTransform(wall.renderer.transform);
-
-            var anchorId = wall.renderer.GetComponent<WallAnchorId>();
-            if (anchorId == null)
-            {
-                anchorId = wall.renderer.gameObject.AddComponent<WallAnchorId>();
-            }
-            anchorId.SetId($"Wall-{wall.id}");
         }
     }
 
