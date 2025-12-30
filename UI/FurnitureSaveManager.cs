@@ -222,9 +222,17 @@ public class FurnitureSaveManager : MonoBehaviour
 
         if (furniture.wallParentTransform != null)
         {
-            wallParentId = GetWallParentId(furniture.wallParentTransform);
-            wallParentName = furniture.wallParentTransform.name;
-            wallParentPath = GetTransformPath(furniture.wallParentTransform);
+            var wallParentFurniture = furniture.wallParentTransform.GetComponentInParent<PlacedFurniture>();
+            if (wallParentFurniture != null)
+            {
+                parentID = GetOrCreateUniqueID(wallParentFurniture);
+            }
+            else
+            {
+                wallParentId = GetWallParentId(furniture.wallParentTransform);
+                wallParentName = furniture.wallParentTransform.name;
+                wallParentPath = GetTransformPath(furniture.wallParentTransform);
+            }
         }
 
         // 既存データを検索して更新または新規追加
@@ -425,6 +433,15 @@ public class FurnitureSaveManager : MonoBehaviour
                     loadedFurnitureObjects.ContainsKey(data.parentFurnitureID);
 
                 if (!parentLoaded)
+                {
+                    string wallParentUid = ExtractFurnitureUidFromPath(data.wallParentPath);
+                    if (!string.IsNullOrEmpty(wallParentUid))
+                    {
+                        parentLoaded = loadedFurnitureObjects.ContainsKey(wallParentUid);
+                    }
+                }
+
+                if (!parentLoaded)
                     continue;
 
                 LoadSingleFurniture(data, placementSystem);
@@ -548,17 +565,6 @@ public class FurnitureSaveManager : MonoBehaviour
         // 読み込み済みリストに追加
         loadedFurnitureObjects[data.uniqueID] = furnitureObj;
 
-        Transform wallTransform = ResolveWallParentTransform(data);
-        if (wallTransform != null)
-        {
-            placedFurniture.transform.SetParent(wallTransform);
-            placedFurniture.wallParentTransform = wallTransform;
-        }
-        else
-        {
-            placedFurniture.wallParentTransform = null;
-        }
-
         // 親家具の設定（親が既に読み込まれている場合）
         if (!string.IsNullOrEmpty(data.parentFurnitureID) && loadedFurnitureObjects.ContainsKey(data.parentFurnitureID))
         {
@@ -567,6 +573,33 @@ public class FurnitureSaveManager : MonoBehaviour
             if (parentFurniture != null)
             {
                 placedFurniture.SetParentFurniture(parentFurniture);
+                placedFurniture.wallParentTransform = null;
+            }
+        }
+        else
+        {
+            string wallParentUid = ExtractFurnitureUidFromPath(data.wallParentPath);
+            if (!string.IsNullOrEmpty(wallParentUid) && loadedFurnitureObjects.TryGetValue(wallParentUid, out var parentObj))
+            {
+                var parentFurniture = parentObj.GetComponent<PlacedFurniture>();
+                if (parentFurniture != null)
+                {
+                    placedFurniture.SetParentFurniture(parentFurniture);
+                    placedFurniture.wallParentTransform = null;
+                }
+            }
+            else
+            {
+                Transform wallTransform = ResolveWallParentTransform(data);
+                if (wallTransform != null)
+                {
+                    placedFurniture.transform.SetParent(wallTransform);
+                    placedFurniture.wallParentTransform = wallTransform;
+                }
+                else
+                {
+                    placedFurniture.wallParentTransform = null;
+                }
             }
         }
 
@@ -597,6 +630,26 @@ public class FurnitureSaveManager : MonoBehaviour
         {
             SetLayerRecursively(child.gameObject, appliedLayer, anchorLayer);
         }
+    }
+
+    string ExtractFurnitureUidFromPath(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return string.Empty;
+        }
+
+        string[] segments = path.Split('/');
+        foreach (string segment in segments)
+        {
+            int index = segment.IndexOf("_UID_", StringComparison.Ordinal);
+            if (index >= 0 && index + 5 < segment.Length)
+            {
+                return segment.Substring(index + 5);
+            }
+        }
+
+        return string.Empty;
     }
 
     int GetWallParentId(Transform wallTransform)
