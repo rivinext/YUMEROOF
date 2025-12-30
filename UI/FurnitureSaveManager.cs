@@ -41,20 +41,16 @@ public class FurnitureSaveManager : MonoBehaviour
         public float posX, posY, posZ;
         public float rotX, rotY, rotZ, rotW;
         public string parentFurnitureID; // 親家具のユニークID（スタック配置用）
-        public string wallParentId; // 壁配置時の親Transform識別子
         public string uniqueID; // このオブジェクト固有のID
-        public int layer = -1;
 
-        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, string parentID = "", string wallParentId = "", string uid = "", int layer = -1)
+        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, string parentID = "", string uid = "")
         {
             furnitureID = id;
             sceneName = scene;
             posX = pos.x; posY = pos.y; posZ = pos.z;
             rotX = rot.x; rotY = rot.y; rotZ = rot.z; rotW = rot.w;
             parentFurnitureID = parentID;
-            this.wallParentId = wallParentId;
             uniqueID = string.IsNullOrEmpty(uid) ? System.Guid.NewGuid().ToString() : uid;
-            this.layer = layer;
         }
 
         public Vector3 GetPosition() => new Vector3(posX, posY, posZ);
@@ -196,17 +192,11 @@ public class FurnitureSaveManager : MonoBehaviour
     {
         string uniqueID = GetOrCreateUniqueID(furniture);
         string parentID = "";
-        string wallParentId = "";
 
         // 親家具がある場合はそのIDを取得
         if (furniture.parentFurniture != null)
         {
             parentID = GetOrCreateUniqueID(furniture.parentFurniture);
-        }
-
-        if (furniture.wallParentTransform != null)
-        {
-            wallParentId = GetWallAnchorId(furniture.wallParentTransform);
         }
 
         // 既存データを検索して更新または新規追加
@@ -223,8 +213,6 @@ public class FurnitureSaveManager : MonoBehaviour
             existingData.rotZ = furniture.transform.rotation.z;
             existingData.rotW = furniture.transform.rotation.w;
             existingData.parentFurnitureID = parentID;
-            existingData.wallParentId = wallParentId;
-            existingData.layer = furniture.gameObject.layer;
         }
         else
         {
@@ -235,9 +223,7 @@ public class FurnitureSaveManager : MonoBehaviour
                 furniture.transform.position,
                 furniture.transform.rotation,
                 parentID,
-                wallParentId,
-                uniqueID,
-                furniture.gameObject.layer
+                uniqueID
             );
             allFurnitureData.furnitureList.Add(newData);
         }
@@ -506,10 +492,7 @@ public class FurnitureSaveManager : MonoBehaviour
         SetUniqueID(placedFurniture, data.uniqueID);
 
         // レイヤーを設定
-        int furnitureLayer = LayerMask.NameToLayer("Furniture");
-        int fallbackLayer = furnitureLayer >= 0 ? furnitureLayer : 0;
-        int targetLayer = data.layer >= 0 ? data.layer : fallbackLayer;
-        SetLayerRecursively(furnitureObj, targetLayer);
+        SetLayerRecursively(furnitureObj, LayerMask.NameToLayer("Furniture"));
 
         // コライダーの設定を確認
         Collider[] colliders = furnitureObj.GetComponentsInChildren<Collider>();
@@ -537,16 +520,6 @@ public class FurnitureSaveManager : MonoBehaviour
             if (parentFurniture != null)
             {
                 placedFurniture.SetParentFurniture(parentFurniture);
-            }
-        }
-
-        if (!string.IsNullOrEmpty(data.wallParentId) && placedFurniture.parentFurniture == null)
-        {
-            Transform wallTransform = FindWallTransform(data.wallParentId);
-            if (wallTransform != null)
-            {
-                furnitureObj.transform.SetParent(wallTransform);
-                placedFurniture.wallParentTransform = wallTransform;
             }
         }
 
@@ -600,47 +573,6 @@ public class FurnitureSaveManager : MonoBehaviour
     void SetUniqueID(PlacedFurniture furniture, string uniqueID)
     {
         furniture.gameObject.name = $"{furniture.furnitureData.nameID}_UID_{uniqueID}";
-    }
-
-    string GetWallAnchorId(Transform wallTransform)
-    {
-        if (wallTransform == null)
-        {
-            return string.Empty;
-        }
-
-        var anchorId = wallTransform.GetComponent<WallAnchorId>();
-        if (anchorId == null)
-        {
-            anchorId = wallTransform.GetComponentInParent<WallAnchorId>();
-        }
-
-        if (anchorId != null && !string.IsNullOrEmpty(anchorId.Id))
-        {
-            return anchorId.Id;
-        }
-
-        return wallTransform.name;
-    }
-
-    Transform FindWallTransform(string wallParentId)
-    {
-        if (string.IsNullOrEmpty(wallParentId))
-        {
-            return null;
-        }
-
-        var anchors = FindObjectsByType<WallAnchorId>(FindObjectsSortMode.None);
-        foreach (var anchor in anchors)
-        {
-            if (anchor != null && anchor.Id == wallParentId)
-            {
-                return anchor.transform;
-            }
-        }
-
-        GameObject fallback = GameObject.Find(wallParentId);
-        return fallback != null ? fallback.transform : null;
     }
 
     // デバッグ用：全データをクリア
