@@ -430,6 +430,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
                 rotation = f.GetRotation(),
                 sceneName = f.sceneName,
                 parentUID = f.parentFurnitureID,
+                wallParentId = string.IsNullOrEmpty(f.wallParentId) ? string.Empty : f.wallParentId,
                 uniqueID = f.uniqueID,
                 layer = f.layer
             });
@@ -594,8 +595,9 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         var allData = new FurnitureSaveManager.AllFurnitureData();
         foreach (var f in list)
         {
+            var wallParentId = string.IsNullOrEmpty(f.wallParentId) ? string.Empty : f.wallParentId;
             allData.furnitureList.Add(new FurnitureSaveManager.FurnitureSaveData(
-                f.id, f.sceneName, f.position, f.rotation, f.parentUID, f.uniqueID, f.layer));
+                f.id, f.sceneName, f.position, f.rotation, f.parentUID, wallParentId, f.uniqueID, f.layer));
         }
         string json = JsonUtility.ToJson(allData);
         mgr.LoadFromData(json);
