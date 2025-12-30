@@ -42,8 +42,9 @@ public class FurnitureSaveManager : MonoBehaviour
         public float rotX, rotY, rotZ, rotW;
         public string parentFurnitureID; // 親家具のユニークID（スタック配置用）
         public string uniqueID; // このオブジェクト固有のID
+        public int layer = -1;
 
-        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, string parentID = "", string uid = "")
+        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, string parentID = "", string uid = "", int layer = -1)
         {
             furnitureID = id;
             sceneName = scene;
@@ -51,6 +52,7 @@ public class FurnitureSaveManager : MonoBehaviour
             rotX = rot.x; rotY = rot.y; rotZ = rot.z; rotW = rot.w;
             parentFurnitureID = parentID;
             uniqueID = string.IsNullOrEmpty(uid) ? System.Guid.NewGuid().ToString() : uid;
+            this.layer = layer;
         }
 
         public Vector3 GetPosition() => new Vector3(posX, posY, posZ);
@@ -213,6 +215,7 @@ public class FurnitureSaveManager : MonoBehaviour
             existingData.rotZ = furniture.transform.rotation.z;
             existingData.rotW = furniture.transform.rotation.w;
             existingData.parentFurnitureID = parentID;
+            existingData.layer = furniture.gameObject.layer;
         }
         else
         {
@@ -223,7 +226,8 @@ public class FurnitureSaveManager : MonoBehaviour
                 furniture.transform.position,
                 furniture.transform.rotation,
                 parentID,
-                uniqueID
+                uniqueID,
+                furniture.gameObject.layer
             );
             allFurnitureData.furnitureList.Add(newData);
         }
@@ -492,7 +496,10 @@ public class FurnitureSaveManager : MonoBehaviour
         SetUniqueID(placedFurniture, data.uniqueID);
 
         // レイヤーを設定
-        SetLayerRecursively(furnitureObj, LayerMask.NameToLayer("Furniture"));
+        int furnitureLayer = LayerMask.NameToLayer("Furniture");
+        int fallbackLayer = furnitureLayer >= 0 ? furnitureLayer : 0;
+        int targetLayer = data.layer >= 0 ? data.layer : fallbackLayer;
+        SetLayerRecursively(furnitureObj, targetLayer);
 
         // コライダーの設定を確認
         Collider[] colliders = furnitureObj.GetComponentsInChildren<Collider>();

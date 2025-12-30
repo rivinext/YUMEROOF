@@ -13,6 +13,7 @@ namespace SaveSystem
         public string sceneName;
         public string parentUID;
         public string uniqueID;
+        public int layer = -1;
     }
 }
 
