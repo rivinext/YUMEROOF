@@ -40,15 +40,17 @@ public class FurnitureSaveManager : MonoBehaviour
         public string sceneName;
         public float posX, posY, posZ;
         public float rotX, rotY, rotZ, rotW;
+        public int layer;
         public string parentFurnitureID; // 親家具のユニークID（スタック配置用）
         public string uniqueID; // このオブジェクト固有のID
 
-        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, string parentID = "", string uid = "")
+        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, int layerIndex = 0, string parentID = "", string uid = "")
         {
             furnitureID = id;
             sceneName = scene;
             posX = pos.x; posY = pos.y; posZ = pos.z;
             rotX = rot.x; rotY = rot.y; rotZ = rot.z; rotW = rot.w;
+            layer = layerIndex;
             parentFurnitureID = parentID;
             uniqueID = string.IsNullOrEmpty(uid) ? System.Guid.NewGuid().ToString() : uid;
         }
@@ -212,6 +214,7 @@ public class FurnitureSaveManager : MonoBehaviour
             existingData.rotY = furniture.transform.rotation.y;
             existingData.rotZ = furniture.transform.rotation.z;
             existingData.rotW = furniture.transform.rotation.w;
+            existingData.layer = furniture.gameObject.layer;
             existingData.parentFurnitureID = parentID;
         }
         else
@@ -222,6 +225,7 @@ public class FurnitureSaveManager : MonoBehaviour
                 scene,
                 furniture.transform.position,
                 furniture.transform.rotation,
+                furniture.gameObject.layer,
                 parentID,
                 uniqueID
             );
@@ -492,7 +496,7 @@ public class FurnitureSaveManager : MonoBehaviour
         SetUniqueID(placedFurniture, data.uniqueID);
 
         // レイヤーを設定
-        SetLayerRecursively(furnitureObj, LayerMask.NameToLayer("Furniture"));
+        SetLayerRecursively(furnitureObj, data.layer);
 
         // コライダーの設定を確認
         Collider[] colliders = furnitureObj.GetComponentsInChildren<Collider>();
