@@ -18,6 +18,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
     [SerializeField] private bool saveBeforeSwitchingSlots = false;
 
     private readonly List<Toggle> spawnedToggles = new();
+    private int lastSelectedSlotIndex = -1;
 
     private void OnEnable()
     {
@@ -25,9 +26,21 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         {
             RebuildToggles();
         }
+        else
+        {
+            SyncToggleSelection(GetRestoreSlotIndex());
+        }
 
         BindActionButtons();
         UpdateSaveButtonState();
+    }
+
+    private void OnDisable()
+    {
+        if (presetManager != null)
+        {
+            lastSelectedSlotIndex = presetManager.SelectedSlotIndex;
+        }
     }
 
     public void RebuildToggles()
@@ -52,6 +65,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             SpawnToggle(toggleTemplate, toggleContainer, i);
         }
 
+        SyncToggleSelection(GetRestoreSlotIndex());
         UpdateSaveButtonState();
     }
 
@@ -169,6 +183,41 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
 
         saveButton.interactable = !presetManager.IsDefaultSlot(presetManager.SelectedSlotIndex);
+    }
+
+    private int GetRestoreSlotIndex()
+    {
+        if (presetManager == null || presetManager.SlotCount <= 0)
+        {
+            return 0;
+        }
+
+        if (lastSelectedSlotIndex >= 0)
+        {
+            return Mathf.Clamp(lastSelectedSlotIndex, 0, presetManager.SlotCount - 1);
+        }
+
+        return presetManager.GetCurrentAppliedSlotIndex();
+    }
+
+    private void SyncToggleSelection(int slotIndex)
+    {
+        if (spawnedToggles.Count == 0)
+        {
+            return;
+        }
+
+        int clampedIndex = Mathf.Clamp(slotIndex, 0, spawnedToggles.Count - 1);
+        for (int i = 0; i < spawnedToggles.Count; i++)
+        {
+            Toggle toggle = spawnedToggles[i];
+            if (toggle == null)
+            {
+                continue;
+            }
+
+            toggle.SetIsOnWithoutNotify(i == clampedIndex);
+        }
     }
 
     private void ClearSpawnedToggles()

@@ -82,6 +82,7 @@ public class MaterialHuePresetManager : MonoBehaviour
     private bool pendingInitialLoad = true;
     private bool hasPendingSaveData = false;
     private MaterialHueManagerSaveData pendingSaveData;
+    private int lastAppliedSlotIndex = -1;
     private readonly List<HSVColor> initialControllerColors = new();
     private readonly Dictionary<int, List<HSVColor>> slotTemporaryColors = new();
 
@@ -119,6 +120,21 @@ public class MaterialHuePresetManager : MonoBehaviour
             hasSavedSelectedSlotThisSession = false;
             SaveSelectedSlotIndex();
         }
+    }
+
+    public int GetCurrentAppliedSlotIndex()
+    {
+        if (SlotCount <= 0)
+        {
+            return 0;
+        }
+
+        if (lastAppliedSlotIndex >= 0)
+        {
+            return Mathf.Clamp(lastAppliedSlotIndex, 0, SlotCount - 1);
+        }
+
+        return SelectedSlotIndex;
     }
 
     private void Awake()
@@ -384,6 +400,11 @@ public class MaterialHuePresetManager : MonoBehaviour
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
             return;
+        }
+
+        if (applyToMaterial)
+        {
+            lastAppliedSlotIndex = clampedSlot;
         }
 
         MaterialHuePresetSlot slot = presetSlots[clampedSlot];
@@ -769,6 +790,7 @@ public class MaterialHuePresetManager : MonoBehaviour
         pendingInitialLoad = false;
         hasAppliedSaveData = true;
         SelectedSlotIndex = clampedSlot;
+        lastAppliedSlotIndex = clampedSlot;
 
         if (data == null || data.controllerColors == null || data.controllerColors.Count == 0)
         {
