@@ -11,8 +11,12 @@ namespace SaveSystem
         public Vector3 position;
         public Quaternion rotation;
         public string sceneName;
+        public int layer;
         public string parentUID;
         public string uniqueID;
+        public int wallParentId;
+        public string wallParentName;
+        public string wallParentPath;
     }
 }
 
