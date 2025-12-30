@@ -42,9 +42,8 @@ public class FurnitureSaveManager : MonoBehaviour
         public float rotX, rotY, rotZ, rotW;
         public string parentFurnitureID; // 親家具のユニークID（スタック配置用）
         public string uniqueID; // このオブジェクト固有のID
-        public string layerName;
 
-        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, string parentID = "", string uid = "", string layer = "")
+        public FurnitureSaveData(string id, string scene, Vector3 pos, Quaternion rot, string parentID = "", string uid = "")
         {
             furnitureID = id;
             sceneName = scene;
@@ -52,7 +51,6 @@ public class FurnitureSaveManager : MonoBehaviour
             rotX = rot.x; rotY = rot.y; rotZ = rot.z; rotW = rot.w;
             parentFurnitureID = parentID;
             uniqueID = string.IsNullOrEmpty(uid) ? System.Guid.NewGuid().ToString() : uid;
-            layerName = layer;
         }
 
         public Vector3 GetPosition() => new Vector3(posX, posY, posZ);
@@ -194,7 +192,6 @@ public class FurnitureSaveManager : MonoBehaviour
     {
         string uniqueID = GetOrCreateUniqueID(furniture);
         string parentID = "";
-        string layerName = LayerMask.LayerToName(furniture.gameObject.layer);
 
         // 親家具がある場合はそのIDを取得
         if (furniture.parentFurniture != null)
@@ -216,7 +213,6 @@ public class FurnitureSaveManager : MonoBehaviour
             existingData.rotZ = furniture.transform.rotation.z;
             existingData.rotW = furniture.transform.rotation.w;
             existingData.parentFurnitureID = parentID;
-            existingData.layerName = layerName;
         }
         else
         {
@@ -227,8 +223,7 @@ public class FurnitureSaveManager : MonoBehaviour
                 furniture.transform.position,
                 furniture.transform.rotation,
                 parentID,
-                uniqueID,
-                layerName
+                uniqueID
             );
             allFurnitureData.furnitureList.Add(newData);
         }
@@ -497,13 +492,7 @@ public class FurnitureSaveManager : MonoBehaviour
         SetUniqueID(placedFurniture, data.uniqueID);
 
         // レイヤーを設定
-        string targetLayerName = string.IsNullOrEmpty(data.layerName) ? "Furniture" : data.layerName;
-        int targetLayer = LayerMask.NameToLayer(targetLayerName);
-        if (targetLayer < 0)
-        {
-            targetLayer = LayerMask.NameToLayer("Furniture");
-        }
-        SetLayerRecursively(furnitureObj, targetLayer);
+        SetLayerRecursively(furnitureObj, LayerMask.NameToLayer("Furniture"));
 
         // コライダーの設定を確認
         Collider[] colliders = furnitureObj.GetComponentsInChildren<Collider>();
