@@ -37,6 +37,14 @@ public class ShopUIManager : MonoBehaviour
     public GameObject purchaseDescriptionArea;
     public GameObject sellDescriptionArea;
 
+    [Serializable]
+    private class CategoryDisplaySetting
+    {
+        public string categoryId;
+        public string displayName;
+        public Sprite icon;
+    }
+
     [Header("Sell Tab Filters")]
     public Button sellRarityUpButton;
     public Button sellRarityDownButton;
@@ -45,6 +53,16 @@ public class ShopUIManager : MonoBehaviour
     public Toggle sellWallPlacementToggle;
     public Toggle sellCeilingPlacementToggle;
     public InputField sellSearchField;
+
+    [Header("Furniture Category Tabs")]
+    [SerializeField] private Transform furnitureCategoryTabContainer;
+    [SerializeField] private ToggleGroup furnitureCategoryToggleGroup;
+    [SerializeField] private GameObject furnitureCategoryTogglePrefab;
+    [SerializeField] private Sprite defaultCategoryIcon;
+    [SerializeField] private string allCategoryKey = "ALL";
+    [SerializeField] private string allCategoryLabel = "ALL";
+    [SerializeField] private Sprite allCategoryIcon;
+    [SerializeField] private List<CategoryDisplaySetting> categoryDisplaySettings = new List<CategoryDisplaySetting>();
 
     [Header("CSV Paths")]
     public string itemCSVPath = "Data/YUME_ROOF - Item";
@@ -83,6 +101,8 @@ public class ShopUIManager : MonoBehaviour
     private bool sellShowOnlyWallPlacement = false;
     private bool sellShowOnlyCeilingPlacement = false;
     private string sellSearchQuery = "";
+    private string selectedFurnitureCategory;
+    private readonly List<FurnitureCategoryToggle> categoryToggles = new();
 
     public bool IsOpen => isOpen;
     private float currentSfxVolume = 1f;
@@ -154,6 +174,7 @@ public class ShopUIManager : MonoBehaviour
         }
 
         SetupSellTabFilters();
+        SetupFurnitureCategoryTabs();
     }
 
     void OnEnable()
@@ -573,10 +594,32 @@ public class ShopUIManager : MonoBehaviour
                 return false;
             }
 
+            if (!MatchesSelectedCategory(item))
+            {
+                return false;
+            }
+
             return MatchesSellSearch(item);
         }
 
         return false;
+    }
+
+    bool MatchesSelectedCategory(InventoryItem item)
+    {
+        if (string.IsNullOrEmpty(selectedFurnitureCategory) ||
+            string.Equals(selectedFurnitureCategory, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var data = FurnitureDataManager.Instance?.GetFurnitureDataSO(item.itemID);
+        if (data == null)
+        {
+            return false;
+        }
+
+        return string.Equals(data.category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase);
     }
 
     bool MatchesSellSearch(InventoryItem item)
@@ -911,6 +954,102 @@ public class ShopUIManager : MonoBehaviour
                 sellSearchQuery = value;
                 PopulateSellTab();
             });
+        }
+    }
+
+    void SetupFurnitureCategoryTabs()
+    {
+        if (furnitureCategoryTabContainer == null || furnitureCategoryTogglePrefab == null || furnitureCategoryToggleGroup == null)
+        {
+            Debug.LogWarning("[ShopUIManager] Furniture category tab references are missing.");
+            return;
+        }
+
+        ClearFurnitureCategoryTabs();
+
+        var categories = GetFurnitureCategories();
+        CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategoryIcon ?? defaultCategoryIcon);
+
+        foreach (var category in categories)
+        {
+            CreateFurnitureCategoryToggle(category, ResolveCategoryDisplayName(category), ResolveCategoryIcon(category));
+        }
+
+        SelectFurnitureCategory(allCategoryKey, false);
+        if (categoryToggles.Count > 0)
+        {
+            categoryToggles[0].SetIsOn(true, false);
+        }
+    }
+
+    void ClearFurnitureCategoryTabs()
+    {
+        foreach (var toggle in categoryToggles)
+        {
+            if (toggle != null)
+            {
+                Destroy(toggle.gameObject);
+            }
+        }
+
+        categoryToggles.Clear();
+    }
+
+    IEnumerable<string> GetFurnitureCategories()
+    {
+        var categories = FurnitureDataManager.Instance?.GetFurnitureCategories();
+        return categories ?? Array.Empty<string>();
+    }
+
+    void CreateFurnitureCategoryToggle(string categoryId, string displayName, Sprite icon)
+    {
+        if (string.IsNullOrEmpty(categoryId) || furnitureCategoryTogglePrefab == null || furnitureCategoryTabContainer == null)
+        {
+            return;
+        }
+
+        var toggleObj = Instantiate(furnitureCategoryTogglePrefab, furnitureCategoryTabContainer);
+        var categoryToggle = toggleObj.GetComponent<FurnitureCategoryToggle>();
+        if (categoryToggle == null)
+        {
+            categoryToggle = toggleObj.AddComponent<FurnitureCategoryToggle>();
+        }
+
+        bool showLabel = string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase);
+        categoryToggle.Initialize(categoryId, displayName, icon, furnitureCategoryToggleGroup, selectedCategory =>
+        {
+            SelectFurnitureCategory(selectedCategory);
+        }, showLabel);
+
+        categoryToggles.Add(categoryToggle);
+    }
+
+    string ResolveCategoryDisplayName(string categoryId)
+    {
+        var setting = FindCategoryDisplaySetting(categoryId);
+        return setting != null && !string.IsNullOrEmpty(setting.displayName) ? setting.displayName : categoryId;
+    }
+
+    Sprite ResolveCategoryIcon(string categoryId)
+    {
+        var setting = FindCategoryDisplaySetting(categoryId);
+        return setting != null && setting.icon != null ? setting.icon : defaultCategoryIcon;
+    }
+
+    CategoryDisplaySetting FindCategoryDisplaySetting(string categoryId)
+    {
+        return categoryDisplaySettings
+            .FirstOrDefault(setting => !string.IsNullOrEmpty(setting.categoryId) &&
+                                       string.Equals(setting.categoryId, categoryId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    void SelectFurnitureCategory(string categoryId, bool refresh = true)
+    {
+        selectedFurnitureCategory = categoryId;
+
+        if (refresh && isOpen)
+        {
+            PopulateSellTab();
         }
     }
 
