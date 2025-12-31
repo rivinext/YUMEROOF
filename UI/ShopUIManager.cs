@@ -721,8 +721,29 @@ public class ShopUIManager : MonoBehaviour
             return;
         }
 
-        bool canSell = selectedForSale != null && selectedForSale.quantity > 0;
+        bool canSell = CanSellItem(selectedForSale);
         sellButton.interactable = canSell;
+    }
+
+    bool CanSellItem(InventoryItem item)
+    {
+        if (item == null || item.quantity <= 0)
+        {
+            return false;
+        }
+
+        if (item.itemType != InventoryItem.ItemType.Furniture)
+        {
+            return true;
+        }
+
+        var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+        if (data == null)
+        {
+            return true;
+        }
+
+        return data.interactionType != InteractionType.Bed;
     }
 
     void HandleSellCardFavoriteToggled(InventoryItem item)
@@ -895,6 +916,20 @@ public class ShopUIManager : MonoBehaviour
 
     void SelectItemForSale(InventoryItem item)
     {
+        if (item != null && !CanSellItem(item))
+        {
+            selectedForSale = null;
+            UpdateSellButtonState();
+
+            foreach (var card in activeSellCards.Values)
+            {
+                card?.SetSelected(false);
+            }
+
+            UpdateDescriptionPanel(item);
+            return;
+        }
+
         selectedForSale = item;
         UpdateSellButtonState();
 
@@ -951,7 +986,11 @@ public class ShopUIManager : MonoBehaviour
 
     void SellSelectedItem()
     {
-        if (selectedForSale == null) return;
+        if (!CanSellItem(selectedForSale))
+        {
+            UpdateSellButtonState();
+            return;
+        }
 
         var item = selectedForSale;
         int price = 0;
