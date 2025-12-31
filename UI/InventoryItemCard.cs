@@ -315,9 +315,18 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             bool hasRecipe = HasRecipe();
             bool canCraft = currentItem.canCraft;
             int ownedQuantity = currentItem.quantity;
+            var furnitureData = FurnitureDataManager.Instance?.GetFurnitureData(currentItem.itemID);
+            bool isBed = furnitureData != null && furnitureData.interactionType == InteractionType.Bed;
 
             // 背景画像の設定（常に設定する）
-            if (isSelected)
+            if (isBed)
+            {
+                if (uncraftableBackground != null)
+                {
+                    backgroundImage.sprite = uncraftableBackground;
+                }
+            }
+            else if (isSelected)
             {
                 // 選択状態
                 if (selectedBackground != null)
