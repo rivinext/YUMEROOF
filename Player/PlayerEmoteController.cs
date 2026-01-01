@@ -90,7 +90,7 @@ public class PlayerEmoteController : MonoBehaviour
     private bool blinkLockedByEmote;
 
     public bool IsBlinkLocked => blinkLockedByEmote;
-    public bool IsEmoteActive => activeEmote != null || activeCoroutine != null;
+    public bool IsEmoteActive => activeEmote != null;
 
     private int standIdleStateHash;
     private int sitIdleStateHash;
@@ -265,6 +265,7 @@ public class PlayerEmoteController : MonoBehaviour
         {
             Debug.LogWarning($"Emote '{entry.emoteId}' does not have a valid state name.", this);
             RestorePostEmoteState(true);
+            activeCoroutine = null;
             yield break;
         }
 
@@ -309,6 +310,7 @@ public class PlayerEmoteController : MonoBehaviour
         }
 
         RestorePostEmoteState(true);
+        activeCoroutine = null;
     }
 
     private void StopActiveEmoteImmediate(bool crossFadeToIdle, bool preserveManualControls = false)
