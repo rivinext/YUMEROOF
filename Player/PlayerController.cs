@@ -41,6 +41,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Emote Controller")]
     [SerializeField] private PlayerEmoteController emoteController;
+    public PlayerEmoteController EmoteController => emoteController;
 
     [Header("Sleep Controller")]
     [SerializeField] private PlayerIdleSleepController sleepController;

@@ -71,16 +71,16 @@ public class PlayerRayInteractor : MonoBehaviour
 
     void Update()
     {
+        PlayerEmoteController emoteController = playerController != null ? playerController.EmoteController : null;
+        if (emoteController != null && emoteController.IsEmoteActive)
+        {
+            ClearCurrentTarget();
+            return;
+        }
+
         if (playerController != null && playerController.IsSitting)
         {
-            if (currentTarget != null)
-            {
-                SetHighlight(currentTarget, false);
-                NotifyBlur(currentTarget);
-                currentTarget = null;
-                interactionUIController?.HandleTargetChanged(null);
-                TargetChanged?.Invoke(null);
-            }
+            ClearCurrentTarget();
             return;
         }
 
@@ -217,6 +217,18 @@ public class PlayerRayInteractor : MonoBehaviour
         currentFocusable = null;
         interactionUIController?.HandleTargetChanged(null);
         TargetChanged?.Invoke(null);
+    }
+
+    private void ClearCurrentTarget()
+    {
+        if (currentTarget != null)
+        {
+            SetHighlight(currentTarget, false);
+            NotifyBlur(currentTarget);
+            currentTarget = null;
+            interactionUIController?.HandleTargetChanged(null);
+            TargetChanged?.Invoke(null);
+        }
     }
 
     private void NotifyFocus(IInteractable target)
