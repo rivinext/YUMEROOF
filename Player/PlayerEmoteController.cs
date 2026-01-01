@@ -90,6 +90,7 @@ public class PlayerEmoteController : MonoBehaviour
     private bool blinkLockedByEmote;
 
     public bool IsBlinkLocked => blinkLockedByEmote;
+    public bool IsEmoteActive => activeEmote != null || activeCoroutine != null;
 
     private int standIdleStateHash;
     private int sitIdleStateHash;
