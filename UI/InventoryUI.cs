@@ -32,6 +32,8 @@ public class InventoryUI : MonoBehaviour
         public string categoryId;
         public string displayName;
         public Sprite icon;
+        public bool useBackgroundColor;
+        public Color backgroundColor = Color.white;
     }
 
     public enum InventoryTabType
@@ -63,6 +65,7 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private ToggleGroup furnitureCategoryToggleGroup;
     [SerializeField] private GameObject furnitureCategoryTogglePrefab;
     [SerializeField] private Sprite defaultCategoryIcon;
+    [SerializeField] private Color defaultCategoryColor = Color.white;
     [SerializeField] private string allCategoryKey = "ALL";
     [SerializeField] private string allCategoryLabel = "ALL";
     [SerializeField] private Sprite allCategoryIcon;
@@ -488,11 +491,13 @@ public class InventoryUI : MonoBehaviour
         }
 
         bool showLabel = string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase);
+        bool useBackgroundColor = true;
+        Color backgroundColor = ResolveCategoryBackgroundColor(categoryId);
 
         categoryToggle.Initialize(categoryId, displayName, icon, furnitureCategoryToggleGroup, selectedCategory =>
         {
             SelectFurnitureCategory(selectedCategory);
-        }, showLabel);
+        }, showLabel, useBackgroundColor, backgroundColor);
 
         categoryToggles.Add(categoryToggle);
     }
@@ -507,6 +512,22 @@ public class InventoryUI : MonoBehaviour
     {
         var setting = FindCategoryDisplaySetting(categoryId);
         return setting != null && setting.icon != null ? setting.icon : defaultCategoryIcon;
+    }
+
+    Color ResolveCategoryBackgroundColor(string categoryId)
+    {
+        if (string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return defaultCategoryColor;
+        }
+
+        var setting = FindCategoryDisplaySetting(categoryId);
+        if (setting != null && setting.useBackgroundColor)
+        {
+            return setting.backgroundColor;
+        }
+
+        return defaultCategoryColor;
     }
 
     CategoryDisplaySetting FindCategoryDisplaySetting(string categoryId)
