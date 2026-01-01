@@ -43,6 +43,10 @@ public class ShopUIManager : MonoBehaviour
         public string categoryId;
         public string displayName;
         public Sprite icon;
+        public bool useBackgroundColor;
+        public Color backgroundColor = Color.white;
+        public bool useCheckmarkColor;
+        public Color checkmarkColor = Color.white;
     }
 
     [Header("Sell Tab Filters")]
@@ -59,6 +63,8 @@ public class ShopUIManager : MonoBehaviour
     [SerializeField] private ToggleGroup furnitureCategoryToggleGroup;
     [SerializeField] private GameObject furnitureCategoryTogglePrefab;
     [SerializeField] private Sprite defaultCategoryIcon;
+    [SerializeField] private Color defaultCategoryColor = Color.white;
+    [SerializeField] private Color defaultCategoryCheckmarkColor = Color.white;
     [SerializeField] private string allCategoryKey = "ALL";
     [SerializeField] private string allCategoryLabel = "ALL";
     [SerializeField] private Sprite allCategoryIcon;
@@ -1016,10 +1022,14 @@ public class ShopUIManager : MonoBehaviour
         }
 
         bool showLabel = string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase);
+        bool useBackgroundColor = true;
+        Color backgroundColor = ResolveCategoryBackgroundColor(categoryId);
+        bool useCheckmarkColor = true;
+        Color checkmarkColor = ResolveCategoryCheckmarkColor(categoryId);
         categoryToggle.Initialize(categoryId, displayName, icon, furnitureCategoryToggleGroup, selectedCategory =>
         {
             SelectFurnitureCategory(selectedCategory);
-        }, showLabel);
+        }, showLabel, useBackgroundColor, backgroundColor, useCheckmarkColor, checkmarkColor);
 
         categoryToggles.Add(categoryToggle);
     }
@@ -1034,6 +1044,42 @@ public class ShopUIManager : MonoBehaviour
     {
         var setting = FindCategoryDisplaySetting(categoryId);
         return setting != null && setting.icon != null ? setting.icon : defaultCategoryIcon;
+    }
+
+    Color ResolveCategoryBackgroundColor(string categoryId)
+    {
+        if (string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return defaultCategoryColor;
+        }
+
+        var setting = FindCategoryDisplaySetting(categoryId);
+        if (setting != null && setting.useBackgroundColor)
+        {
+            return setting.backgroundColor;
+        }
+
+        return defaultCategoryColor;
+    }
+
+    Color ResolveCategoryCheckmarkColor(string categoryId)
+    {
+        if (string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return defaultCategoryCheckmarkColor;
+        }
+
+        var setting = FindCategoryDisplaySetting(categoryId);
+        if (setting != null && setting.useCheckmarkColor)
+        {
+            return setting.checkmarkColor;
+        }
+        if (setting != null && setting.useBackgroundColor)
+        {
+            return setting.backgroundColor;
+        }
+
+        return defaultCategoryCheckmarkColor;
     }
 
     CategoryDisplaySetting FindCategoryDisplaySetting(string categoryId)

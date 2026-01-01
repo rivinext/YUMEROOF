@@ -34,6 +34,8 @@ public class InventoryUI : MonoBehaviour
         public Sprite icon;
         public bool useBackgroundColor;
         public Color backgroundColor = Color.white;
+        public bool useCheckmarkColor;
+        public Color checkmarkColor = Color.white;
     }
 
     public enum InventoryTabType
@@ -66,6 +68,7 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private GameObject furnitureCategoryTogglePrefab;
     [SerializeField] private Sprite defaultCategoryIcon;
     [SerializeField] private Color defaultCategoryColor = Color.white;
+    [SerializeField] private Color defaultCategoryCheckmarkColor = Color.white;
     [SerializeField] private string allCategoryKey = "ALL";
     [SerializeField] private string allCategoryLabel = "ALL";
     [SerializeField] private Sprite allCategoryIcon;
@@ -493,11 +496,13 @@ public class InventoryUI : MonoBehaviour
         bool showLabel = string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase);
         bool useBackgroundColor = true;
         Color backgroundColor = ResolveCategoryBackgroundColor(categoryId);
+        bool useCheckmarkColor = true;
+        Color checkmarkColor = ResolveCategoryCheckmarkColor(categoryId);
 
         categoryToggle.Initialize(categoryId, displayName, icon, furnitureCategoryToggleGroup, selectedCategory =>
         {
             SelectFurnitureCategory(selectedCategory);
-        }, showLabel, useBackgroundColor, backgroundColor);
+        }, showLabel, useBackgroundColor, backgroundColor, useCheckmarkColor, checkmarkColor);
 
         categoryToggles.Add(categoryToggle);
     }
@@ -528,6 +533,26 @@ public class InventoryUI : MonoBehaviour
         }
 
         return defaultCategoryColor;
+    }
+
+    Color ResolveCategoryCheckmarkColor(string categoryId)
+    {
+        if (string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return defaultCategoryCheckmarkColor;
+        }
+
+        var setting = FindCategoryDisplaySetting(categoryId);
+        if (setting != null && setting.useCheckmarkColor)
+        {
+            return setting.checkmarkColor;
+        }
+        if (setting != null && setting.useBackgroundColor)
+        {
+            return setting.backgroundColor;
+        }
+
+        return defaultCategoryCheckmarkColor;
     }
 
     CategoryDisplaySetting FindCategoryDisplaySetting(string categoryId)

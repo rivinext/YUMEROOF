@@ -12,6 +12,7 @@ public class FurnitureCategoryToggle : MonoBehaviour
     [SerializeField] private TMP_Text label;
     [SerializeField] private Image icon;
     [SerializeField] private Image background;
+    [SerializeField] private Image checkmark;
 
     private Toggle toggle;
     private string categoryId;
@@ -30,7 +31,7 @@ public class FurnitureCategoryToggle : MonoBehaviour
     /// <summary>
     /// トグルを初期化し、表示とイベントを設定する。
     /// </summary>
-    public void Initialize(string id, string displayName, Sprite sprite, ToggleGroup group, UnityAction<string> onSelected, bool showLabel = true, bool useBackgroundColor = false, Color backgroundColor = default)
+    public void Initialize(string id, string displayName, Sprite sprite, ToggleGroup group, UnityAction<string> onSelected, bool showLabel = true, bool useBackgroundColor = false, Color backgroundColor = default, bool useCheckmarkColor = false, Color checkmarkColor = default)
     {
         categoryId = id;
         Awake();
@@ -63,6 +64,15 @@ public class FurnitureCategoryToggle : MonoBehaviour
         if (background != null && useBackgroundColor)
         {
             background.color = backgroundColor;
+        }
+
+        if (useCheckmarkColor)
+        {
+            var checkmarkImage = checkmark != null ? checkmark : toggle != null ? toggle.graphic as Image : null;
+            if (checkmarkImage != null)
+            {
+                checkmarkImage.color = checkmarkColor;
+            }
         }
     }
 
