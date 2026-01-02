@@ -233,11 +233,13 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
 
         return presetManager.PresetSlots[slotIndex];
+        return presetManager.PresetSlots[slotIndex] ?? new MaterialHuePresetSlot();
     }
 
     private static void ApplyToggleColors(Toggle toggle, MaterialHuePresetSlot slot, bool isOn)
     {
         if (toggle == null)
+        if (toggle == null || slot == null)
         {
             return;
         }
@@ -247,6 +249,17 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         if (toggle.graphic != null)
         {
             toggle.graphic.color = targetColor;
+        Color targetColor = isOn ? slot.TargetGraphicOnColor : slot.TargetGraphicOffColor;
+        Color graphicColor = isOn ? slot.GraphicOnColor : slot.GraphicOffColor;
+
+        if (toggle.targetGraphic != null)
+        {
+            toggle.targetGraphic.color = targetColor;
+        }
+
+        if (toggle.graphic != null)
+        {
+            toggle.graphic.color = graphicColor;
         }
     }
 

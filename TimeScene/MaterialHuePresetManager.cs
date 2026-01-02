@@ -36,11 +36,22 @@ public class MaterialHuePresetSlot
     [SerializeField] private Color toggleGraphicColor;
 
     private static readonly Color DefaultOnColor = Color.white;
+    [SerializeField] private Color targetGraphicOnColor;
+    [SerializeField] private Color targetGraphicOffColor;
+    [SerializeField] private Color graphicOnColor;
+    [SerializeField] private Color graphicOffColor;
+
+    private static readonly Color DefaultOnColor = Color.white;
+    private static readonly Color DefaultOffColor = new(0.7f, 0.7f, 0.7f, 1f);
 
     public string Label => string.IsNullOrWhiteSpace(label) ? "Slot" : label.Trim();
     public bool IsDefaultPreset => isDefaultPreset;
     public IReadOnlyList<HSVColor> DefaultColors => defaultColors;
     public Color ToggleGraphicOnColor => ResolveColor(toggleGraphicColor, DefaultOnColor);
+    public Color TargetGraphicOnColor => ResolveColor(targetGraphicOnColor, DefaultOnColor);
+    public Color TargetGraphicOffColor => ResolveColor(targetGraphicOffColor, DefaultOffColor);
+    public Color GraphicOnColor => ResolveColor(graphicOnColor, DefaultOnColor);
+    public Color GraphicOffColor => ResolveColor(graphicOffColor, DefaultOffColor);
 
     private static Color ResolveColor(Color color, Color fallback)
     {
