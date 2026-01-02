@@ -87,7 +87,6 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
 
         MaterialHuePresetSlot slot = GetSlot(slotIndex);
-        Image toggleColorTarget = ResolveToggleColorTarget(toggleInstance);
 
         string label = GetSlotLabel(slotIndex);
         TextMeshProUGUI tmpLabel = toggleInstance.GetComponentInChildren<TextMeshProUGUI>();
@@ -105,11 +104,11 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
-        ApplyToggleColor(toggleColorTarget, slot, toggleInstance.isOn);
+        ApplyToggleColor(toggleInstance, slot, toggleInstance.isOn);
 
         toggleInstance.onValueChanged.AddListener(isOn =>
         {
-            ApplyToggleColor(toggleColorTarget, slot, isOn);
+            ApplyToggleColor(toggleInstance, slot, isOn);
 
             if (!isOn || presetManager == null)
             {
@@ -164,9 +163,9 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         return fallback;
     }
 
-    private static void ApplyToggleColor(Image target, MaterialHuePresetSlot slot, bool isOn)
+    private static void ApplyToggleColor(Toggle toggle, MaterialHuePresetSlot slot, bool isOn)
     {
-        if (target == null || slot == null)
+        if (toggle == null || slot == null)
         {
             return;
         }
@@ -177,7 +176,30 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             return;
         }
 
-        target.color = targetColor;
+        bool applied = false;
+
+        if (toggle.targetGraphic is Image targetImage)
+        {
+            targetImage.color = targetColor;
+            applied = true;
+        }
+
+        if (toggle.graphic is Image graphicImage && !ReferenceEquals(graphicImage, toggle.targetGraphic))
+        {
+            graphicImage.color = targetColor;
+            applied = true;
+        }
+
+        if (applied)
+        {
+            return;
+        }
+
+        Image fallback = ResolveToggleColorTarget(toggle);
+        if (fallback != null)
+        {
+            fallback.color = targetColor;
+        }
     }
 
     private static bool IsUnsetToggleColor(Color color)
@@ -290,6 +312,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             }
 
             toggle.SetIsOnWithoutNotify(i == clampedIndex);
+            ApplyToggleColor(toggle, GetSlot(i), toggle.isOn);
         }
     }
 
