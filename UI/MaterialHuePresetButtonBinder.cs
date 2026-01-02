@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class MaterialHuePresetButtonBinder : MonoBehaviour
 {
+    private static readonly Color DefaultOffColor = new(0.7f, 0.7f, 0.7f, 1f);
+
     [Header("References")]
     [SerializeField] private MaterialHuePresetManager presetManager;
     [SerializeField] private Toggle toggleTemplate;
@@ -100,9 +102,12 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
+        MaterialHuePresetSlot slot = GetPresetSlot(slotIndex);
+        ApplyToggleColors(toggleInstance, slot, shouldSelect);
 
         toggleInstance.onValueChanged.AddListener(isOn =>
         {
+            ApplyToggleColors(toggleInstance, slot, isOn);
             if (!isOn || presetManager == null)
             {
                 return;
@@ -216,7 +221,40 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
                 continue;
             }
 
-            toggle.SetIsOnWithoutNotify(i == clampedIndex);
+            bool shouldSelect = i == clampedIndex;
+            toggle.SetIsOnWithoutNotify(shouldSelect);
+            ApplyToggleColors(toggle, GetPresetSlot(i), shouldSelect);
+        }
+    }
+
+    private MaterialHuePresetSlot GetPresetSlot(int slotIndex)
+    {
+        if (presetManager?.PresetSlots == null || slotIndex < 0 || slotIndex >= presetManager.PresetSlots.Count)
+        {
+            return null;
+        }
+
+        return presetManager.PresetSlots[slotIndex];
+    }
+
+    private static void ApplyToggleColors(Toggle toggle, MaterialHuePresetSlot slot, bool isOn)
+    {
+        if (toggle == null)
+        {
+            return;
+        }
+
+        Color onColor = slot == null ? Color.white : slot.ToggleGraphicOnColor;
+        Color targetColor = isOn ? onColor : DefaultOffColor;
+
+        if (toggle.targetGraphic != null)
+        {
+            toggle.targetGraphic.color = targetColor;
+        }
+
+        if (toggle.graphic != null)
+        {
+            toggle.graphic.color = targetColor;
         }
     }
 
