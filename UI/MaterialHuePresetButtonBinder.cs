@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -19,6 +20,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
 
     private readonly List<Toggle> spawnedToggles = new();
     private int lastSelectedSlotIndex = -1;
+    private static readonly Color UnsetToggleColor = default;
 
     private void OnEnable()
     {
@@ -84,6 +86,9 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             toggleInstance.group = toggleGroup;
         }
 
+        MaterialHuePresetSlot slot = GetSlot(slotIndex);
+        Image toggleColorTarget = ResolveToggleColorTarget(toggleInstance);
+
         string label = GetSlotLabel(slotIndex);
         TextMeshProUGUI tmpLabel = toggleInstance.GetComponentInChildren<TextMeshProUGUI>();
         if (tmpLabel != null)
@@ -100,9 +105,12 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
+        ApplyToggleColor(toggleColorTarget, slot, toggleInstance.isOn);
 
         toggleInstance.onValueChanged.AddListener(isOn =>
         {
+            ApplyToggleColor(toggleColorTarget, slot, isOn);
+
             if (!isOn || presetManager == null)
             {
                 return;
@@ -122,6 +130,61 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         spawnedToggles.Add(toggleInstance);
     }
 
+    private static Image ResolveToggleColorTarget(Toggle toggleInstance)
+    {
+        if (toggleInstance == null)
+        {
+            return null;
+        }
+
+        if (toggleInstance.targetGraphic is Image targetImage)
+        {
+            return targetImage;
+        }
+
+        Image graphicImage = toggleInstance.graphic as Image;
+        Image[] images = toggleInstance.GetComponentsInChildren<Image>(true);
+        Image fallback = null;
+
+        foreach (Image image in images)
+        {
+            if (image == null || image == graphicImage)
+            {
+                continue;
+            }
+
+            if (image.name.IndexOf("background", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return image;
+            }
+
+            fallback ??= image;
+        }
+
+        return fallback;
+    }
+
+    private static void ApplyToggleColor(Image target, MaterialHuePresetSlot slot, bool isOn)
+    {
+        if (target == null || slot == null)
+        {
+            return;
+        }
+
+        Color targetColor = isOn ? slot.ToggleOnColor : slot.ToggleOffColor;
+        if (IsUnsetToggleColor(targetColor))
+        {
+            return;
+        }
+
+        target.color = targetColor;
+    }
+
+    private static bool IsUnsetToggleColor(Color color)
+    {
+        return color == UnsetToggleColor;
+    }
+
     private string GetSlotLabel(int slotIndex)
     {
         string defaultLabel = $"Slot {slotIndex + 1}";
@@ -134,6 +197,16 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         MaterialHuePresetSlot slot = presetManager.PresetSlots[slotIndex];
         string slotLabel = slot?.Label?.Trim() ?? string.Empty;
         return string.IsNullOrWhiteSpace(slotLabel) ? defaultLabel : slotLabel;
+    }
+
+    private MaterialHuePresetSlot GetSlot(int slotIndex)
+    {
+        if (presetManager?.PresetSlots == null || slotIndex < 0 || slotIndex >= presetManager.PresetSlots.Count)
+        {
+            return null;
+        }
+
+        return presetManager.PresetSlots[slotIndex];
     }
 
     private void BindActionButtons()
