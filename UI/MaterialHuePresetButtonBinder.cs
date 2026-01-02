@@ -100,9 +100,12 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         }
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
+        MaterialHuePresetSlot slot = GetPresetSlot(slotIndex);
+        ApplyToggleColors(toggleInstance, slot, shouldSelect);
 
         toggleInstance.onValueChanged.AddListener(isOn =>
         {
+            ApplyToggleColors(toggleInstance, slot, isOn);
             if (!isOn || presetManager == null)
             {
                 return;
@@ -216,7 +219,40 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
                 continue;
             }
 
-            toggle.SetIsOnWithoutNotify(i == clampedIndex);
+            bool shouldSelect = i == clampedIndex;
+            toggle.SetIsOnWithoutNotify(shouldSelect);
+            ApplyToggleColors(toggle, GetPresetSlot(i), shouldSelect);
+        }
+    }
+
+    private MaterialHuePresetSlot GetPresetSlot(int slotIndex)
+    {
+        if (presetManager?.PresetSlots == null || slotIndex < 0 || slotIndex >= presetManager.PresetSlots.Count)
+        {
+            return null;
+        }
+
+        return presetManager.PresetSlots[slotIndex] ?? new MaterialHuePresetSlot();
+    }
+
+    private static void ApplyToggleColors(Toggle toggle, MaterialHuePresetSlot slot, bool isOn)
+    {
+        if (toggle == null || slot == null)
+        {
+            return;
+        }
+
+        Color targetColor = isOn ? slot.TargetGraphicOnColor : slot.TargetGraphicOffColor;
+        Color graphicColor = isOn ? slot.GraphicOnColor : slot.GraphicOffColor;
+
+        if (toggle.targetGraphic != null)
+        {
+            toggle.targetGraphic.color = targetColor;
+        }
+
+        if (toggle.graphic != null)
+        {
+            toggle.graphic.color = graphicColor;
         }
     }
 
