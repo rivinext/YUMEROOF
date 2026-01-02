@@ -41,6 +41,8 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private CanvasGroup tooltipCanvasGroup;
     [SerializeField] private float tooltipFadeDuration = 0.2f;
     [SerializeField] private Vector2 tooltipOffset = new Vector2(0f, -10f);
+    [SerializeField] private bool useFixedTooltipPosition;
+    [SerializeField] private Vector2 fixedTooltipAnchoredPosition;
 
     private RectTransform tooltipRectTransform;
     private RectTransform tooltipParentRectTransform;
@@ -496,10 +498,16 @@ public class MilestonePanel : MonoBehaviour
             }
         }
 
-        if (tooltipRectTransform != null &&
-            TryGetTooltipAnchoredPosition(milestoneRectTransform, out var anchoredPosition))
+        if (tooltipRectTransform != null)
         {
-            tooltipRectTransform.anchoredPosition = anchoredPosition + tooltipOffset;
+            if (useFixedTooltipPosition)
+            {
+                tooltipRectTransform.anchoredPosition = fixedTooltipAnchoredPosition + tooltipOffset;
+            }
+            else if (TryGetTooltipAnchoredPosition(milestoneRectTransform, out var anchoredPosition))
+            {
+                tooltipRectTransform.anchoredPosition = anchoredPosition + tooltipOffset;
+            }
         }
 
         FadeTooltip(true);
