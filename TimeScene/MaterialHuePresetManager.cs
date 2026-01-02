@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [System.Serializable]
 public struct HSVColor
@@ -33,21 +34,18 @@ public class MaterialHuePresetSlot
     [SerializeField] private string label = "Slot";
     [SerializeField] private bool isDefaultPreset = false;
     [SerializeField] private List<HSVColor> defaultColors = new();
-    [SerializeField] private Color targetGraphicOnColor;
-    [SerializeField] private Color targetGraphicOffColor;
-    [SerializeField] private Color graphicOnColor;
-    [SerializeField] private Color graphicOffColor;
+    [FormerlySerializedAs("targetGraphicOnColor")]
+    [FormerlySerializedAs("targetGraphicOffColor")]
+    [FormerlySerializedAs("graphicOnColor")]
+    [FormerlySerializedAs("graphicOffColor")]
+    [SerializeField] private Color slotColor;
 
-    private static readonly Color DefaultOnColor = Color.white;
-    private static readonly Color DefaultOffColor = new(0.7f, 0.7f, 0.7f, 1f);
+    private static readonly Color DefaultSlotColor = Color.white;
 
     public string Label => string.IsNullOrWhiteSpace(label) ? "Slot" : label.Trim();
     public bool IsDefaultPreset => isDefaultPreset;
     public IReadOnlyList<HSVColor> DefaultColors => defaultColors;
-    public Color TargetGraphicOnColor => ResolveColor(targetGraphicOnColor, DefaultOnColor);
-    public Color TargetGraphicOffColor => ResolveColor(targetGraphicOffColor, DefaultOffColor);
-    public Color GraphicOnColor => ResolveColor(graphicOnColor, DefaultOnColor);
-    public Color GraphicOffColor => ResolveColor(graphicOffColor, DefaultOffColor);
+    public Color SlotColor => ResolveColor(slotColor, DefaultSlotColor);
 
     private static Color ResolveColor(Color color, Color fallback)
     {

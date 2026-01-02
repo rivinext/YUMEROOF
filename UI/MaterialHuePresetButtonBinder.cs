@@ -242,17 +242,16 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             return;
         }
 
-        Color targetColor = isOn ? slot.TargetGraphicOnColor : slot.TargetGraphicOffColor;
-        Color graphicColor = isOn ? slot.GraphicOnColor : slot.GraphicOffColor;
+        Color slotColor = slot.SlotColor;
 
         if (toggle.targetGraphic != null)
         {
-            toggle.targetGraphic.color = targetColor;
+            toggle.targetGraphic.color = slotColor;
         }
 
         if (toggle.graphic != null)
         {
-            toggle.graphic.color = graphicColor;
+            toggle.graphic.color = slotColor;
         }
     }
 
