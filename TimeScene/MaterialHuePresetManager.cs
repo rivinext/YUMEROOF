@@ -32,10 +32,14 @@ public class MaterialHuePresetSlot
 {
     [SerializeField] private string label = "Slot";
     [SerializeField] private bool isDefaultPreset = false;
+    [SerializeField] private Color toggleOnColor = default;
+    [SerializeField] private Color toggleOffColor = default;
     [SerializeField] private List<HSVColor> defaultColors = new();
 
     public string Label => string.IsNullOrWhiteSpace(label) ? "Slot" : label.Trim();
     public bool IsDefaultPreset => isDefaultPreset;
+    public Color ToggleOnColor => toggleOnColor;
+    public Color ToggleOffColor => toggleOffColor;
     public IReadOnlyList<HSVColor> DefaultColors => defaultColors;
 }
 
