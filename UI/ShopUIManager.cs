@@ -75,7 +75,7 @@ public class ShopUIManager : MonoBehaviour
     public string unlockCSVPath = "Data/YUME_ROOF - WhenUnlock";
 
     [Header("Shop Settings")]
-    public string currentMilestoneID = "Milestone_00"; // Current milestone
+    [SerializeField] private UnlockItemConsole unlockItemConsole;
 
     [Header("Audio")]
     [SerializeField] private AudioClip purchaseSfx;
@@ -123,6 +123,10 @@ public class ShopUIManager : MonoBehaviour
         if (clock != null)
         {
             clock.OnDayChanged += OnDayChanged;
+        }
+        if (unlockItemConsole == null)
+        {
+            unlockItemConsole = FindFirstObjectByType<UnlockItemConsole>(FindObjectsInactive.Include);
         }
         LoadItemData();
         LoadUnlockData();
@@ -462,12 +466,33 @@ public class ShopUIManager : MonoBehaviour
         int day = clock != null ? clock.currentDay : 0;
         if (generatedDay == day) return;
 
+        var unlockableIds = unlockItemConsole != null
+            ? unlockItemConsole.GetUnlockableItemIds()
+            : Enumerable.Empty<string>();
         List<ShopItem> candidates = new();
-        foreach (var item in allItems.Values)
+        HashSet<string> seenIds = new();
+        foreach (var itemId in unlockableIds)
         {
-            if (!string.IsNullOrEmpty(item.milestoneID) && item.milestoneID == currentMilestoneID)
+            if (string.IsNullOrEmpty(itemId) || !seenIds.Add(itemId))
+            {
+                continue;
+            }
+
+            if (allItems.TryGetValue(itemId, out var item))
             {
                 candidates.Add(item);
+                continue;
+            }
+
+            var data = FurnitureDataManager.Instance?.GetFurnitureData(itemId);
+            if (data != null)
+            {
+                candidates.Add(new ShopItem
+                {
+                    itemID = itemId,
+                    buyPrice = data.buyPrice,
+                    sellPrice = data.sellPrice
+                });
             }
         }
 
