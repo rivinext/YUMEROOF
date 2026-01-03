@@ -471,7 +471,16 @@ public class ShopUIManager : MonoBehaviour
             }
         }
 
-        if (candidates.Count == 0)
+        dailyPurchaseItems.Clear();
+        System.Random rand = new System.Random();
+        for (int i = 0; i < 3 && candidates.Count > 0; i++)
+        {
+            int index = rand.Next(candidates.Count);
+            dailyPurchaseItems.Add(candidates[index]);
+            candidates.RemoveAt(index);
+        }
+
+        if (dailyPurchaseItems.Count < 3)
         {
             var inventory = InventoryManager.Instance;
             if (inventory != null)
@@ -482,16 +491,27 @@ public class ShopUIManager : MonoBehaviour
                     .Distinct()
                     .ToList();
 
+                var existingIds = new HashSet<string>(dailyPurchaseItems.Select(item => item.itemID));
                 foreach (var itemId in ownedIds)
                 {
+                    if (dailyPurchaseItems.Count >= 3)
+                    {
+                        break;
+                    }
+
+                    if (!existingIds.Add(itemId))
+                    {
+                        continue;
+                    }
+
                     if (allItems.TryGetValue(itemId, out var shopItem))
                     {
-                        candidates.Add(shopItem);
+                        dailyPurchaseItems.Add(shopItem);
                     }
                     else
                     {
                         var data = FurnitureDataManager.Instance?.GetFurnitureData(itemId);
-                        candidates.Add(new ShopItem
+                        dailyPurchaseItems.Add(new ShopItem
                         {
                             itemID = itemId,
                             buyPrice = data?.buyPrice ?? 0,
@@ -500,15 +520,6 @@ public class ShopUIManager : MonoBehaviour
                     }
                 }
             }
-        }
-
-        dailyPurchaseItems.Clear();
-        System.Random rand = new System.Random();
-        for (int i = 0; i < 3 && candidates.Count > 0; i++)
-        {
-            int index = rand.Next(candidates.Count);
-            dailyPurchaseItems.Add(candidates[index]);
-            candidates.RemoveAt(index);
         }
         generatedDay = day;
     }
