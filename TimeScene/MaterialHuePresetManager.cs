@@ -312,7 +312,14 @@ public class MaterialHuePresetManager : MonoBehaviour
             return;
         }
 
-        Debug.LogWarning($"No saved preset found for slot {slotIndex} on start. Applying default fallback.");
+        Debug.Log($"No saved preset found for slot {slotIndex} on start. Saving initial colors.");
+        if (SavePresetColors(slotIndex, initialControllerColors))
+        {
+            LoadPreset(slotIndex);
+            return;
+        }
+
+        Debug.LogWarning($"No saved preset found for slot {slotIndex} on start, and initial colors could not be saved. Applying default fallback.");
         ApplyDefaultPresetFallback();
     }
 
@@ -395,6 +402,48 @@ public class MaterialHuePresetManager : MonoBehaviour
         PlayerPrefs.Save();
         hasSavedSelectedSlotThisSession = clampedSlot == SelectedSlotIndex;
         Debug.Log($"Saved preset slot {clampedSlot}");
+    }
+
+    private bool SavePresetColors(int slotIndex, IReadOnlyList<HSVColor> colors)
+    {
+        if (!TryValidateSlot(slotIndex, out int clampedSlot))
+        {
+            return false;
+        }
+
+        if (IsDefaultSlot(clampedSlot))
+        {
+            Debug.LogWarning($"Slot index {clampedSlot} is configured as default and cannot be saved.");
+            return false;
+        }
+
+        if (colors == null || colors.Count == 0)
+        {
+            Debug.LogWarning($"No colors available to save for slot {clampedSlot}.");
+            return false;
+        }
+
+        if (colors.Count < controllers.Count)
+        {
+            Debug.LogWarning($"Initial color count ({colors.Count}) is less than controller count ({controllers.Count}) for slot {clampedSlot}.");
+        }
+
+        ClearLegacyPresetKeys(clampedSlot);
+
+        int colorCount = Mathf.Min(colors.Count, controllers.Count);
+        for (int i = 0; i < colorCount; i++)
+        {
+            HSVColor color = colors[i];
+            string baseKey = GetPresetBaseKey(clampedSlot, i);
+            PlayerPrefs.SetFloat(baseKey + "_h", color.H);
+            PlayerPrefs.SetFloat(baseKey + "_s", color.S);
+            PlayerPrefs.SetFloat(baseKey + "_v", color.V);
+        }
+
+        PlayerPrefs.Save();
+        hasSavedSelectedSlotThisSession = clampedSlot == SelectedSlotIndex;
+        Debug.Log($"Saved preset slot {clampedSlot} from provided colors.");
+        return true;
     }
 
     // 指定スロットの色を読み取り、コントローラに一時反映
