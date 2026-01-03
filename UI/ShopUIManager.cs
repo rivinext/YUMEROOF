@@ -471,6 +471,37 @@ public class ShopUIManager : MonoBehaviour
             }
         }
 
+        if (candidates.Count == 0)
+        {
+            var inventory = InventoryManager.Instance;
+            if (inventory != null)
+            {
+                var ownedIds = inventory.GetFurnitureList()
+                    .Where(item => item != null && item.quantity > 0 && !string.IsNullOrEmpty(item.itemID))
+                    .Select(item => item.itemID)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var itemId in ownedIds)
+                {
+                    if (allItems.TryGetValue(itemId, out var shopItem))
+                    {
+                        candidates.Add(shopItem);
+                    }
+                    else
+                    {
+                        var data = FurnitureDataManager.Instance?.GetFurnitureData(itemId);
+                        candidates.Add(new ShopItem
+                        {
+                            itemID = itemId,
+                            buyPrice = data?.buyPrice ?? 0,
+                            sellPrice = data?.sellPrice ?? 0
+                        });
+                    }
+                }
+            }
+        }
+
         dailyPurchaseItems.Clear();
         System.Random rand = new System.Random();
         for (int i = 0; i < 3 && candidates.Count > 0; i++)
