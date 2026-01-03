@@ -26,13 +26,16 @@ public class DynamicLocalizer : MonoBehaviour
         [SerializeField] private string currentKey;  // 現在設定されているキー（デバッグ用）
 
         private LocalizeStringEvent localizeEvent;
+        private bool debugMode;
 
         /// <summary>
         /// 初期化処理
         /// </summary>
-        public void Initialize()
+        public void Initialize(bool debugModeEnabled)
         {
             if (textComponent == null) return;
+
+            debugMode = debugModeEnabled;
 
             // LocalizeStringEventコンポーネントを取得または追加
             localizeEvent = textComponent.GetComponent<LocalizeStringEvent>();
@@ -81,7 +84,10 @@ public class DynamicLocalizer : MonoBehaviour
             else
             {
                 // フォールバック：キーをそのまま表示
-                Debug.LogWarning($"LocalizeStringEvent not found for {fieldName}. Showing key: {key}");
+                if (debugMode)
+                {
+                    Debug.LogWarning($"LocalizeStringEvent not found for {fieldName}. Showing key: {key}");
+                }
                 textComponent.text = key;
             }
         }
@@ -114,7 +120,10 @@ public class DynamicLocalizer : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"LocalizeStringEvent not found for {fieldName}");
+                if (debugMode)
+                {
+                    Debug.LogWarning($"LocalizeStringEvent not found for {fieldName}");
+                }
                 textComponent.text = key;
             }
         }
@@ -299,7 +308,7 @@ public class DynamicLocalizer : MonoBehaviour
     {
         foreach (var field in localizedFields)
         {
-            field.Initialize();
+            field.Initialize(debugMode);
         }
 
         if (debugMode)
@@ -420,7 +429,7 @@ public class DynamicLocalizer : MonoBehaviour
             }
         }
 
-        if (duplicates.Count > 0)
+        if (debugMode && duplicates.Count > 0)
         {
             Debug.LogWarning($"[DynamicLocalizer] Duplicate field names detected: {string.Join(", ", duplicates)}. Please ensure each LocalizedTextField has a unique Field Name.");
         }
