@@ -473,11 +473,47 @@ public class ShopUIManager : MonoBehaviour
 
         dailyPurchaseItems.Clear();
         System.Random rand = new System.Random();
-        for (int i = 0; i < 3 && candidates.Count > 0; i++)
+        var ownedPool = new List<ShopItem>();
+        var inventory = InventoryManager.Instance?.GetFurnitureList();
+        if (inventory != null)
         {
-            int index = rand.Next(candidates.Count);
-            dailyPurchaseItems.Add(candidates[index]);
-            candidates.RemoveAt(index);
+            foreach (var item in inventory)
+            {
+                if (item.quantity > 0 && allItems.TryGetValue(item.itemID, out var shopItem))
+                {
+                    ownedPool.Add(shopItem);
+                }
+            }
+        }
+
+        var addedIds = new HashSet<string>();
+        void AddRandomFromPool(List<ShopItem> pool, int maxCount)
+        {
+            var available = pool.Where(item => !addedIds.Contains(item.itemID)).ToList();
+            while (available.Count > 0 && dailyPurchaseItems.Count < maxCount)
+            {
+                int index = rand.Next(available.Count);
+                var item = available[index];
+                available.RemoveAt(index);
+                if (addedIds.Add(item.itemID))
+                {
+                    dailyPurchaseItems.Add(item);
+                }
+            }
+        }
+
+        if (ownedPool.Count == 0)
+        {
+            AddRandomFromPool(candidates, 3);
+        }
+        else if (candidates.Count == 0)
+        {
+            AddRandomFromPool(ownedPool, 3);
+        }
+        else
+        {
+            AddRandomFromPool(candidates, 1);
+            AddRandomFromPool(ownedPool, 3);
         }
         generatedDay = day;
     }
