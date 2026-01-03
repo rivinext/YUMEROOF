@@ -248,6 +248,9 @@ public class ShopUIManager : MonoBehaviour
             if (allItems.TryGetValue(itemId, out var item))
             {
                 item.milestoneID = milestone;
+                item.cozy = values.Length > 2 ? ParseInt(values[2]) : 0;
+                item.nature = values.Length > 3 ? ParseInt(values[3]) : 0;
+                item.days = values.Length > 4 ? ParseInt(values[4]) : 0;
             }
         }
     }
@@ -462,10 +465,24 @@ public class ShopUIManager : MonoBehaviour
         int day = clock != null ? clock.currentDay : 0;
         if (generatedDay == day) return;
 
+        string currentMilestone = MilestoneManager.Instance != null
+            ? MilestoneManager.Instance.CurrentMilestoneID
+            : currentMilestoneID;
+        int currentCozy = EnvironmentStatsManager.Instance != null
+            ? EnvironmentStatsManager.Instance.CozyTotal
+            : 0;
+        int currentNature = EnvironmentStatsManager.Instance != null
+            ? EnvironmentStatsManager.Instance.NatureTotal
+            : 0;
+        int currentDay = GameClock.Day;
+
         List<ShopItem> candidates = new();
         foreach (var item in allItems.Values)
         {
-            if (!string.IsNullOrEmpty(item.milestoneID) && item.milestoneID == currentMilestoneID)
+            if (GetMilestoneNumber(item.milestoneID) <= GetMilestoneNumber(currentMilestone) &&
+                item.cozy <= currentCozy &&
+                item.nature <= currentNature &&
+                item.days <= currentDay)
             {
                 candidates.Add(item);
             }
@@ -1374,11 +1391,34 @@ public class ShopUIManager : MonoBehaviour
         return v;
     }
 
+    int GetMilestoneNumber(string id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return 0;
+        }
+
+        int underscoreIndex = id.LastIndexOf('_');
+        if (underscoreIndex >= 0 && underscoreIndex < id.Length - 1)
+        {
+            string numberPart = id.Substring(underscoreIndex + 1);
+            if (int.TryParse(numberPart, out int result))
+            {
+                return result;
+            }
+        }
+
+        return 0;
+    }
+
     [Serializable]
     public class ShopItem
     {
         public string itemID;
         public string milestoneID;
+        public int cozy;
+        public int nature;
+        public int days;
         public int buyPrice;
         public int sellPrice;
     }
