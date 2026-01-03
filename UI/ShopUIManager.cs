@@ -75,7 +75,7 @@ public class ShopUIManager : MonoBehaviour
     public string unlockCSVPath = "Data/YUME_ROOF - WhenUnlock";
 
     [Header("Shop Settings")]
-    [SerializeField] private UnlockItemConsole unlockItemConsole;
+    public string currentMilestoneID = "Milestone_00"; // Current milestone
 
     [Header("Audio")]
     [SerializeField] private AudioClip purchaseSfx;
@@ -123,10 +123,6 @@ public class ShopUIManager : MonoBehaviour
         if (clock != null)
         {
             clock.OnDayChanged += OnDayChanged;
-        }
-        if (unlockItemConsole == null)
-        {
-            unlockItemConsole = FindFirstObjectByType<UnlockItemConsole>(FindObjectsInactive.Include);
         }
         LoadItemData();
         LoadUnlockData();
@@ -466,33 +462,12 @@ public class ShopUIManager : MonoBehaviour
         int day = clock != null ? clock.currentDay : 0;
         if (generatedDay == day) return;
 
-        var unlockableIds = unlockItemConsole != null
-            ? unlockItemConsole.GetUnlockableItemIds()
-            : Enumerable.Empty<string>();
         List<ShopItem> candidates = new();
-        HashSet<string> seenIds = new();
-        foreach (var itemId in unlockableIds)
+        foreach (var item in allItems.Values)
         {
-            if (string.IsNullOrEmpty(itemId) || !seenIds.Add(itemId))
-            {
-                continue;
-            }
-
-            if (allItems.TryGetValue(itemId, out var item))
+            if (!string.IsNullOrEmpty(item.milestoneID) && item.milestoneID == currentMilestoneID)
             {
                 candidates.Add(item);
-                continue;
-            }
-
-            var data = FurnitureDataManager.Instance?.GetFurnitureData(itemId);
-            if (data != null)
-            {
-                candidates.Add(new ShopItem
-                {
-                    itemID = itemId,
-                    buyPrice = data.buyPrice,
-                    sellPrice = data.sellPrice
-                });
             }
         }
 
@@ -504,45 +479,6 @@ public class ShopUIManager : MonoBehaviour
             dailyPurchaseItems.Add(candidates[index]);
             candidates.RemoveAt(index);
         }
-
-        if (dailyPurchaseItems.Count < 3)
-        {
-            var inventory = InventoryManager.Instance;
-            if (inventory != null)
-            {
-                var existingIds = new HashSet<string>(dailyPurchaseItems.Select(item => item.itemID));
-                var ownedIds = inventory.GetFurnitureList()
-                    .Where(item => item != null && item.quantity > 0 && !string.IsNullOrEmpty(item.itemID))
-                    .Select(item => item.itemID)
-                    .Distinct()
-                    .Where(itemId => !existingIds.Contains(itemId))
-                    .ToList();
-
-                while (dailyPurchaseItems.Count < 3 && ownedIds.Count > 0)
-                {
-                    int index = rand.Next(ownedIds.Count);
-                    var itemId = ownedIds[index];
-                    ownedIds.RemoveAt(index);
-                    existingIds.Add(itemId);
-
-                    if (allItems.TryGetValue(itemId, out var shopItem))
-                    {
-                        dailyPurchaseItems.Add(shopItem);
-                    }
-                    else
-                    {
-                        var data = FurnitureDataManager.Instance?.GetFurnitureData(itemId);
-                        dailyPurchaseItems.Add(new ShopItem
-                        {
-                            itemID = itemId,
-                            buyPrice = data?.buyPrice ?? 0,
-                            sellPrice = data?.sellPrice ?? 0
-                        });
-                    }
-                }
-            }
-        }
-        // TODO: 所持品も不足している場合に最大3未満でも許容されるかUI仕様の確認が必要。
         generatedDay = day;
     }
 
