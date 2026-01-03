@@ -31,6 +31,13 @@ public class SleepTransitionUIManager : MonoBehaviour
         anchoredX = 0f
     };
 
+    [SerializeField] private SlidePanelAnimation topSlideSecondary = new SlidePanelAnimation
+    {
+        closedPositionY = 0f,
+        openPositionY = 1080f,
+        anchoredX = 0f
+    };
+
     [SerializeField] private SlidePanelAnimation bottomSlide = new SlidePanelAnimation
     {
         closedPositionY = 0f,
@@ -87,6 +94,7 @@ public class SleepTransitionUIManager : MonoBehaviour
     private void SetInitialPanelPositions()
     {
         SetPanelAnchoredPosition(topSlide, topSlide.openPositionY);
+        SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.openPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.openPositionY);
     }
 
@@ -105,6 +113,23 @@ public class SleepTransitionUIManager : MonoBehaviour
 
         float y = Mathf.LerpUnclamped(startY, endY, displacement);
         slide.panel.anchoredPosition = new Vector2(slide.anchoredX, y);
+    }
+
+    private float GetSlideDuration(SlidePanelAnimation slide)
+    {
+        return slide?.duration ?? 0f;
+    }
+
+    private float GetMaxDuration(params SlidePanelAnimation[] slides)
+    {
+        float max = 0f;
+        foreach (SlidePanelAnimation slide in slides)
+        {
+            if (slide == null)
+                continue;
+            max = Mathf.Max(max, slide.duration);
+        }
+        return max;
     }
 
     private float EvaluateSlideCurve(SlidePanelAnimation slide, float t, bool clampResult = false)
@@ -130,6 +155,7 @@ public class SleepTransitionUIManager : MonoBehaviour
     private void OnValidate()
     {
         ValidateSlidePanel(topSlide, "Top");
+        ValidateSlidePanel(topSlideSecondary, "Top (Secondary)");
         ValidateSlidePanel(bottomSlide, "Bottom");
     }
 
@@ -239,6 +265,7 @@ public class SleepTransitionUIManager : MonoBehaviour
     private IEnumerator TransitionRoutine(int nextDay)
     {
         SetPanelAnchoredPosition(topSlide, topSlide.openPositionY);
+        SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.openPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.openPositionY);
         if (dayText != null)
         {
@@ -286,7 +313,9 @@ public class SleepTransitionUIManager : MonoBehaviour
 
         float topTime = 0f;
         float bottomTime = 0f;
-        while (topTime < topSlide.duration || bottomTime < bottomSlide.duration)
+        float topDuration = GetMaxDuration(topSlide, topSlideSecondary);
+        float bottomDuration = GetSlideDuration(bottomSlide);
+        while (topTime < topDuration || bottomTime < bottomDuration)
         {
             float delta = Time.deltaTime;
             topTime += delta;
@@ -298,6 +327,12 @@ public class SleepTransitionUIManager : MonoBehaviour
                 UpdateSlidePosition(topSlide, topSlide.openPositionY, topSlide.closedPositionY, eased);
             }
 
+            if (topSlideSecondary.panel != null)
+            {
+                float eased = EvaluateSlideCurve(topSlideSecondary, topTime);
+                UpdateSlidePosition(topSlideSecondary, topSlideSecondary.openPositionY, topSlideSecondary.closedPositionY, eased);
+            }
+
             if (bottomSlide.panel != null)
             {
                 float eased = EvaluateSlideCurve(bottomSlide, bottomTime);
@@ -307,6 +342,7 @@ public class SleepTransitionUIManager : MonoBehaviour
         }
 
         SetPanelAnchoredPosition(topSlide, topSlide.closedPositionY);
+        SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.closedPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.closedPositionY);
 
         if (unlockPanelDelay > 0f)
@@ -427,7 +463,9 @@ public class SleepTransitionUIManager : MonoBehaviour
 
         topTime = 0f;
         bottomTime = 0f;
-        while (topTime < topSlide.duration || bottomTime < bottomSlide.duration)
+        topDuration = GetMaxDuration(topSlide, topSlideSecondary);
+        bottomDuration = GetSlideDuration(bottomSlide);
+        while (topTime < topDuration || bottomTime < bottomDuration)
         {
             float delta = Time.deltaTime;
             topTime += delta;
@@ -439,6 +477,12 @@ public class SleepTransitionUIManager : MonoBehaviour
                 UpdateSlidePosition(topSlide, topSlide.closedPositionY, topSlide.openPositionY, eased);
             }
 
+            if (topSlideSecondary.panel != null)
+            {
+                float eased = EvaluateSlideCurve(topSlideSecondary, topTime);
+                UpdateSlidePosition(topSlideSecondary, topSlideSecondary.closedPositionY, topSlideSecondary.openPositionY, eased);
+            }
+
             if (bottomSlide.panel != null)
             {
                 float eased = EvaluateSlideCurve(bottomSlide, bottomTime);
@@ -448,6 +492,7 @@ public class SleepTransitionUIManager : MonoBehaviour
         }
 
         SetPanelAnchoredPosition(topSlide, topSlide.openPositionY);
+        SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.openPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.openPositionY);
 
         if (canvas != null)
