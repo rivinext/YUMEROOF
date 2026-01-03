@@ -485,24 +485,20 @@ public class ShopUIManager : MonoBehaviour
             var inventory = InventoryManager.Instance;
             if (inventory != null)
             {
+                var existingIds = new HashSet<string>(dailyPurchaseItems.Select(item => item.itemID));
                 var ownedIds = inventory.GetFurnitureList()
                     .Where(item => item != null && item.quantity > 0 && !string.IsNullOrEmpty(item.itemID))
                     .Select(item => item.itemID)
                     .Distinct()
+                    .Where(itemId => !existingIds.Contains(itemId))
                     .ToList();
 
-                var existingIds = new HashSet<string>(dailyPurchaseItems.Select(item => item.itemID));
-                foreach (var itemId in ownedIds)
+                while (dailyPurchaseItems.Count < 3 && ownedIds.Count > 0)
                 {
-                    if (dailyPurchaseItems.Count >= 3)
-                    {
-                        break;
-                    }
-
-                    if (!existingIds.Add(itemId))
-                    {
-                        continue;
-                    }
+                    int index = rand.Next(ownedIds.Count);
+                    var itemId = ownedIds[index];
+                    ownedIds.RemoveAt(index);
+                    existingIds.Add(itemId);
 
                     if (allItems.TryGetValue(itemId, out var shopItem))
                     {
@@ -521,6 +517,7 @@ public class ShopUIManager : MonoBehaviour
                 }
             }
         }
+        // TODO: 所持品も不足している場合に最大3未満でも許容されるかUI仕様の確認が必要。
         generatedDay = day;
     }
 
