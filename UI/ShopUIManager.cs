@@ -491,6 +491,7 @@ public class ShopUIManager : MonoBehaviour
         dailyPurchaseItems.Clear();
         System.Random rand = new System.Random();
         var ownedPool = new List<ShopItem>();
+        var ownedIds = new HashSet<string>();
         var inventory = InventoryManager.Instance?.GetFurnitureList();
         if (inventory != null)
         {
@@ -499,9 +500,12 @@ public class ShopUIManager : MonoBehaviour
                 if (item.quantity > 0 && allItems.TryGetValue(item.itemID, out var shopItem))
                 {
                     ownedPool.Add(shopItem);
+                    ownedIds.Add(shopItem.itemID);
                 }
             }
         }
+
+        var availableNotOwned = candidates.Where(item => !ownedIds.Contains(item.itemID)).ToList();
 
         var addedIds = new HashSet<string>();
         void AddRandomFromPool(List<ShopItem> pool, int maxCount)
@@ -519,17 +523,34 @@ public class ShopUIManager : MonoBehaviour
             }
         }
 
-        if (ownedPool.Count == 0)
+        // Must-show policy (max 3 items total):
+        // 1) If there are "available not owned" items, ensure at least one appears.
+        // 2) Otherwise, if there are available items, ensure at least one available appears.
+        // 3) Otherwise, if there are owned items, ensure at least one owned appears.
+        if (availableNotOwned.Count > 0)
         {
-            AddRandomFromPool(candidates, 3);
+            AddRandomFromPool(availableNotOwned, 1);
         }
-        else if (candidates.Count == 0)
+        else if (candidates.Count > 0)
+        {
+            AddRandomFromPool(candidates, 1);
+        }
+        else if (ownedPool.Count > 0)
+        {
+            AddRandomFromPool(ownedPool, 1);
+        }
+
+        // Fill remaining slots with existing random selection after priority slots.
+        if (candidates.Count == 0)
         {
             AddRandomFromPool(ownedPool, 3);
         }
+        else if (ownedPool.Count == 0)
+        {
+            AddRandomFromPool(candidates, 3);
+        }
         else
         {
-            AddRandomFromPool(candidates, 1);
             AddRandomFromPool(ownedPool, 3);
         }
         generatedDay = day;
