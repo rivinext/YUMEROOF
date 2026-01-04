@@ -75,7 +75,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
 
             if (stayAtStartSeconds > 0f)
             {
-                yield return CreateWaitInstruction(stayAtStartSeconds);
+                yield return WaitForSeconds(stayAtStartSeconds);
             }
 
             if (moveSeconds <= 0f)
@@ -96,13 +96,20 @@ public class TutorialItemDragAnimation : MonoBehaviour
 
             if (stayAtEndSeconds > 0f)
             {
-                yield return CreateWaitInstruction(stayAtEndSeconds);
+                yield return WaitForSeconds(stayAtEndSeconds);
             }
         }
     }
 
-    private YieldInstruction CreateWaitInstruction(float seconds)
+    private IEnumerator WaitForSeconds(float seconds)
     {
-        return useUnscaledTime ? new WaitForSecondsRealtime(seconds) : new WaitForSeconds(seconds);
+        if (useUnscaledTime)
+        {
+            yield return new WaitForSecondsRealtime(seconds);
+        }
+        else
+        {
+            yield return new WaitForSeconds(seconds);
+        }
     }
 }
