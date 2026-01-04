@@ -17,8 +17,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
     private readonly Dictionary<string, IndependentMaterialColorSaveData> independentMaterialColorStore = new();
-    private bool hasSeenPlacementTutorial;
-    public bool HasSeenPlacementTutorial => hasSeenPlacementTutorial;
     public static SaveGameManager Instance
     {
         get
@@ -120,11 +118,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     void TriggerSave(int cozy, int nature) => TriggerSave();
 
     public void SaveCurrentSlot() => TriggerSave();
-
-    public void SetPlacementTutorialSeen(bool hasSeen)
-    {
-        hasSeenPlacementTutorial = hasSeen;
-    }
 
     public void SetCurrentSlotKey(string slotKey, bool ensureAutoSave = false)
     {
@@ -343,7 +336,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
-        data.hasSeenPlacementTutorial = hasSeenPlacementTutorial;
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -393,7 +385,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
-        data.hasSeenPlacementTutorial = hasSeenPlacementTutorial;
     }
 
     List<InventoryEntry> CollectInventory()
@@ -480,7 +471,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
-        hasSeenPlacementTutorial = data.hasSeenPlacementTutorial;
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -515,7 +505,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
-        hasSeenPlacementTutorial = data.hasSeenPlacementTutorial;
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)
