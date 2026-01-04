@@ -13,9 +13,16 @@ public class DragDropTutorialAnimator : MonoBehaviour
     [SerializeField] private AnimationCurve moveCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
     private Coroutine animationCoroutine;
+    private bool loggedMissingReferences;
 
     private void OnEnable()
     {
+        if (animationCoroutine != null)
+        {
+            StopCoroutine(animationCoroutine);
+            animationCoroutine = null;
+        }
+
         StartAnimationIfReady();
     }
 
@@ -28,11 +35,38 @@ public class DragDropTutorialAnimator : MonoBehaviour
         }
     }
 
-    private void StartAnimationIfReady()
+    private void OnValidate()
     {
-        if (draggableCard == null || startPosition == null || endPosition == null)
+        if (!isActiveAndEnabled)
         {
             return;
+        }
+
+        StartAnimationIfReady();
+    }
+
+    public void TryStartAnimation()
+    {
+        StartAnimationIfReady();
+    }
+
+    private void StartAnimationIfReady()
+    {
+        if (!isActiveAndEnabled)
+        {
+            return;
+        }
+
+        if (!HasRequiredReferences())
+        {
+            LogMissingReferences();
+            return;
+        }
+
+        if (animationCoroutine != null)
+        {
+            StopCoroutine(animationCoroutine);
+            animationCoroutine = null;
         }
 
         animationCoroutine = StartCoroutine(AnimateLoop());
@@ -42,12 +76,29 @@ public class DragDropTutorialAnimator : MonoBehaviour
     {
         while (true)
         {
-            draggableCard.anchoredPosition = startPosition.anchoredPosition;
-            yield return WaitSeconds(startWaitSeconds);
+            if (!HasRequiredReferences())
+            {
+                LogMissingReferences();
+                yield return null;
+                continue;
+            }
 
-            yield return MoveTo(endPosition, moveToEndSeconds);
-            yield return WaitSeconds(endWaitSeconds);
-            draggableCard.anchoredPosition = startPosition.anchoredPosition;
+            loggedMissingReferences = false;
+
+            try
+            {
+                draggableCard.anchoredPosition = startPosition.anchoredPosition;
+                yield return WaitSeconds(startWaitSeconds);
+
+                yield return MoveTo(endPosition, moveToEndSeconds);
+                yield return WaitSeconds(endWaitSeconds);
+                draggableCard.anchoredPosition = startPosition.anchoredPosition;
+            }
+            catch (System.Exception exception)
+            {
+                Debug.LogWarning($"{nameof(DragDropTutorialAnimator)} animation loop interrupted, retrying. {exception}", this);
+                yield return null;
+            }
         }
     }
 
@@ -88,5 +139,21 @@ public class DragDropTutorialAnimator : MonoBehaviour
         }
 
         yield return new WaitForSeconds(seconds);
+    }
+
+    private bool HasRequiredReferences()
+    {
+        return draggableCard != null && startPosition != null && endPosition != null;
+    }
+
+    private void LogMissingReferences()
+    {
+        if (loggedMissingReferences)
+        {
+            return;
+        }
+
+        loggedMissingReferences = true;
+        Debug.LogWarning($"{nameof(DragDropTutorialAnimator)} is missing references and cannot start. Assign draggableCard/startPosition/endPosition.", this);
     }
 }
