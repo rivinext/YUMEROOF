@@ -18,6 +18,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
 
     [Header("Playback")]
     [SerializeField] private bool playOnEnable = true;
+    [SerializeField] private bool playOnEnable = false;
     [SerializeField] private bool useUnscaledTime = true;
 
     private Coroutine loopCoroutine;
@@ -76,6 +77,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
             if (stayAtStartSeconds > 0f)
             {
                 yield return WaitForSecondsRoutine(stayAtStartSeconds);
+                yield return CreateWaitInstruction(stayAtStartSeconds);
             }
 
             if (moveSeconds <= 0f)
@@ -111,5 +113,13 @@ public class TutorialItemDragAnimation : MonoBehaviour
         {
             yield return new WaitForSeconds(seconds);
         }
+                yield return CreateWaitInstruction(stayAtEndSeconds);
+            }
+        }
+    }
+
+    private YieldInstruction CreateWaitInstruction(float seconds)
+    {
+        return useUnscaledTime ? new WaitForSecondsRealtime(seconds) : new WaitForSeconds(seconds);
     }
 }
