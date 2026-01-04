@@ -9,8 +9,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
     [Header("Positions")]
     [SerializeField] private RectTransform startAnchor;
     [SerializeField] private RectTransform endAnchor;
-    [SerializeField] private Vector2 startPosition;
-    [SerializeField] private Vector2 endPosition;
+    [SerializeField] private AnimationCurve moveCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
     [Header("Timing")]
     [SerializeField] private float stayAtStartSeconds = 1.0f;
@@ -48,6 +47,12 @@ public class TutorialItemDragAnimation : MonoBehaviour
             return;
         }
 
+        if (startAnchor == null || endAnchor == null)
+        {
+            Debug.LogWarning("[TutorialItemDragAnimation] Start/End anchors are not assigned.");
+            return;
+        }
+
         loopCoroutine = StartCoroutine(LoopAnimation());
     }
 
@@ -60,32 +65,13 @@ public class TutorialItemDragAnimation : MonoBehaviour
         }
     }
 
-    Vector2 ResolveStartPosition()
-    {
-        if (startAnchor != null)
-        {
-            return startAnchor.anchoredPosition;
-        }
-
-        return startPosition;
-    }
-
-    Vector2 ResolveEndPosition()
-    {
-        if (endAnchor != null)
-        {
-            return endAnchor.anchoredPosition;
-        }
-
-        return endPosition;
-    }
-
     IEnumerator LoopAnimation()
     {
         while (true)
         {
-            Vector2 start = ResolveStartPosition();
-            Vector2 end = ResolveEndPosition();
+            Vector2 start = startAnchor.anchoredPosition;
+            Vector2 end = endAnchor.anchoredPosition;
+            AnimationCurve curve = moveCurve ?? AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
             targetRect.anchoredPosition = start;
 
@@ -105,7 +91,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
                 {
                     elapsed += Time.deltaTime;
                     float t = Mathf.Clamp01(elapsed / moveSeconds);
-                    targetRect.anchoredPosition = Vector2.Lerp(start, end, t);
+                    targetRect.anchoredPosition = Vector2.Lerp(start, end, curve.Evaluate(t));
                     yield return null;
                 }
             }
