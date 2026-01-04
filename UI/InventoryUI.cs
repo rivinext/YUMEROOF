@@ -152,11 +152,7 @@ public class InventoryUI : MonoBehaviour
     private bool objectManipulatorStateCached;
 
     public bool IsOpen => isOpen;
-    public bool IsFurnitureTabOpen => isOpen && !isMaterialTab;
     public bool AutoReopenEnabled => autoReopenEnabled;
-    public event Action OnInventoryOpened;
-    public event Action OnInventoryClosed;
-    public event Action<InventoryTabType> OnTabChanged;
 
     void Awake()
     {
@@ -978,7 +974,6 @@ public class InventoryUI : MonoBehaviour
 
         NotifyCameraController(true);
         SetSceneInteractionActive(false);
-        OnInventoryOpened?.Invoke();
     }
 
     public void CloseInventory()
@@ -1006,8 +1001,6 @@ public class InventoryUI : MonoBehaviour
         {
             SetSceneInteractionActive(true);
         }
-
-        OnInventoryClosed?.Invoke();
     }
 
     void CacheSceneInteractionComponents()
@@ -1120,7 +1113,6 @@ public class InventoryUI : MonoBehaviour
         }
 
         RefreshInventoryDisplay();
-        OnTabChanged?.Invoke(targetType);
     }
 
     public void RefreshInventoryDisplay()
