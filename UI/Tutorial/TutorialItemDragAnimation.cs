@@ -17,7 +17,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
     [SerializeField] private float stayAtEndSeconds = 1.0f;
 
     [Header("Playback")]
-    [SerializeField] private bool playOnEnable = true;
+    [SerializeField] private bool playOnEnable = false;
     [SerializeField] private bool useUnscaledTime = true;
 
     private Coroutine loopCoroutine;

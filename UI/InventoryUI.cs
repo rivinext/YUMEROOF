@@ -1184,7 +1184,10 @@ public class InventoryUI : MonoBehaviour
                 furnitureTutorialAnimation.gameObject.SetActive(true);
             }
 
-            furnitureTutorialAnimation?.Play();
+            if (furnitureTutorialAnimation != null)
+            {
+                furnitureTutorialAnimation.Play();
+            }
         }
         else
         {
