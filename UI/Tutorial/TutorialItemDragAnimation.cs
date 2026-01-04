@@ -101,7 +101,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
         }
     }
 
-    private YieldInstruction CreateWaitInstruction(float seconds)
+    private object CreateWaitInstruction(float seconds)
     {
         return useUnscaledTime ? new WaitForSecondsRealtime(seconds) : new WaitForSeconds(seconds);
     }
