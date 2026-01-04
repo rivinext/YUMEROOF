@@ -10,7 +10,7 @@ public class DragDropTutorialAnimator : MonoBehaviour
     [SerializeField] private float startWaitSeconds = 0.5f;
     [SerializeField] private float moveToEndSeconds = 1.5f;
     [SerializeField] private float endWaitSeconds = 0.5f;
-    [SerializeField] private float moveBackSeconds = 1.5f;
+    [SerializeField] private AnimationCurve moveCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
     private Coroutine animationCoroutine;
 
@@ -47,8 +47,7 @@ public class DragDropTutorialAnimator : MonoBehaviour
 
             yield return MoveTo(endPosition, moveToEndSeconds);
             yield return WaitSeconds(endWaitSeconds);
-
-            yield return MoveTo(startPosition, moveBackSeconds);
+            draggableCard.anchoredPosition = startPosition.anchoredPosition;
         }
     }
 
@@ -73,7 +72,8 @@ public class DragDropTutorialAnimator : MonoBehaviour
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-            draggableCard.anchoredPosition = Vector2.LerpUnclamped(start, end, t);
+            float curvedT = moveCurve != null ? moveCurve.Evaluate(t) : t;
+            draggableCard.anchoredPosition = Vector2.LerpUnclamped(start, end, curvedT);
             yield return null;
         }
 
