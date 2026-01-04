@@ -27,6 +27,7 @@ public class PlacementTutorialController : MonoBehaviour
         {
             inventoryUI.OnInventoryOpened += HandleInventoryOpened;
             inventoryUI.OnInventoryClosed += HandleInventoryClosed;
+            inventoryUI.OnTabChanged += HandleInventoryTabChanged;
         }
     }
 
@@ -46,6 +47,7 @@ public class PlacementTutorialController : MonoBehaviour
         {
             inventoryUI.OnInventoryOpened -= HandleInventoryOpened;
             inventoryUI.OnInventoryClosed -= HandleInventoryClosed;
+            inventoryUI.OnTabChanged -= HandleInventoryTabChanged;
         }
     }
 
@@ -67,7 +69,7 @@ public class PlacementTutorialController : MonoBehaviour
 
     private void EvaluateTutorialVisibility()
     {
-        if (inventoryUI != null && inventoryUI.IsOpen)
+        if (inventoryUI == null || !inventoryUI.IsFurnitureTabOpen)
         {
             HideTutorial();
             return;
@@ -131,6 +133,11 @@ public class PlacementTutorialController : MonoBehaviour
     }
 
     private void HandleInventoryClosed()
+    {
+        EvaluateTutorialVisibility();
+    }
+
+    private void HandleInventoryTabChanged(InventoryUI.InventoryTabType tabType)
     {
         EvaluateTutorialVisibility();
     }
