@@ -151,10 +151,7 @@ public class InventoryUI : MonoBehaviour
     private bool selectionManagerStateCached;
     private bool objectManipulatorStateCached;
 
-    public event Action<InventoryTabType> OnTabChanged;
-
     public bool IsOpen => isOpen;
-    public bool IsFurnitureTabOpen => !isMaterialTab && isOpen;
     public bool AutoReopenEnabled => autoReopenEnabled;
 
     void Awake()
@@ -1116,7 +1113,6 @@ public class InventoryUI : MonoBehaviour
         }
 
         RefreshInventoryDisplay();
-        OnTabChanged?.Invoke(targetType);
     }
 
     public void RefreshInventoryDisplay()
