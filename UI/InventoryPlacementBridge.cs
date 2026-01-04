@@ -181,8 +181,8 @@ public class InventoryPlacementBridge : MonoBehaviour
             Debug.Log("[InventoryPlacementBridge] Starting FreePlacementSystem");
 
             // コールバックを設定
-            placementSystem.OnPlacementCompleted = OnPlacementCompleteCallback;
-            placementSystem.OnPlacementCancelled = OnPlacementCancelCallback;
+            placementSystem.OnPlacementCompleted += OnPlacementCompleteCallback;
+            placementSystem.OnPlacementCancelled += OnPlacementCancelCallback;
 
             // 配置開始
             placementSystem.StartPlacingNewFurniture(prefab, furnitureData);
@@ -243,8 +243,8 @@ public class InventoryPlacementBridge : MonoBehaviour
         FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
         if (placementSystem != null)
         {
-            placementSystem.OnPlacementCompleted = null;
-            placementSystem.OnPlacementCancelled = null;
+            placementSystem.OnPlacementCompleted -= OnPlacementCompleteCallback;
+            placementSystem.OnPlacementCancelled -= OnPlacementCancelCallback;
         }
     }
 
