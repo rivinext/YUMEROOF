@@ -18,6 +18,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
 
     [Header("Playback")]
     [SerializeField] private bool playOnEnable = true;
+    [SerializeField] private bool useUnscaledTime = true;
 
     private Coroutine loopCoroutine;
 
@@ -74,7 +75,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
 
             if (stayAtStartSeconds > 0f)
             {
-                yield return new WaitForSeconds(stayAtStartSeconds);
+                yield return WaitForSecondsRoutine(stayAtStartSeconds);
             }
 
             if (moveSeconds <= 0f)
@@ -86,7 +87,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
                 float elapsed = 0f;
                 while (elapsed < moveSeconds)
                 {
-                    elapsed += Time.deltaTime;
+                    elapsed += useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
                     float t = Mathf.Clamp01(elapsed / moveSeconds);
                     targetRect.anchoredPosition = Vector2.Lerp(start, end, curve.Evaluate(t));
                     yield return null;
@@ -95,8 +96,20 @@ public class TutorialItemDragAnimation : MonoBehaviour
 
             if (stayAtEndSeconds > 0f)
             {
-                yield return new WaitForSeconds(stayAtEndSeconds);
+                yield return WaitForSecondsRoutine(stayAtEndSeconds);
             }
+        }
+    }
+
+    IEnumerator WaitForSecondsRoutine(float seconds)
+    {
+        if (useUnscaledTime)
+        {
+            yield return new WaitForSecondsRealtime(seconds);
+        }
+        else
+        {
+            yield return new WaitForSeconds(seconds);
         }
     }
 }
