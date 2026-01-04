@@ -153,6 +153,8 @@ public class InventoryUI : MonoBehaviour
 
     public bool IsOpen => isOpen;
     public bool AutoReopenEnabled => autoReopenEnabled;
+    public event Action OnInventoryOpened;
+    public event Action OnInventoryClosed;
 
     void Awake()
     {
@@ -974,6 +976,7 @@ public class InventoryUI : MonoBehaviour
 
         NotifyCameraController(true);
         SetSceneInteractionActive(false);
+        OnInventoryOpened?.Invoke();
     }
 
     public void CloseInventory()
@@ -1001,6 +1004,8 @@ public class InventoryUI : MonoBehaviour
         {
             SetSceneInteractionActive(true);
         }
+
+        OnInventoryClosed?.Invoke();
     }
 
     void CacheSceneInteractionComponents()
