@@ -4,6 +4,7 @@ public class PlacementTutorialController : MonoBehaviour
 {
     [SerializeField] private GameObject tutorialRoot;
     [SerializeField] private FreePlacementSystem placementSystem;
+    [SerializeField] private InventoryUI inventoryUI;
 
     private void Awake()
     {
@@ -20,6 +21,13 @@ public class PlacementTutorialController : MonoBehaviour
         {
             placementSystem.OnPlacementCompleted += HandlePlacementCompleted;
         }
+
+        EnsureInventoryUI();
+        if (inventoryUI != null)
+        {
+            inventoryUI.OnInventoryOpened += HandleInventoryOpened;
+            inventoryUI.OnInventoryClosed += HandleInventoryClosed;
+        }
     }
 
     private void Start()
@@ -33,6 +41,12 @@ public class PlacementTutorialController : MonoBehaviour
         {
             placementSystem.OnPlacementCompleted -= HandlePlacementCompleted;
         }
+
+        if (inventoryUI != null)
+        {
+            inventoryUI.OnInventoryOpened -= HandleInventoryOpened;
+            inventoryUI.OnInventoryClosed -= HandleInventoryClosed;
+        }
     }
 
     private void EnsurePlacementSystem()
@@ -43,8 +57,22 @@ public class PlacementTutorialController : MonoBehaviour
         }
     }
 
+    private void EnsureInventoryUI()
+    {
+        if (inventoryUI == null)
+        {
+            inventoryUI = FindFirstObjectByType<InventoryUI>();
+        }
+    }
+
     private void EvaluateTutorialVisibility()
     {
+        if (inventoryUI != null && inventoryUI.IsOpen)
+        {
+            HideTutorial();
+            return;
+        }
+
         bool hasSeen = HasSeenTutorialFlag();
         bool hasPlacedFurniture = HasPlacedFurniture();
 
@@ -95,6 +123,16 @@ public class PlacementTutorialController : MonoBehaviour
     {
         MarkTutorialSeen(persist: true);
         HideTutorial();
+    }
+
+    private void HandleInventoryOpened()
+    {
+        EvaluateTutorialVisibility();
+    }
+
+    private void HandleInventoryClosed()
+    {
+        EvaluateTutorialVisibility();
     }
 
     private void HideTutorial()
