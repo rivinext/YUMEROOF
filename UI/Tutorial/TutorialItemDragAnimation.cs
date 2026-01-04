@@ -36,10 +36,7 @@ public class TutorialItemDragAnimation : MonoBehaviour
 
     public void Play()
     {
-        if (loopCoroutine != null)
-        {
-            StopCoroutine(loopCoroutine);
-        }
+        Stop();
 
         if (targetRect == null)
         {
