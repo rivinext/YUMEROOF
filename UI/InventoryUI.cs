@@ -1172,25 +1172,27 @@ public class InventoryUI : MonoBehaviour
 
         bool shouldShow = isOpen && !isMaterialTab && !hasPlacedFurnitureFromInventory;
 
-        if (furnitureTutorialRoot != null && furnitureTutorialRoot.activeSelf != shouldShow)
+        if (shouldShow)
         {
-            furnitureTutorialRoot.SetActive(shouldShow);
-        }
-
-        if (furnitureTutorialAnimation != null)
-        {
-            if (shouldShow)
+            if (furnitureTutorialRoot != null && !furnitureTutorialRoot.activeSelf)
             {
-                if (!furnitureTutorialAnimation.isActiveAndEnabled)
-                {
-                    furnitureTutorialRoot?.SetActive(true);
-                }
-
-                furnitureTutorialAnimation.Play();
+                furnitureTutorialRoot.SetActive(true);
             }
-            else
+
+            if (furnitureTutorialAnimation != null && !furnitureTutorialAnimation.gameObject.activeSelf)
             {
-                furnitureTutorialAnimation.Stop();
+                furnitureTutorialAnimation.gameObject.SetActive(true);
+            }
+
+            furnitureTutorialAnimation?.Play();
+        }
+        else
+        {
+            furnitureTutorialAnimation?.Stop();
+
+            if (furnitureTutorialRoot != null && furnitureTutorialRoot.activeSelf)
+            {
+                furnitureTutorialRoot.SetActive(false);
             }
         }
     }
