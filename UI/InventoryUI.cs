@@ -62,6 +62,11 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureDescriptionArea;
     public TMP_InputField furnitureSearchField;
 
+    [Header("Tutorial Animation")]
+    [SerializeField] private GameObject furnitureTutorialRoot;
+    [SerializeField] private TutorialItemDragAnimation furnitureTutorialAnimation;
+    [SerializeField] private bool hideTutorialAfterPlacement = true;
+
     [Header("Furniture Category Tabs")]
     [SerializeField] private Transform furnitureCategoryTabContainer;
     [SerializeField] private ToggleGroup furnitureCategoryToggleGroup;
@@ -142,6 +147,8 @@ public class InventoryUI : MonoBehaviour
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
     private readonly List<FurnitureCategoryToggle> categoryToggles = new List<FurnitureCategoryToggle>();
+    private bool hasPlacedFurnitureFromInventory = false;
+    private InventoryPlacementBridge placementBridge;
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -178,17 +185,21 @@ public class InventoryUI : MonoBehaviour
 
         CacheSceneInteractionComponents();
         UpdateAutoReopenVisual();
+        UpdateFurnitureTutorialVisibility();
     }
 
     void OnEnable()
     {
         AudioManager.OnSfxVolumeChanged += HandleSfxVolumeChanged;
         HandleSfxVolumeChanged(AudioManager.CurrentSfxVolume);
+        SubscribePlacementBridge();
+        UpdateFurnitureTutorialVisibility();
     }
 
     void OnDisable()
     {
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
+        UnsubscribePlacementBridge();
     }
 
     void InitializeTabState()
@@ -974,6 +985,7 @@ public class InventoryUI : MonoBehaviour
 
         NotifyCameraController(true);
         SetSceneInteractionActive(false);
+        UpdateFurnitureTutorialVisibility();
     }
 
     public void CloseInventory()
@@ -1001,6 +1013,8 @@ public class InventoryUI : MonoBehaviour
         {
             SetSceneInteractionActive(true);
         }
+
+        UpdateFurnitureTutorialVisibility();
     }
 
     void CacheSceneInteractionComponents()
@@ -1113,6 +1127,72 @@ public class InventoryUI : MonoBehaviour
         }
 
         RefreshInventoryDisplay();
+        UpdateFurnitureTutorialVisibility();
+    }
+
+    void SubscribePlacementBridge()
+    {
+        if (placementBridge == null)
+        {
+            placementBridge = InventoryPlacementBridge.Instance;
+        }
+
+        if (placementBridge != null)
+        {
+            placementBridge.OnPlacementComplete -= HandlePlacementComplete;
+            placementBridge.OnPlacementComplete += HandlePlacementComplete;
+        }
+    }
+
+    void UnsubscribePlacementBridge()
+    {
+        if (placementBridge != null)
+        {
+            placementBridge.OnPlacementComplete -= HandlePlacementComplete;
+        }
+    }
+
+    void HandlePlacementComplete(string itemId)
+    {
+        if (!hideTutorialAfterPlacement)
+        {
+            return;
+        }
+
+        hasPlacedFurnitureFromInventory = true;
+        UpdateFurnitureTutorialVisibility();
+    }
+
+    void UpdateFurnitureTutorialVisibility()
+    {
+        if (furnitureTutorialRoot == null && furnitureTutorialAnimation == null)
+        {
+            return;
+        }
+
+        bool shouldShow = isOpen && !isMaterialTab && !hasPlacedFurnitureFromInventory;
+
+        if (furnitureTutorialRoot != null && furnitureTutorialRoot.activeSelf != shouldShow)
+        {
+            furnitureTutorialRoot.SetActive(shouldShow);
+        }
+
+        if (furnitureTutorialAnimation != null)
+        {
+            if (shouldShow)
+            {
+                if (!furnitureTutorialAnimation.isActiveAndEnabled)
+                {
+                    furnitureTutorialRoot?.SetActive(true);
+                }
+
+                furnitureTutorialAnimation.Play();
+            }
+            else
+            {
+                furnitureTutorialAnimation.Stop();
+            }
+        }
     }
 
     public void RefreshInventoryDisplay()
