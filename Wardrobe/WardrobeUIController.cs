@@ -28,6 +28,8 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private Transform categoryTabContainer;
     [SerializeField] private ToggleGroup categoryTabToggleGroup;
     [SerializeField] private GameObject categoryTabTogglePrefab;
+    [SerializeField] private Transform categoryTabContentContainer;
+    [SerializeField] private GameObject categoryTabContentPrefab;
     [SerializeField] private Sprite defaultCategoryIcon;
     [SerializeField] private Color defaultCategoryColor = Color.white;
     [SerializeField] private Color defaultCategoryCheckmarkColor = Color.white;
@@ -150,6 +152,7 @@ public class WardrobeUIController : MonoBehaviour
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
     private readonly List<FurnitureCategoryToggle> runtimeCategoryToggles = new List<FurnitureCategoryToggle>();
+    private readonly List<GameObject> runtimeCategoryContents = new List<GameObject>();
 
     private bool hasLoadedSelections;
 
@@ -927,24 +930,31 @@ public class WardrobeUIController : MonoBehaviour
 
     private void BuildCategoryTabsFromBindings()
     {
-        if (categoryTabContainer == null || categoryTabTogglePrefab == null || categoryTabToggleGroup == null || categoryContentBindings.Count == 0)
+        if (categoryTabContainer == null || categoryTabTogglePrefab == null || categoryContentBindings.Count == 0)
         {
             return;
         }
 
         ClearRuntimeCategoryTabs();
+        ClearRuntimeCategoryContents();
         categoryTabs.Clear();
 
         tabToggleGroup = categoryTabToggleGroup;
 
         foreach (CategoryContentBinding binding in categoryContentBindings)
         {
-            if (binding == null || binding.content == null)
+            if (binding == null)
             {
                 continue;
             }
 
-            CreateCategoryTabToggle(binding.category, binding.content);
+            GameObject content = binding.content != null ? binding.content : CreateCategoryContent(binding.category);
+            if (content == null)
+            {
+                continue;
+            }
+
+            CreateCategoryTabToggle(binding.category, content);
         }
     }
 
@@ -966,6 +976,46 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         runtimeCategoryToggles.Clear();
+    }
+
+    private void ClearRuntimeCategoryContents()
+    {
+        foreach (GameObject content in runtimeCategoryContents)
+        {
+            if (content == null)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(content);
+            }
+            else
+            {
+                DestroyImmediate(content);
+            }
+        }
+
+        runtimeCategoryContents.Clear();
+    }
+
+    private GameObject CreateCategoryContent(WardrobeTabType category)
+    {
+        if (categoryTabContentPrefab == null || categoryTabContentContainer == null)
+        {
+            return null;
+        }
+
+        GameObject content = Instantiate(categoryTabContentPrefab, categoryTabContentContainer);
+        if (content == null)
+        {
+            return null;
+        }
+
+        content.name = $"CategoryContent_{category}";
+        runtimeCategoryContents.Add(content);
+        return content;
     }
 
     private void CreateCategoryTabToggle(WardrobeTabType category, GameObject content)
