@@ -35,6 +35,7 @@ public class BaseSaveData
     public float playTime;
     public string chapterName;
     public string location;
+    public bool isFurniturePlacementTutorialDisabled;
 
     public string ToJson()
     {
