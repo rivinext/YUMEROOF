@@ -41,7 +41,9 @@ public class WardrobeUIController : MonoBehaviour
     private class CategoryTab
     {
         public WardrobeTabType category;
-        public Toggle toggle;
+        public Sprite icon;
+        public Color backgroundColor = Color.white;
+        public Color checkmarkColor = Color.white;
         public GameObject content;
     }
 
@@ -114,6 +116,7 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private WardrobeEquipEvent onItemEquipped = new WardrobeEquipEvent();
 
     private readonly List<UnityAction<bool>> toggleHandlers = new List<UnityAction<bool>>();
+    private readonly List<Toggle> tabToggles = new List<Toggle>();
     private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> attachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
     private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> gameAttachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
     private readonly Dictionary<WardrobeTabType, EquippedInstanceSet> previewEquippedInstances = new Dictionary<WardrobeTabType, EquippedInstanceSet>();
@@ -248,12 +251,12 @@ public class WardrobeUIController : MonoBehaviour
 
         for (int i = 0; i < categoryTabs.Count && i < toggleHandlers.Count; i++)
         {
-            CategoryTab tab = categoryTabs[i];
             UnityAction<bool> handler = toggleHandlers[i];
+            Toggle toggle = GetTabToggle(i);
 
-            if (tab != null && tab.toggle != null && handler != null)
+            if (toggle != null && handler != null)
             {
-                tab.toggle.onValueChanged.RemoveListener(handler);
+                toggle.onValueChanged.RemoveListener(handler);
             }
         }
     }
@@ -905,24 +908,27 @@ public class WardrobeUIController : MonoBehaviour
             tabToggleGroup = group;
         }
 
+        RefreshTabToggles();
+
         for (int i = 0; i < categoryTabs.Count; i++)
         {
             CategoryTab tab = categoryTabs[i];
             UnityAction<bool> handler = null;
+            Toggle toggle = GetTabToggle(i);
 
-            if (tab != null && tab.toggle != null)
+            if (toggle != null)
             {
                 if (tabToggleGroup != null)
                 {
-                    tab.toggle.group = tabToggleGroup;
+                    toggle.group = tabToggleGroup;
                 }
 
                 int index = i;
                 handler = delegate (bool value) { OnTabToggled(index, value); };
-                tab.toggle.onValueChanged.AddListener(handler);
+                toggle.onValueChanged.AddListener(handler);
             }
 
-            bool isActive = tab != null && tab.toggle != null && tab.toggle.isOn;
+            bool isActive = toggle != null && toggle.isOn;
             if (tab != null && tab.content != null)
             {
                 tab.content.SetActive(isActive);
@@ -1065,8 +1071,8 @@ public class WardrobeUIController : MonoBehaviour
     {
         for (int i = 0; i < categoryTabs.Count; i++)
         {
-            CategoryTab tab = categoryTabs[i];
-            if (tab != null && tab.toggle != null && tab.toggle.isOn)
+            Toggle toggle = GetTabToggle(i);
+            if (toggle != null && toggle.isOn)
             {
                 OnTabToggled(i, true);
                 return;
@@ -1075,14 +1081,44 @@ public class WardrobeUIController : MonoBehaviour
 
         for (int i = 0; i < categoryTabs.Count; i++)
         {
-            CategoryTab tab = categoryTabs[i];
-            if (tab != null && tab.toggle != null)
+            Toggle toggle = GetTabToggle(i);
+            if (toggle != null)
             {
-                tab.toggle.isOn = true;
+                toggle.isOn = true;
                 OnTabToggled(i, true);
                 break;
             }
         }
+    }
+
+    private void RefreshTabToggles()
+    {
+        tabToggles.Clear();
+
+        if (tabToggleGroup == null)
+        {
+            return;
+        }
+
+        Toggle[] toggles = tabToggleGroup.GetComponentsInChildren<Toggle>(true);
+        for (int i = 0; i < toggles.Length; i++)
+        {
+            Toggle toggle = toggles[i];
+            if (toggle != null)
+            {
+                tabToggles.Add(toggle);
+            }
+        }
+    }
+
+    private Toggle GetTabToggle(int index)
+    {
+        if (index < 0 || index >= tabToggles.Count)
+        {
+            return null;
+        }
+
+        return tabToggles[index];
     }
 
     private void UpdatePreviewActivation(bool visible)
