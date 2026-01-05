@@ -84,6 +84,8 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
                 checkmarkImage.color = checkmarkColor;
             }
         }
+
+        UpdateHoverTargetCategoryText();
     }
 
     public void SetIsOn(bool isOn, bool notify = true)
@@ -118,6 +120,20 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         if (hoverTarget != null)
         {
             hoverTarget.SetActive(isActive);
+        }
+    }
+
+    private void UpdateHoverTargetCategoryText()
+    {
+        if (hoverTarget == null)
+        {
+            return;
+        }
+
+        var hoverText = hoverTarget.GetComponentInChildren<TMP_Text>(true);
+        if (hoverText != null)
+        {
+            hoverText.text = categoryId;
         }
     }
 }
