@@ -23,13 +23,44 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (moveRoutine == null)
+        StartLoop();
+    }
+
+    private void OnDisable()
+    {
+        StopLoop();
+    }
+
+    public void Play()
+    {
+        StartLoop();
+    }
+
+    public void Stop()
+    {
+        StopLoop();
+    }
+
+    private void StartLoop()
+    {
+        if (moveRoutine != null)
+        {
+            StopCoroutine(moveRoutine);
+            moveRoutine = null;
+        }
+
+        if (!isActiveAndEnabled)
+        {
+            enabled = true;
+        }
+
+        if (moveRoutine == null && isActiveAndEnabled)
         {
             moveRoutine = StartCoroutine(MoveLoop());
         }
     }
 
-    private void OnDisable()
+    private void StopLoop()
     {
         if (moveRoutine != null)
         {
