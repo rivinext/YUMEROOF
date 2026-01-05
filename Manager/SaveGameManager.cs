@@ -287,7 +287,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         data.location = SceneManager.GetActiveScene().name;
         var milestone = FindFirstObjectByType<MilestoneManager>();
         data.chapterName = milestone != null ? milestone.CurrentMilestoneID : "";
-        data.furniturePlacementTutorialDisabled = FurniturePlacementTutorialController.IsTutorialDisabled;
     }
 
     void SaveManagers(StorySaveData data)
@@ -472,7 +471,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
-        ApplyFurniturePlacementTutorialState(data);
     }
 
     void ApplyManagers(CreativeSaveData data)
@@ -507,20 +505,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
-        ApplyFurniturePlacementTutorialState(data);
-    }
-
-    void ApplyFurniturePlacementTutorialState(BaseSaveData data)
-    {
-        if (data == null)
-        {
-            return;
-        }
-
-        if (data.furniturePlacementTutorialDisabled)
-        {
-            FurniturePlacementTutorialController.DisableTutorial();
-        }
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)
