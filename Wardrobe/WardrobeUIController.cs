@@ -46,6 +46,11 @@ public class WardrobeUIController : MonoBehaviour
         public GameObject content;
         public GameObject hoverTarget;
         public TMP_Text hoverLabel;
+        public Sprite iconSprite;
+        public bool useBackgroundColor;
+        public Color backgroundColor = Color.white;
+        public bool useCheckmarkColor;
+        public Color checkmarkColor = Color.white;
     }
 
     [Serializable]
@@ -915,7 +920,17 @@ public class WardrobeUIController : MonoBehaviour
 
             if (tab != null && tab.furnitureToggle != null)
             {
-                tab.furnitureToggle.Initialize(tab.category.ToString(), tab.category.ToString(), null, tabToggleGroup, null);
+                tab.furnitureToggle.Initialize(
+                    tab.category.ToString(),
+                    tab.category.ToString(),
+                    tab.iconSprite,
+                    tabToggleGroup,
+                    null,
+                    true,
+                    tab.useBackgroundColor,
+                    tab.backgroundColor,
+                    tab.useCheckmarkColor,
+                    tab.checkmarkColor);
                 if (tab.toggle == null)
                 {
                     tab.toggle = tab.furnitureToggle.Toggle;
