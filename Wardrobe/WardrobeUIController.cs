@@ -41,8 +41,11 @@ public class WardrobeUIController : MonoBehaviour
     private class CategoryTab
     {
         public WardrobeTabType category;
+        public FurnitureCategoryToggle furnitureToggle;
         public Toggle toggle;
         public GameObject content;
+        public GameObject hoverTarget;
+        public TMP_Text hoverLabel;
     }
 
     [Serializable]
@@ -910,6 +913,15 @@ public class WardrobeUIController : MonoBehaviour
             CategoryTab tab = categoryTabs[i];
             UnityAction<bool> handler = null;
 
+            if (tab != null && tab.furnitureToggle != null)
+            {
+                tab.furnitureToggle.Initialize(tab.category.ToString(), tab.category.ToString(), null, tabToggleGroup, null);
+                if (tab.toggle == null)
+                {
+                    tab.toggle = tab.furnitureToggle.Toggle;
+                }
+            }
+
             if (tab != null && tab.toggle != null)
             {
                 if (tabToggleGroup != null)
@@ -920,6 +932,16 @@ public class WardrobeUIController : MonoBehaviour
                 int index = i;
                 handler = delegate (bool value) { OnTabToggled(index, value); };
                 tab.toggle.onValueChanged.AddListener(handler);
+            }
+
+            if (tab != null && tab.furnitureToggle == null && tab.toggle != null)
+            {
+                WardrobeCategoryTabHover hoverHandler = tab.toggle.GetComponent<WardrobeCategoryTabHover>();
+                if (hoverHandler == null)
+                {
+                    hoverHandler = tab.toggle.gameObject.AddComponent<WardrobeCategoryTabHover>();
+                }
+                hoverHandler.Configure(tab.category.ToString(), tab.hoverTarget, tab.hoverLabel);
             }
 
             bool isActive = tab != null && tab.toggle != null && tab.toggle.isOn;
