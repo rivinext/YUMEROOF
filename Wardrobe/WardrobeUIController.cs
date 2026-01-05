@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 public enum WardrobeTabType
@@ -43,6 +44,8 @@ public class WardrobeUIController : MonoBehaviour
         public WardrobeTabType category;
         public Toggle toggle;
         public GameObject content;
+        public GameObject hoverTarget;
+        public TMP_Text hoverText;
     }
 
     [Serializable]
@@ -920,6 +923,7 @@ public class WardrobeUIController : MonoBehaviour
                 int index = i;
                 handler = delegate (bool value) { OnTabToggled(index, value); };
                 tab.toggle.onValueChanged.AddListener(handler);
+                SetupTabHover(tab);
             }
 
             bool isActive = tab != null && tab.toggle != null && tab.toggle.isOn;
@@ -928,8 +932,34 @@ public class WardrobeUIController : MonoBehaviour
                 tab.content.SetActive(isActive);
             }
 
+            if (tab != null && tab.hoverTarget != null)
+            {
+                tab.hoverTarget.SetActive(false);
+            }
+
             toggleHandlers.Add(handler);
         }
+    }
+
+    private void SetupTabHover(CategoryTab tab)
+    {
+        if (tab == null || tab.toggle == null)
+        {
+            return;
+        }
+
+        if (tab.hoverTarget != null)
+        {
+            tab.hoverTarget.SetActive(false);
+        }
+
+        CategoryTabHoverHandler hoverHandler = tab.toggle.GetComponent<CategoryTabHoverHandler>();
+        if (hoverHandler == null)
+        {
+            hoverHandler = tab.toggle.gameObject.AddComponent<CategoryTabHoverHandler>();
+        }
+
+        hoverHandler.Initialize(tab.category, tab.hoverTarget, tab.hoverText);
     }
 
     private void OnTabToggled(int tabIndex, bool isOn)
@@ -1344,6 +1374,55 @@ public class WardrobeUIController : MonoBehaviour
             foreach (KeyValuePair<WardrobeTabType, WardrobeItemView> pair in controller.activeSelections)
             {
                 Forward(pair.Key, pair.Value);
+            }
+        }
+    }
+
+    private sealed class CategoryTabHoverHandler : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+    {
+        private WardrobeTabType category;
+        private GameObject hoverTarget;
+        private TMP_Text hoverText;
+
+        public void Initialize(WardrobeTabType category, GameObject hoverTarget, TMP_Text hoverText)
+        {
+            this.category = category;
+            this.hoverTarget = hoverTarget;
+            this.hoverText = hoverText;
+            SetHoverTargetActive(false);
+            UpdateHoverTargetCategoryText();
+        }
+
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            SetHoverTargetActive(true);
+            UpdateHoverTargetCategoryText();
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            SetHoverTargetActive(false);
+        }
+
+        private void SetHoverTargetActive(bool isActive)
+        {
+            if (hoverTarget != null)
+            {
+                hoverTarget.SetActive(isActive);
+            }
+        }
+
+        private void UpdateHoverTargetCategoryText()
+        {
+            if (hoverTarget == null)
+            {
+                return;
+            }
+
+            TMP_Text targetText = hoverText != null ? hoverText : hoverTarget.GetComponentInChildren<TMP_Text>(true);
+            if (targetText != null)
+            {
+                targetText.text = category.ToString();
             }
         }
     }
