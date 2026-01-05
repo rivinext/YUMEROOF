@@ -49,6 +49,12 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
             moveRoutine = null;
         }
 
+        if (target != null)
+        {
+            target.gameObject.SetActive(true);
+            target.anchoredPosition = startPosition;
+        }
+
         if (!isActiveAndEnabled)
         {
             enabled = true;
@@ -66,6 +72,12 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
         {
             StopCoroutine(moveRoutine);
             moveRoutine = null;
+        }
+
+        if (target != null)
+        {
+            target.anchoredPosition = startPosition;
+            target.gameObject.SetActive(false);
         }
     }
 
