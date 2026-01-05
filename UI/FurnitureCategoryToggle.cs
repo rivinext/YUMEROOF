@@ -14,6 +14,8 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
     [SerializeField] private Image icon;
     [SerializeField] private Image background;
     [SerializeField] private Image checkmark;
+    [SerializeField] private GameObject selectedIndicator;
+    [SerializeField] private TMP_Text selectedIndicatorText;
     // UIホバーが反応しない場合は、シーンに EventSystem と GraphicRaycaster があるか確認すること。
     [SerializeField] private GameObject hoverTarget;
 
@@ -31,11 +33,13 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         }
 
         SetHoverTargetActive(false);
+        SetSelectedIndicatorActive(false);
     }
 
     void OnEnable()
     {
         SetHoverTargetActive(false);
+        SetSelectedIndicatorActive(false);
     }
 
     /// <summary>
@@ -45,6 +49,10 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
     {
         categoryId = id;
         Awake();
+        if (selectedIndicatorText != null)
+        {
+            selectedIndicatorText.text = categoryId;
+        }
 
         if (toggle != null)
         {
@@ -52,11 +60,13 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
             toggle.onValueChanged.RemoveAllListeners();
             toggle.onValueChanged.AddListener(isOn =>
             {
+                SetSelectedIndicatorActive(isOn);
                 if (isOn && onSelected != null)
                 {
                     onSelected.Invoke(categoryId);
                 }
             });
+            SetSelectedIndicatorActive(toggle.isOn);
         }
 
         if (label != null)
@@ -118,6 +128,14 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         if (hoverTarget != null)
         {
             hoverTarget.SetActive(isActive);
+        }
+    }
+
+    private void SetSelectedIndicatorActive(bool isActive)
+    {
+        if (selectedIndicator != null)
+        {
+            selectedIndicator.SetActive(isActive);
         }
     }
 }
