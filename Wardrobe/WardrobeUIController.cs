@@ -24,15 +24,6 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private Button closeButton;
     [SerializeField] private ToggleGroup tabToggleGroup;
     [SerializeField] private List<CategoryTab> categoryTabs = new List<CategoryTab>();
-    [Header("Category Tabs")]
-    [SerializeField] private Transform categoryTabContainer;
-    [SerializeField] private ToggleGroup categoryTabToggleGroup;
-    [SerializeField] private GameObject categoryTabTogglePrefab;
-    [SerializeField] private Sprite defaultCategoryIcon;
-    [SerializeField] private Color defaultCategoryColor = Color.white;
-    [SerializeField] private Color defaultCategoryCheckmarkColor = Color.white;
-    [SerializeField] private List<CategoryDisplaySetting> categoryDisplaySettings = new List<CategoryDisplaySetting>();
-    [SerializeField] private List<CategoryContentBinding> categoryContentBindings = new List<CategoryContentBinding>();
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private Transform gamePlayerRoot;
@@ -51,25 +42,6 @@ public class WardrobeUIController : MonoBehaviour
     {
         public WardrobeTabType category;
         public Toggle toggle;
-        public GameObject content;
-    }
-
-    [Serializable]
-    private class CategoryDisplaySetting
-    {
-        public WardrobeTabType category;
-        public string displayName;
-        public Sprite icon;
-        public bool useBackgroundColor;
-        public Color backgroundColor = Color.white;
-        public bool useCheckmarkColor;
-        public Color checkmarkColor = Color.white;
-    }
-
-    [Serializable]
-    private class CategoryContentBinding
-    {
-        public WardrobeTabType category;
         public GameObject content;
     }
 
@@ -149,7 +121,6 @@ public class WardrobeUIController : MonoBehaviour
     private readonly Dictionary<WardrobeTabType, WardrobeItemView> activeSelections = new Dictionary<WardrobeTabType, WardrobeItemView>();
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
-    private readonly List<FurnitureCategoryToggle> runtimeCategoryToggles = new List<FurnitureCategoryToggle>();
 
     private bool hasLoadedSelections;
 
@@ -233,7 +204,6 @@ public class WardrobeUIController : MonoBehaviour
 
         BuildAttachmentLookup();
         BuildGameAttachmentLookup();
-        BuildCategoryTabsFromBindings();
         SetupTabs();
         PopulateCatalogItems();
 
@@ -925,134 +895,9 @@ public class WardrobeUIController : MonoBehaviour
         return instance;
     }
 
-    private void BuildCategoryTabsFromBindings()
-    {
-        if (categoryTabContainer == null || categoryTabTogglePrefab == null || categoryTabToggleGroup == null || categoryContentBindings.Count == 0)
-        {
-            return;
-        }
-
-        ClearRuntimeCategoryTabs();
-        categoryTabs.Clear();
-
-        tabToggleGroup = categoryTabToggleGroup;
-
-        foreach (CategoryContentBinding binding in categoryContentBindings)
-        {
-            if (binding == null || binding.content == null)
-            {
-                continue;
-            }
-
-            CreateCategoryTabToggle(binding.category, binding.content);
-        }
-    }
-
-    private void ClearRuntimeCategoryTabs()
-    {
-        foreach (FurnitureCategoryToggle toggle in runtimeCategoryToggles)
-        {
-            if (toggle != null)
-            {
-                if (Application.isPlaying)
-                {
-                    Destroy(toggle.gameObject);
-                }
-                else
-                {
-                    DestroyImmediate(toggle.gameObject);
-                }
-            }
-        }
-
-        runtimeCategoryToggles.Clear();
-    }
-
-    private void CreateCategoryTabToggle(WardrobeTabType category, GameObject content)
-    {
-        var toggleObj = Instantiate(categoryTabTogglePrefab, categoryTabContainer);
-        var categoryToggle = toggleObj.GetComponent<FurnitureCategoryToggle>();
-        if (categoryToggle == null)
-        {
-            categoryToggle = toggleObj.AddComponent<FurnitureCategoryToggle>();
-        }
-
-        var toggle = categoryToggle.Toggle != null ? categoryToggle.Toggle : toggleObj.GetComponent<Toggle>();
-        if (toggle == null)
-        {
-            toggle = toggleObj.AddComponent<Toggle>();
-        }
-
-        string displayName = ResolveCategoryDisplayName(category);
-        Sprite icon = ResolveCategoryIcon(category);
-        Color backgroundColor = ResolveCategoryBackgroundColor(category);
-        Color checkmarkColor = ResolveCategoryCheckmarkColor(category);
-
-        categoryToggle.Initialize(category.ToString(), displayName, icon, categoryTabToggleGroup, null, true, true, backgroundColor, true, checkmarkColor);
-
-        runtimeCategoryToggles.Add(categoryToggle);
-        categoryTabs.Add(new CategoryTab
-        {
-            category = category,
-            toggle = toggle,
-            content = content,
-        });
-    }
-
-    private string ResolveCategoryDisplayName(WardrobeTabType category)
-    {
-        CategoryDisplaySetting setting = FindCategoryDisplaySetting(category);
-        return setting != null && !string.IsNullOrEmpty(setting.displayName) ? setting.displayName : category.ToString();
-    }
-
-    private Sprite ResolveCategoryIcon(WardrobeTabType category)
-    {
-        CategoryDisplaySetting setting = FindCategoryDisplaySetting(category);
-        return setting != null && setting.icon != null ? setting.icon : defaultCategoryIcon;
-    }
-
-    private Color ResolveCategoryBackgroundColor(WardrobeTabType category)
-    {
-        CategoryDisplaySetting setting = FindCategoryDisplaySetting(category);
-        if (setting != null && setting.useBackgroundColor)
-        {
-            return setting.backgroundColor;
-        }
-
-        return defaultCategoryColor;
-    }
-
-    private Color ResolveCategoryCheckmarkColor(WardrobeTabType category)
-    {
-        CategoryDisplaySetting setting = FindCategoryDisplaySetting(category);
-        if (setting != null && setting.useCheckmarkColor)
-        {
-            return setting.checkmarkColor;
-        }
-
-        if (setting != null && setting.useBackgroundColor)
-        {
-            return setting.backgroundColor;
-        }
-
-        return defaultCategoryCheckmarkColor;
-    }
-
-    private CategoryDisplaySetting FindCategoryDisplaySetting(WardrobeTabType category)
-    {
-        return categoryDisplaySettings
-            .Find(setting => setting != null && setting.category == category);
-    }
-
     private void SetupTabs()
     {
         toggleHandlers.Clear();
-
-        if (tabToggleGroup == null && categoryTabs.Count > 0)
-        {
-            ToggleGroup group = GetComponentInChildren<ToggleGroup>();
-            tabToggleGroup = group;
-        }
 
         for (int i = 0; i < categoryTabs.Count; i++)
         {
