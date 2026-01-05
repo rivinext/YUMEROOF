@@ -108,7 +108,6 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private bool autoCreateAudioSource = true;
 
     [Header("Tutorial")]
-    [SerializeField] private FurniturePlacementTutorialAnimator furniturePlacementTutorialAnimator;
 
     [Header("Auto Reopen")]
     public Toggle autoReopenToggle;
@@ -998,7 +997,6 @@ public class InventoryUI : MonoBehaviour
 
         panelScaleAnimator?.Close();
         NotifyCameraController(false);
-        StopFurniturePlacementTutorial();
 
         if (!isPlacingItem)
         {
@@ -1115,54 +1113,7 @@ public class InventoryUI : MonoBehaviour
             binding.content.SetActive(binding.type == targetType);
         }
 
-        if (targetType == InventoryTabType.Furniture)
-        {
-            if (FurniturePlacementTutorialController.IsTutorialDisabled)
-            {
-                if (debugMode)
-                {
-                    Debug.Log("[UI] Furniture placement tutorial is disabled. Skipping activation.");
-                }
-            }
-            else if (furniturePlacementTutorialAnimator != null
-                && !furniturePlacementTutorialAnimator.gameObject.activeSelf)
-            {
-                furniturePlacementTutorialAnimator.gameObject.SetActive(true);
-            }
-
-            PlayFurniturePlacementTutorial();
-        }
-        else
-        {
-            StopFurniturePlacementTutorial();
-        }
-
         RefreshInventoryDisplay();
-    }
-
-    private void PlayFurniturePlacementTutorial()
-    {
-        if (furniturePlacementTutorialAnimator == null)
-        {
-            return;
-        }
-
-        if (FurniturePlacementTutorialController.IsTutorialDisabled)
-        {
-            return;
-        }
-
-        furniturePlacementTutorialAnimator.Play();
-    }
-
-    private void StopFurniturePlacementTutorial()
-    {
-        if (furniturePlacementTutorialAnimator == null)
-        {
-            return;
-        }
-
-        furniturePlacementTutorialAnimator.Stop();
     }
 
     public void RefreshInventoryDisplay()
