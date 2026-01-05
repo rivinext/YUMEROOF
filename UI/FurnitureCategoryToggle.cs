@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
 
@@ -7,12 +8,14 @@ using TMPro;
 /// 家具カテゴリ用のトグル。アイコンとラベルを扱いやすくまとめる。
 /// </summary>
 [RequireComponent(typeof(Toggle))]
-public class FurnitureCategoryToggle : MonoBehaviour
+public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [SerializeField] private TMP_Text label;
     [SerializeField] private Image icon;
     [SerializeField] private Image background;
     [SerializeField] private Image checkmark;
+    // UIホバーが反応しない場合は、シーンに EventSystem と GraphicRaycaster があるか確認すること。
+    [SerializeField] private GameObject hoverTarget;
 
     private Toggle toggle;
     private string categoryId;
@@ -26,6 +29,13 @@ public class FurnitureCategoryToggle : MonoBehaviour
         {
             toggle = GetComponent<Toggle>();
         }
+
+        SetHoverTargetActive(false);
+    }
+
+    void OnEnable()
+    {
+        SetHoverTargetActive(false);
     }
 
     /// <summary>
@@ -90,6 +100,24 @@ public class FurnitureCategoryToggle : MonoBehaviour
         else
         {
             toggle.SetIsOnWithoutNotify(isOn);
+        }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        SetHoverTargetActive(true);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        SetHoverTargetActive(false);
+    }
+
+    private void SetHoverTargetActive(bool isActive)
+    {
+        if (hoverTarget != null)
+        {
+            hoverTarget.SetActive(isActive);
         }
     }
 }
