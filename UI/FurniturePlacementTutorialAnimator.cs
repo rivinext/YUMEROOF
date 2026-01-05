@@ -13,7 +13,6 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
     [SerializeField] private GameObject[] additionalTargets;
 
     private Coroutine moveRoutine;
-    private bool resetPositionOnStart;
 
     private void Awake()
     {
@@ -22,7 +21,6 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
             target = GetComponent<RectTransform>();
         }
 
-        resetPositionOnStart = true;
     }
 
     private void OnEnable()
@@ -56,11 +54,7 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
         if (target != null)
         {
             target.gameObject.SetActive(true);
-            if (resetPositionOnStart)
-            {
-                target.anchoredPosition = startPosition;
-                resetPositionOnStart = false;
-            }
+            target.anchoredPosition = startPosition;
         }
 
         SetAdditionalTargetsActive(true);
@@ -88,7 +82,6 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
         {
             target.anchoredPosition = startPosition;
             target.gameObject.SetActive(false);
-            resetPositionOnStart = true;
         }
 
         SetAdditionalTargetsActive(false);
