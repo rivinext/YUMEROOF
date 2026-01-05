@@ -10,6 +10,7 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
     [SerializeField] private float endWaitSeconds = 0.5f;
     [SerializeField] private float transitionSeconds = 1f;
     [SerializeField] private AnimationCurve moveCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+    [SerializeField] private GameObject[] additionalTargets;
 
     private Coroutine moveRoutine;
     private bool resetPositionOnStart;
@@ -62,6 +63,8 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
             }
         }
 
+        SetAdditionalTargetsActive(true);
+
         if (!isActiveAndEnabled)
         {
             enabled = true;
@@ -87,6 +90,8 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
             target.gameObject.SetActive(false);
             resetPositionOnStart = true;
         }
+
+        SetAdditionalTargetsActive(false);
     }
 
     private IEnumerator MoveLoop()
@@ -130,6 +135,24 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
             {
                 yield return new WaitForSeconds(endWaitSeconds);
             }
+        }
+    }
+
+    private void SetAdditionalTargetsActive(bool isActive)
+    {
+        if (additionalTargets == null || additionalTargets.Length == 0)
+        {
+            return;
+        }
+
+        foreach (GameObject additionalTarget in additionalTargets)
+        {
+            if (additionalTarget == null)
+            {
+                continue;
+            }
+
+            additionalTarget.SetActive(isActive);
         }
     }
 }
