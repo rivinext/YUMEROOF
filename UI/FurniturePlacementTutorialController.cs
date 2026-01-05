@@ -2,20 +2,18 @@ using UnityEngine;
 
 public class FurniturePlacementTutorialController : MonoBehaviour
 {
+    public const string DisabledPrefKey = "Tutorial.FurniturePlacement.Disabled";
+
     [SerializeField] private bool debugMode = false;
 
     private InventoryPlacementBridge placementBridge;
 
-    public static bool IsTutorialDisabled { get; private set; }
+    public static bool IsTutorialDisabled => PlayerPrefs.GetInt(DisabledPrefKey, 0) == 1;
 
     public static void DisableTutorial()
     {
-        SetTutorialDisabled(true);
-    }
-
-    public static void SetTutorialDisabled(bool disabled)
-    {
-        IsTutorialDisabled = disabled;
+        PlayerPrefs.SetInt(DisabledPrefKey, 1);
+        PlayerPrefs.Save();
     }
 
     private void OnEnable()
