@@ -23,6 +23,8 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private Button openCloseButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private ToggleGroup tabToggleGroup;
+    [SerializeField] private Toggle categoryTabTogglePrefab;
+    [SerializeField] private Transform categoryTabContainer;
     [SerializeField] private List<CategoryTab> categoryTabs = new List<CategoryTab>();
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
@@ -116,7 +118,7 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private WardrobeEquipEvent onItemEquipped = new WardrobeEquipEvent();
 
     private readonly List<UnityAction<bool>> toggleHandlers = new List<UnityAction<bool>>();
-    private readonly List<Toggle> tabToggles = new List<Toggle>();
+    private readonly List<Toggle> categoryTabToggles = new List<Toggle>();
     private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> attachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
     private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> gameAttachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
     private readonly Dictionary<WardrobeTabType, EquippedInstanceSet> previewEquippedInstances = new Dictionary<WardrobeTabType, EquippedInstanceSet>();
@@ -908,13 +910,13 @@ public class WardrobeUIController : MonoBehaviour
             tabToggleGroup = group;
         }
 
-        RefreshTabToggles();
+        ClearCategoryTabToggles();
 
         for (int i = 0; i < categoryTabs.Count; i++)
         {
             CategoryTab tab = categoryTabs[i];
             UnityAction<bool> handler = null;
-            Toggle toggle = GetTabToggle(i);
+            Toggle toggle = CreateTabToggle();
 
             if (toggle != null)
             {
@@ -922,6 +924,8 @@ public class WardrobeUIController : MonoBehaviour
                 {
                     toggle.group = tabToggleGroup;
                 }
+
+                ApplyTabVisuals(toggle, tab);
 
                 int index = i;
                 handler = delegate (bool value) { OnTabToggled(index, value); };
@@ -934,6 +938,7 @@ public class WardrobeUIController : MonoBehaviour
                 tab.content.SetActive(isActive);
             }
 
+            categoryTabToggles.Add(toggle);
             toggleHandlers.Add(handler);
         }
     }
@@ -1091,34 +1096,111 @@ public class WardrobeUIController : MonoBehaviour
         }
     }
 
-    private void RefreshTabToggles()
+    private void ClearCategoryTabToggles()
     {
-        tabToggles.Clear();
-
-        if (tabToggleGroup == null)
+        if (categoryTabContainer != null)
         {
-            return;
-        }
-
-        Toggle[] toggles = tabToggleGroup.GetComponentsInChildren<Toggle>(true);
-        for (int i = 0; i < toggles.Length; i++)
-        {
-            Toggle toggle = toggles[i];
-            if (toggle != null)
+            Toggle[] existingToggles = categoryTabContainer.GetComponentsInChildren<Toggle>(true);
+            for (int i = 0; i < existingToggles.Length; i++)
             {
-                tabToggles.Add(toggle);
+                Toggle toggle = existingToggles[i];
+                if (toggle == null)
+                {
+                    continue;
+                }
+
+                if (Application.isPlaying)
+                {
+                    Destroy(toggle.gameObject);
+                }
+                else
+                {
+                    DestroyImmediate(toggle.gameObject);
+                }
             }
         }
+
+        categoryTabToggles.Clear();
     }
 
     private Toggle GetTabToggle(int index)
     {
-        if (index < 0 || index >= tabToggles.Count)
+        if (index < 0 || index >= categoryTabToggles.Count)
         {
             return null;
         }
 
-        return tabToggles[index];
+        return categoryTabToggles[index];
+    }
+
+    private Toggle CreateTabToggle()
+    {
+        if (categoryTabTogglePrefab == null || categoryTabContainer == null)
+        {
+            return null;
+        }
+
+        return Instantiate(categoryTabTogglePrefab, categoryTabContainer);
+    }
+
+    private void ApplyTabVisuals(Toggle toggle, CategoryTab tab)
+    {
+        if (toggle == null || tab == null)
+        {
+            return;
+        }
+
+        Image backgroundImage = toggle.targetGraphic as Image;
+        if (backgroundImage == null)
+        {
+            backgroundImage = toggle.GetComponent<Image>();
+        }
+
+        if (backgroundImage != null)
+        {
+            backgroundImage.color = tab.backgroundColor;
+        }
+
+        Image checkmarkImage = toggle.graphic as Image;
+        if (checkmarkImage != null)
+        {
+            checkmarkImage.color = tab.checkmarkColor;
+        }
+
+        Image iconImage = FindTabIconImage(toggle.transform, backgroundImage, checkmarkImage);
+        if (iconImage != null)
+        {
+            iconImage.sprite = tab.icon;
+        }
+    }
+
+    private static Image FindTabIconImage(Transform root, Image backgroundImage, Image checkmarkImage)
+    {
+        if (root == null)
+        {
+            return null;
+        }
+
+        Image[] images = root.GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < images.Length; i++)
+        {
+            Image image = images[i];
+            if (image != null && string.Equals(image.gameObject.name, "icon", StringComparison.OrdinalIgnoreCase))
+            {
+                return image;
+            }
+        }
+
+        for (int i = 0; i < images.Length; i++)
+        {
+            Image image = images[i];
+            if (image != null && image != backgroundImage && image != checkmarkImage)
+            {
+                return image;
+            }
+        }
+
+        return null;
     }
 
     private void UpdatePreviewActivation(bool visible)
