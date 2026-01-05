@@ -1117,14 +1117,7 @@ public class InventoryUI : MonoBehaviour
 
         if (targetType == InventoryTabType.Furniture)
         {
-            if (FurniturePlacementTutorialController.IsTutorialDisabled)
-            {
-                if (debugMode)
-                {
-                    Debug.Log("[UI] Furniture placement tutorial is disabled. Skipping activation.");
-                }
-            }
-            else if (furniturePlacementTutorialAnimator != null
+            if (furniturePlacementTutorialAnimator != null
                 && !furniturePlacementTutorialAnimator.gameObject.activeSelf)
             {
                 furniturePlacementTutorialAnimator.gameObject.SetActive(true);
