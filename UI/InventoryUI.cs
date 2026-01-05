@@ -1117,11 +1117,6 @@ public class InventoryUI : MonoBehaviour
 
         if (targetType == InventoryTabType.Furniture)
         {
-            if (furniturePlacementTutorialAnimator != null)
-            {
-                furniturePlacementTutorialAnimator.gameObject.SetActive(true);
-            }
-
             PlayFurniturePlacementTutorial();
         }
         else
