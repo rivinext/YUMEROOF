@@ -287,7 +287,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         data.location = SceneManager.GetActiveScene().name;
         var milestone = FindFirstObjectByType<MilestoneManager>();
         data.chapterName = milestone != null ? milestone.CurrentMilestoneID : "";
-        data.isFurniturePlacementTutorialDisabled = FurniturePlacementTutorialController.IsTutorialDisabled;
     }
 
     void SaveManagers(StorySaveData data)
@@ -447,8 +446,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (player != null)
             player.ApplySaveData(data.player);
 
-        ApplyFurniturePlacementTutorialState(data);
-
         ApplyInventory(data.inventory, data.legacyInventory);
         ApplyFurniture(data.furniture);
         ApplyTime(data.clock);
@@ -483,8 +480,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (player != null)
             player.ApplySaveData(data.player);
 
-        ApplyFurniturePlacementTutorialState(data);
-
         ApplyInventory(data.ownedItems, data.legacyOwnedItems);
         ApplyFurniture(data.furniture);
         ApplyTime(data.clock);
@@ -515,12 +510,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     void ApplyHuePresets(MaterialHueSaveData data)
     {
         MaterialHuePresetManager.ApplySaveDataToAllManagers(data);
-    }
-
-    void ApplyFurniturePlacementTutorialState(BaseSaveData data)
-    {
-        FurniturePlacementTutorialController.SetTutorialDisabled(
-            data != null && data.isFurniturePlacementTutorialDisabled);
     }
 
     void ApplyInventory(List<InventoryEntry> items, List<string> legacyItems)
