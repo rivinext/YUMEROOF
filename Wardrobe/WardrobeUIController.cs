@@ -25,6 +25,8 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private ToggleGroup tabToggleGroup;
     [SerializeField] private Toggle categoryTabTogglePrefab;
     [SerializeField] private Transform categoryTabContainer;
+    [SerializeField] private GameObject categoryTabContentPrefab;
+    [SerializeField] private Transform categoryTabContentContainer;
     [SerializeField] private List<CategoryTab> categoryTabs = new List<CategoryTab>();
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
@@ -119,6 +121,7 @@ public class WardrobeUIController : MonoBehaviour
 
     private readonly List<UnityAction<bool>> toggleHandlers = new List<UnityAction<bool>>();
     private readonly List<Toggle> categoryTabToggles = new List<Toggle>();
+    private readonly List<GameObject> generatedCategoryTabContents = new List<GameObject>();
     private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> attachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
     private readonly Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>> gameAttachmentLookup = new Dictionary<WardrobeTabType, Dictionary<string, AttachmentPoint>>();
     private readonly Dictionary<WardrobeTabType, EquippedInstanceSet> previewEquippedInstances = new Dictionary<WardrobeTabType, EquippedInstanceSet>();
@@ -911,12 +914,18 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         ClearCategoryTabToggles();
+        ClearGeneratedCategoryTabContents();
 
         for (int i = 0; i < categoryTabs.Count; i++)
         {
             CategoryTab tab = categoryTabs[i];
             UnityAction<bool> handler = null;
             Toggle toggle = CreateTabToggle();
+
+            if (tab != null && tab.content == null)
+            {
+                tab.content = CreateTabContent(tab.category);
+            }
 
             if (toggle != null)
             {
@@ -1123,6 +1132,44 @@ public class WardrobeUIController : MonoBehaviour
         categoryTabToggles.Clear();
     }
 
+    private void ClearGeneratedCategoryTabContents()
+    {
+        if (generatedCategoryTabContents.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<GameObject> generatedSet = new HashSet<GameObject>(generatedCategoryTabContents);
+        for (int i = 0; i < categoryTabs.Count; i++)
+        {
+            CategoryTab tab = categoryTabs[i];
+            if (tab != null && tab.content != null && generatedSet.Contains(tab.content))
+            {
+                tab.content = null;
+            }
+        }
+
+        for (int i = 0; i < generatedCategoryTabContents.Count; i++)
+        {
+            GameObject content = generatedCategoryTabContents[i];
+            if (content == null)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(content);
+            }
+            else
+            {
+                DestroyImmediate(content);
+            }
+        }
+
+        generatedCategoryTabContents.Clear();
+    }
+
     private Toggle GetTabToggle(int index)
     {
         if (index < 0 || index >= categoryTabToggles.Count)
@@ -1141,6 +1188,24 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         return Instantiate(categoryTabTogglePrefab, categoryTabContainer);
+    }
+
+    private GameObject CreateTabContent(WardrobeTabType category)
+    {
+        if (categoryTabContentPrefab == null || categoryTabContentContainer == null)
+        {
+            return null;
+        }
+
+        GameObject content = Instantiate(categoryTabContentPrefab, categoryTabContentContainer);
+        if (content == null)
+        {
+            return null;
+        }
+
+        content.name = $"TabCategory_{category}";
+        generatedCategoryTabContents.Add(content);
+        return content;
     }
 
     private void ApplyTabVisuals(Toggle toggle, CategoryTab tab)
