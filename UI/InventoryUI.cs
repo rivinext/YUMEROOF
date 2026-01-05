@@ -107,6 +107,8 @@ public class InventoryUI : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float craftButtonSfxVolume = 1f;
     [SerializeField] private bool autoCreateAudioSource = true;
 
+    [Header("Tutorial")]
+    [SerializeField] private FurniturePlacementTutorialAnimator furniturePlacementTutorialAnimator;
 
     [Header("Auto Reopen")]
     public Toggle autoReopenToggle;
@@ -996,6 +998,7 @@ public class InventoryUI : MonoBehaviour
 
         panelScaleAnimator?.Close();
         NotifyCameraController(false);
+        StopFurniturePlacementTutorial();
 
         if (!isPlacingItem)
         {
@@ -1112,7 +1115,41 @@ public class InventoryUI : MonoBehaviour
             binding.content.SetActive(binding.type == targetType);
         }
 
+        if (targetType == InventoryTabType.Furniture)
+        {
+            PlayFurniturePlacementTutorial();
+        }
+        else
+        {
+            StopFurniturePlacementTutorial();
+        }
+
         RefreshInventoryDisplay();
+    }
+
+    private void PlayFurniturePlacementTutorial()
+    {
+        if (furniturePlacementTutorialAnimator == null)
+        {
+            return;
+        }
+
+        if (FurniturePlacementTutorialController.IsTutorialDisabled)
+        {
+            return;
+        }
+
+        furniturePlacementTutorialAnimator.Play();
+    }
+
+    private void StopFurniturePlacementTutorial()
+    {
+        if (furniturePlacementTutorialAnimator == null)
+        {
+            return;
+        }
+
+        furniturePlacementTutorialAnimator.Stop();
     }
 
     public void RefreshInventoryDisplay()
