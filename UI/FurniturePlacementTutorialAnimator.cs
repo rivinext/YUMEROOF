@@ -11,7 +11,6 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
     [SerializeField] private float transitionSeconds = 1f;
     [SerializeField] private AnimationCurve moveCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
     [SerializeField] private GameObject[] additionalTargets;
-    [SerializeField] private CanvasGroup visibilityGroup;
 
     private Coroutine moveRoutine;
     private bool resetPositionOnStart;
@@ -21,11 +20,6 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
         if (target == null)
         {
             target = GetComponent<RectTransform>();
-        }
-
-        if (visibilityGroup == null)
-        {
-            visibilityGroup = GetComponent<CanvasGroup>();
         }
 
         resetPositionOnStart = true;
@@ -59,11 +53,6 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
             moveRoutine = null;
         }
 
-        if (!gameObject.activeSelf)
-        {
-            gameObject.SetActive(true);
-        }
-
         if (target != null)
         {
             target.gameObject.SetActive(true);
@@ -74,7 +63,6 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
             }
         }
 
-        SetVisibility(true);
         SetAdditionalTargetsActive(true);
 
         if (!isActiveAndEnabled)
@@ -99,10 +87,11 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
         if (target != null)
         {
             target.anchoredPosition = startPosition;
+            target.gameObject.SetActive(false);
             resetPositionOnStart = true;
         }
 
-        SetVisibility(false);
+        SetAdditionalTargetsActive(false);
     }
 
     private IEnumerator MoveLoop()
@@ -165,17 +154,5 @@ public class FurniturePlacementTutorialAnimator : MonoBehaviour
 
             additionalTarget.SetActive(isActive);
         }
-    }
-
-    private void SetVisibility(bool isVisible)
-    {
-        if (visibilityGroup == null)
-        {
-            return;
-        }
-
-        visibilityGroup.alpha = isVisible ? 1f : 0f;
-        visibilityGroup.blocksRaycasts = isVisible;
-        visibilityGroup.interactable = isVisible;
     }
 }
