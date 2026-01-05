@@ -22,7 +22,8 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private WardrobePanelAnimator panelAnimator;
     [SerializeField] private Button openCloseButton;
     [SerializeField] private Button closeButton;
-    private readonly List<CategoryTab> categoryTabs = new List<CategoryTab>();
+    [SerializeField] private ToggleGroup tabToggleGroup;
+    [SerializeField] private List<CategoryTab> categoryTabs = new List<CategoryTab>();
     [Header("Category Tabs")]
     [SerializeField] private Transform categoryTabContainer;
     [SerializeField] private ToggleGroup categoryTabToggleGroup;
@@ -934,6 +935,8 @@ public class WardrobeUIController : MonoBehaviour
         ClearRuntimeCategoryTabs();
         categoryTabs.Clear();
 
+        tabToggleGroup = categoryTabToggleGroup;
+
         foreach (CategoryContentBinding binding in categoryContentBindings)
         {
             if (binding == null || binding.content == null)
@@ -1045,6 +1048,12 @@ public class WardrobeUIController : MonoBehaviour
     {
         toggleHandlers.Clear();
 
+        if (tabToggleGroup == null && categoryTabs.Count > 0)
+        {
+            ToggleGroup group = GetComponentInChildren<ToggleGroup>();
+            tabToggleGroup = group;
+        }
+
         for (int i = 0; i < categoryTabs.Count; i++)
         {
             CategoryTab tab = categoryTabs[i];
@@ -1052,9 +1061,9 @@ public class WardrobeUIController : MonoBehaviour
 
             if (tab != null && tab.toggle != null)
             {
-                if (categoryTabToggleGroup != null)
+                if (tabToggleGroup != null)
                 {
-                    tab.toggle.group = categoryTabToggleGroup;
+                    tab.toggle.group = tabToggleGroup;
                 }
 
                 int index = i;
