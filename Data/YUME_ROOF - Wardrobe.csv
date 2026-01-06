@@ -3,6 +3,16 @@ H_a,Hair,item_h_a,name_h_a,h_a_image,h_a_model,desc_h_a
 H_b,Hair,item_h_b,name_h_b,h_b_image,h_b_model,desc_h_b
 H_c,Hair,item_h_c,name_h_c,h_c_image,h_c_model,desc_h_c
 H_d,Hair,item_h_d,name_h_d,h_d_image,h_d_model,desc_h_d
+H_e,Hair,item_h_e,name_h_e,h_e_image,h_e_model,desc_h_e
+H_f,Hair,item_h_f,name_h_f,h_f_image,h_f_model,desc_h_f
+H_g,Hair,item_h_g,name_h_g,h_g_image,h_g_model,desc_h_g
+H_h,Hair,item_h_h,name_h_h,h_h_image,h_h_model,desc_h_h
+H_i,Hair,item_h_i,name_h_i,h_i_image,h_i_model,desc_h_i
+H_j,Hair,item_h_j,name_h_j,h_j_image,h_j_model,desc_h_j
+H_k,Hair,item_h_k,name_h_k,h_k_image,h_k_model,desc_h_k
+H_l,Hair,item_h_l,name_h_l,h_l_image,h_l_model,desc_h_l
+H_n,Hair,item_h_n,name_h_n,h_n_image,h_n_model,desc_h_n
+H_m,Hair,item_h_m,name_h_m,h_m_image,h_m_model,desc_h_m
 E_Empty,Eyewear,item_e_empty,name_e_empty,e_empty_image,e_empty_model,desc_e_empty
 E_Sunglasses,Eyewear,item_e_sunglasses,name_e_sunglasses,e_sunglasses_image,e_sunglasses_model,desc_e_sunglasses
 E_glasses,Eyewear,item_e_glasses,name_e_glasses,e_glasses_image,e_glasses_model,desc_e_glasses
