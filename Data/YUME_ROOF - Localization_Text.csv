@@ -1,109 +1,109 @@
 Key,Id,English(en),Japanese(ja),Chinese (Simplified)(zh-Hans),Chinese (Traditional)(zh-TW),French(fr),German(de),Italian(it),Portuguese(pt),Spanish(es),Korean(ko),Russian(ru)
-StoryMode,,StoryMode,ストーリーモード,,,,,,,,,
-CreativeMode,,CreativeMode,クリエイティブモード,,,,,,,,,
-Language,,Language,言語,,,,,,,,,
-Full Screen,,Full Screen,全画面,,,,,,,,,
-Resolution,,Resolution,解像度,,,,,,,,,
-SFX,,SFX,効果音,,,,,,,,,
-BGM,,BGM,音楽,,,,,,,,,
-Player Silhouette,,Player Silhouette,プレイヤーシルエット,,,,,,,,,
-Wall Visibility,,Wall Visibility,壁の可視化,,,,,,,,,
-Main menu,,Main menu,メインメニューへ,,,,,,,,,
-Exit game,,Exit game,ゲームをおわる,,,,,,,,,
-Place,,Place,配置,,,,,,,,,
-Rotation,,Rotation,回転,,,,,,,,,
-Mirror,,Mirror,反転,,,,,,,,,
-Del,,Delete,削除,,,,,,,,,
-Cancel,,Cancel,キャンセル,,,,,,,,,
+StoryMode,,StoryMode,ストーリーモード,故事模式,故事模式,Mode Histoire,Story-Modus,Modalità Storia,Modo História,Modo Historia,스토리 모드,Сюжетный режим
+CreativeMode,,CreativeMode,クリエイティブモード,创意模式,創意模式,Mode Créatif,Kreativmodus,Modalità Creativa,Modo Criativo,Modo Creativo,크리에이티브 모드,Творческий режим
+Language,,Language,言語,语言,語言,Langue,Sprache,Lingua,Idioma,Idioma,언어,Язык
+Full Screen,,Full Screen,全画面,全屏,全螢幕,Plein écran,Vollbild,Schermo intero,Tela cheia,Pantalla completa,전체 화면,Полный экран
+Resolution,,Resolution,解像度,分辨率,解析度,Résolution,Auflösung,Risoluzione,Resolução,Resolución,해상도,Разрешение
+SFX,,SFX,効果音,音效,音效,Effets sonores,Soundeffekte,Effetti sonori,Efeitos sonoros,Efectos de sonido,효과음,Звуковые эффекты
+BGM,,BGM,音楽,背景音乐,背景音樂,Musique,Musik,Musica,Música,Música,음악,Музыка
+Player Silhouette,,Player Silhouette,プレイヤーシルエット,玩家轮廓,玩家輪廓,Silhouette du joueur,Spielersilhouette,Sagoma giocatore,Silhueta do jogador,Silueta del jugador,플레이어 실루엣,Силуэт игрока
+Wall Visibility,,Wall Visibility,壁の可視化,墙体可见性,牆體可見性,Visibilité des murs,Wandsichtbarkeit,Visibilità pareti,Visibilidade das paredes,Visibilidad de paredes,벽 가시성,Видимость стен
+Main menu,,Main menu,メインメニューへ,主菜单,主選單,Menu principal,Hauptmenü,Menu principale,Menu principal,Menú principal,메인 메뉴,Главное меню
+Exit game,,Exit game,ゲームをおわる,退出游戏,退出遊戲,Quitter le jeu,Spiel beenden,Esci dal gioco,Sair do jogo,Salir del juego,게임 종료,Выйти из игры
+Place,,Place,配置,放置,放置,Placer,Platzieren,Posiziona,Posicionar,Colocar,배치,Разместить
+Rotation,,Rotation,回転,旋转,旋轉,Rotation,Drehung,Rotazione,Rotação,Rotación,회전,Поворот
+Mirror,,Mirror,反転,镜像,鏡像,Miroir,Spiegeln,Specchia,Espelhar,Reflejar,반전,Отразить
+Del,,Delete,削除,删除,刪除,Supprimer,Löschen,Elimina,Excluir,Eliminar,삭제,Удалить
+Cancel,,Cancel,キャンセル,取消,取消,Annuler,Abbrechen,Annulla,Cancelar,Cancelar,취소,Отмена
 ,,,,,,,,,,,,
 ,,,,,,,,,,,,
-Delete,,Delete,削除,,,,,,,,,
-ConfirmDelete,,Are you sure you want to delete this data?,本当に削除しますか？,,,,,,,,,
-Yes,,Yes,はい,,,,,,,,,
-No,,No,いいえ,,,,,,,,,
-Loading,,Loading,ロード中,,,,,,,,,
-Start,,Start,スタート,,,,,,,,,
-Slot1,,Slot1,スロット1,,,,,,,,,
-Slot2,,Slot2,スロット2,,,,,,,,,
-Slot3,,Slot3,スロット3,,,,,,,,,
-Day,,Day,日にち,,,,,,,,,
-Cozy,,Cozy,快適さ,,,,,,,,,
-Nature,,Nature,自然度,,,,,,,,,
-Item,,Item,アイテム,,,,,,,,,
-Common,,Common,ふつう,,,,,,,,,
-Uncommon,,Uncommon,いいかんじ,,,,,,,,,
-Rare,,Rare,レア,,,,,,,,,
-milestone_00,,Welcome,ようこそ,,,,,,,,,
-milestone_01,,Welcome1,ようこそ1,,,,,,,,,
-milestone_02,,Welcome2,ようこそ2,,,,,,,,,
-milestone_03,,Welcome3,ようこそ3,,,,,,,,,
-milestone_04,,Welcome4,ようこそ4,,,,,,,,,
-milestone_05,,Welcome5,ようこそ5,,,,,,,,,
-milestone_06,,Welcome6,ようこそ6,,,,,,,,,
-milestone_07,,Welcome7,ようこそ7,,,,,,,,,
-milestone_08,,Welcome8,ようこそ8,,,,,,,,,
-milestone_99,,Welcome9,ようこそ9,,,,,,,,,
-Reward,,Reward,報酬,,,,,,,,,
+Delete,,Delete,削除,删除,刪除,Supprimer,Löschen,Elimina,Excluir,Eliminar,삭제,Удалить
+ConfirmDelete,,Are you sure you want to delete this data?,本当に削除しますか？,确定要删除此数据吗？,確定要刪除此資料嗎？,Voulez-vous vraiment supprimer ces données ?,Möchten Sie diese Daten wirklich löschen?,Vuoi davvero eliminare questi dati?,Tem certeza de que deseja excluir estes dados?,¿Seguro que quieres eliminar estos datos?,이 데이터를 삭제하시겠습니까?,"Вы уверены, что хотите удалить эти данные?"
+Yes,,Yes,はい,是,是,Oui,Ja,Sì,Sim,Sí,예,Да
+No,,No,いいえ,否,否,Non,Nein,No,Não,No,아니요,Нет
+Loading,,Loading,ロード中,载入中,載入中,Chargement,Laden,Caricamento,Carregando,Cargando,로딩 중,Загрузка
+Start,,Start,スタート,开始,開始,Démarrer,Start,Avvia,Iniciar,Iniciar,시작,Начать
+Slot1,,Slot1,スロット1,插槽1,插槽1,Emplacement 1,Slot 1,Slot 1,Slot 1,Ranura 1,슬롯 1,Слот 1
+Slot2,,Slot2,スロット2,插槽2,插槽2,Emplacement 2,Slot 2,Slot 2,Slot 2,Ranura 2,슬롯 2,Слот 2
+Slot3,,Slot3,スロット3,插槽3,插槽3,Emplacement 3,Slot 3,Slot 3,Slot 3,Ranura 3,슬롯 3,Слот 3
+Day,,Day,日にち,天数,天數,Jour,Tag,Giorno,Dia,Día,일,День
+Cozy,,Cozy,快適さ,舒适度,舒適度,Confort,Gemütlichkeit,Comfort,Conforto,Comodidad,아늑함,Уют
+Nature,,Nature,自然度,自然度,自然度,Nature,Natur,Natura,Natureza,Naturaleza,자연,Природа
+Item,,Item,アイテム,物品,物品,Objet,Gegenstand,Oggetto,Item,Objeto,아이템,Предмет
+Common,,Common,ふつう,普通,普通,Commun,Gewöhnlich,Comune,Comum,Común,일반,Обычный
+Uncommon,,Uncommon,いいかんじ,罕见,罕見,Inhabituel,Ungewöhnlich,Non comune,Incomum,Poco común,고급,Необычный
+Rare,,Rare,レア,稀有,稀有,Rare,Selten,Raro,Raro,Raro,희귀,Редкий
+milestone_00,,Welcome,ようこそ,欢迎,歡迎,Bienvenue,Willkommen,Benvenuto,Bem-vindo,Bienvenido,환영합니다,Добро пожаловать
+milestone_01,,Welcome1,ようこそ1,欢迎1,歡迎1,Bienvenue 1,Willkommen 1,Benvenuto 1,Bem-vindo 1,Bienvenido 1,환영합니다 1,Добро пожаловать 1
+milestone_02,,Welcome2,ようこそ2,欢迎2,歡迎2,Bienvenue 2,Willkommen 2,Benvenuto 2,Bem-vindo 2,Bienvenido 2,환영합니다 2,Добро пожаловать 2
+milestone_03,,Welcome3,ようこそ3,欢迎3,歡迎3,Bienvenue 3,Willkommen 3,Benvenuto 3,Bem-vindo 3,Bienvenido 3,환영합니다 3,Добро пожаловать 3
+milestone_04,,Welcome4,ようこそ4,欢迎4,歡迎4,Bienvenue 4,Willkommen 4,Benvenuto 4,Bem-vindo 4,Bienvenido 4,환영합니다 4,Добро пожаловать 4
+milestone_05,,Welcome5,ようこそ5,欢迎5,歡迎5,Bienvenue 5,Willkommen 5,Benvenuto 5,Bem-vindo 5,Bienvenido 5,환영합니다 5,Добро пожаловать 5
+milestone_06,,Welcome6,ようこそ6,欢迎6,歡迎6,Bienvenue 6,Willkommen 6,Benvenuto 6,Bem-vindo 6,Bienvenido 6,환영합니다 6,Добро пожаловать 6
+milestone_07,,Welcome7,ようこそ7,欢迎7,歡迎7,Bienvenue 7,Willkommen 7,Benvenuto 7,Bem-vindo 7,Bienvenido 7,환영합니다 7,Добро пожаловать 7
+milestone_08,,Welcome8,ようこそ8,欢迎8,歡迎8,Bienvenue 8,Willkommen 8,Benvenuto 8,Bem-vindo 8,Bienvenido 8,환영합니다 8,Добро пожаловать 8
+milestone_99,,Welcome9,ようこそ9,欢迎9,歡迎9,Bienvenue 9,Willkommen 9,Benvenuto 9,Bem-vindo 9,Bienvenido 9,환영합니다 9,Добро пожаловать 9
+Reward,,Reward,報酬,奖励,獎勵,Récompense,Belohnung,Ricompensa,Recompensa,Recompensa,보상,Награда
 ,,,,,,,,,,,,
-Orthographic,,Orthographic,正投影,,,,,,,,,
-Perspective,,Perspective,遠近法,,,,,,,,,
-FOV,,FOV,視野角,,,,,,,,,
-Distance,,Distance,距離,,,,,,,,,
-Depth of Field,,Depth of Field,被写界深度,,,,,,,,,
-Focus Distance,,Focus Distance,焦点距離,,,,,,,,,
-Focal Length,,Focal Length,レンズ焦点距離,,,,,,,,,
-Aperture,,Aperture,絞り,,,,,,,,,
-Screenshot,,Screenshot,スクリーンショット,,,,,,,,,
-Emote,,Emote,エモート,,,,,,,,,
-Eye,,Eye,目,,,,,,,,,
-Mouth,,Mouth,口,,,,,,,,,
+Orthographic,,Orthographic,正投影,正交投影,正交投影,Orthographique,Orthografisch,Ortogonale,Ortográfica,Ortográfica,정사영,Ортографическая
+Perspective,,Perspective,遠近法,透视,透視,Perspective,Perspektive,Prospettiva,Perspectiva,Perspectiva,원근,Перспектива
+FOV,,FOV,視野角,视野,視野,Champ de vision,Sichtfeld,Campo visivo,Campo de visão,Campo de visión,시야각,Угол обзора
+Distance,,Distance,距離,距离,距離,Distance,Abstand,Distanza,Distância,Distancia,거리,Дистанция
+Depth of Field,,Depth of Field,被写界深度,景深,景深,Profondeur de champ,Schärfentiefe,Profondità di campo,Profundidade de campo,Profundidad de campo,피사계 심도,Глубина резкости
+Focus Distance,,Focus Distance,焦点距離,对焦距离,對焦距離,Distance de mise au point,Fokussierabstand,Distanza di messa a fuoco,Distância de foco,Distancia de enfoque,포커스 거리,Дистанция фокуса
+Focal Length,,Focal Length,レンズ焦点距離,焦距,焦距,Focale,Brennweite,Lunghezza focale,Distância focal,Distancia focal,초점 거리,Фокусное расстояние
+Aperture,,Aperture,絞り,光圈,光圈,Ouverture,Blende,Apertura,Abertura,Apertura,조리개,Диафрагма
+Screenshot,,Screenshot,スクリーンショット,截图,截圖,Capture d'écran,Screenshot,Screenshot,Captura de tela,Captura de pantalla,스크린샷,Скриншот
+Emote,,Emote,エモート,表情,表情,Émote,Emote,Emote,Emote,Emote,이모트,Эмоция
+Eye,,Eye,目,眼睛,眼睛,Yeux,Augen,Occhi,Olhos,Ojos,눈,Глаза
+Mouth,,Mouth,口,嘴,嘴,Bouche,Mund,Bocca,Boca,Boca,입,Рот
 ,,,,,,,,,,,,
-Hair,,Hair,髪,,,,,,,,,
-Back,,Back,もどる,,,,,,,,,
+Hair,,Hair,髪,头发,頭髮,Cheveux,Haare,Capelli,Cabelo,Cabello,머리,Волосы
+Back,,Back,もどる,返回,返回,Retour,Zurück,Indietro,Voltar,Volver,뒤로,Назад
 ,,,,,,,,,,,,
-Player Reset,,Player Reset,プレイヤーリセット,,,,,,,,,
+Player Reset,,Player Reset,プレイヤーリセット,玩家重置,玩家重置,Réinitialiser le joueur,Spieler zurücksetzen,Reimposta giocatore,Redefinir jogador,Restablecer jugador,플레이어 초기화,Сброс игрока
 ,,,,,,,,,,,,
-Inventory,,Inventory,インベントリ,,,,,,,,,
-Furniture,,Furniture,家具,家具,傢俱,Meuble,Möbel,Mobili,Móveis,Mueble,,
-Material,,Material,そざい,材料,材料,Matériau,Material,Materiale,Material,Material,,
-Craft!,,Craft!,クラフト,工艺！,工藝！,Artisanat !,Handwerk!,Artigianato!,Artesanato!,Artesanía!,,
-Craftable,,Craftable,クラフト可能,,,,,,,,,
-Rarity,,Rarity,レアリティ,稀有,稀有,Rareté,Seltenheit,Rarità,Raridade,Rareza,,
-RequiredMaterials,,RequiredMaterials,必要マテリアル,,,,,,,,,
-DropMaterials,,DropMaterials,ドロップマテリアル,,,,,,,,,
-Sell,,Sell,売却,卖,賣,Vendre,Verkaufen,Vendere,Vender,Vender,,
-Buy,,Buy,購入,,,,,,,,,
+Inventory,,Inventory,インベントリ,物品栏,物品欄,Inventaire,Inventar,Inventario,Inventário,Inventario,인벤토리,Инвентарь
+Furniture,,Furniture,家具,家具,家具,Meubles,Möbel,Mobili,Móveis,Muebles,가구,Мебель
+Material,,Material,そざい,材料,材料,Matériaux,Material,Materiale,Material,Material,재료,Материалы
+Craft!,,Craft!,クラフト,制作！,製作！,Fabriquer !,Herstellen!,Crea!,Criar!,Fabricar!,제작!,Создать!
+Craftable,,Craftable,クラフト可能,可制作,可製作,Fabriquable,Herstellbar,Fabbricabile,Fabricável,Fabricable,제작 가능,Можно создать
+Rarity,,Rarity,レアリティ,稀有度,稀有度,Rareté,Seltenheit,Rarità,Raridade,Rareza,희귀도,Редкость
+RequiredMaterials,,RequiredMaterials,必要マテリアル,所需材料,所需材料,Matériaux requis,Benötigte Materialien,Materiali richiesti,Materiais necessários,Materiales necesarios,필요 재료,Необходимые материалы
+DropMaterials,,DropMaterials,ドロップマテリアル,掉落材料,掉落材料,Matériaux obtenus,Drop-Materialien,Materiali ottenuti,Materiais obtidos,Materiales obtenidos,드롭 재료,Выпадающие материалы
+Sell,,Sell,売却,出售,出售,Vendre,Verkaufen,Vendi,Vender,Vender,판매,Продать
+Buy,,Buy,購入,购买,購買,Acheter,Kaufen,Compra,Comprar,Comprar,구매,Купить
 ,,,,,,,,,,,,
-Building,,Building,建物,,,,,,,,,
-Furniture,,Furniture,家具,,,,,,,,,
-Plant,,Plant,植物,,,,,,,,,
-Save,,Save,セーブ,,,,,,,,,
-Load,,Load,ロード,,,,,,,,,
-Main 1,,Main 1,メイン 1,,,,,,,,,
-Main 2,,Main 2,メイン 2,,,,,,,,,
-Sub 1,,Sub 1,サブ 1,,,,,,,,,
-Sub 2,,Sub 2,サブ 2,,,,,,,,,
-Accent 1,,Accent 1,アクセント 1,,,,,,,,,
-Accent 2,,Accent 2,アクセント 2,,,,,,,,,
-Original,,Original,オリジナル,,,,,,,,,
-90s Pop,,90s Pop,90s Pop,,,,,,,,,
-Chocolate,,Chocolate,チョコレート,,,,,,,,,
-Matcha,,Matcha,抹茶,,,,,,,,,
-Custom 1,,Custom 1,カスタム 1,,,,,,,,,
-Custom 2,,Custom 2,カスタム 2,,,,,,,,,
-Auto open,,Auto open,自動オープン,,,,,,,,,
+Building,,Building,建物,建筑,建築,Bâtiment,Gebäude,Edificio,Construção,Edificio,건물,Здание
+Furniture,,Furniture,家具,家具,家具,Meubles,Möbel,Mobili,Móveis,Muebles,가구,Мебель
+Plant,,Plant,植物,植物,植物,Plante,Pflanze,Pianta,Planta,Planta,식물,Растение
+Save,,Save,セーブ,保存,保存,Sauvegarder,Speichern,Salva,Salvar,Guardar,저장,Сохранить
+Load,,Load,ロード,读取,讀取,Charger,Laden,Carica,Carregar,Cargar,불러오기,Загрузить
+Main 1,,Main 1,メイン 1,主色 1,主色 1,Principal 1,Haupt 1,Principale 1,Principal 1,Principal 1,메인 1,Основной 1
+Main 2,,Main 2,メイン 2,主色 2,主色 2,Principal 2,Haupt 2,Principale 2,Principal 2,Principal 2,메인 2,Основной 2
+Sub 1,,Sub 1,サブ 1,副色 1,副色 1,Secondaire 1,Neben 1,Secondario 1,Secundário 1,Secundario 1,서브 1,Дополнительный 1
+Sub 2,,Sub 2,サブ 2,副色 2,副色 2,Secondaire 2,Neben 2,Secondario 2,Secundário 2,Secundario 2,서브 2,Дополнительный 2
+Accent 1,,Accent 1,アクセント 1,强调 1,強調 1,Accent 1,Akzent 1,Accento 1,Acento 1,Acento 1,포인트 1,Акцент 1
+Accent 2,,Accent 2,アクセント 2,强调 2,強調 2,Accent 2,Akzent 2,Accento 2,Acento 2,Acento 2,포인트 2,Акцент 2
+Original,,Original,オリジナル,原版,原版,Original,Original,Originale,Original,Original,오리지널,Оригинал
+90s Pop,,90s Pop,90s Pop,90年代流行,90年代流行,Pop années 90,90er-Pop,Pop anni '90,Pop dos anos 90,Pop de los 90,90년대 팝,Поп 90-х
+Chocolate,,Chocolate,チョコレート,巧克力,巧克力,Chocolat,Schokolade,Cioccolato,Chocolate,Chocolate,초콜릿,Шоколад
+Matcha,,Matcha,抹茶,抹茶,抹茶,Matcha,Matcha,Matcha,Matcha,Matcha,말차,Матча
+Custom 1,,Custom 1,カスタム 1,自定义 1,自訂 1,Personnalisé 1,Benutzerdefiniert 1,Personalizzato 1,Personalizado 1,Personalizado 1,커스텀 1,Пользовательский 1
+Custom 2,,Custom 2,カスタム 2,自定义 2,自訂 2,Personnalisé 2,Benutzerdefiniert 2,Personalizzato 2,Personalizado 2,Personalizado 2,커스텀 2,Пользовательский 2
+Auto open,,Auto open,自動オープン,自动打开,自動開啟,Ouverture auto,Automatisch öffnen,Apertura automatica,Abrir automaticamente,Abrir automáticamente,자동 열기,Автооткрытие
 DEMODesc,,The demo is Creative Mode only. Take lots of screenshots and share them on social media!,"DEMO版はクリエイティブモードのみです
-たくさんスクショをとってSNSにアップしてね！！！",,,,,,,,,
-DescriptionText,,DescriptionText,説明文,,,,,,,,,
-ItemName,,ItemName,アイテム名,,,,,,,,,
-WASD,,Move,移動,,,,,,,,,
-Add to Wishlist,,Add to Wishlist,今すぐウィッシュリストに追加！,,,,,,,,,
-Touch,,Touch,ふれる,,,,,,,,,
-Custom 3,,Custom 3,カスタム 3,,,,,,,,,
-Custom 4,,Custom 4,カスタム 4,,,,,,,,,
-Custom 5,,Custom 5,カスタム 5,,,,,,,,,
-Room,,Room,部屋,,,,,,,,,
-Price,,Price,価格,,,,,,,,,
-RewardItem,,RewardItem,報酬アイテム,,,,,,,,,
-RewardMoney,,RewardMoney,報酬金,,,,,,,,,
-ControlGuide,,ControlGuide,操作説明,,,,,,,,,
+たくさんスクショをとってSNSにアップしてね！！！",试玩版仅支持创意模式。多拍截图并分享到社交媒体！,試玩版僅支援創意模式。多拍截圖並分享到社群媒體！,La démo ne propose que le mode créatif. Prenez plein de captures d'écran et partagez-les sur les réseaux sociaux !,Die Demo enthält nur den Kreativmodus. Macht viele Screenshots und teilt sie in den sozialen Medien!,La demo include solo la modalità creativa. Fai tante schermate e condividile sui social!,A demo é apenas no Modo Criativo. Tire muitas capturas de tela e compartilhe nas redes sociais!,La demo solo incluye el Modo Creativo. ¡Haz muchas capturas de pantalla y compártelas en redes sociales!,데모는 크리에이티브 모드만 지원합니다. 스크린샷을 많이 찍어 SNS에 공유하세요!,В демо доступен только творческий режим. Делайте побольше скриншотов и делитесь ими в соцсетях!
+DescriptionText,,DescriptionText,説明文,说明文本,說明文字,Texte de description,Beschreibungstext,Testo descrittivo,Texto de descrição,Texto de descripción,설명 텍스트,Текст описания
+ItemName,,ItemName,アイテム名,物品名称,物品名稱,Nom de l'objet,Objektname,Nome oggetto,Nome do item,Nombre del objeto,아이템 이름,Название предмета
+WASD,,Move,移動,移动,移動,Déplacer,Bewegen,Muovi,Mover,Mover,이동,Движение
+Add to Wishlist,,Add to Wishlist,今すぐウィッシュリストに追加！,加入愿望单,加入願望清單,Ajouter à la liste de souhaits,Zur Wunschliste hinzufügen,Aggiungi alla lista dei desideri,Adicionar à lista de desejos,Agregar a la lista de deseados,위시리스트에 추가,Добавить в список желаемого
+Touch,,Touch,ふれる,触摸,觸摸,Toucher,Berühren,Tocca,Tocar,Tocar,터치,Коснуться
+Custom 3,,Custom 3,カスタム 3,自定义 3,自訂 3,Personnalisé 3,Benutzerdefiniert 3,Personalizzato 3,Personalizado 3,Personalizado 3,커스텀 3,Пользовательский 3
+Custom 4,,Custom 4,カスタム 4,自定义 4,自訂 4,Personnalisé 4,Benutzerdefiniert 4,Personalizzato 4,Personalizado 4,Personalizado 4,커스텀 4,Пользовательский 4
+Custom 5,,Custom 5,カスタム 5,自定义 5,自訂 5,Personnalisé 5,Benutzerdefiniert 5,Personalizzato 5,Personalizado 5,Personalizado 5,커스텀 5,Пользовательский 5
+Room,,Room,部屋,房间,房間,Pièce,Raum,Stanza,Cômodo,Habitación,방,Комната
+Price,,Price,価格,价格,價格,Prix,Preis,Prezzo,Preço,Precio,가격,Цена
+RewardItem,,RewardItem,報酬アイテム,奖励物品,獎勵物品,Objet de récompense,Belohnungsgegenstand,Oggetto ricompensa,Item de recompensa,Objeto de recompensa,보상 아이템,Предмет награды
+RewardMoney,,RewardMoney,報酬金,奖励金,獎勵金,Argent de récompense,Belohnungsgeld,Denaro ricompensa,Dinheiro de recompensa,Dinero de recompensa,보상금,Деньги за награду
+ControlGuide,,ControlGuide,操作説明,操作指南,操作說明,Guide des commandes,Steuerungshilfe,Guida ai comandi,Guia de controles,Guía de controles,조작 안내,Руководство по управлению
