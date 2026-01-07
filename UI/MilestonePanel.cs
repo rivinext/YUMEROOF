@@ -20,6 +20,7 @@ public class MilestonePanel : MonoBehaviour
     [FormerlySerializedAs("rewardText")]
     public TMP_Text rewardItemText;
     public TMP_Text rewardMoneyText;
+    public TMP_Text rewardAreaText;
     [SerializeField] private Image rewardImage;
     [SerializeField] private Sprite rewardFallbackSprite;
     [Header("Localization")]
@@ -36,6 +37,7 @@ public class MilestonePanel : MonoBehaviour
     [FormerlySerializedAs("tooltipRewardText")]
     [SerializeField] private TMP_Text tooltipRewardItemText;
     [SerializeField] private TMP_Text tooltipRewardMoneyText;
+    [SerializeField] private TMP_Text tooltipRewardAreaText;
     [SerializeField] private Image tooltipRewardImage;
     [SerializeField] private DynamicLocalizer tooltipRewardDynamicLocalizer;
     [SerializeField] private CanvasGroup tooltipCanvasGroup;
@@ -359,6 +361,7 @@ public class MilestonePanel : MonoBehaviour
         {
             rewardMoneyText.text = milestone.moneyReward.ToString();
         }
+        UpdateRewardAreaText(rewardAreaText, milestone.rewardArea);
         UpdateRewardIcon(milestone, rewardImage);
         if (milestoneIdText != null)
         {
@@ -554,6 +557,7 @@ public class MilestonePanel : MonoBehaviour
             {
                 tooltipRewardMoneyText.text = milestone.moneyReward.ToString();
             }
+            UpdateRewardAreaText(tooltipRewardAreaText, milestone.rewardArea);
             UpdateRewardIcon(milestone, tooltipRewardImage);
         }
     }
@@ -594,6 +598,22 @@ public class MilestonePanel : MonoBehaviour
         if (valueText != null)
         {
             valueText.text = $"{currentCount}/{milestone.rarityCountRequirement}";
+        }
+    }
+
+    private void UpdateRewardAreaText(TMP_Text targetText, string rewardArea)
+    {
+        if (targetText == null)
+        {
+            return;
+        }
+
+        bool hasRewardArea = !string.IsNullOrWhiteSpace(rewardArea);
+        targetText.text = hasRewardArea ? rewardArea : string.Empty;
+
+        if (targetText.gameObject.activeSelf != hasRewardArea)
+        {
+            targetText.gameObject.SetActive(hasRewardArea);
         }
     }
 
