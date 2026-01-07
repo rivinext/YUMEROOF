@@ -300,27 +300,17 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         if (IsDefaultSlot(slotIndex))
         {
-            Debug.Log($"Loading default preset for slot {slotIndex} on start.");
             LoadPreset(slotIndex);
             return;
         }
 
-        if (HasSavedPreset(slotIndex))
-        {
-            Debug.Log($"Loading saved preset for slot {slotIndex} on start.");
-            LoadPreset(slotIndex);
-            return;
-        }
-
-        Debug.Log($"No saved preset found for slot {slotIndex} on start. Saving initial colors.");
-        if (SavePresetColors(slotIndex, initialControllerColors))
-        {
-            LoadPreset(slotIndex);
-            return;
-        }
-
-        Debug.LogWarning($"No saved preset found for slot {slotIndex} on start, and initial colors could not be saved. Applying default fallback.");
-        ApplyDefaultPresetFallback();
+        LoadOrSeedUserPreset(
+            slotIndex,
+            "Loaded",
+            applyToMaterial: true,
+            seedColorsOverride: initialControllerColors,
+            contextLabel: "on start",
+            fallbackToDefaultOnSaveFailure: true);
     }
 
     private void SubscribeToControllers()
@@ -621,49 +611,46 @@ public class MaterialHuePresetManager : MonoBehaviour
 
     private void LoadUserPreset(int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
-        if (TryLoadUserPresetFromPrefs(slotIndex, actionLabel, applyToMaterial))
+        LoadOrSeedUserPreset(slotIndex, actionLabel, applyToMaterial);
+    }
+
+    private void LoadOrSeedUserPreset(
+        int slotIndex,
+        string actionLabel,
+        bool applyToMaterial,
+        IReadOnlyList<HSVColor> seedColorsOverride = null,
+        string contextLabel = null,
+        bool fallbackToDefaultOnSaveFailure = false)
+    {
+        bool hasSavedPreset = HasSavedPreset(slotIndex);
+        string contextSuffix = string.IsNullOrWhiteSpace(contextLabel) ? string.Empty : $" {contextLabel}";
+
+        if (hasSavedPreset && TryLoadUserPresetFromPrefs(slotIndex, actionLabel, applyToMaterial))
         {
-            StoreSlotTemporaryColors(slotIndex);
             return;
         }
 
-        Debug.LogWarning($"No saved preset found for slot {slotIndex}.");
-
-        UserPresetFallbackSource fallbackSource = userPresetFallbackSource;
-        IReadOnlyList<HSVColor> fallbackColors;
-        if (fallbackSource == UserPresetFallbackSource.TemporarySlotMemory)
+        if (hasSavedPreset)
         {
-            if (TryGetTemporarySlotColors(slotIndex, out var storedColors))
-            {
-                fallbackColors = storedColors;
-            }
-            else
-            {
-                fallbackSource = UserPresetFallbackSource.CurrentAppliedColor;
-                fallbackColors = GetCurrentAppliedColors();
-            }
+            Debug.LogWarning($"Saved preset data missing for slot {slotIndex}{contextSuffix}. Falling back.");
         }
         else
         {
-            fallbackColors = fallbackSource switch
-            {
-                UserPresetFallbackSource.CurrentAppliedColor => GetCurrentAppliedColors(),
-                UserPresetFallbackSource.InitialControllerColor => initialControllerColors,
-                _ => GetCurrentAppliedColors()
-            };
+            Debug.Log($"No saved preset found for slot {slotIndex}{contextSuffix}. Using fallback.");
         }
 
-        if (fallbackColors == null || fallbackColors.Count == 0)
-        {
-            fallbackSource = UserPresetFallbackSource.CurrentAppliedColor;
-            fallbackColors = GetCurrentAppliedColors();
-        }
-
+        IReadOnlyList<HSVColor> fallbackColors = ResolveUserPresetFallbackColors(slotIndex, seedColorsOverride, out var fallbackSource);
         ApplyUserPresetFallback(slotIndex, actionLabel, applyToMaterial, fallbackColors, fallbackSource);
 
-        if (!IsDefaultSlot(slotIndex))
+        if (IsDefaultSlot(slotIndex))
         {
-            SavePresetColors(slotIndex, fallbackColors);
+            return;
+        }
+
+        if (!SavePresetColors(slotIndex, fallbackColors) && fallbackToDefaultOnSaveFailure)
+        {
+            Debug.LogWarning($"Fallback colors could not be saved for slot {slotIndex}{contextSuffix}. Applying default fallback.");
+            ApplyDefaultPresetFallback();
         }
     }
 
@@ -1176,6 +1163,46 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         StoreSlotTemporaryColors(slotIndex);
         Debug.Log($"{actionLabel} user preset fallback slot {slotIndex} ({fallbackSource}).");
+    }
+
+    private IReadOnlyList<HSVColor> ResolveUserPresetFallbackColors(
+        int slotIndex,
+        IReadOnlyList<HSVColor> seedColorsOverride,
+        out UserPresetFallbackSource fallbackSource)
+    {
+        if (seedColorsOverride != null && seedColorsOverride.Count > 0)
+        {
+            fallbackSource = UserPresetFallbackSource.InitialControllerColor;
+            return seedColorsOverride;
+        }
+
+        fallbackSource = userPresetFallbackSource;
+
+        if (fallbackSource == UserPresetFallbackSource.TemporarySlotMemory)
+        {
+            if (TryGetTemporarySlotColors(slotIndex, out var storedColors))
+            {
+                return storedColors;
+            }
+
+            fallbackSource = UserPresetFallbackSource.CurrentAppliedColor;
+            return GetCurrentAppliedColors();
+        }
+
+        IReadOnlyList<HSVColor> fallbackColors = fallbackSource switch
+        {
+            UserPresetFallbackSource.CurrentAppliedColor => GetCurrentAppliedColors(),
+            UserPresetFallbackSource.InitialControllerColor => initialControllerColors,
+            _ => GetCurrentAppliedColors()
+        };
+
+        if (fallbackColors == null || fallbackColors.Count == 0)
+        {
+            fallbackSource = UserPresetFallbackSource.CurrentAppliedColor;
+            return GetCurrentAppliedColors();
+        }
+
+        return fallbackColors;
     }
 
     private bool TryGetTemporarySlotColors(int slotIndex, out IReadOnlyList<HSVColor> colors)
