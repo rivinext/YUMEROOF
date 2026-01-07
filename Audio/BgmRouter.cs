@@ -14,6 +14,9 @@ public class BgmRouter : MonoBehaviour
         [Tooltip("対象シーン名 (SceneA など)")]
         public string sceneName;
 
+        [Tooltip("BGM 継続判定用のグループ ID (同一 ID の場合は継続)")]
+        public string bgmGroupId;
+
         [Tooltip("該当シーンで使用する AudioSource(単体用)")]
         public AudioSource audioSource;
 
@@ -45,6 +48,7 @@ public class BgmRouter : MonoBehaviour
     private Coroutine playlistRoutine;
     private float volumeMultiplier = 1f;
     private string currentSceneName;
+    private SceneBinding currentBinding;
 
     private void Awake()
     {
@@ -125,6 +129,19 @@ public class BgmRouter : MonoBehaviour
             return;
         }
 
+        if (ShouldContinueBgm(next))
+        {
+            currentSceneName = next.sceneName;
+            currentBinding = next;
+            if (currentSource != null && currentSource.isPlaying)
+            {
+                return;
+            }
+
+            StartBindingPlayback(next);
+            return;
+        }
+
         if (currentSceneName == next.sceneName)
         {
             if (currentSource != null && currentSource.isPlaying)
@@ -149,6 +166,7 @@ public class BgmRouter : MonoBehaviour
         var previous = currentSource;
         currentSource = null;
         currentSceneName = nextBinding.sceneName;
+        currentBinding = nextBinding;
 
         StopPlaylist();
 
@@ -176,6 +194,8 @@ public class BgmRouter : MonoBehaviour
 
     private IEnumerator StartBindingPlaybackRoutine(SceneBinding binding)
     {
+        currentSceneName = binding.sceneName;
+        currentBinding = binding;
         if (ShouldUseMultipleClips(binding))
         {
             StopPlaylist();
@@ -200,6 +220,7 @@ public class BgmRouter : MonoBehaviour
         var source = currentSource;
         currentSource = null;
         currentSceneName = null;
+        currentBinding = null;
         StopPlaylist();
 
         if (source != null && source.isPlaying)
@@ -244,7 +265,7 @@ public class BgmRouter : MonoBehaviour
 
     private IEnumerator PlayRandomClips(SceneBinding binding)
     {
-        while (currentSceneName == binding.sceneName)
+        while (IsSameBgmGroup(binding, currentBinding))
         {
             var source = ChooseRandomSource(binding);
             var clip = ChooseRandomClip(binding);
@@ -265,13 +286,13 @@ public class BgmRouter : MonoBehaviour
             float fadeOutStart = Mathf.Max(clipLength - fadeSeconds, 0f);
             float elapsed = 0f;
 
-            while (currentSceneName == binding.sceneName && source.isPlaying && elapsed < fadeOutStart)
+            while (IsSameBgmGroup(binding, currentBinding) && source.isPlaying && elapsed < fadeOutStart)
             {
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
 
-            if (currentSceneName != binding.sceneName)
+            if (!IsSameBgmGroup(binding, currentBinding))
             {
                 yield break;
             }
@@ -290,6 +311,34 @@ public class BgmRouter : MonoBehaviour
     private bool ShouldUseMultipleClips(SceneBinding binding)
     {
         return binding.useMultipleClips && binding.clips != null && binding.clips.Length > 0;
+    }
+
+    private bool ShouldContinueBgm(SceneBinding nextBinding)
+    {
+        if (currentBinding == null || nextBinding == null)
+        {
+            return false;
+        }
+
+        return IsSameBgmGroup(currentBinding, nextBinding);
+    }
+
+    private bool IsSameBgmGroup(SceneBinding left, SceneBinding right)
+    {
+        if (left == null || right == null)
+        {
+            return false;
+        }
+
+        bool hasLeftGroup = !string.IsNullOrEmpty(left.bgmGroupId);
+        bool hasRightGroup = !string.IsNullOrEmpty(right.bgmGroupId);
+
+        if (hasLeftGroup || hasRightGroup)
+        {
+            return hasLeftGroup && hasRightGroup && left.bgmGroupId == right.bgmGroupId;
+        }
+
+        return left.sceneName == right.sceneName;
     }
 
     private void ConfigureSourceForSingle(SceneBinding binding, AudioSource source)
