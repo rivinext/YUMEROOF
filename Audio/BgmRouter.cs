@@ -9,13 +9,25 @@ using UnityEngine.SceneManagement;
 public class BgmRouter : MonoBehaviour
 {
     [System.Serializable]
-    private struct SceneBinding
+    private class SceneBinding
     {
         [Tooltip("対象シーン名 (SceneA など)")]
         public string sceneName;
 
-        [Tooltip("該当シーンで使用する AudioSource")]
+        [Tooltip("該当シーンで使用する AudioSource(単体用)")]
         public AudioSource audioSource;
+
+        [Tooltip("該当シーンで使用する AudioSource(複数候補)")]
+        public AudioSource[] audioSources;
+
+        [Tooltip("固定で再生する AudioClip (SceneA 用)")]
+        public AudioClip singleClip;
+
+        [Tooltip("ランダム再生する AudioClip 配列 (SceneB/C/D 用)")]
+        public AudioClip[] clips;
+
+        [Tooltip("複数クリップをランダム再生する場合は true")]
+        public bool useMultipleClips;
     }
 
     public static BgmRouter Instance { get; private set; }
@@ -26,11 +38,13 @@ public class BgmRouter : MonoBehaviour
     [SerializeField]
     private SceneBinding[] bindings;
 
-    private readonly Dictionary<string, AudioSource> sceneToSource = new Dictionary<string, AudioSource>();
+    private readonly Dictionary<string, SceneBinding> sceneBindings = new Dictionary<string, SceneBinding>();
     private readonly Dictionary<AudioSource, float> sourceVolumes = new Dictionary<AudioSource, float>();
     private AudioSource currentSource;
     private Coroutine transitionRoutine;
+    private Coroutine playlistRoutine;
     private float volumeMultiplier = 1f;
+    private string currentSceneName;
 
     private void Awake()
     {
@@ -43,27 +57,35 @@ public class BgmRouter : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        sceneToSource.Clear();
+        sceneBindings.Clear();
         foreach (var entry in bindings)
         {
-            if (entry.audioSource == null || string.IsNullOrEmpty(entry.sceneName))
+            if (string.IsNullOrEmpty(entry.sceneName))
             {
                 continue;
             }
 
-            if (!sceneToSource.ContainsKey(entry.sceneName))
+            if (!sceneBindings.ContainsKey(entry.sceneName))
             {
-                sceneToSource.Add(entry.sceneName, entry.audioSource);
+                sceneBindings.Add(entry.sceneName, entry);
             }
 
-            if (!sourceVolumes.ContainsKey(entry.audioSource))
+            foreach (var source in EnumerateSources(entry))
             {
-                sourceVolumes.Add(entry.audioSource, entry.audioSource.volume);
-            }
+                if (source == null)
+                {
+                    continue;
+                }
 
-            entry.audioSource.playOnAwake = false;
-            entry.audioSource.loop = true;
-            entry.audioSource.transform.SetParent(transform, worldPositionStays: false);
+                if (!sourceVolumes.ContainsKey(source))
+                {
+                    sourceVolumes.Add(source, source.volume);
+                }
+
+                source.playOnAwake = false;
+                source.loop = false;
+                source.transform.SetParent(transform, worldPositionStays: false);
+            }
         }
 
         SceneManager.sceneLoaded += HandleSceneLoaded;
@@ -87,7 +109,7 @@ public class BgmRouter : MonoBehaviour
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (!sceneToSource.TryGetValue(scene.name, out var next))
+        if (!sceneBindings.TryGetValue(scene.name, out var next))
         {
             if (currentSource != null)
             {
@@ -96,19 +118,21 @@ public class BgmRouter : MonoBehaviour
                     StopCoroutine(transitionRoutine);
                 }
 
+                StopPlaylist();
                 transitionRoutine = StartCoroutine(FadeOutAndStopCurrent());
             }
 
             return;
         }
 
-        if (next == currentSource)
+        if (currentSceneName == next.sceneName)
         {
-            if (!currentSource.isPlaying)
+            if (currentSource != null && currentSource.isPlaying)
             {
-                currentSource.UnPause();
+                return;
             }
 
+            StartBindingPlayback(next);
             return;
         }
 
@@ -117,13 +141,16 @@ public class BgmRouter : MonoBehaviour
             StopCoroutine(transitionRoutine);
         }
 
-        transitionRoutine = StartCoroutine(SwitchSource(next));
+        transitionRoutine = StartCoroutine(SwitchBinding(next));
     }
 
-    private IEnumerator SwitchSource(AudioSource next)
+    private IEnumerator SwitchBinding(SceneBinding nextBinding)
     {
         var previous = currentSource;
-        currentSource = next;
+        currentSource = null;
+        currentSceneName = nextBinding.sceneName;
+
+        StopPlaylist();
 
         if (previous != null && previous.isPlaying)
         {
@@ -132,23 +159,48 @@ public class BgmRouter : MonoBehaviour
             RestoreVolume(previous);
         }
 
-        float targetVolume = GetTargetVolume(next);
+        yield return StartBindingPlaybackRoutine(nextBinding);
+        transitionRoutine = null;
+    }
 
-        if (!next.isPlaying)
+    private void StartBindingPlayback(SceneBinding binding)
+    {
+        if (transitionRoutine != null)
         {
-            next.Play();
+            StopCoroutine(transitionRoutine);
+            transitionRoutine = null;
         }
 
-        next.volume = 0f;
-        yield return FadeVolume(next, targetVolume);
+        transitionRoutine = StartCoroutine(StartBindingPlaybackRoutine(binding));
+    }
 
-        transitionRoutine = null;
+    private IEnumerator StartBindingPlaybackRoutine(SceneBinding binding)
+    {
+        if (ShouldUseMultipleClips(binding))
+        {
+            StopPlaylist();
+            playlistRoutine = StartCoroutine(PlayRandomClips(binding));
+            yield break;
+        }
+
+        var source = GetPrimarySource(binding);
+        if (source == null)
+        {
+            yield break;
+        }
+
+        currentSource = source;
+        ConfigureSourceForSingle(binding, source);
+
+        yield return PlayWithFade(source);
     }
 
     private IEnumerator FadeOutAndStopCurrent()
     {
         var source = currentSource;
         currentSource = null;
+        currentSceneName = null;
+        StopPlaylist();
 
         if (source != null && source.isPlaying)
         {
@@ -176,6 +228,140 @@ public class BgmRouter : MonoBehaviour
         }
 
         source.volume = target <= 0f ? 0f : GetTargetVolume(source);
+    }
+
+    private IEnumerator PlayWithFade(AudioSource source)
+    {
+        if (source == null)
+        {
+            yield break;
+        }
+
+        source.volume = 0f;
+        source.Play();
+        yield return FadeVolume(source, GetTargetVolume(source));
+    }
+
+    private IEnumerator PlayRandomClips(SceneBinding binding)
+    {
+        while (currentSceneName == binding.sceneName)
+        {
+            var source = ChooseRandomSource(binding);
+            var clip = ChooseRandomClip(binding);
+
+            if (source == null || clip == null)
+            {
+                yield break;
+            }
+
+            currentSource = source;
+            ConfigureSourceForPlaylist(source);
+            source.clip = clip;
+            source.volume = 0f;
+            source.Play();
+            yield return FadeVolume(source, GetTargetVolume(source));
+
+            float clipLength = Mathf.Max(clip.length, 0.01f);
+            float fadeOutStart = Mathf.Max(clipLength - fadeSeconds, 0f);
+            float elapsed = 0f;
+
+            while (currentSceneName == binding.sceneName && source.isPlaying && elapsed < fadeOutStart)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (currentSceneName != binding.sceneName)
+            {
+                yield break;
+            }
+
+            if (source.isPlaying)
+            {
+                yield return FadeVolume(source, 0f);
+                source.Stop();
+                RestoreVolume(source);
+            }
+
+            source.volume = 0f;
+        }
+    }
+
+    private bool ShouldUseMultipleClips(SceneBinding binding)
+    {
+        return binding.useMultipleClips && binding.clips != null && binding.clips.Length > 0;
+    }
+
+    private void ConfigureSourceForSingle(SceneBinding binding, AudioSource source)
+    {
+        source.loop = true;
+        if (binding.singleClip != null)
+        {
+            source.clip = binding.singleClip;
+        }
+    }
+
+    private void ConfigureSourceForPlaylist(AudioSource source)
+    {
+        source.loop = false;
+    }
+
+    private AudioSource GetPrimarySource(SceneBinding binding)
+    {
+        foreach (var source in EnumerateSources(binding))
+        {
+            if (source != null)
+            {
+                return source;
+            }
+        }
+
+        return null;
+    }
+
+    private AudioSource ChooseRandomSource(SceneBinding binding)
+    {
+        var sources = new List<AudioSource>();
+        foreach (var source in EnumerateSources(binding))
+        {
+            if (source != null)
+            {
+                sources.Add(source);
+            }
+        }
+
+        if (sources.Count == 0)
+        {
+            return null;
+        }
+
+        return sources[Random.Range(0, sources.Count)];
+    }
+
+    private AudioClip ChooseRandomClip(SceneBinding binding)
+    {
+        if (binding.clips == null || binding.clips.Length == 0)
+        {
+            return null;
+        }
+
+        return binding.clips[Random.Range(0, binding.clips.Length)];
+    }
+
+    private IEnumerable<AudioSource> EnumerateSources(SceneBinding binding)
+    {
+        if (binding.audioSources != null && binding.audioSources.Length > 0)
+        {
+            for (int i = 0; i < binding.audioSources.Length; i++)
+            {
+                yield return binding.audioSources[i];
+            }
+        }
+
+        if (binding.audioSource != null)
+        {
+            yield return binding.audioSource;
+        }
     }
 
     private float GetTargetVolume(AudioSource source)
@@ -217,6 +403,7 @@ public class BgmRouter : MonoBehaviour
             transitionRoutine = null;
         }
 
+        StopPlaylist();
         currentSource.Stop();
         RestoreVolume(currentSource);
     }
@@ -242,7 +429,7 @@ public class BgmRouter : MonoBehaviour
     {
         volumeMultiplier = Mathf.Clamp01(value);
 
-        foreach (var source in sceneToSource.Values)
+        foreach (var source in sourceVolumes.Keys)
         {
             if (source == null)
             {
@@ -253,6 +440,15 @@ public class BgmRouter : MonoBehaviour
             {
                 source.volume = GetTargetVolume(source);
             }
+        }
+    }
+
+    private void StopPlaylist()
+    {
+        if (playlistRoutine != null)
+        {
+            StopCoroutine(playlistRoutine);
+            playlistRoutine = null;
         }
     }
 }
