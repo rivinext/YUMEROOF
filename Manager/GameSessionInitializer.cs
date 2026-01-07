@@ -138,11 +138,29 @@ public class GameSessionInitializer : MonoBehaviour
             yield return null;
         }
 
-        bool createdNewSave = SaveGameManager.Instance.Load(slotKey);
-        if (createdNewSave && !DevItemInjector.BuildDisablesInjection)
+        SaveGameManager.Instance.Load(slotKey);
+        if (!DevItemInjector.BuildDisablesInjection)
         {
-            FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include)?.Inject();
-            InventoryManager.Instance.ForceInventoryUpdate();
+            var inventoryManager = InventoryManager.Instance;
+            if (inventoryManager != null)
+            {
+                var furnitureList = inventoryManager.GetFurnitureList();
+                var materialList = inventoryManager.GetMaterialList();
+                bool hasNoFurniture = furnitureList == null || furnitureList.Count == 0;
+                bool hasNoMaterials = materialList == null || materialList.Count == 0;
+
+                if (hasNoFurniture && hasNoMaterials && !SaveGameManager.Instance.Applied_0_1_6_Seed)
+                {
+                    FindFirstObjectByType<DevItemInjector>(FindObjectsInactive.Include)?.Inject();
+                    inventoryManager.ForceInventoryUpdate();
+                    SaveGameManager.Instance.Applied_0_1_6_Seed = true;
+
+                    if (!string.IsNullOrEmpty(SaveGameManager.Instance.CurrentSlotKey))
+                    {
+                        SaveGameManager.Instance.Save(SaveGameManager.Instance.CurrentSlotKey);
+                    }
+                }
+            }
         }
         initialized = true;
         slotKey = null;
