@@ -166,7 +166,11 @@ public class BgmRouter : MonoBehaviour
         var previous = currentSource;
         currentSource = null;
         currentSceneName = nextBinding.sceneName;
-        currentBinding = nextBinding;
+
+        if (currentBinding != null)
+        {
+            StopAndRestoreBindingSources(currentBinding);
+        }
 
         StopPlaylist();
 
@@ -177,6 +181,7 @@ public class BgmRouter : MonoBehaviour
             RestoreVolume(previous);
         }
 
+        currentBinding = nextBinding;
         yield return StartBindingPlaybackRoutine(nextBinding);
         transitionRoutine = null;
     }
@@ -187,6 +192,11 @@ public class BgmRouter : MonoBehaviour
         {
             StopCoroutine(transitionRoutine);
             transitionRoutine = null;
+        }
+
+        if (currentBinding != null)
+        {
+            StopAndRestoreBindingSources(currentBinding);
         }
 
         transitionRoutine = StartCoroutine(StartBindingPlaybackRoutine(binding));
@@ -439,6 +449,20 @@ public class BgmRouter : MonoBehaviour
         source.volume = target;
     }
 
+    private void StopAndRestoreBindingSources(SceneBinding binding)
+    {
+        foreach (var source in EnumerateSources(binding))
+        {
+            if (source == null)
+            {
+                continue;
+            }
+
+            source.Stop();
+            RestoreVolume(source);
+        }
+    }
+
     private void StopCurrent()
     {
         if (currentSource == null)
@@ -494,6 +518,7 @@ public class BgmRouter : MonoBehaviour
 
     private void StopPlaylist()
     {
+        // StopPlaylist は再生中 AudioSource を止めないため、別途 Stop/Restore が必要。
         if (playlistRoutine != null)
         {
             StopCoroutine(playlistRoutine);
