@@ -196,6 +196,11 @@ public class GlobalFontManager : MonoBehaviour
 
         foreach (var text in allTexts)
         {
+            if (text.GetComponent<FixedFontOverride>() != null)
+            {
+                continue;
+            }
+
             // DynamicLocalizerがある場合はスキップ（オプション）
             if (excludeDynamicLocalizer)
             {
@@ -223,6 +228,7 @@ public class GlobalFontManager : MonoBehaviour
     public void UpdateTextFont(TextMeshProUGUI textComponent)
     {
         if (textComponent == null) return;
+        if (textComponent.GetComponent<FixedFontOverride>() != null) return;
 
         TMP_FontAsset targetFont = GetFontForCurrentLocale();
         if (targetFont != null)
