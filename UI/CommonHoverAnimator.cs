@@ -1,5 +1,4 @@
 using DG.Tweening;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -14,9 +13,6 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
     [SerializeField] private float hoverTilt = 5f;
     [SerializeField] private float hoverDuration = 0.18f;
     [SerializeField] private bool disableHoverAnimation = false;
-    [SerializeField] private List<GameObject> hideGameObjects = new List<GameObject>();
-    [SerializeField] private List<Canvas> hideCanvases = new List<Canvas>();
-    [SerializeField] private List<CanvasGroup> hideCanvasGroups = new List<CanvasGroup>();
 
     [Header("Hover Audio")]
     [SerializeField] private AudioClip hoverSfx;
@@ -35,16 +31,6 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
     private Vector3 baseEulerAngles = Vector3.zero;
     private Tween hoverTween;
     private float lastHoverSfxTime = -10f;
-    private readonly Dictionary<GameObject, bool> originalGameObjectStates = new Dictionary<GameObject, bool>();
-    private readonly Dictionary<Canvas, bool> originalCanvasStates = new Dictionary<Canvas, bool>();
-    private readonly Dictionary<CanvasGroup, CanvasGroupState> originalCanvasGroupStates = new Dictionary<CanvasGroup, CanvasGroupState>();
-
-    private struct CanvasGroupState
-    {
-        public float Alpha;
-        public bool BlocksRaycasts;
-        public bool Interactable;
-    }
 
     private float SafeHoverScale => Mathf.Max(hoverScale, MinHoverScaleValue);
     private float SafeHoverDuration => Mathf.Max(hoverDuration, MinHoverDurationValue);
@@ -79,45 +65,44 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
     {
         KillHoverTween();
         ResetHoverTargetTransform();
-        RestoreHiddenTargets();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!disableHoverAnimation && resolvedHoverTarget != null)
+        if (disableHoverAnimation || resolvedHoverTarget == null)
         {
-            KillHoverTween();
-            ResetHoverTargetTransform();
-
-            Vector3 targetScale = baseScale * SafeHoverScale;
-            Vector3 tiltedRotation = baseEulerAngles + new Vector3(0f, 0f, hoverTilt);
-            float duration = SafeHoverDuration;
-
-            Sequence sequence = DOTween.Sequence();
-            sequence.Join(resolvedHoverTarget.DOScale(targetScale, duration).SetEase(Ease.OutQuad));
-            sequence.Join(resolvedHoverTarget.DOLocalRotate(tiltedRotation, duration * 0.5f).SetEase(Ease.OutQuad));
-            sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
-            sequence.OnComplete(() => hoverTween = null);
-            hoverTween = sequence;
-
-            PlayHoverSfx();
+            return;
         }
 
-        HideTargets();
+        KillHoverTween();
+        ResetHoverTargetTransform();
+
+        Vector3 targetScale = baseScale * SafeHoverScale;
+        Vector3 tiltedRotation = baseEulerAngles + new Vector3(0f, 0f, hoverTilt);
+        float duration = SafeHoverDuration;
+
+        Sequence sequence = DOTween.Sequence();
+        sequence.Join(resolvedHoverTarget.DOScale(targetScale, duration).SetEase(Ease.OutQuad));
+        sequence.Join(resolvedHoverTarget.DOLocalRotate(tiltedRotation, duration * 0.5f).SetEase(Ease.OutQuad));
+        sequence.Append(resolvedHoverTarget.DOLocalRotate(baseEulerAngles, duration * 0.5f).SetEase(Ease.OutQuad));
+        sequence.OnComplete(() => hoverTween = null);
+        hoverTween = sequence;
+
+        PlayHoverSfx();
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (!disableHoverAnimation && resolvedHoverTarget != null)
+        if (disableHoverAnimation || resolvedHoverTarget == null)
         {
-            KillHoverTween();
-            resolvedHoverTarget.localEulerAngles = baseEulerAngles;
-            hoverTween = resolvedHoverTarget.DOScale(baseScale, SafeHoverDuration)
-                .SetEase(Ease.OutQuad)
-                .OnComplete(() => hoverTween = null);
+            return;
         }
 
-        RestoreHiddenTargets();
+        KillHoverTween();
+        resolvedHoverTarget.localEulerAngles = baseEulerAngles;
+        hoverTween = resolvedHoverTarget.DOScale(baseScale, SafeHoverDuration)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() => hoverTween = null);
     }
 
     public void HandlePointerEnter(PointerEventData eventData)
@@ -232,109 +217,5 @@ public class CommonHoverAnimator : MonoBehaviour, IPointerEnterHandler, IPointer
         }
 
         clickAudioSource.PlayOneShot(clickSfx, volume);
-    }
-
-    private void HideTargets()
-    {
-        CacheAndHideGameObjects();
-        CacheAndHideCanvases();
-        CacheAndHideCanvasGroups();
-    }
-
-    private void RestoreHiddenTargets()
-    {
-        foreach (KeyValuePair<GameObject, bool> entry in originalGameObjectStates)
-        {
-            if (entry.Key != null)
-            {
-                entry.Key.SetActive(entry.Value);
-            }
-        }
-
-        foreach (KeyValuePair<Canvas, bool> entry in originalCanvasStates)
-        {
-            if (entry.Key != null)
-            {
-                entry.Key.enabled = entry.Value;
-            }
-        }
-
-        foreach (KeyValuePair<CanvasGroup, CanvasGroupState> entry in originalCanvasGroupStates)
-        {
-            if (entry.Key != null)
-            {
-                entry.Key.alpha = entry.Value.Alpha;
-                entry.Key.blocksRaycasts = entry.Value.BlocksRaycasts;
-                entry.Key.interactable = entry.Value.Interactable;
-            }
-        }
-
-        originalGameObjectStates.Clear();
-        originalCanvasStates.Clear();
-        originalCanvasGroupStates.Clear();
-    }
-
-    private void CacheAndHideGameObjects()
-    {
-        if (hideGameObjects == null)
-        {
-            return;
-        }
-
-        foreach (GameObject target in hideGameObjects)
-        {
-            if (target == null || originalGameObjectStates.ContainsKey(target))
-            {
-                continue;
-            }
-
-            originalGameObjectStates[target] = target.activeSelf;
-            target.SetActive(false);
-        }
-    }
-
-    private void CacheAndHideCanvases()
-    {
-        if (hideCanvases == null)
-        {
-            return;
-        }
-
-        foreach (Canvas target in hideCanvases)
-        {
-            if (target == null || originalCanvasStates.ContainsKey(target))
-            {
-                continue;
-            }
-
-            originalCanvasStates[target] = target.enabled;
-            target.enabled = false;
-        }
-    }
-
-    private void CacheAndHideCanvasGroups()
-    {
-        if (hideCanvasGroups == null)
-        {
-            return;
-        }
-
-        foreach (CanvasGroup target in hideCanvasGroups)
-        {
-            if (target == null || originalCanvasGroupStates.ContainsKey(target))
-            {
-                continue;
-            }
-
-            originalCanvasGroupStates[target] = new CanvasGroupState
-            {
-                Alpha = target.alpha,
-                BlocksRaycasts = target.blocksRaycasts,
-                Interactable = target.interactable
-            };
-            target.alpha = 0f;
-            target.blocksRaycasts = false;
-            target.interactable = false;
-        }
     }
 }
