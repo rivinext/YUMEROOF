@@ -13,7 +13,13 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     private static SaveGameManager instance;
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
     private string currentSlot;
+    private bool applied_0_1_6_seed;
     public string CurrentSlotKey => currentSlot;
+    public bool Applied_0_1_6_Seed
+    {
+        get => applied_0_1_6_seed;
+        set => applied_0_1_6_seed = value;
+    }
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
     private readonly Dictionary<string, IndependentMaterialColorSaveData> independentMaterialColorStore = new();
@@ -189,6 +195,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             var data = new CreativeSaveData();
             FillCommon(data);
             SaveManagers(data);
+            data.applied_0_1_6_seed = applied_0_1_6_seed;
             EnsureIndependentMaterialColorSlotCached(slotKey);
             data.independentMaterialColors = GetCachedIndependentMaterialColors(slotKey);
             data.independentMaterialColorSlots = GetCachedIndependentMaterialColorSlots();
@@ -199,6 +206,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             var data = new StorySaveData();
             FillCommon(data);
             SaveManagers(data);
+            data.applied_0_1_6_seed = applied_0_1_6_seed;
             EnsureIndependentMaterialColorSlotCached(slotKey);
             data.independentMaterialColors = GetCachedIndependentMaterialColors(slotKey);
             data.independentMaterialColorSlots = GetCachedIndependentMaterialColorSlots();
@@ -239,12 +247,14 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             if (creative)
             {
                 var emptyData = new CreativeSaveData();
+                applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
             else
             {
                 var emptyData = new StorySaveData();
+                applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
@@ -256,12 +266,14 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (creative)
         {
             var data = CreativeSaveData.FromJson(json);
+            applied_0_1_6_seed = data != null && data.applied_0_1_6_seed;
             CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }
         else
         {
             var data = StorySaveData.FromJson(json);
+            applied_0_1_6_seed = data != null && data.applied_0_1_6_seed;
             CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }

@@ -35,6 +35,7 @@ public class BaseSaveData
     public float playTime;
     public string chapterName;
     public string location;
+    public bool applied_0_1_6_seed;
 
     public string ToJson()
     {
