@@ -149,14 +149,6 @@ public class MaterialHueManagerSaveData
     public string keyPrefix;
     public int selectedSlotIndex;
     public List<HSVColor> controllerColors = new();
-    public List<MaterialHueSlotSaveData> slots = new();
-}
-
-[Serializable]
-public class MaterialHueSlotSaveData
-{
-    public int slotIndex;
-    public List<HSVColor> colors = new();
 }
 
 [Serializable]
