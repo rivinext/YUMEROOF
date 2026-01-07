@@ -175,6 +175,7 @@ public class MilestoneManager : MonoBehaviour
                 rarityRequirement = parsedRarityRequirement,
                 rarityCountRequirement = parsedRarityCountRequirement,
                 reward = parts[7],
+                rewardArea = parts.Length > 9 ? parts[9].Trim() : string.Empty,
             };
             if (parts.Length > 8)
             {
@@ -362,5 +363,6 @@ public class MilestoneManager : MonoBehaviour
         public int rarityCountRequirement;
         public string reward;
         public int moneyReward;
+        public string rewardArea;
     }
 }
