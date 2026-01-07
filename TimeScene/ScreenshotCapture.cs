@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using Steamworks;
 
 namespace Yume
 {
@@ -23,8 +24,22 @@ namespace Yume
             }
         }
 
+        [SerializeField] private bool preferSteamOverlayScreenshot;
+
         public void Capture()
         {
+            if (preferSteamOverlayScreenshot && SteamManager.Initialized)
+            {
+                Debug.Log("Triggering Steam overlay screenshot capture.");
+                SteamScreenshots.TriggerScreenshot();
+                return;
+            }
+
+            if (preferSteamOverlayScreenshot && !SteamManager.Initialized)
+            {
+                Debug.LogWarning("Steam overlay screenshot requested, but Steam API is not initialized. Falling back to custom capture.");
+            }
+
             StartCoroutine(CaptureRoutine());
         }
 
@@ -101,6 +116,16 @@ namespace Yume
 
                 File.WriteAllBytes(path, bytes);
                 Debug.Log($"Screenshot saved to: {path}");
+
+                if (SteamManager.Initialized)
+                {
+                    var screenshotHandle = SteamScreenshots.AddScreenshotToLibrary(path, null, texture.width, texture.height);
+                    Debug.Log($"Steam screenshot registered. Handle: {screenshotHandle.m_ScreenshotHandle}");
+                }
+                else
+                {
+                    Debug.Log("Steam API not initialized. Skipping Steam screenshot registration.");
+                }
             }
             catch (Exception ex)
             {
