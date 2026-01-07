@@ -369,6 +369,33 @@ public class MaterialHuePresetManager : MonoBehaviour
             data.controllerColors.Add(new HSVColor(controller.AppliedHue, controller.AppliedSaturation, controller.AppliedValue));
         }
 
+        for (int slotIndex = 0; slotIndex < SlotCount; slotIndex++)
+        {
+            MaterialHuePresetSlot slot = presetSlots[slotIndex];
+            if (slot == null || slot.IsDefaultPreset)
+            {
+                continue;
+            }
+
+            var slotData = new MaterialHueSlotSaveData
+            {
+                slotIndex = slotIndex
+            };
+
+            foreach (var controller in controllers)
+            {
+                if (controller == null)
+                {
+                    slotData.colors.Add(new HSVColor());
+                    continue;
+                }
+
+                slotData.colors.Add(new HSVColor(controller.AppliedHue, controller.AppliedSaturation, controller.AppliedValue));
+            }
+
+            data.slots.Add(slotData);
+        }
+
         return data;
     }
 
@@ -855,6 +882,11 @@ public class MaterialHuePresetManager : MonoBehaviour
         SelectedSlotIndex = clampedSlot;
         lastAppliedSlotIndex = clampedSlot;
 
+        if (TryApplySlotSaveData(data, clampedSlot))
+        {
+            return;
+        }
+
         if (data == null || data.controllerColors == null || data.controllerColors.Count == 0)
         {
             if (!TryLoadUserPresetFromPrefs(clampedSlot, "Loaded from PlayerPrefs fallback", applyToMaterial: true))
@@ -888,6 +920,59 @@ public class MaterialHuePresetManager : MonoBehaviour
         {
             SavePreset(clampedSlot);
         }
+    }
+
+    private bool TryApplySlotSaveData(MaterialHueManagerSaveData data, int slotIndex)
+    {
+        if (data?.slots == null || data.slots.Count == 0)
+        {
+            return false;
+        }
+
+        MaterialHueSlotSaveData slotData = null;
+        foreach (MaterialHueSlotSaveData candidate in data.slots)
+        {
+            if (candidate != null && candidate.slotIndex == slotIndex)
+            {
+                slotData = candidate;
+                break;
+            }
+        }
+
+        if (slotData == null || slotData.colors == null || slotData.colors.Count == 0)
+        {
+            return false;
+        }
+
+        if (slotData.colors.Count < controllers.Count)
+        {
+            Debug.LogWarning($"Slot save data color count ({slotData.colors.Count}) is less than controller count ({controllers.Count}) for slot {slotIndex}.");
+        }
+
+        int colorCount = Mathf.Min(controllers.Count, slotData.colors.Count);
+        for (int i = 0; i < colorCount; i++)
+        {
+            MaterialHueController controller = controllers[i];
+            if (controller == null)
+            {
+                continue;
+            }
+
+            HSVColor savedColor = slotData.colors[i];
+            controller.SetHSV(savedColor.H, savedColor.S, savedColor.V);
+        }
+
+        StoreSlotTemporaryColors(slotIndex);
+
+        if (!IsDefaultSlot(slotIndex))
+        {
+            if (!SavePresetColors(slotIndex, slotData.colors))
+            {
+                SavePreset(slotIndex);
+            }
+        }
+
+        return true;
     }
 
     private void WaitForSaveSlotKey()
