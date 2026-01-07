@@ -587,8 +587,6 @@ public class MaterialHuePresetManager : MonoBehaviour
             HSVColor defaultColor = defaultColors[i];
             controller.SetHSV(defaultColor.H, defaultColor.S, defaultColor.V, applyToMaterial: applyToMaterial);
         }
-
-        StoreSlotTemporaryColors(slotIndex);
         Debug.Log($"{actionLabel} default preset slot {slotIndex}");
     }
 
@@ -596,7 +594,6 @@ public class MaterialHuePresetManager : MonoBehaviour
     {
         if (TryLoadUserPresetFromPrefs(slotIndex, actionLabel, applyToMaterial))
         {
-            StoreSlotTemporaryColors(slotIndex);
             return;
         }
 
@@ -817,8 +814,6 @@ public class MaterialHuePresetManager : MonoBehaviour
                     SavePreset(slotIndex);
                 }
             }
-
-            StoreSlotTemporaryColors(slotIndex);
         }
 
         return loadedAny;
@@ -881,8 +876,6 @@ public class MaterialHuePresetManager : MonoBehaviour
             HSVColor savedColor = data.controllerColors[i];
             controller.SetHSV(savedColor.H, savedColor.S, savedColor.V);
         }
-
-        StoreSlotTemporaryColors(clampedSlot);
 
         if (enableAutoSave && !IsDefaultSlot(clampedSlot))
         {
@@ -1034,15 +1027,15 @@ public class MaterialHuePresetManager : MonoBehaviour
         {
             UserPresetFallbackSource.TemporarySlotMemory => TryGetTemporarySlotColors(slotIndex, out var storedColors)
                 ? storedColors
-                : GetCurrentAppliedColors(),
+                : initialControllerColors,
             UserPresetFallbackSource.CurrentAppliedColor => GetCurrentAppliedColors(),
             UserPresetFallbackSource.InitialControllerColor => initialControllerColors,
-            _ => GetCurrentAppliedColors()
+            _ => initialControllerColors
         };
 
         if (fallbackColors == null || fallbackColors.Count == 0)
         {
-            fallbackColors = GetCurrentAppliedColors();
+            fallbackColors = initialControllerColors;
         }
 
         int colorCount = Mathf.Min(controllers.Count, fallbackColors.Count);
@@ -1063,7 +1056,6 @@ public class MaterialHuePresetManager : MonoBehaviour
             controller.SetHSV(fallbackColor.H, fallbackColor.S, fallbackColor.V, applyToMaterial: applyToMaterial);
         }
 
-        StoreSlotTemporaryColors(slotIndex);
         Debug.Log($"{actionLabel} user preset fallback slot {slotIndex} ({userPresetFallbackSource}).");
     }
 
