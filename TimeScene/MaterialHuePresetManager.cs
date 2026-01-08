@@ -359,8 +359,13 @@ public class MaterialHuePresetManager : MonoBehaviour
     }
 
     // 指定スロットに、すべての MaterialHueController の色を保存
-    public void SavePreset(int slotIndex)
+    public void SavePreset(int slotIndex, bool isUserTriggered)
     {
+        if (!isUserTriggered)
+        {
+            return;
+        }
+
         if (!TryValidateSlot(slotIndex, out int clampedSlot))
         {
             return;
