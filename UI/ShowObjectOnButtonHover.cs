@@ -3,49 +3,62 @@ using UnityEngine.EventSystems;
 
 public class ShowObjectOnButtonHover : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
-    [SerializeField] private GameObject targetObject;
+    [SerializeField] private GameObject[] targetObjects;
     [SerializeField] private bool hideOnStart = true;
 
     private void Awake()
     {
-        if (targetObject == null)
+        if (targetObjects == null || targetObjects.Length == 0)
         {
             return;
         }
 
         if (hideOnStart)
         {
-            targetObject.SetActive(false);
+            SetTargetsActive(false);
         }
     }
 
     private void OnDisable()
     {
-        if (targetObject == null || !hideOnStart)
+        if (targetObjects == null || targetObjects.Length == 0 || !hideOnStart)
         {
             return;
         }
 
-        targetObject.SetActive(false);
+        SetTargetsActive(false);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (targetObject == null)
+        if (targetObjects == null || targetObjects.Length == 0)
         {
             return;
         }
 
-        targetObject.SetActive(true);
+        SetTargetsActive(true);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (targetObject == null)
+        if (targetObjects == null || targetObjects.Length == 0)
         {
             return;
         }
 
-        targetObject.SetActive(false);
+        SetTargetsActive(false);
+    }
+
+    private void SetTargetsActive(bool isActive)
+    {
+        foreach (var targetObject in targetObjects)
+        {
+            if (targetObject == null)
+            {
+                continue;
+            }
+
+            targetObject.SetActive(isActive);
+        }
     }
 }
