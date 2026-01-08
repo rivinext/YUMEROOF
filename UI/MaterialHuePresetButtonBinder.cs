@@ -125,7 +125,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             int appliedIndex = presetManager.GetCurrentAppliedSlotIndex();
             if (saveBeforeSwitchingSlots && oldIndex == appliedIndex && !presetManager.IsDefaultSlot(oldIndex))
             {
-                presetManager.SavePreset(oldIndex);
+                presetManager.SavePreset(oldIndex, false);
             }
 
             presetManager.SelectedSlotIndex = slotIndex;
@@ -183,7 +183,7 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
                     return;
                 }
 
-                presetManager.SavePreset(targetSlot);
+                presetManager.SavePreset(targetSlot, true);
                 presetManager.PreviewPreset(targetSlot);
             });
         }
