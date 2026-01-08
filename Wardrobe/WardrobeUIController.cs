@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
 using TMPro;
 
 public enum WardrobeTabType
@@ -31,6 +33,11 @@ public class WardrobeUIController : MonoBehaviour
     [SerializeField] private Color defaultCategoryCheckmarkColor = Color.white;
     [SerializeField] private List<CategoryDisplaySetting> categoryDisplaySettings = new List<CategoryDisplaySetting>();
     [SerializeField] private List<CategoryContentBinding> categoryContentBindings = new List<CategoryContentBinding>();
+    [Header("Category Localization")]
+    [SerializeField] private TMP_Text categoryLabelText;
+    [SerializeField] private LocalizeStringEvent categoryLabelLocalizeEvent;
+    [SerializeField] private DynamicLocalizer categoryLabelDynamicLocalizer;
+    [SerializeField] private string categoryLabelDynamicFieldName = "Category";
     private readonly List<CategoryTab> categoryTabs = new List<CategoryTab>();
     [SerializeField] private List<AttachmentPoint> attachmentPoints = new List<AttachmentPoint>();
     [SerializeField] private List<AttachmentPoint> gameAttachmentPoints = new List<AttachmentPoint>();
@@ -149,6 +156,17 @@ public class WardrobeUIController : MonoBehaviour
     private readonly List<WardrobeItemView> registeredItems = new List<WardrobeItemView>();
     private readonly List<WardrobeItemView> runtimeGeneratedItems = new List<WardrobeItemView>();
     private readonly List<FurnitureCategoryToggle> runtimeCategoryToggles = new List<FurnitureCategoryToggle>();
+    private const string StandardTextTableName = "StandardText";
+    private static readonly Dictionary<WardrobeTabType, string> CategoryLocalizationKeys = new Dictionary<WardrobeTabType, string>
+    {
+        { WardrobeTabType.Hair, "Hair" },
+        { WardrobeTabType.Accessories, "Accessories" },
+        { WardrobeTabType.Eyewear, "Eyewear" },
+        { WardrobeTabType.Tops, "Tops" },
+        { WardrobeTabType.Pants, "Pants" },
+        { WardrobeTabType.OnePiece, "OnePiece" },
+        { WardrobeTabType.Shoes, "Shoes" }
+    };
 
     private bool hasLoadedSelections;
 
@@ -986,6 +1004,7 @@ public class WardrobeUIController : MonoBehaviour
         Color checkmarkColor = ResolveCategoryCheckmarkColor(category);
 
         categoryToggle.Initialize(category.ToString(), displayName, icon, categoryTabToggleGroup, null, true, true, backgroundColor, true, checkmarkColor);
+        ApplyCategoryTabLocalization(categoryToggle, category);
 
         runtimeCategoryToggles.Add(categoryToggle);
         categoryTabs.Add(new CategoryTab
@@ -1000,6 +1019,28 @@ public class WardrobeUIController : MonoBehaviour
     {
         CategoryDisplaySetting setting = FindCategoryDisplaySetting(category);
         return setting != null && !string.IsNullOrEmpty(setting.displayName) ? setting.displayName : category.ToString();
+    }
+
+    private string ResolveCategoryLocalizationKey(WardrobeTabType category)
+    {
+        string key;
+        if (CategoryLocalizationKeys.TryGetValue(category, out key) && !string.IsNullOrEmpty(key))
+        {
+            return key;
+        }
+
+        return category.ToString();
+    }
+
+    private void ApplyCategoryTabLocalization(FurnitureCategoryToggle categoryToggle, WardrobeTabType category)
+    {
+        if (categoryToggle == null)
+        {
+            return;
+        }
+
+        string key = ResolveCategoryLocalizationKey(category);
+        categoryToggle.SetLabelLocalization(StandardTextTableName, key);
     }
 
     private Sprite ResolveCategoryIcon(WardrobeTabType category)
@@ -1094,6 +1135,35 @@ public class WardrobeUIController : MonoBehaviour
         if (tab.content != null)
         {
             tab.content.SetActive(isOn);
+        }
+
+        if (isOn)
+        {
+            UpdateCategoryLabelLocalization(tab.category);
+        }
+    }
+
+    private void UpdateCategoryLabelLocalization(WardrobeTabType category)
+    {
+        string key = ResolveCategoryLocalizationKey(category);
+
+        if (categoryLabelDynamicLocalizer != null)
+        {
+            categoryLabelDynamicLocalizer.SetFieldByName(categoryLabelDynamicFieldName, key);
+            return;
+        }
+
+        if (categoryLabelLocalizeEvent != null)
+        {
+            categoryLabelLocalizeEvent.StringReference = new LocalizedString(StandardTextTableName, key);
+            categoryLabelLocalizeEvent.enabled = false;
+            categoryLabelLocalizeEvent.enabled = true;
+            return;
+        }
+
+        if (categoryLabelText != null)
+        {
+            categoryLabelText.text = key;
         }
     }
 
