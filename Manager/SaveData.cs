@@ -46,12 +46,13 @@ public class BaseSaveData
 [Serializable]
 public class StorySaveData : BaseSaveData
 {
+    public const int DefaultMoney = 100;
     public PlayerManager.PlayerData player;
     public List<InventoryEntry> inventory = new();
     [NonSerialized] public List<string> legacyInventory;
     public List<SaveSystem.PlacedFurniture> furniture = new();
     public GameClock.ClockData clock;
-    public int money;
+    public int money = DefaultMoney;
     public int milestoneIndex;
     public int cozy;
     public int nature;
