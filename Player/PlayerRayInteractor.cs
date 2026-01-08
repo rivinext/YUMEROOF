@@ -164,7 +164,7 @@ public class PlayerRayInteractor : MonoBehaviour
                 Vector3 dir = Quaternion.AngleAxis(vAngle, transform.right) * horizDir;
                 if (Cast(origin, dir, out RaycastHit hit))
                 {
-                    IInteractable trig = hit.collider.GetComponentInParent<IInteractable>();
+                    IInteractable trig = ResolveInteractable(hit.collider);
                     if (trig != null && hit.distance < bestDist)
                     {
                         bestDist = hit.distance;
@@ -175,6 +175,24 @@ public class PlayerRayInteractor : MonoBehaviour
         }
 
         return best;
+    }
+
+    private static IInteractable ResolveInteractable(Collider collider)
+    {
+        if (collider == null)
+            return null;
+
+        IInteractable[] interactables = collider.GetComponentsInParent<IInteractable>();
+        if (interactables == null || interactables.Length == 0)
+            return null;
+
+        foreach (IInteractable interactable in interactables)
+        {
+            if (interactable is MoneyCostInteractable)
+                return interactable;
+        }
+
+        return interactables[0];
     }
 
     private void SetHighlight(IInteractable target, bool enabled)
