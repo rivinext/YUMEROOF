@@ -33,7 +33,7 @@ public class MoneyCostInteractable : MonoBehaviour, IInteractable
             return;
         }
 
-        if (blockIfInsufficient && money.CurrentMoney < cost)
+        if (blockIfInsufficient && !money.UnlimitedMoney && money.CurrentMoney < cost)
         {
             Debug.Log("[MoneyCostInteractable] 所持金不足のため実行できません。");
             return;
