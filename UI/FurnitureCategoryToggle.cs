@@ -2,8 +2,6 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using UnityEngine.Localization;
-using UnityEngine.Localization.Components;
 using TMPro;
 
 /// <summary>
@@ -21,8 +19,6 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
 
     private Toggle toggle;
     private string categoryId;
-    private string localizationTableName;
-    private string localizationKey;
 
     public string CategoryId => categoryId;
     public Toggle Toggle => toggle;
@@ -92,30 +88,6 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         UpdateHoverTargetCategoryText();
     }
 
-    public void SetLabelLocalization(string tableName, string key)
-    {
-        localizationTableName = tableName;
-        localizationKey = key;
-
-        if (label == null || string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(key))
-        {
-            UpdateHoverTargetCategoryText();
-            return;
-        }
-
-        var localizeEvent = label.GetComponent<LocalizeStringEvent>();
-        if (localizeEvent == null)
-        {
-            localizeEvent = label.gameObject.AddComponent<LocalizeStringEvent>();
-        }
-
-        localizeEvent.StringReference = new LocalizedString(tableName, key);
-        localizeEvent.enabled = false;
-        localizeEvent.enabled = true;
-
-        UpdateHoverTargetCategoryText();
-    }
-
     public void SetIsOn(bool isOn, bool notify = true)
     {
         if (toggle == null)
@@ -161,22 +133,7 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         var hoverText = hoverTarget.GetComponentInChildren<TMP_Text>(true);
         if (hoverText != null)
         {
-            if (!string.IsNullOrEmpty(localizationTableName) && !string.IsNullOrEmpty(localizationKey))
-            {
-                var localizeEvent = hoverText.GetComponent<LocalizeStringEvent>();
-                if (localizeEvent == null)
-                {
-                    localizeEvent = hoverText.gameObject.AddComponent<LocalizeStringEvent>();
-                }
-
-                localizeEvent.StringReference = new LocalizedString(localizationTableName, localizationKey);
-                localizeEvent.enabled = false;
-                localizeEvent.enabled = true;
-            }
-            else
-            {
-                hoverText.text = categoryId;
-            }
+            hoverText.text = categoryId;
         }
     }
 }
