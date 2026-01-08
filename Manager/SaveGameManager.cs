@@ -244,6 +244,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (!File.Exists(path))
         {
             createdNewSave = true;
+            MaterialHuePresetManager.ClearSavedPresetsForSlot(slotKey);
             if (creative)
             {
                 var emptyData = new CreativeSaveData();
@@ -290,6 +291,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             File.Delete(path);
         }
+
+        MaterialHuePresetManager.ClearSavedPresetsForSlot(slotKey);
     }
 
     void FillCommon(BaseSaveData data)

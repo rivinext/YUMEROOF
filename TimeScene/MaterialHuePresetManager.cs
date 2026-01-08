@@ -62,6 +62,8 @@ public class MaterialHuePresetManager : MonoBehaviour
         InitialControllerColor
     }
 
+    private const string IgnoreLegacyKeySuffix = "ignoreLegacy";
+
     [SerializeField] private List<MaterialHueController> controllers = new();
     [SerializeField] private string keyPrefix = "multi_mat_preset";
 
@@ -750,6 +752,11 @@ public class MaterialHuePresetManager : MonoBehaviour
     private string GetSaveSlotNamespace()
     {
         string slotKey = SaveGameManager.Instance?.CurrentSlotKey;
+        return GetSaveSlotNamespace(slotKey);
+    }
+
+    private string GetSaveSlotNamespace(string slotKey)
+    {
         return string.IsNullOrWhiteSpace(slotKey) ? "global" : slotKey;
     }
 
@@ -758,9 +765,19 @@ public class MaterialHuePresetManager : MonoBehaviour
         return $"{keyPrefix}_{GetSaveSlotNamespace()}_{suffix}";
     }
 
+    private string GetNamespacedKey(string suffix, string slotKey)
+    {
+        return $"{keyPrefix}_{GetSaveSlotNamespace(slotKey)}_{suffix}";
+    }
+
     private string GetPresetBaseKey(int slotIndex, int controllerIndex)
     {
         return GetNamespacedKey($"{slotIndex}_{controllerIndex}");
+    }
+
+    private string GetPresetBaseKey(int slotIndex, int controllerIndex, string slotKey)
+    {
+        return GetNamespacedKey($"{slotIndex}_{controllerIndex}", slotKey);
     }
 
     private void ClearLegacyPresetKeys(int slotIndex)
@@ -819,11 +836,65 @@ public class MaterialHuePresetManager : MonoBehaviour
         return loadedAny;
     }
 
+    private bool ShouldIgnoreLegacyPresets()
+    {
+        return PlayerPrefs.GetInt(GetNamespacedKey(IgnoreLegacyKeySuffix), 0) == 1;
+    }
+
+    public static void ClearSavedPresetsForSlot(string slotKey)
+    {
+        if (string.IsNullOrWhiteSpace(slotKey))
+        {
+            return;
+        }
+
+        foreach (MaterialHuePresetManager manager in Resources.FindObjectsOfTypeAll<MaterialHuePresetManager>())
+        {
+            if (manager == null)
+            {
+                continue;
+            }
+
+            manager.ClearSavedPresetsForSlotInternal(slotKey);
+        }
+    }
+
+    private void ClearSavedPresetsForSlotInternal(string slotKey)
+    {
+        if (SlotCount <= 0)
+        {
+            PlayerPrefs.DeleteKey(GetNamespacedKey("selectedSlot", slotKey));
+            PlayerPrefs.SetInt(GetNamespacedKey(IgnoreLegacyKeySuffix, slotKey), 1);
+            PlayerPrefs.Save();
+            return;
+        }
+
+        for (int slotIndex = 0; slotIndex < SlotCount; slotIndex++)
+        {
+            for (int controllerIndex = 0; controllerIndex < controllers.Count; controllerIndex++)
+            {
+                string baseKey = GetPresetBaseKey(slotIndex, controllerIndex, slotKey);
+                PlayerPrefs.DeleteKey(baseKey + "_h");
+                PlayerPrefs.DeleteKey(baseKey + "_s");
+                PlayerPrefs.DeleteKey(baseKey + "_v");
+            }
+        }
+
+        PlayerPrefs.DeleteKey(GetNamespacedKey("selectedSlot", slotKey));
+        PlayerPrefs.SetInt(GetNamespacedKey(IgnoreLegacyKeySuffix, slotKey), 1);
+        PlayerPrefs.Save();
+    }
+
     private bool TryLoadUserPresetFromPrefs(int slotIndex, string actionLabel, bool applyToMaterial)
     {
         if (LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: false))
         {
             return true;
+        }
+
+        if (ShouldIgnoreLegacyPresets())
+        {
+            return false;
         }
 
         return LoadPresetFromPlayerPrefs(slotIndex, actionLabel, applyToMaterial, useLegacyKeys: true);
