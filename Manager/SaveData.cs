@@ -46,7 +46,7 @@ public class BaseSaveData
 [Serializable]
 public class StorySaveData : BaseSaveData
 {
-    public const int DefaultMoney = 100;
+    public const int DefaultMoney = 2026;
     public PlayerManager.PlayerData player;
     public List<InventoryEntry> inventory = new();
     [NonSerialized] public List<string> legacyInventory;
