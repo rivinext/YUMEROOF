@@ -881,6 +881,16 @@ public class MaterialHuePresetManager : MonoBehaviour
         {
             SavePreset(clampedSlot);
         }
+
+        foreach (MaterialHuePresetButtonBinder binder in FindObjectsOfType<MaterialHuePresetButtonBinder>(includeInactive: true))
+        {
+            if (binder == null)
+            {
+                continue;
+            }
+
+            binder.SyncToCurrentSelection();
+        }
     }
 
     private void WaitForSaveSlotKey()

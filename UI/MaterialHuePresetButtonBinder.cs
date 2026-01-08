@@ -69,6 +69,16 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         UpdateSaveButtonState();
     }
 
+    public void SyncToCurrentSelection()
+    {
+        if (presetManager == null)
+        {
+            return;
+        }
+
+        SyncToggleSelection(presetManager.GetCurrentAppliedSlotIndex());
+    }
+
     private void SpawnToggle(Toggle template, Transform parent, int slotIndex)
     {
         if (template == null || parent == null)
