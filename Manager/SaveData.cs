@@ -92,6 +92,7 @@ public class CreativeSaveData : BaseSaveData
     public List<SaveSystem.PlacedFurniture> furniture = new();
     public GameClock.ClockData clock;
     public int money;
+    public bool unlimitedMoney = true;
     public int milestoneIndex;
     public int cozy;
     public int nature;
@@ -107,6 +108,11 @@ public class CreativeSaveData : BaseSaveData
         if (data == null)
         {
             return null;
+        }
+
+        if (!string.IsNullOrEmpty(json) && !json.Contains("\"unlimitedMoney\""))
+        {
+            data.unlimitedMoney = true;
         }
 
         if (data.ownedItems == null || data.ownedItems.Count == 0)
