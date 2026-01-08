@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -72,10 +71,6 @@ public class MaterialHuePresetManager : MonoBehaviour
     [SerializeField] private int initialPresetIndex = 0;
     [SerializeField] private bool applyFirstDefaultSlot = false;
 
-    [Header("Auto Save")]
-    [SerializeField] private bool enableAutoSave = false;
-    [SerializeField] private float autoSaveDebounceSeconds = 0.2f;
-
     [Header("Preset Slots")]
     [SerializeField] private List<MaterialHuePresetSlot> presetSlots = new()
     {
@@ -92,8 +87,6 @@ public class MaterialHuePresetManager : MonoBehaviour
     private UserPresetFallbackSource userPresetFallbackSource = UserPresetFallbackSource.TemporarySlotMemory;
 
     private bool hasAppliedSaveData = false;
-    private bool hasSavedSelectedSlotThisSession = false;
-    private Coroutine autoSaveCoroutine;
     private bool isWaitingForSlotKey = false;
     private bool pendingInitialLoad = true;
     private bool hasPendingSaveData = false;
@@ -133,7 +126,6 @@ public class MaterialHuePresetManager : MonoBehaviour
             }
 
             selectedSlotIndex = clampedIndex;
-            hasSavedSelectedSlotThisSession = false;
             SaveSelectedSlotIndex();
         }
     }
@@ -174,20 +166,12 @@ public class MaterialHuePresetManager : MonoBehaviour
         UnsubscribeFromControllers();
         UnsubscribeFromSlotKeyChanged();
 
-        if (autoSaveCoroutine != null)
-        {
-            StopCoroutine(autoSaveCoroutine);
-            autoSaveCoroutine = null;
-        }
-
         SaveSelectedSlotIndex();
-        SaveSelectedSlotIfNeeded("OnDisable");
     }
 
     private void OnApplicationQuit()
     {
         SaveSelectedSlotIndex();
-        SaveSelectedSlotIfNeeded("OnApplicationQuit");
     }
 
     private void Start()
@@ -402,7 +386,6 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         PlayerPrefs.Save();
-        hasSavedSelectedSlotThisSession = clampedSlot == SelectedSlotIndex;
         Debug.Log($"Saved preset slot {clampedSlot}");
     }
 
@@ -443,7 +426,6 @@ public class MaterialHuePresetManager : MonoBehaviour
         }
 
         PlayerPrefs.Save();
-        hasSavedSelectedSlotThisSession = clampedSlot == SelectedSlotIndex;
         Debug.Log($"Saved preset slot {clampedSlot} from provided colors.");
         return true;
     }
@@ -533,36 +515,6 @@ public class MaterialHuePresetManager : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    private void SaveSelectedSlotIfNeeded(string triggerLabel)
-    {
-        if (!enableAutoSave)
-        {
-            return;
-        }
-
-        if (!IsSaveSlotReady())
-        {
-            return;
-        }
-
-        int slotIndex = SelectedSlotIndex;
-
-        if (IsDefaultSlot(slotIndex))
-        {
-            Debug.Log($"Auto-save skipped on {triggerLabel}: selected slot {slotIndex} is default.");
-            return;
-        }
-
-        if (hasSavedSelectedSlotThisSession)
-        {
-            Debug.Log($"Auto-save skipped on {triggerLabel}: slot {slotIndex} was already saved this session.");
-            return;
-        }
-
-        Debug.Log($"Auto-saving preset slot {slotIndex} on {triggerLabel}.");
-        SavePreset(slotIndex);
-    }
-
     private void LoadDefaultPreset(MaterialHuePresetSlot slot, int slotIndex, string actionLabel = "Loaded", bool applyToMaterial = true)
     {
         IReadOnlyList<HSVColor> defaultColors = slot.DefaultColors;
@@ -632,36 +584,6 @@ public class MaterialHuePresetManager : MonoBehaviour
 
         StoreSlotTemporaryColors(slotIndex);
 
-        if (!enableAutoSave)
-        {
-            return;
-        }
-
-        if (autoSaveDebounceSeconds <= 0f)
-        {
-            SavePreset(slotIndex);
-            return;
-        }
-
-        if (autoSaveCoroutine != null)
-        {
-            StopCoroutine(autoSaveCoroutine);
-        }
-
-        autoSaveCoroutine = StartCoroutine(DebouncedAutoSave());
-    }
-
-    private IEnumerator DebouncedAutoSave()
-    {
-        yield return new WaitForSeconds(autoSaveDebounceSeconds);
-
-        int slotIndex = SelectedSlotIndex;
-        if (!IsDefaultSlot(slotIndex))
-        {
-            SavePreset(slotIndex);
-        }
-
-        autoSaveCoroutine = null;
     }
 
     private bool TryValidateSlot(int slotIndex, out int validSlotIndex)
@@ -824,13 +746,6 @@ public class MaterialHuePresetManager : MonoBehaviour
             string label = useLegacyKeys ? $"{actionLabel} (legacy PlayerPrefs)" : actionLabel;
             Debug.Log($"{label} preset slot {slotIndex}");
 
-            if (useLegacyKeys && !IsDefaultSlot(slotIndex))
-            {
-                if (enableAutoSave)
-                {
-                    SavePreset(slotIndex);
-                }
-            }
         }
 
         return loadedAny;
@@ -946,11 +861,6 @@ public class MaterialHuePresetManager : MonoBehaviour
 
             HSVColor savedColor = data.controllerColors[i];
             controller.SetHSV(savedColor.H, savedColor.S, savedColor.V);
-        }
-
-        if (enableAutoSave && !IsDefaultSlot(clampedSlot))
-        {
-            SavePreset(clampedSlot);
         }
 
         foreach (MaterialHuePresetButtonBinder binder in FindObjectsOfType<MaterialHuePresetButtonBinder>(includeInactive: true))
