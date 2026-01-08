@@ -369,6 +369,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         var money = MoneyManager.Instance;
         data.money = money != null ? money.CurrentMoney : 0;
+        data.unlimitedMoney = money != null && money.UnlimitedMoney;
 
         var milestone = MilestoneManager.Instance;
         data.milestoneIndex = milestone != null ? milestone.CurrentMilestoneIndex : 0;
@@ -467,7 +468,9 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         var money = MoneyManager.Instance;
         if (money != null)
+        {
             money.SetMoney(data.money);
+        }
 
         var milestone = MilestoneManager.Instance;
         if (milestone != null)
@@ -501,7 +504,10 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         var money = MoneyManager.Instance;
         if (money != null)
+        {
             money.SetMoney(data.money);
+            money.UnlimitedMoney = data.unlimitedMoney;
+        }
 
         var milestone = MilestoneManager.Instance;
         if (milestone != null)

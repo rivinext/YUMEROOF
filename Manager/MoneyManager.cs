@@ -11,6 +11,7 @@ public class MoneyManager : MonoBehaviour
     private int currentMoney;
 
     public int CurrentMoney => currentMoney;
+    public bool UnlimitedMoney { get; set; }
 
     void Awake()
     {
@@ -44,6 +45,11 @@ public class MoneyManager : MonoBehaviour
 
     public void AddMoney(int amount)
     {
+        if (UnlimitedMoney && amount < 0)
+        {
+            return;
+        }
+
         currentMoney += amount;
         OnMoneyChanged?.Invoke(currentMoney);
     }
