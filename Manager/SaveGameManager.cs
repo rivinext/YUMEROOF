@@ -380,11 +380,22 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             data.hasSeenOpeningPanel = openingPanel.HasSeenOpeningPanel;
             cachedHasSeenOpeningPanel = data.hasSeenOpeningPanel;
+            Debug.Log($"[SaveGameManager] SaveManagers(Story): Opening panel found, HasSeenOpeningPanel={data.hasSeenOpeningPanel}");
         }
         else
         {
-            data.hasSeenOpeningPanel = cachedHasSeenOpeningPanel;
-            Debug.Log($"[SaveGameManager] SaveManagers(Story): Opening panel missing, using cached value={cachedHasSeenOpeningPanel}");
+            var existing = LoadMetadata(currentSlot) as StorySaveData;
+            if (existing != null && existing.hasSeenOpeningPanel)
+            {
+                data.hasSeenOpeningPanel = true;
+                cachedHasSeenOpeningPanel = true;
+                Debug.Log("[SaveGameManager] SaveManagers(Story): Opening panel missing, restored hasSeenOpeningPanel from save metadata.");
+            }
+            else
+            {
+                data.hasSeenOpeningPanel = cachedHasSeenOpeningPanel;
+                Debug.Log($"[SaveGameManager] SaveManagers(Story): Opening panel missing, using cached value={cachedHasSeenOpeningPanel}");
+            }
         }
         Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
