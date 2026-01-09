@@ -7,14 +7,12 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button closeButton;
-    [SerializeField] private CanvasGroup tmpCanvasGroup;
 
     // SaveGameManager が ApplyManagers(Story) でスロットごとに復元してくれる想定の値
     public bool HasSeenOpeningPanel { get; set; }
 
     private bool isWaitingForSlideOut;
     private Coroutine waitCoroutine;
-    private Coroutine tmpFadeCoroutine;
 
     void OnEnable()
     {
@@ -22,8 +20,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         {
             closeButton.onClick.AddListener(ClosePanel);
         }
-
-        InitializeTmpFadeState();
 
         // ✅ slotKey が空のタイミングで判定してしまうのを防ぐ
         if (waitCoroutine != null)
@@ -48,9 +44,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             StopCoroutine(waitCoroutine);
             waitCoroutine = null;
         }
-
-        StopTmpFadeCoroutine();
-        ResetTmpFadeState();
     }
 
     private IEnumerator WaitForSlotAndTryShow()
@@ -109,7 +102,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             return;
 
         ShowPanel();
-        StartTmpFadeSequence();
     }
 
     private void UnsubscribeFromSlideOut()
@@ -146,8 +138,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         {
             panelRoot.SetActive(true);
         }
-
-        InitializeTmpFadeState();
     }
 
     private void ClosePanel()
@@ -171,76 +161,5 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
         Debug.Log($"[StoryOpeningPanelOnceController] CurrentSlotKey='{slotKey}'. Saving current slot.");
         SaveGameManager.Instance.SaveCurrentSlot();
-    }
-
-    private void StartTmpFadeSequence()
-    {
-        StopTmpFadeCoroutine();
-
-        if (tmpCanvasGroup == null)
-        {
-            return;
-        }
-
-        tmpFadeCoroutine = StartCoroutine(WaitAndFadeInTmp());
-    }
-
-    private IEnumerator WaitAndFadeInTmp()
-    {
-        yield return new WaitForSecondsRealtime(1f);
-
-        float elapsed = 0f;
-        const float fadeDuration = 0.4f;
-
-        tmpCanvasGroup.alpha = 0f;
-        tmpCanvasGroup.interactable = false;
-        tmpCanvasGroup.blocksRaycasts = false;
-
-        while (elapsed < fadeDuration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            tmpCanvasGroup.alpha = Mathf.Clamp01(elapsed / fadeDuration);
-            yield return null;
-        }
-
-        tmpCanvasGroup.alpha = 1f;
-        tmpCanvasGroup.interactable = true;
-        tmpCanvasGroup.blocksRaycasts = true;
-        tmpFadeCoroutine = null;
-    }
-
-    private void StopTmpFadeCoroutine()
-    {
-        if (tmpFadeCoroutine == null)
-        {
-            return;
-        }
-
-        StopCoroutine(tmpFadeCoroutine);
-        tmpFadeCoroutine = null;
-    }
-
-    private void InitializeTmpFadeState()
-    {
-        if (tmpCanvasGroup == null)
-        {
-            return;
-        }
-
-        tmpCanvasGroup.alpha = 0f;
-        tmpCanvasGroup.interactable = false;
-        tmpCanvasGroup.blocksRaycasts = false;
-    }
-
-    private void ResetTmpFadeState()
-    {
-        if (tmpCanvasGroup == null)
-        {
-            return;
-        }
-
-        tmpCanvasGroup.alpha = 0f;
-        tmpCanvasGroup.interactable = false;
-        tmpCanvasGroup.blocksRaycasts = false;
     }
 }
