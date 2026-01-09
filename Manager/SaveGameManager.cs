@@ -526,6 +526,11 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
 
+        if (TryGetHasSeenOpeningPanel(currentSlot, out var cachedHasSeen) && cachedHasSeen)
+        {
+            data.hasSeenOpeningPanel = true;
+        }
+
         var openingPanel = FindFirstObjectByType<StoryOpeningPanelOnceController>(FindObjectsInactive.Include);
         if (openingPanel != null)
         {
