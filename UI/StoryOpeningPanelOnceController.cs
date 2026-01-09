@@ -96,12 +96,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[StoryOpeningPanelOnceController] Before setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
-        HasSeenOpeningPanel = true;
-        Debug.Log($"[StoryOpeningPanelOnceController] After setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
-        SaveGameManager.Instance?.SaveCurrentSlot();
-        Debug.Log("[StoryOpeningPanelOnceController] SaveCurrentSlot called after setting hasSeenOpeningPanel");
-
         if (panelRoot != null)
         {
             panelRoot.SetActive(true);
@@ -114,5 +108,19 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         {
             panelRoot.SetActive(false);
         }
+
+        Debug.Log($"[StoryOpeningPanelOnceController] Before setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
+        HasSeenOpeningPanel = true;
+        Debug.Log($"[StoryOpeningPanelOnceController] After setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
+
+        var slotKey = SaveGameManager.Instance != null ? SaveGameManager.Instance.CurrentSlotKey : null;
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            Debug.Log("[StoryOpeningPanelOnceController] CurrentSlotKey is empty. Skipping SaveCurrentSlot.");
+            return;
+        }
+
+        Debug.Log($"[StoryOpeningPanelOnceController] CurrentSlotKey='{slotKey}'. Saving current slot.");
+        SaveGameManager.Instance?.SaveCurrentSlot();
     }
 }
