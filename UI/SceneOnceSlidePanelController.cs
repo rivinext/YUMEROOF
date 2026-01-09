@@ -177,7 +177,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         isWaitingSlideOutCompletion = true;
         cachedSlideOutComplete = slidePanel.OnSlideOutComplete;
         slidePanel.OnSlideOutComplete = HandleSlideOutComplete;
-        SaveSeenStateOnce();
+        SaveSeenStateOnce("ExitPanel");
         slidePanel.SlideOut();
     }
 
@@ -191,7 +191,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         }
 
         PlayerController.SetGlobalInputEnabled(true);
-        SaveSeenStateOnce();
+        SaveSeenStateOnce("HandleSlideOutComplete");
     }
 
     private void ClearSlideOutHandler()
@@ -206,28 +206,36 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         isWaitingSlideOutCompletion = false;
     }
 
-    private void SaveSeenStateOnce()
+    private void SaveSeenStateOnce(string reason)
     {
         if (hasSavedSeenState)
         {
+            Debug.Log(
+                $"[SceneOnceSlidePanelController] SaveSeenStateOnce skipped reason={reason} (already saved) sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel}");
             return;
         }
 
         hasSavedSeenState = true;
         HasSeenScenePanel = true;
 
+        var slotKey = SaveGameManager.Instance != null ? SaveGameManager.Instance.CurrentSlotKey : null;
+        Debug.Log(
+            $"[SceneOnceSlidePanelController] SaveSeenStateOnce begin reason={reason} slotKey={slotKey} sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel}");
         if (SaveGameManager.Instance != null)
         {
             SaveGameManager.Instance.SetHasSeenSceneOncePanel(true);
         }
 
-        var slotKey = SaveGameManager.Instance != null ? SaveGameManager.Instance.CurrentSlotKey : null;
         if (string.IsNullOrEmpty(slotKey))
         {
+            Debug.LogWarning(
+                $"[SceneOnceSlidePanelController] SaveSeenStateOnce abort reason={reason} slotKey is empty sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel}");
             return;
         }
 
         SaveGameManager.Instance.SaveCurrentSlot();
+        Debug.Log(
+            $"[SceneOnceSlidePanelController] SaveSeenStateOnce completed reason={reason} slotKey={slotKey} sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel}");
     }
 
     private void ShowNextPage()
