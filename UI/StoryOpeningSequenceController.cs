@@ -22,6 +22,10 @@ public class StoryOpeningSequenceController : MonoBehaviour
 
     private Coroutine sequenceCoroutine;
     private bool hasPlayed;
+    private bool shouldRestoreInput;
+    private bool shouldRestoreCameraControl;
+    private bool previousCameraControlEnabled;
+    private OrthographicCameraController cachedCameraController;
 
     private void OnEnable()
     {
@@ -71,6 +75,7 @@ public class StoryOpeningSequenceController : MonoBehaviour
     private IEnumerator PlaySequence()
     {
         hasPlayed = true;
+        BeginInputLock();
 
         if (openingPanelGroup != null)
         {
@@ -114,6 +119,35 @@ public class StoryOpeningSequenceController : MonoBehaviour
             yield return FadeCanvasGroup(openingPanelGroup, openingPanelGroup.alpha, 0f, panelFadeDuration);
             openingPanelGroup.blocksRaycasts = false;
             openingPanelGroup.interactable = false;
+        }
+
+        EndInputLock();
+    }
+
+    private void BeginInputLock()
+    {
+        shouldRestoreInput = PlayerController.GlobalInputEnabled;
+        PlayerController.SetGlobalInputEnabled(false);
+
+        cachedCameraController ??= FindFirstObjectByType<OrthographicCameraController>();
+        if (cachedCameraController != null)
+        {
+            previousCameraControlEnabled = !cachedCameraController.blockCameraWhenUIActive;
+            shouldRestoreCameraControl = previousCameraControlEnabled;
+            cachedCameraController.SetCameraControlEnabled(false);
+        }
+    }
+
+    private void EndInputLock()
+    {
+        if (shouldRestoreInput)
+        {
+            PlayerController.SetGlobalInputEnabled(true);
+        }
+
+        if (shouldRestoreCameraControl && cachedCameraController != null)
+        {
+            cachedCameraController.SetCameraControlEnabled(previousCameraControlEnabled);
         }
     }
 
