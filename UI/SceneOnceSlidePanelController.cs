@@ -33,6 +33,8 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
     private void OnEnable()
     {
+        Debug.Log(
+            $"[SceneOnceSlidePanelController] OnEnable sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
         SceneManager.sceneLoaded += HandleSceneLoaded;
 
         if (nextButton != null)
@@ -83,6 +85,8 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        Debug.Log(
+            $"[SceneOnceSlidePanelController] HandleSceneLoaded sceneName={scene.name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
         TryShowForScene(scene.name);
     }
 
@@ -90,29 +94,41 @@ public class SceneOnceSlidePanelController : MonoBehaviour
     {
         if (string.IsNullOrEmpty(sceneName) || string.IsNullOrEmpty(targetSceneName))
         {
+            Debug.Log(
+                $"[SceneOnceSlidePanelController] TryShowForScene return=missingSceneName sceneName={sceneName} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
             return;
         }
 
         if (!sceneName.Equals(targetSceneName, StringComparison.OrdinalIgnoreCase))
         {
+            Debug.Log(
+                $"[SceneOnceSlidePanelController] TryShowForScene return=sceneMismatch sceneName={sceneName} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
             return;
         }
 
         if (!ShouldShowPanel())
         {
+            Debug.Log(
+                $"[SceneOnceSlidePanelController] TryShowForScene return=shouldNotShow sceneName={sceneName} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
             return;
         }
 
+        Debug.Log(
+            $"[SceneOnceSlidePanelController] TryShowForScene show sceneName={sceneName} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
         ShowPanel();
     }
 
     private bool ShouldShowPanel()
     {
+        Debug.Log(
+            $"[SceneOnceSlidePanelController] ShouldShowPanel sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
         return !HasSeenScenePanel;
     }
 
     private void ShowPanel()
     {
+        Debug.Log(
+            $"[SceneOnceSlidePanelController] ShowPanel sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
         if (panelRoot != null)
         {
             panelRoot.SetActive(true);
