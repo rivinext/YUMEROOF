@@ -91,13 +91,13 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             return;
         }
 
+        HasSeenOpeningPanel = true;
+        SaveGameManager.Instance?.SaveCurrentSlot();
+
         if (panelRoot != null)
         {
             panelRoot.SetActive(true);
         }
-
-        HasSeenOpeningPanel = true;
-        SaveGameManager.Instance?.SaveCurrentSlot();
     }
 
     private void ClosePanel()
