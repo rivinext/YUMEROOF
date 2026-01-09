@@ -15,9 +15,11 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
     private bool isWaitingForSlideOut;
     private Coroutine waitCoroutine;
+    private Coroutine slideOutWaitCoroutine;
     private Coroutine tmpFadeCoroutine;
     private Coroutine closeFadeCoroutine;
     private bool hasSavedSeenState;
+    private const float SlideOutWaitTimeoutSeconds = 2f;
 
     void OnEnable()
     {
@@ -54,6 +56,7 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             waitCoroutine = null;
         }
 
+        StopSlideOutWaitCoroutine();
         StopTmpFadeCoroutine();
         ResetTmpFadeState();
         StopCloseFadeCoroutine();
@@ -88,27 +91,29 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         var slideManager = SlideTransitionManager.Instance;
         if (slideManager != null)
         {
-            if (slideManager.IsAnyPanelOpen())
+            if (!slideManager.IsSlideOutInProgress || slideManager.ArePanelsClosed)
             {
-                Debug.Log("[StoryOpeningPanelOnceController] Slide panels already open or idle; showing panel immediately.");
+                Debug.Log("[StoryOpeningPanelOnceController] Slide panels are idle or closed; showing panel immediately.");
                 ShowPanel();
+                StartTmpFadeSequence();
                 return;
             }
 
             // ✅ スライドアウト完了後に出したい
-            slideManager.SlideOutCompleted += HandleSlideOutCompleted;
-            isWaitingForSlideOut = true;
+            StartSlideOutWait(slideManager);
         }
         else
         {
             // スライドマネージャが無いなら即表示
             ShowPanel();
+            StartTmpFadeSequence();
         }
     }
 
     private void HandleSlideOutCompleted()
     {
         // ここで再判定（ロード状況のズレ対策）
+        StopSlideOutWaitCoroutine();
         UnsubscribeFromSlideOut();
 
         if (!ShouldShowPanel())
@@ -116,6 +121,54 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
         ShowPanel();
         StartTmpFadeSequence();
+    }
+
+    private void StartSlideOutWait(SlideTransitionManager slideManager)
+    {
+        if (isWaitingForSlideOut)
+        {
+            return;
+        }
+
+        slideManager.SlideOutCompleted += HandleSlideOutCompleted;
+        isWaitingForSlideOut = true;
+        StopSlideOutWaitCoroutine();
+        slideOutWaitCoroutine = StartCoroutine(WaitForSlideOutOrTimeout());
+    }
+
+    private IEnumerator WaitForSlideOutOrTimeout()
+    {
+        float elapsed = 0f;
+
+        while (isWaitingForSlideOut && elapsed < SlideOutWaitTimeoutSeconds)
+        {
+            var slideManager = SlideTransitionManager.Instance;
+            if (slideManager == null || slideManager.ArePanelsClosed || !slideManager.IsSlideOutInProgress)
+            {
+                break;
+            }
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (!isWaitingForSlideOut)
+        {
+            slideOutWaitCoroutine = null;
+            yield break;
+        }
+
+        UnsubscribeFromSlideOut();
+
+        if (!ShouldShowPanel())
+        {
+            slideOutWaitCoroutine = null;
+            yield break;
+        }
+
+        ShowPanel();
+        StartTmpFadeSequence();
+        slideOutWaitCoroutine = null;
     }
 
     private void UnsubscribeFromSlideOut()
@@ -239,6 +292,10 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             return;
         }
 
+        tmpCanvasGroup.alpha = 0f;
+        tmpCanvasGroup.interactable = false;
+        tmpCanvasGroup.blocksRaycasts = false;
+
         tmpFadeCoroutine = StartCoroutine(WaitAndFadeInTmp());
     }
 
@@ -275,6 +332,17 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
         StopCoroutine(tmpFadeCoroutine);
         tmpFadeCoroutine = null;
+    }
+
+    private void StopSlideOutWaitCoroutine()
+    {
+        if (slideOutWaitCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(slideOutWaitCoroutine);
+        slideOutWaitCoroutine = null;
     }
 
     private void InitializeTmpFadeState()
