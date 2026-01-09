@@ -200,6 +200,19 @@ public class UISlidePanel : MonoBehaviour
         closeOnClickOutside = allowClickOutsideClose;
     }
 
+    public void SetSlideCurves(AnimationCurve slideIn, AnimationCurve slideOut)
+    {
+        if (slideIn != null)
+        {
+            slideInCurve = slideIn;
+        }
+
+        if (slideOut != null)
+        {
+            slideOutCurve = slideOut;
+        }
+    }
+
     private void OnValidate()
     {
         if (exclusionPanels == null)
