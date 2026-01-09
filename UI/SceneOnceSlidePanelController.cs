@@ -119,6 +119,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         }
 
         ApplySlideCurves();
+        PlayerController.SetGlobalInputEnabled(false);
         slidePanel?.SlideIn();
         currentPageIndex = 0;
         UpdatePageDisplay();
@@ -146,6 +147,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
             panelRoot.SetActive(false);
         }
 
+        PlayerController.SetGlobalInputEnabled(true);
         SaveSeenStateOnce();
     }
 
