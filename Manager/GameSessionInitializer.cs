@@ -9,6 +9,9 @@ public class GameSessionInitializer : MonoBehaviour
 {
     public static GameSessionInitializer Instance { get; private set; }
 
+    public bool CreatedNewSave { get; private set; }
+    public string LoadedSlotKey { get; private set; }
+
     private string slotKey;
     private bool initialized;
     [SerializeField] private GameObject inventoryManagerPrefab;
@@ -138,7 +141,8 @@ public class GameSessionInitializer : MonoBehaviour
             yield return null;
         }
 
-        SaveGameManager.Instance.Load(slotKey);
+        CreatedNewSave = SaveGameManager.Instance.Load(slotKey);
+        LoadedSlotKey = slotKey;
         if (!DevItemInjector.BuildDisablesInjection)
         {
             var inventoryManager = InventoryManager.Instance;
