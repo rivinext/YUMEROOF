@@ -176,6 +176,8 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
     private void ExitPanel()
     {
+        SaveSeenStateOnce();
+
         if (slidePanel == null || isWaitingSlideOutCompletion)
         {
             return;
@@ -197,7 +199,6 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         }
 
         PlayerController.SetGlobalInputEnabled(true);
-        SaveSeenStateOnce();
     }
 
     private void ClearSlideOutHandler()
