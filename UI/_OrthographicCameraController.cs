@@ -824,6 +824,11 @@ public class OrthographicCameraController : MonoBehaviour
         }
     }
 
+    public void SetInputEnabled(bool enabled)
+    {
+        SetCameraControlEnabled(enabled);
+    }
+
     // インベントリの開閉をマニュアルで通知（必要に応じて使用）
     public void NotifyInventoryStateChanged(bool isOpen)
     {
