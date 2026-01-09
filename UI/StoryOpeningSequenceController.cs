@@ -6,6 +6,8 @@ using UnityEngine.SceneManagement;
 
 public class StoryOpeningSequenceController : MonoBehaviour
 {
+    private const string StoryOpeningSequenceShownKey = "StoryOpeningSequenceShown";
+
     [Header("UI References")]
     [SerializeField] private CanvasGroup openingPanelGroup;
     [SerializeField] private CanvasGroup openingTextGroup;
@@ -66,10 +68,7 @@ public class StoryOpeningSequenceController : MonoBehaviour
         if (!initializer.LoadedSlotKey.StartsWith("Story", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var saveManager = SaveGameManager.Instance;
-        if (saveManager != null
-            && string.Equals(saveManager.CurrentSlotKey, initializer.LoadedSlotKey, StringComparison.OrdinalIgnoreCase)
-            && saveManager.StoryOpeningShown)
+        if (PlayerPrefs.GetInt(StoryOpeningSequenceShownKey, 0) == 1)
         {
             return false;
         }
@@ -129,12 +128,8 @@ public class StoryOpeningSequenceController : MonoBehaviour
             openingPanelGroup.interactable = false;
         }
 
-        var saveManager = SaveGameManager.Instance;
-        if (saveManager != null)
-        {
-            saveManager.StoryOpeningShown = true;
-            saveManager.SaveCurrentSlot();
-        }
+        PlayerPrefs.SetInt(StoryOpeningSequenceShownKey, 1);
+        PlayerPrefs.Save();
 
         EndInputLock();
     }
