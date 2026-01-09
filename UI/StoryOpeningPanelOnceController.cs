@@ -7,14 +7,12 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button closeButton;
-    [SerializeField, Min(0f)] private float slideInFallbackDelaySeconds = 1.5f;
 
     // SaveGameManager が ApplyManagers(Story) でスロットごとに復元してくれる想定の値
     public bool HasSeenOpeningPanel { get; set; }
 
     private bool isWaitingForSlideOut;
     private Coroutine waitCoroutine;
-    private Coroutine slideFallbackCoroutine;
 
     void OnEnable()
     {
@@ -40,7 +38,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         }
 
         UnsubscribeFromSlideOut();
-        StopSlideFallback();
 
         if (waitCoroutine != null)
         {
@@ -81,7 +78,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             // ✅ スライドアウト完了後に出したい
             slideManager.SlideOutCompleted += HandleSlideOutCompleted;
             isWaitingForSlideOut = true;
-            StartSlideFallback(slideManager);
         }
         else
         {
@@ -94,7 +90,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
     {
         // ここで再判定（ロード状況のズレ対策）
         UnsubscribeFromSlideOut();
-        StopSlideFallback();
 
         if (!ShouldShowPanel())
             return;
@@ -114,46 +109,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         }
 
         isWaitingForSlideOut = false;
-    }
-
-    private void StartSlideFallback(SlideTransitionManager slideManager)
-    {
-        if (slideInFallbackDelaySeconds <= 0f)
-            return;
-
-        if (slideFallbackCoroutine != null)
-        {
-            StopCoroutine(slideFallbackCoroutine);
-        }
-
-        slideFallbackCoroutine = StartCoroutine(WaitForSlideInFallback(slideManager));
-    }
-
-    private void StopSlideFallback()
-    {
-        if (slideFallbackCoroutine == null)
-            return;
-
-        StopCoroutine(slideFallbackCoroutine);
-        slideFallbackCoroutine = null;
-    }
-
-    private IEnumerator WaitForSlideInFallback(SlideTransitionManager slideManager)
-    {
-        yield return new WaitForSecondsRealtime(slideInFallbackDelaySeconds);
-
-        if (!isWaitingForSlideOut)
-            yield break;
-
-        if (slideManager == null || !slideManager.IsAnyPanelOpen)
-            yield break;
-
-        UnsubscribeFromSlideOut();
-
-        if (!ShouldShowPanel())
-            yield break;
-
-        ShowPanel();
     }
 
     private bool ShouldShowPanel()
