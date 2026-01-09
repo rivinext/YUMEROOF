@@ -35,6 +35,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
     private void OnEnable()
     {
+        HasSeenScenePanel = SaveGameManager.Instance != null && SaveGameManager.Instance.HasSeenSceneOncePanel;
         Debug.Log(
             $"[SceneOnceSlidePanelController] OnEnable sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
         LogMissingReferences();
@@ -213,6 +214,11 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
         hasSavedSeenState = true;
         HasSeenScenePanel = true;
+
+        if (SaveGameManager.Instance != null)
+        {
+            SaveGameManager.Instance.SetHasSeenSceneOncePanel(true);
+        }
 
         var slotKey = SaveGameManager.Instance != null ? SaveGameManager.Instance.CurrentSlotKey : null;
         if (string.IsNullOrEmpty(slotKey))

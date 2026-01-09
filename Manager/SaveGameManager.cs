@@ -14,7 +14,10 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
     private string currentSlot;
     private bool applied_0_1_6_seed;
+    private StorySaveData currentStoryData;
     public string CurrentSlotKey => currentSlot;
+    public StorySaveData CurrentStoryData => currentStoryData;
+    public bool HasSeenSceneOncePanel { get; private set; }
     public bool Applied_0_1_6_Seed
     {
         get => applied_0_1_6_seed;
@@ -249,6 +252,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             {
                 var emptyData = new CreativeSaveData();
                 applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
+                currentStoryData = null;
+                HasSeenSceneOncePanel = false;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
@@ -256,6 +261,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             {
                 var emptyData = new StorySaveData();
                 applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
+                currentStoryData = emptyData;
+                HasSeenSceneOncePanel = emptyData.hasSeenSceneOncePanel;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
@@ -268,6 +275,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             var data = CreativeSaveData.FromJson(json);
             applied_0_1_6_seed = data != null && data.applied_0_1_6_seed;
+            currentStoryData = null;
+            HasSeenSceneOncePanel = false;
             CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }
@@ -275,6 +284,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             var data = StorySaveData.FromJson(json);
             applied_0_1_6_seed = data != null && data.applied_0_1_6_seed;
+            currentStoryData = data;
+            HasSeenSceneOncePanel = data != null && data.hasSeenSceneOncePanel;
             CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }
@@ -293,6 +304,15 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         MaterialHuePresetManager.ClearSavedPresetsForSlot(slotKey);
+    }
+
+    public void SetHasSeenSceneOncePanel(bool hasSeen)
+    {
+        HasSeenSceneOncePanel = hasSeen;
+        if (currentStoryData != null)
+        {
+            currentStoryData.hasSeenSceneOncePanel = hasSeen;
+        }
     }
 
     void FillCommon(BaseSaveData data)
@@ -361,6 +381,10 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (sceneOncePanel != null)
         {
             data.hasSeenSceneOncePanel = sceneOncePanel.HasSeenScenePanel;
+        }
+        else
+        {
+            data.hasSeenSceneOncePanel = HasSeenSceneOncePanel;
         }
         Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
@@ -469,6 +493,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
     void ApplyManagers(StorySaveData data)
     {
+        currentStoryData = data;
+        HasSeenSceneOncePanel = data != null && data.hasSeenSceneOncePanel;
         // Restore player position and rotation through PlayerManager
         var player = FindFirstObjectByType<PlayerManager>();
         if (player != null)
