@@ -357,6 +357,11 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             data.hasSeenOpeningPanel = openingPanel.HasSeenOpeningPanel;
         }
+        var sceneOncePanel = FindFirstObjectByType<SceneOnceSlidePanelController>(FindObjectsInactive.Include);
+        if (sceneOncePanel != null)
+        {
+            data.hasSeenSceneOncePanel = sceneOncePanel.HasSeenScenePanel;
+        }
         Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
 
@@ -501,6 +506,11 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (openingPanel != null)
         {
             openingPanel.HasSeenOpeningPanel = data.hasSeenOpeningPanel;
+        }
+        var sceneOncePanel = FindFirstObjectByType<SceneOnceSlidePanelController>(FindObjectsInactive.Include);
+        if (sceneOncePanel != null)
+        {
+            sceneOncePanel.HasSeenScenePanel = data.hasSeenSceneOncePanel;
         }
         Debug.Log($"[SaveGameManager] ApplyManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
