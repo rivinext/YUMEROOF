@@ -18,6 +18,14 @@ public class StoryOpeningSequenceController : MonoBehaviour
     private OrthographicCameraController cameraController;
     private bool inputSuppressed;
 
+    private void Awake()
+    {
+        if (panelGroup == null)
+        {
+            panelGroup = GetComponentInChildren<CanvasGroup>(true);
+        }
+    }
+
     private void OnEnable()
     {
         if (sequenceCoroutine != null)
@@ -50,15 +58,8 @@ public class StoryOpeningSequenceController : MonoBehaviour
             yield break;
         }
 
+        PrepareOpeningPanel();
         SetInputState(false);
-
-        if (panelGroup != null)
-        {
-            panelGroup.gameObject.SetActive(true);
-            panelGroup.alpha = 1f;
-            panelGroup.blocksRaycasts = true;
-            panelGroup.interactable = true;
-        }
 
         SetGroupAlpha(mainTextGroup, 0f);
         SetGroupAlpha(pressAnyKeyGroup, 0f);
@@ -132,6 +133,37 @@ public class StoryOpeningSequenceController : MonoBehaviour
         }
 
         group.alpha = alpha;
+    }
+
+    private void PrepareOpeningPanel()
+    {
+        if (panelGroup == null)
+        {
+            panelGroup = GetComponentInChildren<CanvasGroup>(true);
+        }
+
+        if (panelGroup == null)
+        {
+            return;
+        }
+
+        panelGroup.gameObject.SetActive(true);
+        panelGroup.alpha = 1f;
+        panelGroup.blocksRaycasts = true;
+        panelGroup.interactable = true;
+
+        var parentGroups = panelGroup.GetComponentsInParent<CanvasGroup>(true);
+        foreach (var parentGroup in parentGroups)
+        {
+            if (parentGroup == panelGroup)
+            {
+                continue;
+            }
+
+            parentGroup.alpha = 1f;
+            parentGroup.blocksRaycasts = true;
+            parentGroup.interactable = true;
+        }
     }
 
     private void SetInputState(bool enabled)
