@@ -54,6 +54,7 @@ public class SlideTransitionManager : MonoBehaviour
     public IEnumerator RunSlideOut()
     {
         yield return RunSlideSequence(slideIn: false);
+        Debug.Log("[SlideTransitionManager] SlideOutCompleted invoked.");
         SlideOutCompleted?.Invoke();
     }
 
