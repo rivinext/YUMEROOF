@@ -73,17 +73,16 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         Debug.Log($"[StoryOpeningPanelOnceController] willShow=true (slotKey='{slotKey}', hasSeenOpeningPanel={HasSeenOpeningPanel})");
 
         var slideManager = SlideTransitionManager.Instance;
-        if (slideManager != null)
+        if (slideManager == null || slideManager.IsAnyPanelOpen)
         {
-            // ✅ スライドアウト完了後に出したい
-            slideManager.SlideOutCompleted += HandleSlideOutCompleted;
-            isWaitingForSlideOut = true;
-        }
-        else
-        {
-            // スライドマネージャが無いなら即表示
+            // スライドマネージャが無い or パネルが開いているなら即表示
             ShowPanel();
+            return;
         }
+
+        // ✅ スライドアウト完了後に出したい（スライドアウトが発生しうる場合のみ）
+        slideManager.SlideOutCompleted += HandleSlideOutCompleted;
+        isWaitingForSlideOut = true;
     }
 
     private void HandleSlideOutCompleted()
