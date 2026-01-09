@@ -58,6 +58,15 @@ public class SlideTransitionManager : MonoBehaviour
         SlideOutCompleted?.Invoke();
     }
 
+    /// <summary>
+    /// Returns true when any slide panel is currently open.
+    /// </summary>
+    public bool IsAnyPanelOpen()
+    {
+        return (slidePanel != null && slidePanel.IsOpen)
+            || (secondarySlidePanel != null && secondarySlidePanel.IsOpen);
+    }
+
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
         yield return RunSlideSequence(slideIn: true);

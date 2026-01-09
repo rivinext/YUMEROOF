@@ -75,6 +75,13 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         var slideManager = SlideTransitionManager.Instance;
         if (slideManager != null)
         {
+            if (slideManager.IsAnyPanelOpen())
+            {
+                Debug.Log("[StoryOpeningPanelOnceController] Slide panels already open or idle; showing panel immediately.");
+                ShowPanel();
+                return;
+            }
+
             // ✅ スライドアウト完了後に出したい
             slideManager.SlideOutCompleted += HandleSlideOutCompleted;
             isWaitingForSlideOut = true;
