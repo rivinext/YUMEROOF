@@ -14,6 +14,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
     private string currentSlot;
     private bool applied_0_1_6_seed;
+    private bool cachedHasSeenOpeningPanel;
     public string CurrentSlotKey => currentSlot;
     public bool Applied_0_1_6_Seed
     {
@@ -378,11 +379,12 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (openingPanel != null)
         {
             data.hasSeenOpeningPanel = openingPanel.HasSeenOpeningPanel;
-            SetHasSeenOpeningPanel(currentSlot, data.hasSeenOpeningPanel);
+            cachedHasSeenOpeningPanel = data.hasSeenOpeningPanel;
         }
-        else if (TryGetHasSeenOpeningPanel(currentSlot, out var cachedHasSeenOpeningPanel))
+        else
         {
             data.hasSeenOpeningPanel = cachedHasSeenOpeningPanel;
+            Debug.Log($"[SaveGameManager] SaveManagers(Story): Opening panel missing, using cached value={cachedHasSeenOpeningPanel}");
         }
         Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
@@ -529,7 +531,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             openingPanel.HasSeenOpeningPanel = data.hasSeenOpeningPanel;
         }
-        SetHasSeenOpeningPanel(currentSlot, data.hasSeenOpeningPanel);
+        cachedHasSeenOpeningPanel = data.hasSeenOpeningPanel;
         Debug.Log($"[SaveGameManager] ApplyManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
 
