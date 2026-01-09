@@ -28,12 +28,13 @@ public class LanguageDropdownController : MonoBehaviour
     {
         {"en", "English"},
         {"ja", "日本語"},
-        {"zh-Hans", "简体字"},
-        {"zh-Hant", "繁體字"},
+        {"zh-Hans", "简体中文"},
+        {"zh-TW", "繁體中文"},
         {"fr", "Français"},
         {"de", "Deutsch"},
         {"es", "Español"},
         {"ko", "한국어"},
+        {"ru", "Русский"},
     };
 
     void Awake()
