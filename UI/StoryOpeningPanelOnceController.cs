@@ -13,13 +13,11 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
     // SaveGameManager が ApplyManagers(Story) でスロットごとに復元してくれる想定の値
     public bool HasSeenOpeningPanel { get; set; }
 
-    private bool isWaitingForSlideOut;
+    private bool isWaitingForSlideOutStart;
     private Coroutine waitCoroutine;
-    private Coroutine slideOutWaitCoroutine;
     private Coroutine tmpFadeCoroutine;
     private Coroutine closeFadeCoroutine;
     private bool hasSavedSeenState;
-    private const float SlideOutWaitTimeoutSeconds = 2f;
 
     void OnEnable()
     {
@@ -48,7 +46,7 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             closeButton.onClick.RemoveListener(ClosePanel);
         }
 
-        UnsubscribeFromSlideOut();
+        UnsubscribeFromSlideOutStarted();
 
         if (waitCoroutine != null)
         {
@@ -56,7 +54,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             waitCoroutine = null;
         }
 
-        StopSlideOutWaitCoroutine();
         StopTmpFadeCoroutine();
         ResetTmpFadeState();
         StopCloseFadeCoroutine();
@@ -91,16 +88,15 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         var slideManager = SlideTransitionManager.Instance;
         if (slideManager != null)
         {
-            if (!slideManager.IsSlideOutInProgress || slideManager.ArePanelsClosed)
+            if (slideManager.IsAnyPanelOpen() || slideManager.IsSlideOutInProgress)
             {
-                Debug.Log("[StoryOpeningPanelOnceController] Slide panels are idle or closed; showing panel immediately.");
+                Debug.Log("[StoryOpeningPanelOnceController] Slide out already started or panel is open; showing panel immediately.");
                 ShowPanel();
                 StartTmpFadeSequence();
                 return;
             }
 
-            // ✅ スライドアウト完了後に出したい
-            StartSlideOutWait(slideManager);
+            StartSlideOutStartWait(slideManager);
         }
         else
         {
@@ -110,11 +106,9 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         }
     }
 
-    private void HandleSlideOutCompleted()
+    private void HandleSlideOutStarted()
     {
-        // ここで再判定（ロード状況のズレ対策）
-        StopSlideOutWaitCoroutine();
-        UnsubscribeFromSlideOut();
+        UnsubscribeFromSlideOutStarted();
 
         if (!ShouldShowPanel())
             return;
@@ -123,66 +117,29 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         StartTmpFadeSequence();
     }
 
-    private void StartSlideOutWait(SlideTransitionManager slideManager)
+    private void StartSlideOutStartWait(SlideTransitionManager slideManager)
     {
-        if (isWaitingForSlideOut)
+        if (isWaitingForSlideOutStart)
         {
             return;
         }
 
-        slideManager.SlideOutCompleted += HandleSlideOutCompleted;
-        isWaitingForSlideOut = true;
-        StopSlideOutWaitCoroutine();
-        slideOutWaitCoroutine = StartCoroutine(WaitForSlideOutOrTimeout());
+        slideManager.SlideOutStarted += HandleSlideOutStarted;
+        isWaitingForSlideOutStart = true;
     }
 
-    private IEnumerator WaitForSlideOutOrTimeout()
+    private void UnsubscribeFromSlideOutStarted()
     {
-        float elapsed = 0f;
-
-        while (isWaitingForSlideOut && elapsed < SlideOutWaitTimeoutSeconds)
-        {
-            var slideManager = SlideTransitionManager.Instance;
-            if (slideManager == null || slideManager.ArePanelsClosed || !slideManager.IsSlideOutInProgress)
-            {
-                break;
-            }
-
-            elapsed += Time.unscaledDeltaTime;
-            yield return null;
-        }
-
-        if (!isWaitingForSlideOut)
-        {
-            slideOutWaitCoroutine = null;
-            yield break;
-        }
-
-        UnsubscribeFromSlideOut();
-
-        if (!ShouldShowPanel())
-        {
-            slideOutWaitCoroutine = null;
-            yield break;
-        }
-
-        ShowPanel();
-        StartTmpFadeSequence();
-        slideOutWaitCoroutine = null;
-    }
-
-    private void UnsubscribeFromSlideOut()
-    {
-        if (!isWaitingForSlideOut)
+        if (!isWaitingForSlideOutStart)
             return;
 
         var slideManager = SlideTransitionManager.Instance;
         if (slideManager != null)
         {
-            slideManager.SlideOutCompleted -= HandleSlideOutCompleted;
+            slideManager.SlideOutStarted -= HandleSlideOutStarted;
         }
 
-        isWaitingForSlideOut = false;
+        isWaitingForSlideOutStart = false;
     }
 
     private bool ShouldShowPanel()
@@ -332,17 +289,6 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
         StopCoroutine(tmpFadeCoroutine);
         tmpFadeCoroutine = null;
-    }
-
-    private void StopSlideOutWaitCoroutine()
-    {
-        if (slideOutWaitCoroutine == null)
-        {
-            return;
-        }
-
-        StopCoroutine(slideOutWaitCoroutine);
-        slideOutWaitCoroutine = null;
     }
 
     private void InitializeTmpFadeState()

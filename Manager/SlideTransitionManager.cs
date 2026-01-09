@@ -12,6 +12,7 @@ using UnityEngine.UI;
 public class SlideTransitionManager : MonoBehaviour
 {
     public static SlideTransitionManager Instance { get; private set; }
+    public event Action SlideOutStarted;
     public event Action SlideOutCompleted;
 
     [SerializeField] private UISlidePanel slidePanel;
@@ -61,6 +62,7 @@ public class SlideTransitionManager : MonoBehaviour
     {
         isSlideOutInProgress = true;
         arePanelsClosed = false;
+        SlideOutStarted?.Invoke();
         yield return RunSlideSequence(slideIn: false);
         isSlideOutInProgress = false;
         arePanelsClosed = !IsAnyPanelOpen();
