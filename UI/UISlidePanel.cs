@@ -17,6 +17,11 @@ public class UISlidePanel : MonoBehaviour
     [Header("Position Settings")]
     [SerializeField] private float offScreenXOffset = 1920f; // 画面外のX座標オフセット（解像度に応じて調整）
 
+    [Header("Custom Positions")]
+    [SerializeField] private bool useCustomPositions = false;
+    [SerializeField] private Vector2 openPosition;
+    [SerializeField] private Vector2 closePosition;
+
     [Header("Close Behaviour")]
     [SerializeField] private bool closeOnEscape = true;
     [SerializeField] private bool closeOnClickOutside = true;
@@ -47,6 +52,12 @@ public class UISlidePanel : MonoBehaviour
 
         // オフスクリーン位置を計算（画面右外）
         offScreenPosition = new Vector2(offScreenXOffset, onScreenPosition.y);
+
+        if (useCustomPositions)
+        {
+            onScreenPosition = openPosition;
+            offScreenPosition = closePosition;
+        }
 
         // 初期位置を画面外に設定
         rectTransform.anchoredPosition = offScreenPosition;
@@ -198,6 +209,15 @@ public class UISlidePanel : MonoBehaviour
     {
         closeOnEscape = allowEscapeClose;
         closeOnClickOutside = allowClickOutsideClose;
+    }
+
+    public void SetPositions(Vector2 open, Vector2 close)
+    {
+        useCustomPositions = true;
+        openPosition = open;
+        closePosition = close;
+        onScreenPosition = open;
+        offScreenPosition = close;
     }
 
     public void SetSlideCurves(AnimationCurve slideIn, AnimationCurve slideOut)

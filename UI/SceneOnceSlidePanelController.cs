@@ -15,6 +15,8 @@ public class SceneOnceSlidePanelController : MonoBehaviour
     [SerializeField] private UISlidePanel slidePanel;
     [SerializeField] private AnimationCurve slideInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve slideOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    [SerializeField] private Vector2 openPosition;
+    [SerializeField] private Vector2 closePosition;
 
     [Header("Page Content")]
     [SerializeField] private TextMeshProUGUI bodyText;
@@ -56,6 +58,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         hasSavedSeenState = false;
         currentPageIndex = 0;
         ApplySlideCurves();
+        ApplyPanelPositions();
         UpdatePageDisplay();
 
         StartCoroutine(ShowAfterOneFrame());
@@ -286,5 +289,16 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         }
 
         slidePanel.SetSlideCurves(slideInCurve, slideOutCurve);
+    }
+
+    private void ApplyPanelPositions()
+    {
+        if (slidePanel == null)
+        {
+            return;
+        }
+
+        slidePanel.SetPositions(openPosition, closePosition);
+        slidePanel.CloseImmediate();
     }
 }
