@@ -15,6 +15,8 @@ public class StoryOpeningSequenceController : MonoBehaviour
     [SerializeField] private float panelFadeDuration = 1f;
 
     private Coroutine sequenceCoroutine;
+    private OrthographicCameraController cameraController;
+    private bool inputSuppressed;
 
     private void OnEnable()
     {
@@ -33,6 +35,11 @@ public class StoryOpeningSequenceController : MonoBehaviour
             StopCoroutine(sequenceCoroutine);
             sequenceCoroutine = null;
         }
+
+        if (inputSuppressed)
+        {
+            SetInputState(true);
+        }
     }
 
     private IEnumerator RunSequence()
@@ -42,6 +49,8 @@ public class StoryOpeningSequenceController : MonoBehaviour
             HideAll();
             yield break;
         }
+
+        SetInputState(false);
 
         if (panelGroup != null)
         {
@@ -74,6 +83,8 @@ public class StoryOpeningSequenceController : MonoBehaviour
             panelGroup.interactable = false;
             panelGroup.gameObject.SetActive(false);
         }
+
+        SetInputState(true);
     }
 
     private bool IsNewGameSession()
@@ -121,6 +132,28 @@ public class StoryOpeningSequenceController : MonoBehaviour
         }
 
         group.alpha = alpha;
+    }
+
+    private void SetInputState(bool enabled)
+    {
+        if (!enabled)
+        {
+            inputSuppressed = true;
+        }
+
+        PlayerController.SetGlobalInputEnabled(enabled);
+
+        if (cameraController == null)
+        {
+            cameraController = FindFirstObjectByType<OrthographicCameraController>();
+        }
+
+        cameraController?.SetInputEnabled(enabled);
+
+        if (enabled)
+        {
+            inputSuppressed = false;
+        }
     }
 
     private IEnumerator FadeCanvasGroup(CanvasGroup group, float from, float to, float duration)
