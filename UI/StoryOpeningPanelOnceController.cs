@@ -7,6 +7,7 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button closeButton;
+    [SerializeField] private CanvasGroup panelCanvasGroup;
     [SerializeField] private CanvasGroup tmpCanvasGroup;
 
     // SaveGameManager が ApplyManagers(Story) でスロットごとに復元してくれる想定の値
@@ -15,6 +16,8 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
     private bool isWaitingForSlideOut;
     private Coroutine waitCoroutine;
     private Coroutine tmpFadeCoroutine;
+    private Coroutine closeFadeCoroutine;
+    private bool hasSavedSeenState;
 
     void OnEnable()
     {
@@ -23,7 +26,9 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             closeButton.onClick.AddListener(ClosePanel);
         }
 
+        hasSavedSeenState = false;
         InitializeTmpFadeState();
+        InitializePanelFadeState();
 
         // ✅ slotKey が空のタイミングで判定してしまうのを防ぐ
         if (waitCoroutine != null)
@@ -51,6 +56,7 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
         StopTmpFadeCoroutine();
         ResetTmpFadeState();
+        StopCloseFadeCoroutine();
     }
 
     private IEnumerator WaitForSlotAndTryShow()
@@ -147,15 +153,66 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             panelRoot.SetActive(true);
         }
 
+        InitializePanelFadeState();
         InitializeTmpFadeState();
     }
 
     private void ClosePanel()
     {
+        if (closeFadeCoroutine != null)
+        {
+            return;
+        }
+
+        closeFadeCoroutine = StartCoroutine(FadeOutAndClosePanel());
+    }
+
+    private IEnumerator FadeOutAndClosePanel()
+    {
+        EnsurePanelCanvasGroup();
+
+        if (panelCanvasGroup != null)
+        {
+            panelCanvasGroup.interactable = false;
+            panelCanvasGroup.blocksRaycasts = false;
+        }
+
+        float elapsed = 0f;
+        const float fadeDuration = 0.3f;
+        float startAlpha = panelCanvasGroup != null ? panelCanvasGroup.alpha : 1f;
+
+        while (elapsed < fadeDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            if (panelCanvasGroup != null)
+            {
+                panelCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, Mathf.Clamp01(elapsed / fadeDuration));
+            }
+            yield return null;
+        }
+
+        if (panelCanvasGroup != null)
+        {
+            panelCanvasGroup.alpha = 0f;
+        }
+
         if (panelRoot != null)
         {
             panelRoot.SetActive(false);
         }
+
+        SaveSeenStateOnce();
+        closeFadeCoroutine = null;
+    }
+
+    private void SaveSeenStateOnce()
+    {
+        if (hasSavedSeenState)
+        {
+            return;
+        }
+
+        hasSavedSeenState = true;
 
         // ✅ 閉じたら「見た」扱いにしてスロットに保存
         Debug.Log($"[StoryOpeningPanelOnceController] Before setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
@@ -230,6 +287,41 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         tmpCanvasGroup.alpha = 0f;
         tmpCanvasGroup.interactable = false;
         tmpCanvasGroup.blocksRaycasts = false;
+    }
+
+    private void InitializePanelFadeState()
+    {
+        EnsurePanelCanvasGroup();
+
+        if (panelCanvasGroup == null)
+        {
+            return;
+        }
+
+        panelCanvasGroup.alpha = 1f;
+        panelCanvasGroup.interactable = true;
+        panelCanvasGroup.blocksRaycasts = true;
+    }
+
+    private void EnsurePanelCanvasGroup()
+    {
+        if (panelCanvasGroup != null || panelRoot == null)
+        {
+            return;
+        }
+
+        panelCanvasGroup = panelRoot.GetComponent<CanvasGroup>();
+    }
+
+    private void StopCloseFadeCoroutine()
+    {
+        if (closeFadeCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(closeFadeCoroutine);
+        closeFadeCoroutine = null;
     }
 
     private void ResetTmpFadeState()
