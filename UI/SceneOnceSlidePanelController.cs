@@ -35,6 +35,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
     {
         Debug.Log(
             $"[SceneOnceSlidePanelController] OnEnable sceneName={SceneManager.GetActiveScene().name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
+        LogMissingReferences();
         SceneManager.sceneLoaded += HandleSceneLoaded;
 
         if (nextButton != null)
@@ -57,8 +58,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         ApplySlideCurves();
         UpdatePageDisplay();
 
-        var activeSceneName = SceneManager.GetActiveScene().name;
-        TryShowForScene(activeSceneName);
+        StartCoroutine(ShowAfterOneFrame());
     }
 
     private void OnDisable()
@@ -88,6 +88,28 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         Debug.Log(
             $"[SceneOnceSlidePanelController] HandleSceneLoaded sceneName={scene.name} targetSceneName={targetSceneName} HasSeenScenePanel={HasSeenScenePanel} panelRootIsNull={panelRoot == null} slidePanelIsNull={slidePanel == null}");
         TryShowForScene(scene.name);
+    }
+
+    private System.Collections.IEnumerator ShowAfterOneFrame()
+    {
+        yield return null;
+        var activeSceneName = SceneManager.GetActiveScene().name;
+        TryShowForScene(activeSceneName);
+    }
+
+    private void LogMissingReferences()
+    {
+        if (panelRoot == null)
+        {
+            Debug.LogWarning(
+                "[SceneOnceSlidePanelController] panelRoot is not assigned. Ensure the controller is active and panelRoot is assigned in the inspector.");
+        }
+
+        if (slidePanel == null)
+        {
+            Debug.LogWarning(
+                "[SceneOnceSlidePanelController] slidePanel is not assigned. Ensure the controller is active and slidePanel is assigned in the inspector.");
+        }
     }
 
     private void TryShowForScene(string sceneName)
