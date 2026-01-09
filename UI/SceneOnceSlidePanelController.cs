@@ -17,7 +17,6 @@ public class SceneOnceSlidePanelController : MonoBehaviour
     [SerializeField] private AnimationCurve slideOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private Vector2 openPosition;
     [SerializeField] private Vector2 closePosition;
-    [SerializeField, Min(0f)] private float slideInDelaySeconds;
 
     [Header("Page Content")]
     [SerializeField] private TextMeshProUGUI bodyText;
@@ -33,7 +32,6 @@ public class SceneOnceSlidePanelController : MonoBehaviour
     private bool hasSavedSeenState;
     private bool isWaitingSlideOutCompletion;
     private Action cachedSlideOutComplete;
-    private Coroutine slideInCoroutine;
 
     private void OnEnable()
     {
@@ -86,12 +84,6 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         }
 
         ClearSlideOutHandler();
-
-        if (slideInCoroutine != null)
-        {
-            StopCoroutine(slideInCoroutine);
-            slideInCoroutine = null;
-        }
     }
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -169,15 +161,13 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
         ApplySlideCurves();
         PlayerController.SetGlobalInputEnabled(false);
-        StartSlideIn();
+        slidePanel?.SlideIn();
         currentPageIndex = 0;
         UpdatePageDisplay();
     }
 
     private void ExitPanel()
     {
-        SaveSeenStateOnce();
-
         if (slidePanel == null || isWaitingSlideOutCompletion)
         {
             return;
@@ -199,6 +189,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         }
 
         PlayerController.SetGlobalInputEnabled(true);
+        SaveSeenStateOnce();
     }
 
     private void ClearSlideOutHandler()
@@ -309,26 +300,5 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
         slidePanel.SetPositions(openPosition, closePosition);
         slidePanel.CloseImmediate();
-    }
-
-    private void StartSlideIn()
-    {
-        if (slideInCoroutine != null)
-        {
-            StopCoroutine(slideInCoroutine);
-        }
-
-        slideInCoroutine = StartCoroutine(DelayedSlideIn());
-    }
-
-    private System.Collections.IEnumerator DelayedSlideIn()
-    {
-        if (slideInDelaySeconds > 0f)
-        {
-            yield return new WaitForSeconds(slideInDelaySeconds);
-        }
-
-        slidePanel?.SlideIn();
-        slideInCoroutine = null;
     }
 }
