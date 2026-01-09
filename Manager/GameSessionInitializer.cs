@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -138,7 +139,9 @@ public class GameSessionInitializer : MonoBehaviour
             yield return null;
         }
 
-        SaveGameManager.Instance.Load(slotKey);
+        bool createdNewSave = SaveGameManager.Instance.Load(slotKey);
+        bool isStorySlot = slotKey.StartsWith("Story", StringComparison.OrdinalIgnoreCase);
+        StoryOpeningSequenceState.SetNewStorySession(isStorySlot && createdNewSave);
         if (!DevItemInjector.BuildDisablesInjection)
         {
             var inventoryManager = InventoryManager.Instance;
