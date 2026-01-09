@@ -362,7 +362,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             data.hasSeenSceneOncePanel = sceneOncePanel.HasSeenScenePanel;
         }
-        Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
+        Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}, hasSeenSceneOncePanel={data.hasSeenSceneOncePanel}");
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -512,7 +512,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             sceneOncePanel.HasSeenScenePanel = data.hasSeenSceneOncePanel;
         }
-        Debug.Log($"[SaveGameManager] ApplyManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
+        Debug.Log($"[SaveGameManager] ApplyManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}, hasSeenSceneOncePanel={data.hasSeenSceneOncePanel}");
     }
 
     void ApplyManagers(CreativeSaveData data)
