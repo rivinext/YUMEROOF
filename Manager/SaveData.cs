@@ -61,6 +61,7 @@ public class StorySaveData : BaseSaveData
     public IndependentMaterialColorSaveData independentMaterialColors = new();
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
+    public bool storyOpeningShown;
 
     public static StorySaveData FromJson(string json)
     {

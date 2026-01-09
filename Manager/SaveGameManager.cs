@@ -14,11 +14,17 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
     private string currentSlot;
     private bool applied_0_1_6_seed;
+    private bool storyOpeningShown;
     public string CurrentSlotKey => currentSlot;
     public bool Applied_0_1_6_Seed
     {
         get => applied_0_1_6_seed;
         set => applied_0_1_6_seed = value;
+    }
+    public bool StoryOpeningShown
+    {
+        get => storyOpeningShown;
+        set => storyOpeningShown = value;
     }
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
@@ -249,6 +255,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             {
                 var emptyData = new CreativeSaveData();
                 applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
+                storyOpeningShown = false;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
@@ -256,6 +263,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             {
                 var emptyData = new StorySaveData();
                 applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
+                storyOpeningShown = emptyData.storyOpeningShown;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
             }
@@ -268,6 +276,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             var data = CreativeSaveData.FromJson(json);
             applied_0_1_6_seed = data != null && data.applied_0_1_6_seed;
+            storyOpeningShown = false;
             CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }
@@ -275,6 +284,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             var data = StorySaveData.FromJson(json);
             applied_0_1_6_seed = data != null && data.applied_0_1_6_seed;
+            storyOpeningShown = data != null && data.storyOpeningShown;
             CacheIndependentMaterialColors(slotKey, data.independentMaterialColors, data.independentMaterialColorSlots);
             ApplyManagers(data);
         }
@@ -330,6 +340,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.cozy = env.CozyTotal;
             data.nature = env.NatureTotal;
         }
+
+        data.storyOpeningShown = storyOpeningShown;
 
         var huePresetManagers = FindObjectsOfType<MaterialHuePresetManager>(includeInactive: true);
         if (huePresetManagers != null && huePresetManagers.Length > 0)

@@ -66,6 +66,14 @@ public class StoryOpeningSequenceController : MonoBehaviour
         if (!initializer.LoadedSlotKey.StartsWith("Story", StringComparison.OrdinalIgnoreCase))
             return false;
 
+        var saveManager = SaveGameManager.Instance;
+        if (saveManager != null
+            && string.Equals(saveManager.CurrentSlotKey, initializer.LoadedSlotKey, StringComparison.OrdinalIgnoreCase)
+            && saveManager.StoryOpeningShown)
+        {
+            return false;
+        }
+
         if (SceneManager.GetActiveScene().name == "MainMenu")
             return false;
 
@@ -119,6 +127,13 @@ public class StoryOpeningSequenceController : MonoBehaviour
             yield return FadeCanvasGroup(openingPanelGroup, openingPanelGroup.alpha, 0f, panelFadeDuration);
             openingPanelGroup.blocksRaycasts = false;
             openingPanelGroup.interactable = false;
+        }
+
+        var saveManager = SaveGameManager.Instance;
+        if (saveManager != null)
+        {
+            saveManager.StoryOpeningShown = true;
+            saveManager.SaveCurrentSlot();
         }
 
         EndInputLock();
