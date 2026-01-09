@@ -13,9 +13,6 @@ public class SlideTransitionManager : MonoBehaviour
 {
     public static SlideTransitionManager Instance { get; private set; }
 
-    public event Action SlideInCompleted;
-    public event Action SlideOutCompleted;
-
     [SerializeField] private UISlidePanel slidePanel;
     [SerializeField] private UISlidePanel secondarySlidePanel;
     [SerializeField, Min(0f)] private float panelSequenceDelaySeconds = 2f;
@@ -267,15 +264,6 @@ public class SlideTransitionManager : MonoBehaviour
             {
                 state.UnsubscribeOnce();
             }
-        }
-
-        if (slideIn)
-        {
-            SlideInCompleted?.Invoke();
-        }
-        else
-        {
-            SlideOutCompleted?.Invoke();
         }
     }
 
