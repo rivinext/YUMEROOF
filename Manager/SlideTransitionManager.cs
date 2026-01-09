@@ -52,6 +52,7 @@ public class SlideTransitionManager : MonoBehaviour
     /// </summary>
     public void LoadSceneWithSlide(string sceneName)
     {
+        Debug.Log($"[SlideTransitionManager] シーン遷移リクエスト: {sceneName} (current={SceneManager.GetActiveScene().name}, frame={Time.frameCount})");
         StartCoroutine(LoadSceneCoroutine(sceneName));
     }
 
@@ -81,6 +82,7 @@ public class SlideTransitionManager : MonoBehaviour
 
     private IEnumerator LoadSceneCoroutine(string sceneName)
     {
+        Debug.Log($"[SlideTransitionManager] シーン遷移開始: {sceneName} (frame={Time.frameCount})");
         yield return RunSlideSequence(slideIn: true);
 
         SaveGameManager.Instance.SaveCurrentSlot();
@@ -124,6 +126,7 @@ public class SlideTransitionManager : MonoBehaviour
         {
             yield return RunSlideOut();
         }
+        Debug.Log($"[SlideTransitionManager] シーン遷移完了: {sceneName} (active={SceneManager.GetActiveScene().name}, frame={Time.frameCount})");
     }
 
     void ShowLoadingIndicator(string message)
