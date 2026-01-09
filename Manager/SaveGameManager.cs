@@ -351,6 +351,12 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
+
+        var openingPanel = FindFirstObjectByType<StoryOpeningPanelOnceController>(FindObjectsInactive.Include);
+        if (openingPanel != null)
+        {
+            data.hasSeenOpeningPanel = openingPanel.HasSeenOpeningPanel;
+        }
     }
 
     void SaveManagers(CreativeSaveData data)
@@ -489,6 +495,12 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
+
+        var openingPanel = FindFirstObjectByType<StoryOpeningPanelOnceController>(FindObjectsInactive.Include);
+        if (openingPanel != null)
+        {
+            openingPanel.HasSeenOpeningPanel = data.hasSeenOpeningPanel;
+        }
     }
 
     void ApplyManagers(CreativeSaveData data)

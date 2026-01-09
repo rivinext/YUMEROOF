@@ -12,6 +12,7 @@ using UnityEngine.UI;
 public class SlideTransitionManager : MonoBehaviour
 {
     public static SlideTransitionManager Instance { get; private set; }
+    public event Action SlideOutCompleted;
 
     [SerializeField] private UISlidePanel slidePanel;
     [SerializeField] private UISlidePanel secondarySlidePanel;
@@ -53,6 +54,7 @@ public class SlideTransitionManager : MonoBehaviour
     public IEnumerator RunSlideOut()
     {
         yield return RunSlideSequence(slideIn: false);
+        SlideOutCompleted?.Invoke();
     }
 
     private IEnumerator LoadSceneCoroutine(string sceneName)
