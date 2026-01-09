@@ -28,6 +28,10 @@ public class SlideTransitionManager : MonoBehaviour
 
     private readonly List<UISlidePanel> orderedSlidePanels = new(2);
 
+    public bool IsAnyPanelOpen =>
+        (slidePanel != null && slidePanel.IsOpen) ||
+        (secondarySlidePanel != null && secondarySlidePanel.IsOpen);
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
