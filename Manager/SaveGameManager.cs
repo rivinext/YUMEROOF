@@ -14,7 +14,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
     private string currentSlot;
     private bool applied_0_1_6_seed;
-    private bool cachedHasSeenOpeningPanel;
     public string CurrentSlotKey => currentSlot;
     public bool Applied_0_1_6_Seed
     {
@@ -24,7 +23,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
     private readonly Dictionary<string, IndependentMaterialColorSaveData> independentMaterialColorStore = new();
-    private readonly Dictionary<string, bool> openingPanelSeenBySlot = new();
     public static SaveGameManager Instance
     {
         get
@@ -126,27 +124,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     void TriggerSave(int cozy, int nature) => TriggerSave();
 
     public void SaveCurrentSlot() => TriggerSave();
-
-    public void SetHasSeenOpeningPanel(string slotKey, bool hasSeen)
-    {
-        if (string.IsNullOrEmpty(slotKey))
-        {
-            return;
-        }
-
-        openingPanelSeenBySlot[slotKey] = hasSeen;
-    }
-
-    public bool TryGetHasSeenOpeningPanel(string slotKey, out bool hasSeen)
-    {
-        if (string.IsNullOrEmpty(slotKey))
-        {
-            hasSeen = false;
-            return false;
-        }
-
-        return openingPanelSeenBySlot.TryGetValue(slotKey, out hasSeen);
-    }
 
     public void SetCurrentSlotKey(string slotKey, bool ensureAutoSave = false)
     {
@@ -379,23 +356,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (openingPanel != null)
         {
             data.hasSeenOpeningPanel = openingPanel.HasSeenOpeningPanel;
-            cachedHasSeenOpeningPanel = data.hasSeenOpeningPanel;
-            Debug.Log($"[SaveGameManager] SaveManagers(Story): Opening panel found, HasSeenOpeningPanel={data.hasSeenOpeningPanel}");
-        }
-        else
-        {
-            var existing = LoadMetadata(currentSlot) as StorySaveData;
-            if (existing != null && existing.hasSeenOpeningPanel)
-            {
-                data.hasSeenOpeningPanel = true;
-                cachedHasSeenOpeningPanel = true;
-                Debug.Log("[SaveGameManager] SaveManagers(Story): Opening panel missing, restored hasSeenOpeningPanel from save metadata.");
-            }
-            else
-            {
-                data.hasSeenOpeningPanel = cachedHasSeenOpeningPanel;
-                Debug.Log($"[SaveGameManager] SaveManagers(Story): Opening panel missing, using cached value={cachedHasSeenOpeningPanel}");
-            }
         }
         Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
@@ -537,17 +497,11 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
 
-        if (TryGetHasSeenOpeningPanel(currentSlot, out var cachedHasSeen) && cachedHasSeen)
-        {
-            data.hasSeenOpeningPanel = true;
-        }
-
         var openingPanel = FindFirstObjectByType<StoryOpeningPanelOnceController>(FindObjectsInactive.Include);
         if (openingPanel != null)
         {
             openingPanel.HasSeenOpeningPanel = data.hasSeenOpeningPanel;
         }
-        cachedHasSeenOpeningPanel = data.hasSeenOpeningPanel;
         Debug.Log($"[SaveGameManager] ApplyManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
 
