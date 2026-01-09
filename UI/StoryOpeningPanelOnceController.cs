@@ -33,11 +33,16 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
     private void TryShowPanelWhenReady()
     {
+        var slotKey = SaveGameManager.Instance != null ? SaveGameManager.Instance.CurrentSlotKey : null;
+        Debug.Log($"[StoryOpeningPanelOnceController] Before ShouldShowPanel: slotKey='{slotKey}', hasSeenOpeningPanel={HasSeenOpeningPanel}");
+
         if (!ShouldShowPanel())
         {
+            Debug.Log($"[StoryOpeningPanelOnceController] After ShouldShowPanel: slotKey='{slotKey}', hasSeenOpeningPanel={HasSeenOpeningPanel}, willShow=false");
             return;
         }
 
+        Debug.Log($"[StoryOpeningPanelOnceController] After ShouldShowPanel: slotKey='{slotKey}', hasSeenOpeningPanel={HasSeenOpeningPanel}, willShow=true");
         var slideManager = SlideTransitionManager.Instance;
         if (slideManager != null)
         {
@@ -91,8 +96,11 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             return;
         }
 
+        Debug.Log($"[StoryOpeningPanelOnceController] Before setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
         HasSeenOpeningPanel = true;
+        Debug.Log($"[StoryOpeningPanelOnceController] After setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
         SaveGameManager.Instance?.SaveCurrentSlot();
+        Debug.Log("[StoryOpeningPanelOnceController] SaveCurrentSlot called after setting hasSeenOpeningPanel");
 
         if (panelRoot != null)
         {
