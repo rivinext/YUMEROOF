@@ -177,6 +177,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         isWaitingSlideOutCompletion = true;
         cachedSlideOutComplete = slidePanel.OnSlideOutComplete;
         slidePanel.OnSlideOutComplete = HandleSlideOutComplete;
+        SaveSeenStateOnce();
         slidePanel.SlideOut();
     }
 
