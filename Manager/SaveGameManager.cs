@@ -23,6 +23,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
     private readonly Dictionary<string, IndependentMaterialColorSaveData> independentMaterialColorStore = new();
+    private readonly Dictionary<string, bool> openingPanelSeenBySlot = new();
     public static SaveGameManager Instance
     {
         get
@@ -124,6 +125,27 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     void TriggerSave(int cozy, int nature) => TriggerSave();
 
     public void SaveCurrentSlot() => TriggerSave();
+
+    public void SetHasSeenOpeningPanel(string slotKey, bool hasSeen)
+    {
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            return;
+        }
+
+        openingPanelSeenBySlot[slotKey] = hasSeen;
+    }
+
+    public bool TryGetHasSeenOpeningPanel(string slotKey, out bool hasSeen)
+    {
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            hasSeen = false;
+            return false;
+        }
+
+        return openingPanelSeenBySlot.TryGetValue(slotKey, out hasSeen);
+    }
 
     public void SetCurrentSlotKey(string slotKey, bool ensureAutoSave = false)
     {
@@ -356,6 +378,11 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         if (openingPanel != null)
         {
             data.hasSeenOpeningPanel = openingPanel.HasSeenOpeningPanel;
+            SetHasSeenOpeningPanel(currentSlot, data.hasSeenOpeningPanel);
+        }
+        else if (TryGetHasSeenOpeningPanel(currentSlot, out var cachedHasSeenOpeningPanel))
+        {
+            data.hasSeenOpeningPanel = cachedHasSeenOpeningPanel;
         }
         Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
@@ -502,6 +529,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             openingPanel.HasSeenOpeningPanel = data.hasSeenOpeningPanel;
         }
+        SetHasSeenOpeningPanel(currentSlot, data.hasSeenOpeningPanel);
         Debug.Log($"[SaveGameManager] ApplyManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
 
