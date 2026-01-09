@@ -62,7 +62,6 @@ public class StorySaveData : BaseSaveData
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
     public bool hasSeenOpeningPanel;
-    public bool hasSeenSceneOncePanel;
 
     public static StorySaveData FromJson(string json)
     {

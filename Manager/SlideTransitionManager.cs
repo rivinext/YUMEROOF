@@ -12,7 +12,6 @@ using UnityEngine.UI;
 public class SlideTransitionManager : MonoBehaviour
 {
     public static SlideTransitionManager Instance { get; private set; }
-    public event Action SlideOutStarted;
     public event Action SlideOutCompleted;
 
     [SerializeField] private UISlidePanel slidePanel;
@@ -28,11 +27,6 @@ public class SlideTransitionManager : MonoBehaviour
     [SerializeField] private string finishingLoadingMessage = "Ready!";
 
     private readonly List<UISlidePanel> orderedSlidePanels = new(2);
-    private bool isSlideOutInProgress;
-    private bool arePanelsClosed = true;
-
-    public bool IsSlideOutInProgress => isSlideOutInProgress;
-    public bool ArePanelsClosed => arePanelsClosed;
 
     private void Awake()
     {
@@ -44,7 +38,6 @@ public class SlideTransitionManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        arePanelsClosed = !IsAnyPanelOpen();
     }
 
     /// <summary>
@@ -60,23 +53,9 @@ public class SlideTransitionManager : MonoBehaviour
     /// </summary>
     public IEnumerator RunSlideOut()
     {
-        isSlideOutInProgress = true;
-        arePanelsClosed = false;
-        SlideOutStarted?.Invoke();
         yield return RunSlideSequence(slideIn: false);
-        isSlideOutInProgress = false;
-        arePanelsClosed = !IsAnyPanelOpen();
         Debug.Log("[SlideTransitionManager] SlideOutCompleted invoked.");
         SlideOutCompleted?.Invoke();
-    }
-
-    /// <summary>
-    /// Returns true when any slide panel is currently open.
-    /// </summary>
-    public bool IsAnyPanelOpen()
-    {
-        return (slidePanel != null && slidePanel.IsOpen)
-            || (secondarySlidePanel != null && secondarySlidePanel.IsOpen);
     }
 
     private IEnumerator LoadSceneCoroutine(string sceneName)
@@ -249,11 +228,6 @@ public class SlideTransitionManager : MonoBehaviour
 
     private IEnumerator RunSlideSequence(bool slideIn)
     {
-        if (slideIn)
-        {
-            arePanelsClosed = false;
-        }
-
         var panels = CollectSlidePanels(slideIn);
         if (panels.Count == 0)
             yield break;
