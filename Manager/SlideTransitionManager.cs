@@ -13,6 +13,7 @@ public class SlideTransitionManager : MonoBehaviour
 {
     public static SlideTransitionManager Instance { get; private set; }
     public event Action SlideOutCompleted;
+    public event Action OnBeforeSlideIn;
 
     [SerializeField] private UISlidePanel slidePanel;
     [SerializeField] private UISlidePanel secondarySlidePanel;
@@ -45,6 +46,7 @@ public class SlideTransitionManager : MonoBehaviour
     /// </summary>
     public void LoadSceneWithSlide(string sceneName)
     {
+        OnBeforeSlideIn?.Invoke();
         StartCoroutine(LoadSceneCoroutine(sceneName));
     }
 

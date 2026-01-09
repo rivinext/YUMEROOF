@@ -21,6 +21,12 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             closeButton.onClick.AddListener(ClosePanel);
         }
 
+        var slideManager = SlideTransitionManager.Instance;
+        if (slideManager != null)
+        {
+            slideManager.OnBeforeSlideIn += HandleBeforeSlideIn;
+        }
+
         // ✅ slotKey が空のタイミングで判定してしまうのを防ぐ
         if (waitCoroutine != null)
         {
@@ -38,6 +44,7 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         }
 
         UnsubscribeFromSlideOut();
+        UnsubscribeFromSlideIn();
 
         if (waitCoroutine != null)
         {
@@ -57,6 +64,16 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
         // ここに来た時点で ApplyManagers が走って HasSeenOpeningPanel が復元されている可能性が高い
         TryShowPanelNow();
+    }
+
+    private void HandleBeforeSlideIn()
+    {
+        if (HasSeenOpeningPanel)
+        {
+            return;
+        }
+
+        ShowPanel();
     }
 
     private void TryShowPanelNow()
@@ -109,6 +126,15 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         }
 
         isWaitingForSlideOut = false;
+    }
+
+    private void UnsubscribeFromSlideIn()
+    {
+        var slideManager = SlideTransitionManager.Instance;
+        if (slideManager != null)
+        {
+            slideManager.OnBeforeSlideIn -= HandleBeforeSlideIn;
+        }
     }
 
     private bool ShouldShowPanel()
