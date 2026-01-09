@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,12 +9,23 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button closeButton;
+    [Header("Text Fade In")]
+    [SerializeField] private TMP_Text openingText;
+    [SerializeField] private CanvasGroup openingTextCanvasGroup;
+    [SerializeField, Min(0f)] private float textFadeDelaySeconds = 1f;
+    [SerializeField, Min(0f)] private float textFadeDurationSeconds = 0.5f;
+    [Header("Panel Fade Out")]
+    [SerializeField] private CanvasGroup panelCanvasGroup;
+    [SerializeField, Min(0f)] private float panelFadeOutDurationSeconds = 0.35f;
 
     // SaveGameManager が ApplyManagers(Story) でスロットごとに復元してくれる想定の値
     public bool HasSeenOpeningPanel { get; set; }
 
     private bool isWaitingForSlideOut;
     private Coroutine waitCoroutine;
+    private Coroutine textFadeCoroutine;
+    private Tween textFadeTween;
+    private Tween panelFadeTween;
 
     void OnEnable()
     {
@@ -20,6 +33,8 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         {
             closeButton.onClick.AddListener(ClosePanel);
         }
+
+        ResetVisualState();
 
         // ✅ slotKey が空のタイミングで判定してしまうのを防ぐ
         if (waitCoroutine != null)
@@ -44,6 +59,9 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
             StopCoroutine(waitCoroutine);
             waitCoroutine = null;
         }
+
+        StopTextFade();
+        StopPanelFade();
     }
 
     private IEnumerator WaitForSlotAndTryShow()
@@ -130,14 +148,15 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         {
             panelRoot.SetActive(true);
         }
+
+        ResetPanelFadeState();
+        StartTextFadeIn();
     }
 
     private void ClosePanel()
     {
-        if (panelRoot != null)
-        {
-            panelRoot.SetActive(false);
-        }
+        StopTextFade();
+        FadeOutPanel();
 
         // ✅ 閉じたら「見た」扱いにしてスロットに保存
         Debug.Log($"[StoryOpeningPanelOnceController] Before setting hasSeenOpeningPanel=true (current={HasSeenOpeningPanel})");
@@ -153,5 +172,126 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
 
         Debug.Log($"[StoryOpeningPanelOnceController] CurrentSlotKey='{slotKey}'. Saving current slot.");
         SaveGameManager.Instance.SaveCurrentSlot();
+    }
+
+    private void StartTextFadeIn()
+    {
+        if (openingText == null && openingTextCanvasGroup == null)
+        {
+            return;
+        }
+
+        StopTextFade();
+        SetTextAlpha(0f);
+        textFadeCoroutine = StartCoroutine(FadeTextAfterDelay());
+    }
+
+    private IEnumerator FadeTextAfterDelay()
+    {
+        if (textFadeDelaySeconds > 0f)
+        {
+            yield return new WaitForSecondsRealtime(textFadeDelaySeconds);
+        }
+
+        if (openingTextCanvasGroup != null)
+        {
+            textFadeTween = openingTextCanvasGroup
+                .DOFade(1f, textFadeDurationSeconds)
+                .SetUpdate(true);
+        }
+        else if (openingText != null)
+        {
+            textFadeTween = DOTween.To(
+                    () => openingText.alpha,
+                    value => openingText.alpha = value,
+                    1f,
+                    textFadeDurationSeconds)
+                .SetUpdate(true);
+        }
+
+        textFadeCoroutine = null;
+    }
+
+    private void StopTextFade()
+    {
+        if (textFadeCoroutine != null)
+        {
+            StopCoroutine(textFadeCoroutine);
+            textFadeCoroutine = null;
+        }
+
+        if (textFadeTween != null && textFadeTween.IsActive())
+        {
+            textFadeTween.Kill();
+            textFadeTween = null;
+        }
+    }
+
+    private void FadeOutPanel()
+    {
+        if (panelRoot == null)
+        {
+            return;
+        }
+
+        StopPanelFade();
+
+        if (panelCanvasGroup == null)
+        {
+            panelRoot.SetActive(false);
+            return;
+        }
+
+        panelCanvasGroup.interactable = false;
+        panelCanvasGroup.blocksRaycasts = false;
+        panelFadeTween = panelCanvasGroup
+            .DOFade(0f, panelFadeOutDurationSeconds)
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                if (panelRoot != null)
+                {
+                    panelRoot.SetActive(false);
+                }
+            });
+    }
+
+    private void StopPanelFade()
+    {
+        if (panelFadeTween != null && panelFadeTween.IsActive())
+        {
+            panelFadeTween.Kill();
+            panelFadeTween = null;
+        }
+    }
+
+    private void ResetVisualState()
+    {
+        ResetPanelFadeState();
+        SetTextAlpha(0f);
+    }
+
+    private void ResetPanelFadeState()
+    {
+        if (panelCanvasGroup == null)
+        {
+            return;
+        }
+
+        panelCanvasGroup.alpha = 1f;
+        panelCanvasGroup.interactable = true;
+        panelCanvasGroup.blocksRaycasts = true;
+    }
+
+    private void SetTextAlpha(float alpha)
+    {
+        if (openingTextCanvasGroup != null)
+        {
+            openingTextCanvasGroup.alpha = alpha;
+        }
+        else if (openingText != null)
+        {
+            openingText.alpha = alpha;
+        }
     }
 }
