@@ -33,6 +33,7 @@ public class UISlidePanel : MonoBehaviour
 
     // アニメーション完了時のコールバック
     public Action OnSlideInComplete;
+    public Action OnSlideOutStarting;
     public Action OnSlideOutComplete;
 
     // パネルが開いているかどうかを取得
@@ -102,6 +103,8 @@ public class UISlidePanel : MonoBehaviour
         if (!isOpen) return;
 
         isOpen = false;
+
+        OnSlideOutStarting?.Invoke();
 
         // DOTweenでアニメーション
         rectTransform.DOAnchorPos(offScreenPosition, animationDuration)
