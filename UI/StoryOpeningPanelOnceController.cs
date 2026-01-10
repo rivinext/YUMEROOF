@@ -167,15 +167,11 @@ public class StoryOpeningPanelOnceController : MonoBehaviour
         if (string.IsNullOrEmpty(slotKey))
         {
             Debug.Log("[StoryOpeningPanelOnceController] CurrentSlotKey is empty. Skipping SaveCurrentSlot.");
-        }
-        else
-        {
-            Debug.Log($"[StoryOpeningPanelOnceController] CurrentSlotKey='{slotKey}'. Saving current slot.");
-            SaveGameManager.Instance.SaveCurrentSlot();
+            return;
         }
 
-        var destroyTarget = panelRoot != null ? panelRoot : gameObject;
-        Destroy(destroyTarget);
+        Debug.Log($"[StoryOpeningPanelOnceController] CurrentSlotKey='{slotKey}'. Saving current slot.");
+        SaveGameManager.Instance.SaveCurrentSlot();
     }
 
     private void StartTextFadeIn()
