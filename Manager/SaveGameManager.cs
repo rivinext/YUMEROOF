@@ -14,11 +14,17 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
     private string currentSlot;
     private bool applied_0_1_6_seed;
+    private bool hasSeenOpeningPanel;
     public string CurrentSlotKey => currentSlot;
     public bool Applied_0_1_6_Seed
     {
         get => applied_0_1_6_seed;
         set => applied_0_1_6_seed = value;
+    }
+    public bool HasSeenOpeningPanel
+    {
+        get => hasSeenOpeningPanel;
+        set => hasSeenOpeningPanel = value;
     }
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
@@ -351,6 +357,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
+        data.hasSeenOpeningPanel = hasSeenOpeningPanel;
 
     }
 
@@ -402,6 +409,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         }
 
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
+        data.hasSeenOpeningPanel = hasSeenOpeningPanel;
     }
 
     List<InventoryEntry> CollectInventory()
@@ -490,6 +498,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
+        hasSeenOpeningPanel = data.hasSeenOpeningPanel;
 
     }
 
@@ -528,6 +537,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
+        hasSeenOpeningPanel = data.hasSeenOpeningPanel;
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)

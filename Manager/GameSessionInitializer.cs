@@ -8,6 +8,7 @@ using UnityEngine.SceneManagement;
 public class GameSessionInitializer : MonoBehaviour
 {
     public static GameSessionInitializer Instance { get; private set; }
+    public static bool LastLoadCreatedNewSave { get; private set; }
 
     private string slotKey;
     private bool initialized;
@@ -138,7 +139,7 @@ public class GameSessionInitializer : MonoBehaviour
             yield return null;
         }
 
-        SaveGameManager.Instance.Load(slotKey);
+        LastLoadCreatedNewSave = SaveGameManager.Instance.Load(slotKey);
         if (!DevItemInjector.BuildDisablesInjection)
         {
             var inventoryManager = InventoryManager.Instance;
