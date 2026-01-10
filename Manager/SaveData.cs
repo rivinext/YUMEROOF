@@ -80,6 +80,11 @@ public class StorySaveData : BaseSaveData
             }
         }
 
+        if (!string.IsNullOrEmpty(json) && !json.Contains("\"hasSeenOpeningPanel\""))
+        {
+            data.hasSeenOpeningPanel = false;
+        }
+
         return data;
     }
 }
@@ -102,6 +107,7 @@ public class CreativeSaveData : BaseSaveData
     public IndependentMaterialColorSaveData independentMaterialColors = new();
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
+    public bool hasSeenOpeningPanel;
 
     public static CreativeSaveData FromJson(string json)
     {
@@ -114,6 +120,11 @@ public class CreativeSaveData : BaseSaveData
         if (!string.IsNullOrEmpty(json) && !json.Contains("\"unlimitedMoney\""))
         {
             data.unlimitedMoney = true;
+        }
+
+        if (!string.IsNullOrEmpty(json) && !json.Contains("\"hasSeenOpeningPanel\""))
+        {
+            data.hasSeenOpeningPanel = false;
         }
 
         if (data.ownedItems == null || data.ownedItems.Count == 0)
