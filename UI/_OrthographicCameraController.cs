@@ -162,17 +162,9 @@ public class OrthographicCameraController : MonoBehaviour
     void FindInventoryUI()
     {
         inventoryUI = FindFirstObjectByType<InventoryUI>();
-        if (inventoryUI != null)
-        {
-            Debug.Log("[CameraController] Found InventoryUI");
-        }
 
         // FreePlacementSystemを探す
         placementSystem = FindFirstObjectByType<FreePlacementSystem>();
-        if (placementSystem != null)
-        {
-            Debug.Log("[CameraController] Found FreePlacementSystem");
-        }
     }
 
     void Update()
