@@ -30,7 +30,7 @@ public class FurnitureSaveManager : MonoBehaviour
     }
 
     [Header("Settings")]
-    public bool debugMode = true;  // デバッグモードをデフォルトONに
+    public bool debugMode = false;  // デバッグモードをデフォルトOFFに
 
     // 保存用データクラス
     [System.Serializable]
@@ -111,7 +111,8 @@ public class FurnitureSaveManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
 
             // データは外部から読み込まれる
-            Debug.Log("[FurnitureSave] Manager initialized");
+            if (debugMode)
+                Debug.Log("[FurnitureSave] Manager initialized");
         }
         else if (instance != this)
         {
