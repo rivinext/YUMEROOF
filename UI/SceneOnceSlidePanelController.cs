@@ -1,3 +1,6 @@
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,8 +9,17 @@ public class SceneOnceSlidePanelController : MonoBehaviour
     [SerializeField] private UISlidePanel slidePanel;
     [SerializeField] private Button exitButton;
 
+    [Header("Content")]
+    [SerializeField] private TMP_Text pageText;
+    [SerializeField] private List<string> pages = new();
+    [SerializeField] private Button prevButton;
+    [SerializeField] private Button nextButton;
+    [SerializeField] private float showDelaySeconds = 0.7f;
+
     private bool waitingForSlideOut;
     private bool hasShown;
+    private int currentPageIndex;
+    private Coroutine showCoroutine;
 
     void OnEnable()
     {
@@ -15,6 +27,14 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         if (exitButton != null)
         {
             exitButton.onClick.AddListener(ClosePanel);
+        }
+        if (prevButton != null)
+        {
+            prevButton.onClick.AddListener(ShowPreviousPage);
+        }
+        if (nextButton != null)
+        {
+            nextButton.onClick.AddListener(ShowNextPage);
         }
 
         var slideManager = SlideTransitionManager.Instance;
@@ -38,6 +58,15 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         {
             exitButton.onClick.RemoveListener(ClosePanel);
         }
+        if (prevButton != null)
+        {
+            prevButton.onClick.RemoveListener(ShowPreviousPage);
+        }
+        if (nextButton != null)
+        {
+            nextButton.onClick.RemoveListener(ShowNextPage);
+        }
+        StopShowCoroutine();
 
         var slideManager = SlideTransitionManager.Instance;
         if (slideManager != null)
@@ -86,7 +115,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
             Debug.LogWarning($"[{nameof(SceneOnceSlidePanelController)}] SlideTransitionManager.Instance is null in TryShowPanel.");
         }
 
-        ShowPanel();
+        StartDelayedShow();
     }
 
     bool HasSeenPanel()
@@ -116,6 +145,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         hasShown = true;
         Debug.Log($"[{nameof(SceneOnceSlidePanelController)}] SlideIn triggered. hasShown={hasShown}");
         slidePanel.SlideIn();
+        UpdatePageUI();
 
         if (exitButton != null)
         {
