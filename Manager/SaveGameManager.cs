@@ -15,6 +15,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     private string currentSlot;
     private bool applied_0_1_6_seed;
     private bool hasSeenOpeningPanel;
+    private bool hasSeenSceneOnceSlidePanel;
     public string CurrentSlotKey => currentSlot;
     public bool Applied_0_1_6_Seed
     {
@@ -25,6 +26,12 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     {
         get => hasSeenOpeningPanel;
         set => hasSeenOpeningPanel = value;
+    }
+
+    public bool HasSeenSceneOnceSlidePanel
+    {
+        get => hasSeenSceneOnceSlidePanel;
+        set => hasSeenSceneOnceSlidePanel = value;
     }
     public event Action<string> OnSlotKeyChanged;
     private Coroutine autoSaveCoroutine;
@@ -358,6 +365,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
         data.hasSeenOpeningPanel = hasSeenOpeningPanel;
+        data.hasSeenSceneOnceSlidePanel = hasSeenSceneOnceSlidePanel;
 
     }
 
@@ -410,6 +418,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         SaveWardrobeSelections(data.wardrobeSelections, out data.hasWardrobeSelections);
         data.hasSeenOpeningPanel = hasSeenOpeningPanel;
+        data.hasSeenSceneOnceSlidePanel = hasSeenSceneOnceSlidePanel;
     }
 
     List<InventoryEntry> CollectInventory()
@@ -499,6 +508,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
         hasSeenOpeningPanel = data.hasSeenOpeningPanel;
+        hasSeenSceneOnceSlidePanel = data.hasSeenSceneOnceSlidePanel;
 
     }
 
@@ -538,6 +548,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         ApplyHuePresets(data.materialHue);
         ApplyWardrobeSelections(data.wardrobeSelections, data.hasWardrobeSelections);
         hasSeenOpeningPanel = data.hasSeenOpeningPanel;
+        hasSeenSceneOnceSlidePanel = data.hasSeenSceneOnceSlidePanel;
     }
 
     void ApplyHuePresets(MaterialHueSaveData data)
