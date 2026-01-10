@@ -647,7 +647,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
                 f.position,
                 f.rotation,
                 f.layer,
-                LayerMask.LayerToName(f.layer),
                 f.parentUID,
                 f.uniqueID,
                 f.wallParentId,
