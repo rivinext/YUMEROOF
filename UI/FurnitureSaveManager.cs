@@ -41,7 +41,6 @@ public class FurnitureSaveManager : MonoBehaviour
         public float posX, posY, posZ;
         public float rotX, rotY, rotZ, rotW;
         public int layer;
-        public string layerName;
         public string parentFurnitureID; // 親家具のユニークID（スタック配置用）
         public string uniqueID; // このオブジェクト固有のID
         public int wallParentId; // 壁親の安定ID
@@ -54,7 +53,6 @@ public class FurnitureSaveManager : MonoBehaviour
             Vector3 pos,
             Quaternion rot,
             int layerIndex = 0,
-            string layerNameValue = "",
             string parentID = "",
             string uid = "",
             int wallId = 0,
@@ -66,7 +64,6 @@ public class FurnitureSaveManager : MonoBehaviour
             posX = pos.x; posY = pos.y; posZ = pos.z;
             rotX = rot.x; rotY = rot.y; rotZ = rot.z; rotW = rot.w;
             layer = layerIndex;
-            layerName = layerNameValue;
             parentFurnitureID = parentID;
             uniqueID = string.IsNullOrEmpty(uid) ? System.Guid.NewGuid().ToString() : uid;
             wallParentId = wallId;
@@ -253,7 +250,6 @@ public class FurnitureSaveManager : MonoBehaviour
             existingData.rotZ = furniture.transform.rotation.z;
             existingData.rotW = furniture.transform.rotation.w;
             existingData.layer = furniture.gameObject.layer;
-            existingData.layerName = LayerMask.LayerToName(furniture.gameObject.layer);
             existingData.parentFurnitureID = parentID;
             existingData.wallParentId = wallParentId;
             existingData.wallParentName = wallParentName;
@@ -268,7 +264,6 @@ public class FurnitureSaveManager : MonoBehaviour
                 furniture.transform.position,
                 furniture.transform.rotation,
                 furniture.gameObject.layer,
-                LayerMask.LayerToName(furniture.gameObject.layer),
                 parentID,
                 uniqueID,
                 wallParentId,
@@ -547,22 +542,11 @@ public class FurnitureSaveManager : MonoBehaviour
             furnitureObj.AddComponent<SitTrigger>();
         }
 
-        CorrectDefaultLayerName(data, placedFurniture.furnitureData);
-
         // ユニークIDを設定
         SetUniqueID(placedFurniture, data.uniqueID);
 
         // レイヤーを設定
-        int targetLayer = data.layer;
-        if (!string.IsNullOrEmpty(data.layerName))
-        {
-            int namedLayer = LayerMask.NameToLayer(data.layerName);
-            if (namedLayer >= 0)
-            {
-                targetLayer = namedLayer;
-            }
-        }
-        SetLayerRecursively(furnitureObj, targetLayer);
+        SetLayerRecursively(furnitureObj, data.layer);
 
         // コライダーの設定を確認
         Collider[] colliders = furnitureObj.GetComponentsInChildren<Collider>();
@@ -622,51 +606,6 @@ public class FurnitureSaveManager : MonoBehaviour
 
         if (debugMode)
             Debug.Log($"[FurnitureSave] Loaded {data.furnitureID} at {data.GetPosition()}");
-    }
-
-    void CorrectDefaultLayerName(FurnitureSaveData data, FurnitureData furnitureData)
-    {
-        if (data == null || furnitureData == null)
-        {
-            return;
-        }
-
-        int defaultLayer = LayerMask.NameToLayer("Default");
-        if (!string.IsNullOrEmpty(data.layerName) || data.layer != defaultLayer)
-        {
-            return;
-        }
-
-        bool hasWallPlacementInfo = data.wallParentId != 0 || !string.IsNullOrEmpty(data.wallParentPath);
-        int targetLayer = -1;
-        if (hasWallPlacementInfo)
-        {
-            targetLayer = LayerMask.NameToLayer("Wall");
-        }
-        else
-        {
-            switch (furnitureData.placementRules)
-            {
-                case PlacementRule.Wall:
-                    targetLayer = LayerMask.NameToLayer("Wall");
-                    break;
-                case PlacementRule.Ceiling:
-                    targetLayer = LayerMask.NameToLayer("Ceiling");
-                    break;
-                default:
-                    targetLayer = LayerMask.NameToLayer("Furniture");
-                    break;
-            }
-        }
-
-        if (targetLayer >= 0)
-        {
-            data.layer = targetLayer;
-            if (string.IsNullOrEmpty(data.layerName))
-            {
-                data.layerName = LayerMask.LayerToName(targetLayer);
-            }
-        }
     }
 
     // レイヤーを再帰的に設定
