@@ -1,3 +1,6 @@
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,9 +8,16 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 {
     [SerializeField] private UISlidePanel slidePanel;
     [SerializeField] private Button exitButton;
+    [SerializeField] private Button prevButton;
+    [SerializeField] private Button nextButton;
+    [SerializeField] private TMP_Text pageText;
+    [SerializeField] private List<string> pages = new();
+    [SerializeField] private float showDelaySeconds = 0.7f;
 
     private bool waitingForSlideOut;
     private bool hasShown;
+    private int currentPageIndex;
+    private Coroutine showRoutine;
 
     void OnEnable()
     {
@@ -15,6 +25,14 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         if (exitButton != null)
         {
             exitButton.onClick.AddListener(ClosePanel);
+        }
+        if (prevButton != null)
+        {
+            prevButton.onClick.AddListener(ShowPreviousPage);
+        }
+        if (nextButton != null)
+        {
+            nextButton.onClick.AddListener(ShowNextPage);
         }
 
         var slideManager = SlideTransitionManager.Instance;
@@ -37,6 +55,20 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         if (exitButton != null)
         {
             exitButton.onClick.RemoveListener(ClosePanel);
+        }
+        if (prevButton != null)
+        {
+            prevButton.onClick.RemoveListener(ShowPreviousPage);
+        }
+        if (nextButton != null)
+        {
+            nextButton.onClick.RemoveListener(ShowNextPage);
+        }
+
+        if (showRoutine != null)
+        {
+            StopCoroutine(showRoutine);
+            showRoutine = null;
         }
 
         var slideManager = SlideTransitionManager.Instance;
@@ -86,7 +118,7 @@ public class SceneOnceSlidePanelController : MonoBehaviour
             Debug.LogWarning($"[{nameof(SceneOnceSlidePanelController)}] SlideTransitionManager.Instance is null in TryShowPanel.");
         }
 
-        ShowPanel();
+        BeginShowAfterDelay();
     }
 
     bool HasSeenPanel()
@@ -114,6 +146,8 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         }
 
         hasShown = true;
+        currentPageIndex = 0;
+        UpdatePageDisplay();
         Debug.Log($"[{nameof(SceneOnceSlidePanelController)}] SlideIn triggered. hasShown={hasShown}");
         slidePanel.SlideIn();
 
@@ -155,6 +189,14 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         {
             exitButton.interactable = false;
         }
+        if (prevButton != null)
+        {
+            prevButton.interactable = false;
+        }
+        if (nextButton != null)
+        {
+            nextButton.interactable = false;
+        }
     }
 
     void ClosePanel()
@@ -184,6 +226,14 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         {
             exitButton.interactable = false;
         }
+        if (prevButton != null)
+        {
+            prevButton.interactable = false;
+        }
+        if (nextButton != null)
+        {
+            nextButton.interactable = false;
+        }
 
         if (slidePanel != null)
         {
@@ -193,6 +243,70 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         else
         {
             Debug.LogWarning($"[{nameof(SceneOnceSlidePanelController)}] slidePanel is null in ClosePanel.");
+        }
+    }
+
+    void BeginShowAfterDelay()
+    {
+        if (showRoutine != null)
+        {
+            StopCoroutine(showRoutine);
+        }
+        showRoutine = StartCoroutine(ShowPanelAfterDelay());
+    }
+
+    IEnumerator ShowPanelAfterDelay()
+    {
+        if (showDelaySeconds > 0f)
+        {
+            yield return new WaitForSeconds(showDelaySeconds);
+        }
+
+        showRoutine = null;
+        ShowPanel();
+    }
+
+    void ShowPreviousPage()
+    {
+        SetPage(currentPageIndex - 1);
+    }
+
+    void ShowNextPage()
+    {
+        SetPage(currentPageIndex + 1);
+    }
+
+    void SetPage(int index)
+    {
+        if (pages == null || pages.Count == 0)
+        {
+            currentPageIndex = 0;
+            UpdatePageDisplay();
+            return;
+        }
+
+        currentPageIndex = Mathf.Clamp(index, 0, pages.Count - 1);
+        UpdatePageDisplay();
+    }
+
+    void UpdatePageDisplay()
+    {
+        if (pageText != null)
+        {
+            var pageContent = pages != null && pages.Count > 0
+                ? pages[Mathf.Clamp(currentPageIndex, 0, pages.Count - 1)]
+                : string.Empty;
+            pageText.text = pageContent;
+        }
+
+        bool hasPages = pages != null && pages.Count > 0;
+        if (prevButton != null)
+        {
+            prevButton.interactable = hasPages && currentPageIndex > 0;
+        }
+        if (nextButton != null)
+        {
+            nextButton.interactable = hasPages && currentPageIndex < pages.Count - 1;
         }
     }
 }
