@@ -195,9 +195,11 @@ public class DynamicLocalizer : MonoBehaviour
     [Header("オプション")]
     [SerializeField] private bool waitForLocalizationInit = true;  // 初期化を待つかどうか
     [SerializeField] private bool debugMode = false;
+    private const bool EnableDebugLogs = false;
 
     private bool isLocalizationReady = false;
     private Locale currentLocale;
+    private bool IsDebugEnabled => debugMode && EnableDebugLogs;
 
     private void Awake()
     {
@@ -233,7 +235,7 @@ public class DynamicLocalizer : MonoBehaviour
         currentLocale = LocalizationSettings.SelectedLocale;
         UpdateFontsForLocale(currentLocale);
 
-        if (debugMode)
+        if (IsDebugEnabled)
         {
             Debug.Log($"[DynamicLocalizer] Localization ready. Current locale: {currentLocale?.name}");
         }
@@ -244,7 +246,7 @@ public class DynamicLocalizer : MonoBehaviour
     /// </summary>
     private void OnLocaleChanged(Locale newLocale)
     {
-        if (debugMode)
+        if (IsDebugEnabled)
         {
             Debug.Log($"[DynamicLocalizer] Locale changed from {currentLocale?.name} to {newLocale?.name}");
         }
@@ -280,7 +282,7 @@ public class DynamicLocalizer : MonoBehaviour
         if (targetFont == null)
         {
             targetFont = defaultFont;
-            if (debugMode && defaultFont != null)
+            if (IsDebugEnabled && defaultFont != null)
             {
                 Debug.Log($"[DynamicLocalizer] Using default font for locale: {localeCode}");
             }
@@ -294,7 +296,7 @@ public class DynamicLocalizer : MonoBehaviour
                 field.SetFont(targetFont);
             }
 
-            if (debugMode)
+            if (IsDebugEnabled)
             {
                 Debug.Log($"[DynamicLocalizer] Updated font to: {targetFont.name}");
             }
@@ -308,10 +310,10 @@ public class DynamicLocalizer : MonoBehaviour
     {
         foreach (var field in localizedFields)
         {
-            field.Initialize(debugMode);
+            field.Initialize(IsDebugEnabled);
         }
 
-        if (debugMode)
+        if (IsDebugEnabled)
         {
             Debug.Log($"[DynamicLocalizer] Initialized {localizedFields.Length} fields");
         }
@@ -336,10 +338,10 @@ public class DynamicLocalizer : MonoBehaviour
                 field.SetLocalizedKeyImmediate(key);
             }
 
-            if (debugMode)
+            if (IsDebugEnabled)
                 Debug.Log($"[DynamicLocalizer] Set {fieldName} to {key}");
         }
-        else if (debugMode)
+        else if (IsDebugEnabled)
         {
             Debug.LogWarning($"[DynamicLocalizer] Field '{fieldName}' not found");
         }
@@ -375,10 +377,10 @@ public class DynamicLocalizer : MonoBehaviour
                 localizedFields[index].SetLocalizedKeyImmediate(key);
             }
 
-            if (debugMode)
+            if (IsDebugEnabled)
                 Debug.Log($"[DynamicLocalizer] Set field[{index}] to {key}");
         }
-        else if (debugMode)
+        else if (IsDebugEnabled)
         {
             Debug.LogWarning($"[DynamicLocalizer] Index {index} out of range");
         }
@@ -429,7 +431,7 @@ public class DynamicLocalizer : MonoBehaviour
             }
         }
 
-        if (debugMode && duplicates.Count > 0)
+        if (IsDebugEnabled && duplicates.Count > 0)
         {
             Debug.LogWarning($"[DynamicLocalizer] Duplicate field names detected: {string.Join(", ", duplicates)}. Please ensure each LocalizedTextField has a unique Field Name.");
         }
@@ -445,12 +447,12 @@ public class DynamicLocalizer : MonoBehaviour
         {
             field.Clear();
 
-            if (debugMode)
+            if (IsDebugEnabled)
             {
                 Debug.Log($"[DynamicLocalizer] Cleared field '{fieldName}'");
             }
         }
-        else if (debugMode)
+        else if (IsDebugEnabled)
         {
             Debug.LogWarning($"[DynamicLocalizer] Field '{fieldName}' not found when attempting to clear");
         }
@@ -536,7 +538,7 @@ public class DynamicLocalizer : MonoBehaviour
         if (field != null)
         {
             field.localizationTableName = tableName;
-            field.Initialize();  // 再初期化
+            field.Initialize(IsDebugEnabled);  // 再初期化
         }
     }
 
