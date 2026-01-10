@@ -359,6 +359,10 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             data.hasSeenOpeningPanel = openingPanel.HasSeenOpeningPanel;
             lastHasSeenOpeningPanel = data.hasSeenOpeningPanel;
         }
+        else if (lastHasSeenOpeningPanel.HasValue)
+        {
+            data.hasSeenOpeningPanel = lastHasSeenOpeningPanel.Value;
+        }
         Debug.Log($"[SaveGameManager] SaveManagers(Story): hasSeenOpeningPanel={data.hasSeenOpeningPanel}");
     }
 
