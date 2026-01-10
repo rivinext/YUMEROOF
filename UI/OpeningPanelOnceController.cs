@@ -6,11 +6,14 @@ using UnityEngine.UI;
 public class OpeningPanelOnceController : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
+    [SerializeField] private CanvasGroup panelCanvasGroup;
     [SerializeField] private Button closeButton;
     [SerializeField] private CanvasGroup openingTextCanvasGroup;
+    [SerializeField, Min(0f)] private float panelFadeDuration = 0.2f;
     [SerializeField, Min(0f)] private float openingTextFadeDuration = 0.5f;
 
     private Coroutine openingTextCoroutine;
+    private Tween panelFadeTween;
 
     void OnEnable()
     {
@@ -40,6 +43,7 @@ public class OpeningPanelOnceController : MonoBehaviour
         }
 
         StopOpeningTextFade();
+        StopPanelFade();
     }
 
     public void ClosePanel()
@@ -52,7 +56,28 @@ public class OpeningPanelOnceController : MonoBehaviour
             saveGameManager.Save(slotKey);
         }
 
-        SetPanelVisible(false);
+        if (panelCanvasGroup == null)
+        {
+            SetPanelVisible(false);
+            return;
+        }
+
+        StopPanelFade();
+
+        if (closeButton != null)
+        {
+            closeButton.interactable = false;
+        }
+
+        panelCanvasGroup.blocksRaycasts = false;
+        panelCanvasGroup.interactable = false;
+        panelFadeTween = panelCanvasGroup.DOFade(0f, panelFadeDuration)
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                panelFadeTween = null;
+                SetPanelVisible(false);
+            });
     }
 
     public void ShowIfNewSave(bool createdNewSave)
@@ -78,6 +103,19 @@ public class OpeningPanelOnceController : MonoBehaviour
         if (panelRoot != null)
         {
             panelRoot.SetActive(isVisible);
+        }
+
+        if (closeButton != null)
+        {
+            closeButton.interactable = isVisible;
+        }
+
+        if (panelCanvasGroup != null)
+        {
+            panelCanvasGroup.DOKill();
+            panelCanvasGroup.alpha = isVisible ? 1f : 0f;
+            panelCanvasGroup.blocksRaycasts = isVisible;
+            panelCanvasGroup.interactable = isVisible;
         }
 
         if (!isVisible)
@@ -140,6 +178,20 @@ public class OpeningPanelOnceController : MonoBehaviour
         if (openingTextCanvasGroup != null)
         {
             openingTextCanvasGroup.DOKill();
+        }
+    }
+
+    void StopPanelFade()
+    {
+        if (panelFadeTween != null)
+        {
+            panelFadeTween.Kill();
+            panelFadeTween = null;
+        }
+
+        if (panelCanvasGroup != null)
+        {
+            panelCanvasGroup.DOKill();
         }
     }
 
