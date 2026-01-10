@@ -12,6 +12,7 @@ namespace SaveSystem
         public Quaternion rotation;
         public string sceneName;
         public int layer;
+        public string layerName;
         public string parentUID;
         public string uniqueID;
         public int wallParentId;
