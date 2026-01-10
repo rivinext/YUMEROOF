@@ -35,9 +35,6 @@ public class InventoryPlacementBridge : MonoBehaviour
     public event Action<string> OnPlacementComplete;
     public event Action OnPlacementCancelled;
 
-    [Header("Debug")]
-    public bool debugMode = false;
-
     [SerializeField]
     private List<string> disabledScenes = new List<string>();
 
@@ -46,9 +43,6 @@ public class InventoryPlacementBridge : MonoBehaviour
         if (instance == null)
         {
             instance = this;
-
-            if (debugMode)
-                Debug.Log("[InventoryPlacementBridge] Initialized");
         }
         else if (instance != this)
         {
@@ -69,8 +63,6 @@ public class InventoryPlacementBridge : MonoBehaviour
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (debugMode)
-            Debug.Log($"[InventoryPlacementBridge] Scene loaded: {scene.name}");
     }
 
     // 現在のシーンで配置が無効かどうか
@@ -85,20 +77,11 @@ public class InventoryPlacementBridge : MonoBehaviour
     {
         if (IsPlacementDisabledScene())
         {
-            if (debugMode)
-            {
-                string activeScene = SceneManager.GetActiveScene().name;
-                Debug.Log($"[InventoryPlacementBridge] Placement disabled in scene: {activeScene}");
-            }
             return;
         }
 
-        if (debugMode)
-            Debug.Log($"[InventoryPlacementBridge] StartPlacementFromInventory called with item: {item?.itemID}");
-
         if (item == null || item.quantity <= 0)
         {
-            Debug.LogWarning("[InventoryPlacementBridge] Cannot place item with zero quantity");
             return;
         }
 
@@ -106,25 +89,16 @@ public class InventoryPlacementBridge : MonoBehaviour
         InventoryUI inventoryUI = FindFirstObjectByType<InventoryUI>();
         FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
 
-        if (debugMode)
-        {
-            Debug.Log($"[InventoryPlacementBridge] Found InventoryUI: {inventoryUI != null}");
-            Debug.Log($"[InventoryPlacementBridge] Found FreePlacementSystem: {placementSystem != null}");
-        }
-
         // 家具データとPrefabを取得
         var furnitureData = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
         var prefab = FurnitureDataManager.Instance?.GetFurniturePrefab(item.itemID);
 
         if (furnitureData == null)
         {
-            Debug.LogError($"[InventoryPlacementBridge] Furniture data not found for {item.itemID}");
-
             // ScriptableObjectを直接取得してみる
             var furnitureDataSO = FurnitureDataManager.Instance?.GetFurnitureDataSO(item.itemID);
             if (furnitureDataSO != null)
             {
-                Debug.Log($"[InventoryPlacementBridge] Found FurnitureDataSO: {furnitureDataSO.name}");
                 prefab = furnitureDataSO.prefab;
 
                 // FurnitureDataに変換
@@ -156,12 +130,8 @@ public class InventoryPlacementBridge : MonoBehaviour
 
         if (prefab == null)
         {
-            Debug.LogError($"[InventoryPlacementBridge] Prefab not found for {item.itemID}");
             return;
         }
-
-        if (debugMode)
-            Debug.Log($"[InventoryPlacementBridge] Found prefab: {prefab.name}");
 
         // 配置情報を保存
         placingItemID = item.itemID;
@@ -170,23 +140,14 @@ public class InventoryPlacementBridge : MonoBehaviour
         // インベントリを一時的に閉じる
         if (inventoryUI != null)
         {
-            if (debugMode)
-                Debug.Log("[InventoryPlacementBridge] Closing inventory for placement");
             // 配置中フラグを立ててから閉じる
             inventoryUI.SetPlacingItem(true);
             inventoryUI.CloseInventory();
-        }
-        else
-        {
-            Debug.LogWarning("[InventoryPlacementBridge] InventoryUI not found in current scene!");
         }
 
         // 配置システムを開始
         if (placementSystem != null)
         {
-            if (debugMode)
-                Debug.Log("[InventoryPlacementBridge] Starting FreePlacementSystem");
-
             // コールバックを設定
             placementSystem.OnPlacementCompleted = OnPlacementCompleteCallback;
             placementSystem.OnPlacementCancelled = OnPlacementCancelCallback;
@@ -196,7 +157,6 @@ public class InventoryPlacementBridge : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[InventoryPlacementBridge] FreePlacementSystem not found in current scene!");
             // エラー時はインベントリを復元
             RestoreInventory();
         }
@@ -209,9 +169,6 @@ public class InventoryPlacementBridge : MonoBehaviour
         {
             // インベントリから数量を減らす
             InventoryManager.Instance?.RemoveFurniture(placingItemID, 1);
-            if (debugMode)
-                Debug.Log($"[InventoryPlacementBridge] Placed {placingItemID} from inventory");
-
             // イベント発火
             OnPlacementComplete?.Invoke(placingItemID);
         }
@@ -229,9 +186,6 @@ public class InventoryPlacementBridge : MonoBehaviour
     // 配置キャンセル時のコールバック
     private void OnPlacementCancelCallback()
     {
-        if (debugMode)
-            Debug.Log("[InventoryPlacementBridge] Placement cancelled, restoring inventory");
-
         // 配置システムのコールバックをクリア
         ClearPlacementCallbacks();
 
@@ -276,14 +230,7 @@ public class InventoryPlacementBridge : MonoBehaviour
 
                 // Furnitureタブに切り替え
                 inventoryUI.SwitchTab(false);  // false = Furnitureタブ
-
-                if (debugMode)
-                    Debug.Log("[InventoryPlacementBridge] Inventory restored");
             }
-        }
-        else
-        {
-            Debug.LogWarning("[InventoryPlacementBridge] Cannot restore inventory - InventoryUI not found");
         }
     }
 
@@ -292,9 +239,6 @@ public class InventoryPlacementBridge : MonoBehaviour
     {
         placingItemID = null;
         isPlacingFromInventory = false;
-
-        if (debugMode)
-            Debug.Log("[InventoryPlacementBridge] State reset");
     }
 
     // 配置中かどうか
@@ -309,20 +253,4 @@ public class InventoryPlacementBridge : MonoBehaviour
         return placingItemID;
     }
 
-    // デバッグ用：現在の状態を表示
-    [ContextMenu("Show Current State")]
-    public void ShowCurrentState()
-    {
-        Debug.Log("=== InventoryPlacementBridge State ===");
-        Debug.Log($"Is Placing: {isPlacingFromInventory}");
-        Debug.Log($"Placing Item ID: {placingItemID}");
-
-        InventoryUI inventoryUI = FindFirstObjectByType<InventoryUI>();
-        Debug.Log($"Current InventoryUI: {(inventoryUI != null ? "Found" : "Not Found")}");
-
-        FreePlacementSystem placementSystem = FindFirstObjectByType<FreePlacementSystem>();
-        Debug.Log($"Current FreePlacementSystem: {(placementSystem != null ? "Found" : "Not Found")}");
-
-        Debug.Log("=====================================");
-    }
 }
