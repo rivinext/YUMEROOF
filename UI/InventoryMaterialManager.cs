@@ -63,11 +63,6 @@ public class InventoryMaterialManager : MonoBehaviour
 
     public void RefreshMaterialIcons(List<InventoryItem> items)
     {
-        if (ShouldLogDebug())
-        {
-            Debug.Log($"RefreshMaterialIcons called with {items.Count} items");
-            Debug.Log($"Material slots available: {materialSlots?.Length ?? 0}");
-        }
         // 既存のアイコンをクリア
         foreach (var kvp in materialIcons)
         {
