@@ -62,6 +62,7 @@ public class StorySaveData : BaseSaveData
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
     public bool hasSeenOpeningPanel;
+    public bool hasSeenSceneOnceSlidePanel;
 
     public static StorySaveData FromJson(string json)
     {
@@ -83,6 +84,11 @@ public class StorySaveData : BaseSaveData
         if (!string.IsNullOrEmpty(json) && !json.Contains("\"hasSeenOpeningPanel\""))
         {
             data.hasSeenOpeningPanel = false;
+        }
+
+        if (!string.IsNullOrEmpty(json) && !json.Contains("\"hasSeenSceneOnceSlidePanel\""))
+        {
+            data.hasSeenSceneOnceSlidePanel = false;
         }
 
         return data;
@@ -108,6 +114,7 @@ public class CreativeSaveData : BaseSaveData
     public List<WardrobeSelectionEntry> wardrobeSelections = new();
     public bool hasWardrobeSelections;
     public bool hasSeenOpeningPanel;
+    public bool hasSeenSceneOnceSlidePanel;
 
     public static CreativeSaveData FromJson(string json)
     {
@@ -125,6 +132,11 @@ public class CreativeSaveData : BaseSaveData
         if (!string.IsNullOrEmpty(json) && !json.Contains("\"hasSeenOpeningPanel\""))
         {
             data.hasSeenOpeningPanel = false;
+        }
+
+        if (!string.IsNullOrEmpty(json) && !json.Contains("\"hasSeenSceneOnceSlidePanel\""))
+        {
+            data.hasSeenSceneOnceSlidePanel = false;
         }
 
         if (data.ownedItems == null || data.ownedItems.Count == 0)
