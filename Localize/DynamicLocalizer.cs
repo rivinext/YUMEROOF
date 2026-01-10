@@ -197,6 +197,11 @@ public class DynamicLocalizer : MonoBehaviour
     [SerializeField] private bool debugMode = false;
     private const bool EnableDebugLogs = false;
 
+    [Header("起動時のキー設定")]
+    [SerializeField] private bool applyStartupKey = false;
+    [SerializeField] private string startupFieldName = "Stariroom";
+    [SerializeField] private string startupKey = "your_key_here";
+
     private bool isLocalizationReady = false;
     private Locale currentLocale;
     private bool IsDebugEnabled => debugMode && EnableDebugLogs;
@@ -212,6 +217,16 @@ public class DynamicLocalizer : MonoBehaviour
         {
             LocalizationSettings.SelectedLocaleChanged += OnLocaleChanged;
         }
+    }
+
+    private void Start()
+    {
+        if (!applyStartupKey || string.IsNullOrEmpty(startupFieldName))
+        {
+            return;
+        }
+
+        SetFieldByName(startupFieldName, startupKey);
     }
 
     private void OnDestroy()
