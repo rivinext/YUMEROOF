@@ -637,24 +637,35 @@ public class FurnitureSaveManager : MonoBehaviour
             return;
         }
 
+        bool hasWallPlacementInfo = data.wallParentId != 0 || !string.IsNullOrEmpty(data.wallParentPath);
         int targetLayer = -1;
-        switch (furnitureData.placementRules)
+        if (hasWallPlacementInfo)
         {
-            case PlacementRule.Wall:
-                targetLayer = LayerMask.NameToLayer("Wall");
-                break;
-            case PlacementRule.Ceiling:
-                targetLayer = LayerMask.NameToLayer("Ceiling");
-                break;
-            default:
-                targetLayer = LayerMask.NameToLayer("Furniture");
-                break;
+            targetLayer = LayerMask.NameToLayer("Wall");
+        }
+        else
+        {
+            switch (furnitureData.placementRules)
+            {
+                case PlacementRule.Wall:
+                    targetLayer = LayerMask.NameToLayer("Wall");
+                    break;
+                case PlacementRule.Ceiling:
+                    targetLayer = LayerMask.NameToLayer("Ceiling");
+                    break;
+                default:
+                    targetLayer = LayerMask.NameToLayer("Furniture");
+                    break;
+            }
         }
 
         if (targetLayer >= 0)
         {
             data.layer = targetLayer;
-            data.layerName = LayerMask.LayerToName(targetLayer);
+            if (string.IsNullOrEmpty(data.layerName))
+            {
+                data.layerName = LayerMask.LayerToName(targetLayer);
+            }
         }
     }
 
