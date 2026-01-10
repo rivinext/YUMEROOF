@@ -6,12 +6,6 @@ public class OpeningPanelOnceController : MonoBehaviour
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button closeButton;
 
-    void Start()
-    {
-        bool shouldShow = GameSessionInitializer.LastLoadCreatedNewSave;
-        SetPanelVisible(shouldShow);
-    }
-
     void OnEnable()
     {
         if (closeButton != null)
@@ -41,14 +35,16 @@ public class OpeningPanelOnceController : MonoBehaviour
         SetPanelVisible(false);
     }
 
+    public void ShowIfNewSave(bool createdNewSave)
+    {
+        SetPanelVisible(createdNewSave);
+    }
+
     void SetPanelVisible(bool isVisible)
     {
         if (panelRoot != null)
         {
             panelRoot.SetActive(isVisible);
-            return;
         }
-
-        gameObject.SetActive(isVisible);
     }
 }
