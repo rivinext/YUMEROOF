@@ -547,6 +547,8 @@ public class FurnitureSaveManager : MonoBehaviour
             furnitureObj.AddComponent<SitTrigger>();
         }
 
+        CorrectDefaultLayerName(data, placedFurniture.furnitureData);
+
         // ユニークIDを設定
         SetUniqueID(placedFurniture, data.uniqueID);
 
@@ -620,6 +622,40 @@ public class FurnitureSaveManager : MonoBehaviour
 
         if (debugMode)
             Debug.Log($"[FurnitureSave] Loaded {data.furnitureID} at {data.GetPosition()}");
+    }
+
+    void CorrectDefaultLayerName(FurnitureSaveData data, FurnitureData furnitureData)
+    {
+        if (data == null || furnitureData == null)
+        {
+            return;
+        }
+
+        int defaultLayer = LayerMask.NameToLayer("Default");
+        if (!string.IsNullOrEmpty(data.layerName) || data.layer != defaultLayer)
+        {
+            return;
+        }
+
+        int targetLayer = -1;
+        switch (furnitureData.placementRules)
+        {
+            case PlacementRule.Wall:
+                targetLayer = LayerMask.NameToLayer("Wall");
+                break;
+            case PlacementRule.Ceiling:
+                targetLayer = LayerMask.NameToLayer("Ceiling");
+                break;
+            default:
+                targetLayer = LayerMask.NameToLayer("Furniture");
+                break;
+        }
+
+        if (targetLayer >= 0)
+        {
+            data.layer = targetLayer;
+            data.layerName = LayerMask.LayerToName(targetLayer);
+        }
     }
 
     // レイヤーを再帰的に設定
