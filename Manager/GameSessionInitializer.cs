@@ -140,6 +140,11 @@ public class GameSessionInitializer : MonoBehaviour
         }
 
         LastLoadCreatedNewSave = SaveGameManager.Instance.Load(slotKey);
+        var openingPanelController = FindFirstObjectByType<OpeningPanelOnceController>(FindObjectsInactive.Include);
+        if (openingPanelController != null)
+        {
+            openingPanelController.ShowIfNewSave(LastLoadCreatedNewSave);
+        }
         if (!DevItemInjector.BuildDisablesInjection)
         {
             var inventoryManager = InventoryManager.Instance;
