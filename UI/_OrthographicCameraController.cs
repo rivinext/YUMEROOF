@@ -36,7 +36,6 @@ public class OrthographicCameraController : MonoBehaviour
     [Header("UI Interaction")]
     public bool blockCameraWhenUIActive = true; // UI操作時にカメラ操作をブロック
     public bool blockCameraWhenPlacing = true;  // 配置中にカメラ操作を制限
-    public bool debugUIDetection = false;       // UIデバッグモード
 
     private Camera orthographicCamera;
     private Vector3 lastMousePosition;
@@ -121,7 +120,6 @@ public class OrthographicCameraController : MonoBehaviour
 
         if (orthographicCamera == null)
         {
-            Debug.LogError("Camera component not found!");
             return;
         }
 
@@ -162,23 +160,9 @@ public class OrthographicCameraController : MonoBehaviour
     void FindInventoryUI()
     {
         inventoryUI = FindFirstObjectByType<InventoryUI>();
-        if (inventoryUI != null)
-        {
-            if (debugUIDetection)
-            {
-                Debug.Log("[CameraController] Found InventoryUI");
-            }
-        }
 
         // FreePlacementSystemを探す
         placementSystem = FindFirstObjectByType<FreePlacementSystem>();
-        if (placementSystem != null)
-        {
-            if (debugUIDetection)
-            {
-                Debug.Log("[CameraController] Found FreePlacementSystem");
-            }
-        }
     }
 
     void Update()
@@ -213,11 +197,6 @@ public class OrthographicCameraController : MonoBehaviour
                 // UIInteractionManagerがない場合は従来の方法
                 bool isMouseOverUI = IsPointerOverUIElement();
                 shouldBlockCamera = blockCameraWhenUIActive && (isInventoryOpen && isMouseOverUI);
-
-                if (debugUIDetection && shouldBlockCamera)
-                {
-                    Debug.Log($"[CameraController] Blocking new camera operation - Inventory: {isInventoryOpen}, Mouse over UI: {isMouseOverUI}");
-                }
             }
         }
 
@@ -329,20 +308,12 @@ public class OrthographicCameraController : MonoBehaviour
             // Background画像上にマウスがある場合のみtrueを返す
             if (backgroundImage != null && result.gameObject == backgroundImage)
             {
-                if (debugUIDetection)
-                {
-                    Debug.Log($"[CameraController] Mouse over Background image");
-                }
                 return true;
             }
 
             // またはBackground画像の子要素上にある場合
             if (backgroundImage != null && result.gameObject.transform.IsChildOf(backgroundImage.transform))
             {
-                if (debugUIDetection)
-                {
-                    Debug.Log($"[CameraController] Mouse over Background child: {result.gameObject.name}");
-                }
                 return true;
             }
         }
@@ -391,13 +362,6 @@ public class OrthographicCameraController : MonoBehaviour
                 lastMousePosition = Input.mousePosition;
                 isPanning = true;
                 startedOutsideUI = !isOverUI;
-
-                #if UNITY_EDITOR
-                if (debugUIDetection)
-                {
-                    Debug.Log($"[CameraController] Started panning - Outside UI: {startedOutsideUI}");
-                }
-                #endif
             }
         }
 
@@ -427,13 +391,6 @@ public class OrthographicCameraController : MonoBehaviour
             {
                 isPanning = false;
                 startedOutsideUI = false;
-
-                #if UNITY_EDITOR
-                if (debugUIDetection)
-                {
-                    Debug.Log("[CameraController] Stopped panning");
-                }
-                #endif
             }
         }
     }
@@ -451,13 +408,6 @@ public class OrthographicCameraController : MonoBehaviour
                 lastMousePosition = Input.mousePosition;
                 isRotating = true;
                 startedOutsideUI = !isOverUI;
-
-                #if UNITY_EDITOR
-                if (debugUIDetection)
-                {
-                    // Debug.Log($"[CameraController] Started rotating - Outside UI: {startedOutsideUI}");
-                }
-                #endif
             }
         }
 
@@ -473,13 +423,6 @@ public class OrthographicCameraController : MonoBehaviour
             currentRotationX = Mathf.Clamp(currentRotationX, minAngleX, maxAngleX);
 
             lastMousePosition = Input.mousePosition;
-
-            #if UNITY_EDITOR
-            if (debugUIDetection && Time.frameCount % 30 == 0) // 30フレームごとにログ
-            {
-                // Debug.Log($"[CameraController] Rotating - X: {currentRotationX:F1}, Y: {currentRotationY:F1}");
-            }
-            #endif
         }
 
         if (Input.GetMouseButtonUp(1)) // 右ボタンリリース
@@ -488,13 +431,6 @@ public class OrthographicCameraController : MonoBehaviour
             {
                 isRotating = false;
                 startedOutsideUI = false;
-
-                #if UNITY_EDITOR
-                if (debugUIDetection)
-                {
-                    // Debug.Log("[CameraController] Stopped rotating");
-                }
-                #endif
             }
         }
     }
@@ -823,22 +759,12 @@ public class OrthographicCameraController : MonoBehaviour
     public void SetCameraControlEnabled(bool enabled)
     {
         blockCameraWhenUIActive = !enabled;
-
-        if (debugUIDetection)
-        {
-            Debug.Log($"[CameraController] Camera control: {(enabled ? "Enabled" : "Disabled")}");
-        }
     }
 
     // インベントリの開閉をマニュアルで通知（必要に応じて使用）
     public void NotifyInventoryStateChanged(bool isOpen)
     {
         isInventoryOpen = isOpen;
-
-        if (debugUIDetection)
-        {
-            Debug.Log($"[CameraController] Inventory state changed: {(isOpen ? "Open" : "Closed")}");
-        }
     }
 
     // アプリケーションフォーカス時の処理
