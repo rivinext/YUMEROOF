@@ -46,6 +46,11 @@ public class SceneOnceSlidePanelController : MonoBehaviour
             return;
         }
 
+        if (slidePanel != null && !slidePanel.gameObject.activeSelf)
+        {
+            slidePanel.gameObject.SetActive(true);
+        }
+
         if (HasSeenPanel())
         {
             HidePanelImmediate();
@@ -73,6 +78,11 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         if (slidePanel == null)
         {
             return;
+        }
+
+        if (!slidePanel.gameObject.activeSelf)
+        {
+            slidePanel.gameObject.SetActive(true);
         }
 
         hasShown = true;
