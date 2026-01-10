@@ -5,12 +5,11 @@ public class OpeningPanelOnceController : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button closeButton;
-    [SerializeField] private UISlidePanel targetSlidePanel;
-    private bool hasShown;
 
     void Start()
     {
-        SetPanelVisible(false);
+        bool shouldShow = GameSessionInitializer.LastLoadCreatedNewSave;
+        SetPanelVisible(shouldShow);
     }
 
     void OnEnable()
@@ -19,11 +18,6 @@ public class OpeningPanelOnceController : MonoBehaviour
         {
             closeButton.onClick.AddListener(ClosePanel);
         }
-
-        if (targetSlidePanel != null)
-        {
-            targetSlidePanel.OnSlideOutStarting += HandleSlideOutStarting;
-        }
     }
 
     void OnDisable()
@@ -31,11 +25,6 @@ public class OpeningPanelOnceController : MonoBehaviour
         if (closeButton != null)
         {
             closeButton.onClick.RemoveListener(ClosePanel);
-        }
-
-        if (targetSlidePanel != null)
-        {
-            targetSlidePanel.OnSlideOutStarting -= HandleSlideOutStarting;
         }
     }
 
@@ -61,17 +50,5 @@ public class OpeningPanelOnceController : MonoBehaviour
         }
 
         gameObject.SetActive(isVisible);
-    }
-
-    void HandleSlideOutStarting()
-    {
-        if (hasShown)
-            return;
-
-        if (!GameSessionInitializer.LastLoadCreatedNewSave)
-            return;
-
-        hasShown = true;
-        SetPanelVisible(true);
     }
 }
