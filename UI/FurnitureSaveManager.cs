@@ -41,6 +41,7 @@ public class FurnitureSaveManager : MonoBehaviour
         public float posX, posY, posZ;
         public float rotX, rotY, rotZ, rotW;
         public int layer;
+        public string layerName;
         public string parentFurnitureID; // 親家具のユニークID（スタック配置用）
         public string uniqueID; // このオブジェクト固有のID
         public int wallParentId; // 壁親の安定ID
@@ -53,6 +54,7 @@ public class FurnitureSaveManager : MonoBehaviour
             Vector3 pos,
             Quaternion rot,
             int layerIndex = 0,
+            string layerNameValue = "",
             string parentID = "",
             string uid = "",
             int wallId = 0,
@@ -64,6 +66,7 @@ public class FurnitureSaveManager : MonoBehaviour
             posX = pos.x; posY = pos.y; posZ = pos.z;
             rotX = rot.x; rotY = rot.y; rotZ = rot.z; rotW = rot.w;
             layer = layerIndex;
+            layerName = layerNameValue;
             parentFurnitureID = parentID;
             uniqueID = string.IsNullOrEmpty(uid) ? System.Guid.NewGuid().ToString() : uid;
             wallParentId = wallId;
@@ -250,6 +253,7 @@ public class FurnitureSaveManager : MonoBehaviour
             existingData.rotZ = furniture.transform.rotation.z;
             existingData.rotW = furniture.transform.rotation.w;
             existingData.layer = furniture.gameObject.layer;
+            existingData.layerName = LayerMask.LayerToName(furniture.gameObject.layer);
             existingData.parentFurnitureID = parentID;
             existingData.wallParentId = wallParentId;
             existingData.wallParentName = wallParentName;
@@ -264,6 +268,7 @@ public class FurnitureSaveManager : MonoBehaviour
                 furniture.transform.position,
                 furniture.transform.rotation,
                 furniture.gameObject.layer,
+                LayerMask.LayerToName(furniture.gameObject.layer),
                 parentID,
                 uniqueID,
                 wallParentId,
@@ -546,7 +551,16 @@ public class FurnitureSaveManager : MonoBehaviour
         SetUniqueID(placedFurniture, data.uniqueID);
 
         // レイヤーを設定
-        SetLayerRecursively(furnitureObj, data.layer);
+        int targetLayer = data.layer;
+        if (!string.IsNullOrEmpty(data.layerName))
+        {
+            int namedLayer = LayerMask.NameToLayer(data.layerName);
+            if (namedLayer >= 0)
+            {
+                targetLayer = namedLayer;
+            }
+        }
+        SetLayerRecursively(furnitureObj, targetLayer);
 
         // コライダーの設定を確認
         Collider[] colliders = furnitureObj.GetComponentsInChildren<Collider>();
