@@ -36,7 +36,7 @@ public class InventoryPlacementBridge : MonoBehaviour
     public event Action OnPlacementCancelled;
 
     [Header("Debug")]
-    public bool debugMode = true;
+    public bool debugMode = false;
 
     [SerializeField]
     private List<string> disabledScenes = new List<string>();
@@ -85,12 +85,16 @@ public class InventoryPlacementBridge : MonoBehaviour
     {
         if (IsPlacementDisabledScene())
         {
-            string activeScene = SceneManager.GetActiveScene().name;
-            Debug.Log($"[InventoryPlacementBridge] Placement disabled in scene: {activeScene}");
+            if (debugMode)
+            {
+                string activeScene = SceneManager.GetActiveScene().name;
+                Debug.Log($"[InventoryPlacementBridge] Placement disabled in scene: {activeScene}");
+            }
             return;
         }
 
-        Debug.Log($"[InventoryPlacementBridge] StartPlacementFromInventory called with item: {item?.itemID}");
+        if (debugMode)
+            Debug.Log($"[InventoryPlacementBridge] StartPlacementFromInventory called with item: {item?.itemID}");
 
         if (item == null || item.quantity <= 0)
         {
@@ -156,7 +160,8 @@ public class InventoryPlacementBridge : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[InventoryPlacementBridge] Found prefab: {prefab.name}");
+        if (debugMode)
+            Debug.Log($"[InventoryPlacementBridge] Found prefab: {prefab.name}");
 
         // 配置情報を保存
         placingItemID = item.itemID;
@@ -165,7 +170,8 @@ public class InventoryPlacementBridge : MonoBehaviour
         // インベントリを一時的に閉じる
         if (inventoryUI != null)
         {
-            Debug.Log("[InventoryPlacementBridge] Closing inventory for placement");
+            if (debugMode)
+                Debug.Log("[InventoryPlacementBridge] Closing inventory for placement");
             // 配置中フラグを立ててから閉じる
             inventoryUI.SetPlacingItem(true);
             inventoryUI.CloseInventory();
@@ -178,7 +184,8 @@ public class InventoryPlacementBridge : MonoBehaviour
         // 配置システムを開始
         if (placementSystem != null)
         {
-            Debug.Log("[InventoryPlacementBridge] Starting FreePlacementSystem");
+            if (debugMode)
+                Debug.Log("[InventoryPlacementBridge] Starting FreePlacementSystem");
 
             // コールバックを設定
             placementSystem.OnPlacementCompleted = OnPlacementCompleteCallback;
@@ -202,7 +209,8 @@ public class InventoryPlacementBridge : MonoBehaviour
         {
             // インベントリから数量を減らす
             InventoryManager.Instance?.RemoveFurniture(placingItemID, 1);
-            Debug.Log($"[InventoryPlacementBridge] Placed {placingItemID} from inventory");
+            if (debugMode)
+                Debug.Log($"[InventoryPlacementBridge] Placed {placingItemID} from inventory");
 
             // イベント発火
             OnPlacementComplete?.Invoke(placingItemID);
@@ -221,7 +229,8 @@ public class InventoryPlacementBridge : MonoBehaviour
     // 配置キャンセル時のコールバック
     private void OnPlacementCancelCallback()
     {
-        Debug.Log("[InventoryPlacementBridge] Placement cancelled, restoring inventory");
+        if (debugMode)
+            Debug.Log("[InventoryPlacementBridge] Placement cancelled, restoring inventory");
 
         // 配置システムのコールバックをクリア
         ClearPlacementCallbacks();
