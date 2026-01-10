@@ -546,7 +546,13 @@ public class FurnitureSaveManager : MonoBehaviour
         SetUniqueID(placedFurniture, data.uniqueID);
 
         // レイヤーを設定
-        SetLayerRecursively(furnitureObj, data.layer);
+        int targetLayer = data.layer;
+        if (targetLayer == 0)
+        {
+            int furnitureLayer = LayerMask.NameToLayer("Furniture");
+            targetLayer = furnitureLayer >= 0 ? furnitureLayer : furnitureObj.layer;
+        }
+        SetLayerRecursively(furnitureObj, targetLayer);
 
         // コライダーの設定を確認
         Collider[] colliders = furnitureObj.GetComponentsInChildren<Collider>();

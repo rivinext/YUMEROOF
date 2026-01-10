@@ -639,14 +639,21 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         mgr.ClearAllSaveData();
         var allData = new FurnitureSaveManager.AllFurnitureData();
+        int fallbackFurnitureLayer = LayerMask.NameToLayer("Furniture");
         foreach (var f in list)
         {
+            int targetLayer = f.layer;
+            if (targetLayer == 0 && fallbackFurnitureLayer >= 0)
+            {
+                targetLayer = fallbackFurnitureLayer;
+            }
+
             allData.furnitureList.Add(new FurnitureSaveManager.FurnitureSaveData(
                 f.id,
                 f.sceneName,
                 f.position,
                 f.rotation,
-                f.layer,
+                targetLayer,
                 f.parentUID,
                 f.uniqueID,
                 f.wallParentId,
