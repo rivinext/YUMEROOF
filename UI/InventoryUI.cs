@@ -69,6 +69,8 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Sprite defaultCategoryIcon;
     [SerializeField] private Color defaultCategoryColor = Color.white;
     [SerializeField] private Color defaultCategoryCheckmarkColor = Color.white;
+    private const string StandardTextTableName = "StandardText";
+    private static readonly Dictionary<string, string> CategoryLocalizationKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     [SerializeField] private string allCategoryKey = "ALL";
     [SerializeField] private string allCategoryLabel = "ALL";
     [SerializeField] private Sprite allCategoryIcon;
@@ -503,6 +505,12 @@ public class InventoryUI : MonoBehaviour
             SelectFurnitureCategory(selectedCategory);
         }, showLabel, useBackgroundColor, backgroundColor, useCheckmarkColor, checkmarkColor);
 
+        string localizationKey = ResolveCategoryLocalizationKey(categoryId);
+        if (!string.IsNullOrEmpty(localizationKey))
+        {
+            categoryToggle.SetLabelLocalization(StandardTextTableName, localizationKey);
+        }
+
         categoryToggles.Add(categoryToggle);
     }
 
@@ -516,6 +524,26 @@ public class InventoryUI : MonoBehaviour
     {
         var setting = FindCategoryDisplaySetting(categoryId);
         return setting != null && setting.icon != null ? setting.icon : defaultCategoryIcon;
+    }
+
+    string ResolveCategoryLocalizationKey(string categoryId)
+    {
+        if (string.IsNullOrEmpty(categoryId))
+        {
+            return string.Empty;
+        }
+
+        if (string.Equals(categoryId, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return allCategoryKey;
+        }
+
+        if (CategoryLocalizationKeys.TryGetValue(categoryId, out string key) && !string.IsNullOrEmpty(key))
+        {
+            return key;
+        }
+
+        return categoryId;
     }
 
     Color ResolveCategoryBackgroundColor(string categoryId)
