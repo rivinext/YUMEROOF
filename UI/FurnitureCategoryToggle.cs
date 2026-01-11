@@ -3,6 +3,7 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Localization;
 using UnityEngine.Localization.Components;
 
 /// <summary>
@@ -175,9 +176,9 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
             localizeEvent = label.gameObject.AddComponent<LocalizeStringEvent>();
         }
 
-        localizeEvent.StringReference.TableReference = tableName;
-        localizeEvent.StringReference.TableEntryReference = key;
-        localizeEvent.RefreshString();
+        localizeEvent.StringReference = new LocalizedString(tableName, key);
+        localizeEvent.enabled = false;
+        localizeEvent.enabled = true;
         UpdateHoverTargetCategoryText();
     }
 }
