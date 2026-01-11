@@ -32,11 +32,13 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
             toggle = GetComponent<Toggle>();
         }
 
+        EnsureLabelLocalization();
         SetHoverTargetActive(false);
     }
 
     void OnEnable()
     {
+        EnsureLabelLocalization();
         SetHoverTargetActive(false);
     }
 
@@ -150,6 +152,7 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
             hoverLocalizeEvent.enabled = true;
             hoverLocalizeEvent.StringReference.TableReference = labelLocalizeEvent.StringReference.TableReference;
             hoverLocalizeEvent.StringReference.TableEntryReference = labelLocalizeEvent.StringReference.TableEntryReference;
+            EnsureUpdateStringListener(hoverLocalizeEvent, hoverText);
             hoverLocalizeEvent.RefreshString();
             return;
         }
@@ -161,6 +164,35 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         }
 
         hoverText.text = label != null ? label.text : string.Empty;
+    }
+
+    private void EnsureLabelLocalization()
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        var localizeEvent = label.GetComponent<LocalizeStringEvent>();
+        if (localizeEvent == null)
+        {
+            return;
+        }
+
+        EnsureUpdateStringListener(localizeEvent, label);
+        localizeEvent.enabled = true;
+        localizeEvent.RefreshString();
+    }
+
+    private void EnsureUpdateStringListener(LocalizeStringEvent localizeEvent, TMP_Text targetText)
+    {
+        if (localizeEvent == null || targetText == null)
+        {
+            return;
+        }
+
+        localizeEvent.OnUpdateString.RemoveListener(targetText.SetText);
+        localizeEvent.OnUpdateString.AddListener(targetText.SetText);
     }
 
     public void SetLabelLocalization(string tableName, string key)
@@ -178,8 +210,7 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         }
 
         localizeEvent.StringReference = new LocalizedString(tableName, key);
-        localizeEvent.OnUpdateString.RemoveAllListeners();
-        localizeEvent.OnUpdateString.AddListener(label.SetText);
+        EnsureUpdateStringListener(localizeEvent, label);
         localizeEvent.enabled = true;
         localizeEvent.RefreshString();
         UpdateHoverTargetCategoryText();
