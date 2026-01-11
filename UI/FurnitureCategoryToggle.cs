@@ -182,7 +182,7 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         localizeEvent.OnUpdateString.AddListener(label.SetText);
         localizeEvent.enabled = false;
         localizeEvent.enabled = true;
-        localizeEvent.RefreshString();
         UpdateHoverTargetCategoryText();
+        localizeEvent.RefreshString();
     }
 }
