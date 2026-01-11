@@ -1,4 +1,7 @@
 using UnityEngine;
+using System;
+using System.Collections;
+using System.Reflection;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -191,8 +194,88 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
             return;
         }
 
-        localizeEvent.OnUpdateString.RemoveListener(targetText.SetText);
-        localizeEvent.OnUpdateString.AddListener(targetText.SetText);
+        if (!IsUpdateStringListenerRegistered(localizeEvent, targetText))
+        {
+            localizeEvent.OnUpdateString.AddListener(targetText.SetText);
+        }
+    }
+
+    private bool IsUpdateStringListenerRegistered(LocalizeStringEvent localizeEvent, TMP_Text targetText)
+    {
+        var updateString = localizeEvent.OnUpdateString;
+        if (updateString == null)
+        {
+            return false;
+        }
+
+        var methodName = nameof(TMP_Text.SetText);
+        var persistentCount = updateString.GetPersistentEventCount();
+        for (var i = 0; i < persistentCount; i++)
+        {
+            if (updateString.GetPersistentTarget(i) == targetText
+                && updateString.GetPersistentMethodName(i) == methodName)
+            {
+                return true;
+            }
+        }
+
+        return HasRuntimeUpdateStringListener(updateString, targetText, methodName);
+    }
+
+    private bool HasRuntimeUpdateStringListener(UnityEventBase unityEvent, TMP_Text targetText, string methodName)
+    {
+        var callsField = typeof(UnityEventBase).GetField("m_Calls", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (callsField == null)
+        {
+            return false;
+        }
+
+        var calls = callsField.GetValue(unityEvent);
+        if (calls == null)
+        {
+            return false;
+        }
+
+        var runtimeCallsField = calls.GetType().GetField("m_RuntimeCalls", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (runtimeCallsField == null)
+        {
+            return false;
+        }
+
+        var runtimeCalls = runtimeCallsField.GetValue(calls) as IList;
+        if (runtimeCalls == null)
+        {
+            return false;
+        }
+
+        foreach (var runtimeCall in runtimeCalls)
+        {
+            if (runtimeCall == null)
+            {
+                continue;
+            }
+
+            var delegateField = runtimeCall.GetType().GetField("Delegate", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (delegateField == null)
+            {
+                continue;
+            }
+
+            if (delegateField.GetValue(runtimeCall) is not Delegate callback)
+            {
+                continue;
+            }
+
+            foreach (var handler in callback.GetInvocationList())
+            {
+                if (handler.Target == targetText && handler.Method.Name == methodName)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public void SetLabelLocalization(string tableName, string key)
