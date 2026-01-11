@@ -3,6 +3,7 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Localization.Components;
 
 /// <summary>
 /// 家具カテゴリ用のトグル。アイコンとラベルを扱いやすくまとめる。
@@ -135,5 +136,23 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         {
             hoverText.text = categoryId;
         }
+    }
+
+    public void SetLabelLocalization(string tableName, string key)
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        var localizeEvent = label.GetComponent<LocalizeStringEvent>();
+        if (localizeEvent == null)
+        {
+            localizeEvent = label.gameObject.AddComponent<LocalizeStringEvent>();
+        }
+
+        localizeEvent.StringReference.TableReference = tableName;
+        localizeEvent.StringReference.TableEntryReference = key;
+        localizeEvent.RefreshString();
     }
 }
