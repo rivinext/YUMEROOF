@@ -1040,6 +1040,7 @@ public class WardrobeUIController : MonoBehaviour
         }
 
         string key = ResolveCategoryLocalizationKey(category);
+        Debug.Log($"[WardrobeUIController] ApplyCategoryTabLocalization called for {category} on {categoryToggle.gameObject.name}.");
         categoryToggle.SetLabelLocalization(StandardTextTableName, key);
     }
 
