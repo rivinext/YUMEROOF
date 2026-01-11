@@ -132,10 +132,34 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         }
 
         var hoverText = hoverTarget.GetComponentInChildren<TMP_Text>(true);
-        if (hoverText != null)
+        if (hoverText == null)
         {
-            hoverText.text = categoryId;
+            return;
         }
+
+        var labelLocalizeEvent = label != null ? label.GetComponent<LocalizeStringEvent>() : null;
+        if (labelLocalizeEvent != null)
+        {
+            var hoverLocalizeEvent = hoverText.GetComponent<LocalizeStringEvent>();
+            if (hoverLocalizeEvent == null)
+            {
+                hoverLocalizeEvent = hoverText.gameObject.AddComponent<LocalizeStringEvent>();
+            }
+
+            hoverLocalizeEvent.enabled = true;
+            hoverLocalizeEvent.StringReference.TableReference = labelLocalizeEvent.StringReference.TableReference;
+            hoverLocalizeEvent.StringReference.TableEntryReference = labelLocalizeEvent.StringReference.TableEntryReference;
+            hoverLocalizeEvent.RefreshString();
+            return;
+        }
+
+        var existingHoverLocalizeEvent = hoverText.GetComponent<LocalizeStringEvent>();
+        if (existingHoverLocalizeEvent != null)
+        {
+            existingHoverLocalizeEvent.enabled = false;
+        }
+
+        hoverText.text = label != null ? label.text : string.Empty;
     }
 
     public void SetLabelLocalization(string tableName, string key)
@@ -154,5 +178,6 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
         localizeEvent.StringReference.TableReference = tableName;
         localizeEvent.StringReference.TableEntryReference = key;
         localizeEvent.RefreshString();
+        UpdateHoverTargetCategoryText();
     }
 }
