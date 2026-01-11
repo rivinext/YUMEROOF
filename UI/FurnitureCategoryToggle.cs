@@ -167,6 +167,7 @@ public class FurnitureCategoryToggle : MonoBehaviour, IPointerEnterHandler, IPoi
     {
         if (label == null)
         {
+            Debug.LogWarning($"[FurnitureCategoryToggle] Missing label reference on {gameObject.name} (categoryId: {categoryId ?? "null"}).");
             return;
         }
 
