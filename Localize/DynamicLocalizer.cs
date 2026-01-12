@@ -27,6 +27,7 @@ public class DynamicLocalizer : MonoBehaviour
 
         private LocalizeStringEvent localizeEvent;
         private bool debugMode;
+        private bool isUpdateStringListenerRegistered;
 
         /// <summary>
         /// 初期化処理
@@ -42,6 +43,16 @@ public class DynamicLocalizer : MonoBehaviour
             if (localizeEvent == null)
             {
                 localizeEvent = textComponent.gameObject.AddComponent<LocalizeStringEvent>();
+            }
+
+            if (localizeEvent != null && localizeEvent.OnUpdateString != null)
+            {
+                if (localizeEvent.OnUpdateString.GetPersistentEventCount() == 0 && !isUpdateStringListenerRegistered)
+                {
+                    localizeEvent.OnUpdateString.RemoveListener(textComponent.SetText);
+                    localizeEvent.OnUpdateString.AddListener(textComponent.SetText);
+                    isUpdateStringListenerRegistered = true;
+                }
             }
         }
 
