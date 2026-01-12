@@ -26,9 +26,11 @@ public class MilestonePanel : MonoBehaviour
     [Header("Localization")]
     [SerializeField] private DynamicLocalizer rewardDynamicLocalizer;
     public TMP_Text milestoneIdText;
+    [SerializeField] private DynamicLocalizer milestoneIdDynamicLocalizer;
     [Header("Tooltip")]
     [SerializeField] private GameObject tooltipPanel;
     [SerializeField] private TMP_Text tooltipText;
+    [SerializeField] private DynamicLocalizer tooltipDynamicLocalizer;
     [SerializeField] private TMP_Text tooltipCozyText;
     [SerializeField] private TMP_Text tooltipNatureText;
     [SerializeField] private TMP_Text tooltipItemText;
@@ -363,9 +365,13 @@ public class MilestonePanel : MonoBehaviour
         }
         UpdateRewardAreaText(rewardAreaText, milestone.rewardArea);
         UpdateRewardIcon(milestone, rewardImage);
-        if (milestoneIdText != null)
+        if (milestoneIdDynamicLocalizer != null)
         {
-            milestoneIdText.text = $"Milestone: {milestone.id}";
+            milestoneIdDynamicLocalizer.SetFieldByName("MilestoneId", milestone.id);
+        }
+        else if (milestoneIdText != null)
+        {
+            Debug.LogWarning("MilestonePanel: Milestone ID DynamicLocalizer not assigned.");
         }
     }
 
@@ -514,9 +520,13 @@ public class MilestonePanel : MonoBehaviour
         }
 
         FadeTooltip(true);
-        if (tooltipText != null)
+        if (tooltipDynamicLocalizer != null)
         {
-            tooltipText.text = milestone.id;
+            tooltipDynamicLocalizer.SetFieldByName("MilestoneId", milestone.id);
+        }
+        else if (tooltipText != null)
+        {
+            Debug.LogWarning("MilestonePanel: Tooltip milestone ID DynamicLocalizer not assigned.");
         }
 
         UpdateTooltipFields();
