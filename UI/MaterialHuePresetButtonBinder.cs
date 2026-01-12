@@ -94,19 +94,22 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             toggleInstance.group = toggleGroup;
         }
 
-        string label = GetSlotLabel(slotIndex);
-        TextMeshProUGUI tmpLabel = toggleInstance.GetComponentInChildren<TextMeshProUGUI>();
-        if (tmpLabel != null)
+        string slotLabelKey = GetSlotLabel(slotIndex);
+        DynamicLocalizer dynamicLocalizer = toggleInstance.GetComponentInChildren<DynamicLocalizer>();
+        if (dynamicLocalizer != null)
         {
-            tmpLabel.text = label;
+            if (!string.IsNullOrWhiteSpace(slotLabelKey))
+            {
+                dynamicLocalizer.SetFieldByName("PalletName", slotLabelKey);
+            }
+            else
+            {
+                ApplySlotLabelFallback(toggleInstance, GetSlotDisplayLabel(slotIndex));
+            }
         }
         else
         {
-            Text textComponent = toggleInstance.GetComponentInChildren<Text>();
-            if (textComponent != null)
-            {
-                textComponent.text = label;
-            }
+            ApplySlotLabelFallback(toggleInstance, GetSlotDisplayLabel(slotIndex));
         }
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
@@ -138,6 +141,19 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
 
     private string GetSlotLabel(int slotIndex)
     {
+        // GetSlotLabel returns the localization key used by DynamicLocalizer, not the display string.
+
+        if (presetManager?.PresetSlots == null || slotIndex < 0 || slotIndex >= presetManager.PresetSlots.Count)
+        {
+            return string.Empty;
+        }
+
+        MaterialHuePresetSlot slot = presetManager.PresetSlots[slotIndex];
+        return slot?.LabelKey ?? string.Empty;
+    }
+
+    private string GetSlotDisplayLabel(int slotIndex)
+    {
         string defaultLabel = $"Slot {slotIndex + 1}";
 
         if (presetManager?.PresetSlots == null || slotIndex < 0 || slotIndex >= presetManager.PresetSlots.Count)
@@ -148,6 +164,22 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         MaterialHuePresetSlot slot = presetManager.PresetSlots[slotIndex];
         string slotLabel = slot?.Label?.Trim() ?? string.Empty;
         return string.IsNullOrWhiteSpace(slotLabel) ? defaultLabel : slotLabel;
+    }
+
+    private static void ApplySlotLabelFallback(Toggle toggleInstance, string label)
+    {
+        TextMeshProUGUI tmpLabel = toggleInstance.GetComponentInChildren<TextMeshProUGUI>();
+        if (tmpLabel != null)
+        {
+            tmpLabel.text = label;
+            return;
+        }
+
+        Text textComponent = toggleInstance.GetComponentInChildren<Text>();
+        if (textComponent != null)
+        {
+            textComponent.text = label;
+        }
     }
 
     private void BindActionButtons()
