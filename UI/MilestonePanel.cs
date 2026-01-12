@@ -25,10 +25,10 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private Sprite rewardFallbackSprite;
     [Header("Localization")]
     [SerializeField] private DynamicLocalizer rewardDynamicLocalizer;
-    [SerializeField] private DynamicLocalizer milestoneIdDynamicLocalizer;
+    public TMP_Text milestoneIdText;
     [Header("Tooltip")]
     [SerializeField] private GameObject tooltipPanel;
-    [SerializeField] private DynamicLocalizer tooltipMilestoneIdDynamicLocalizer;
+    [SerializeField] private TMP_Text tooltipText;
     [SerializeField] private TMP_Text tooltipCozyText;
     [SerializeField] private TMP_Text tooltipNatureText;
     [SerializeField] private TMP_Text tooltipItemText;
@@ -363,9 +363,9 @@ public class MilestonePanel : MonoBehaviour
         }
         UpdateRewardAreaText(rewardAreaText, milestone.rewardArea);
         UpdateRewardIcon(milestone, rewardImage);
-        if (milestoneIdDynamicLocalizer != null)
+        if (milestoneIdText != null)
         {
-            milestoneIdDynamicLocalizer.SetFieldByName("MilestoneId", milestone.id);
+            milestoneIdText.text = $"Milestone: {milestone.id}";
         }
     }
 
@@ -514,9 +514,9 @@ public class MilestonePanel : MonoBehaviour
         }
 
         FadeTooltip(true);
-        if (tooltipMilestoneIdDynamicLocalizer != null)
+        if (tooltipText != null)
         {
-            tooltipMilestoneIdDynamicLocalizer.SetFieldByName("TooltipMilestoneId", milestone.id);
+            tooltipText.text = milestone.id;
         }
 
         UpdateTooltipFields();
