@@ -25,7 +25,7 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private Sprite rewardFallbackSprite;
     [Header("Localization")]
     [SerializeField] private DynamicLocalizer rewardDynamicLocalizer;
-    [SerializeField] private DynamicLocalizer milestoneIdDynamicLocalizer;
+    [SerializeField] private DynamicLocalizer milestoneStatusLocalizer;
     public TMP_Text milestoneIdText;
     [Header("Tooltip")]
     [SerializeField] private GameObject tooltipPanel;
@@ -41,7 +41,7 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private TMP_Text tooltipRewardAreaText;
     [SerializeField] private Image tooltipRewardImage;
     [SerializeField] private DynamicLocalizer tooltipRewardDynamicLocalizer;
-    [SerializeField] private DynamicLocalizer tooltipMilestoneDynamicLocalizer;
+    [SerializeField] private DynamicLocalizer milestoneStatusTooltipLocalizer;
     [SerializeField] private CanvasGroup tooltipCanvasGroup;
     [SerializeField] private float tooltipFadeDuration = 0.2f;
     [SerializeField] private Vector2 tooltipOffset = new Vector2(0f, -10f);
@@ -365,20 +365,20 @@ public class MilestonePanel : MonoBehaviour
         }
         UpdateRewardAreaText(rewardAreaText, milestone.rewardArea);
         UpdateRewardIcon(milestone, rewardImage);
-        if (milestoneIdDynamicLocalizer != null)
+        if (milestoneStatusLocalizer != null)
         {
             if (!string.IsNullOrEmpty(milestone.id))
             {
-                milestoneIdDynamicLocalizer.SetFieldByName("MilestoneId", milestone.id);
+                milestoneStatusLocalizer.SetFieldByName("MilestoneStatus", milestone.id);
             }
             else
             {
-                milestoneIdDynamicLocalizer.ClearField("MilestoneId");
+                milestoneStatusLocalizer.ClearField("MilestoneStatus");
             }
         }
         else if (milestoneIdText != null)
         {
-            Debug.LogWarning("MilestonePanel: Milestone ID DynamicLocalizer not assigned.");
+            Debug.LogWarning("MilestonePanel: Milestone status DynamicLocalizer not assigned.");
         }
     }
 
@@ -527,20 +527,20 @@ public class MilestonePanel : MonoBehaviour
         }
 
         FadeTooltip(true);
-        if (tooltipMilestoneDynamicLocalizer != null)
+        if (milestoneStatusTooltipLocalizer != null)
         {
             if (!string.IsNullOrEmpty(milestone.id))
             {
-                tooltipMilestoneDynamicLocalizer.SetFieldByName("TooltipMilestoneId", milestone.id);
+                milestoneStatusTooltipLocalizer.SetFieldByName("MilestoneStatusTooltip", milestone.id);
             }
             else
             {
-                tooltipMilestoneDynamicLocalizer.ClearField("TooltipMilestoneId");
+                milestoneStatusTooltipLocalizer.ClearField("MilestoneStatusTooltip");
             }
         }
         else if (tooltipText != null)
         {
-            Debug.LogWarning("MilestonePanel: Tooltip milestone DynamicLocalizer not assigned.");
+            Debug.LogWarning("MilestonePanel: Tooltip milestone status DynamicLocalizer not assigned.");
         }
 
         UpdateTooltipFields();
@@ -649,9 +649,9 @@ public class MilestonePanel : MonoBehaviour
     public void HideMilestoneTooltip()
     {
         tooltipActive = false;
-        if (tooltipMilestoneDynamicLocalizer != null)
+        if (milestoneStatusTooltipLocalizer != null)
         {
-            tooltipMilestoneDynamicLocalizer.ClearField("TooltipMilestoneId");
+            milestoneStatusTooltipLocalizer.ClearField("MilestoneStatusTooltip");
         }
         FadeTooltip(false);
     }
