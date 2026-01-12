@@ -25,7 +25,6 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private Sprite rewardFallbackSprite;
     [Header("Localization")]
     [SerializeField] private DynamicLocalizer rewardDynamicLocalizer;
-    [SerializeField] private DynamicLocalizer milestoneIdDynamicLocalizer;
     public TMP_Text milestoneIdText;
     [Header("Tooltip")]
     [SerializeField] private GameObject tooltipPanel;
@@ -41,7 +40,6 @@ public class MilestonePanel : MonoBehaviour
     [SerializeField] private TMP_Text tooltipRewardAreaText;
     [SerializeField] private Image tooltipRewardImage;
     [SerializeField] private DynamicLocalizer tooltipRewardDynamicLocalizer;
-    [SerializeField] private DynamicLocalizer tooltipMilestoneIdDynamicLocalizer;
     [SerializeField] private CanvasGroup tooltipCanvasGroup;
     [SerializeField] private float tooltipFadeDuration = 0.2f;
     [SerializeField] private Vector2 tooltipOffset = new Vector2(0f, -10f);
@@ -365,13 +363,9 @@ public class MilestonePanel : MonoBehaviour
         }
         UpdateRewardAreaText(rewardAreaText, milestone.rewardArea);
         UpdateRewardIcon(milestone, rewardImage);
-        if (milestoneIdDynamicLocalizer != null)
+        if (milestoneIdText != null)
         {
-            milestoneIdDynamicLocalizer.SetFieldByName("MilestoneId", milestone.id);
-        }
-        else if (milestoneIdText != null)
-        {
-            Debug.LogWarning("MilestonePanel: Milestone ID DynamicLocalizer not assigned.");
+            milestoneIdText.text = $"Milestone: {milestone.id}";
         }
     }
 
@@ -520,13 +514,9 @@ public class MilestonePanel : MonoBehaviour
         }
 
         FadeTooltip(true);
-        if (tooltipMilestoneIdDynamicLocalizer != null)
+        if (tooltipText != null)
         {
-            tooltipMilestoneIdDynamicLocalizer.SetFieldByName("TooltipMilestoneId", milestone.id);
-        }
-        else if (tooltipText != null)
-        {
-            Debug.LogWarning("MilestonePanel: Tooltip milestone ID DynamicLocalizer not assigned.");
+            tooltipText.text = milestone.id;
         }
 
         UpdateTooltipFields();
