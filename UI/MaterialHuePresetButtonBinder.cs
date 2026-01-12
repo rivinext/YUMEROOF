@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
 using UnityEngine.UI;
 
 public class MaterialHuePresetButtonBinder : MonoBehaviour
@@ -16,6 +18,9 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
     [Header("Options")]
     [SerializeField] private bool rebuildOnEnable = true;
     [SerializeField] private bool saveBeforeSwitchingSlots = false;
+
+    [Header("Localization")]
+    [SerializeField] private string presetLabelTableName = "PalletName";
 
     private readonly List<Toggle> spawnedToggles = new();
     private int lastSelectedSlotIndex = -1;
@@ -94,23 +99,9 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
             toggleInstance.group = toggleGroup;
         }
 
-        string slotLabelKey = GetSlotLabel(slotIndex);
-        DynamicLocalizer dynamicLocalizer = toggleInstance.GetComponentInChildren<DynamicLocalizer>();
-        if (dynamicLocalizer != null)
-        {
-            if (!string.IsNullOrWhiteSpace(slotLabelKey))
-            {
-                dynamicLocalizer.SetFieldByName("PalletName", slotLabelKey);
-            }
-            else
-            {
-                ApplySlotLabelFallback(toggleInstance, GetSlotDisplayLabel(slotIndex));
-            }
-        }
-        else
-        {
-            ApplySlotLabelFallback(toggleInstance, GetSlotDisplayLabel(slotIndex));
-        }
+        string slotLabelKey = GetSlotLocalizationKey(slotIndex);
+        string slotDisplayLabel = GetSlotDisplayLabel(slotIndex);
+        ApplySlotLocalization(toggleInstance, slotLabelKey, slotDisplayLabel);
         bool shouldSelect = slotIndex == presetManager.SelectedSlotIndex;
         toggleInstance.SetIsOnWithoutNotify(shouldSelect);
         MaterialHuePresetSlot slot = GetPresetSlot(slotIndex);
@@ -139,17 +130,25 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         spawnedToggles.Add(toggleInstance);
     }
 
-    private string GetSlotLabel(int slotIndex)
+    private string GetSlotLocalizationKey(int slotIndex)
     {
-        // GetSlotLabel returns the localization key used by DynamicLocalizer, not the display string.
-
         if (presetManager?.PresetSlots == null || slotIndex < 0 || slotIndex >= presetManager.PresetSlots.Count)
         {
             return string.Empty;
         }
 
         MaterialHuePresetSlot slot = presetManager.PresetSlots[slotIndex];
-        return slot?.LabelKey ?? string.Empty;
+        if (slot == null)
+        {
+            return string.Empty;
+        }
+
+        if (!string.IsNullOrWhiteSpace(slot.LabelKey))
+        {
+            return slot.LabelKey;
+        }
+
+        return slot.Label?.Trim() ?? string.Empty;
     }
 
     private string GetSlotDisplayLabel(int slotIndex)
@@ -180,6 +179,60 @@ public class MaterialHuePresetButtonBinder : MonoBehaviour
         {
             textComponent.text = label;
         }
+    }
+
+    private void ApplySlotLocalization(Toggle toggleInstance, string slotLabelKey, string fallbackLabel)
+    {
+        if (toggleInstance == null)
+        {
+            return;
+        }
+
+        TextMeshProUGUI tmpLabel = toggleInstance.GetComponentInChildren<TextMeshProUGUI>();
+        if (tmpLabel == null)
+        {
+            ApplySlotLabelFallback(toggleInstance, fallbackLabel);
+            return;
+        }
+
+        LocalizeStringEvent localizeEvent = tmpLabel.GetComponent<LocalizeStringEvent>();
+        if (localizeEvent == null)
+        {
+            localizeEvent = tmpLabel.gameObject.AddComponent<LocalizeStringEvent>();
+        }
+
+        if (string.IsNullOrWhiteSpace(slotLabelKey))
+        {
+            localizeEvent.StringReference.Clear();
+            localizeEvent.enabled = false;
+            tmpLabel.text = fallbackLabel;
+            return;
+        }
+
+        string tableName = GetSlotLocalizationTableName(localizeEvent);
+        localizeEvent.StringReference.Clear();
+        LocalizedString localizedString = new LocalizedString
+        {
+            TableReference = tableName,
+            TableEntryReference = slotLabelKey
+        };
+        localizeEvent.StringReference = localizedString;
+        localizeEvent.enabled = false;
+        localizeEvent.enabled = true;
+    }
+
+    private string GetSlotLocalizationTableName(LocalizeStringEvent localizeEvent)
+    {
+        if (localizeEvent != null)
+        {
+            string existingTableName = localizeEvent.StringReference.TableReference.TableCollectionName;
+            if (!string.IsNullOrWhiteSpace(existingTableName))
+            {
+                return existingTableName;
+            }
+        }
+
+        return presetLabelTableName;
     }
 
     private void BindActionButtons()
