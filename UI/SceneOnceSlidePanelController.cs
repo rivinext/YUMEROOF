@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
 using UnityEngine.UI;
 
 public class SceneOnceSlidePanelController : MonoBehaviour
@@ -11,6 +13,9 @@ public class SceneOnceSlidePanelController : MonoBehaviour
     [SerializeField] private Button prevButton;
     [SerializeField] private Button nextButton;
     [SerializeField] private TMP_Text pageText;
+    [SerializeField] private string localizationTableName = "StandardText";
+    [SerializeField] private string fieldName = "StairDialog";
+    [SerializeField] private DynamicLocalizer dynamicLocalizer;
     [SerializeField] private List<string> pages = new();
     [SerializeField] private float showDelaySeconds = 0.7f;
 
@@ -291,12 +296,50 @@ public class SceneOnceSlidePanelController : MonoBehaviour
 
     void UpdatePageDisplay()
     {
+        var pageKey = pages != null && pages.Count > 0
+            ? pages[Mathf.Clamp(currentPageIndex, 0, pages.Count - 1)]
+            : string.Empty;
+
         if (pageText != null)
         {
-            var pageContent = pages != null && pages.Count > 0
-                ? pages[Mathf.Clamp(currentPageIndex, 0, pages.Count - 1)]
-                : string.Empty;
-            pageText.text = pageContent;
+            if (!string.IsNullOrEmpty(pageKey))
+            {
+                if (dynamicLocalizer != null)
+                {
+                    dynamicLocalizer.SetFieldByName(fieldName, pageKey);
+                }
+                else
+                {
+                    var localizeEvent = pageText.GetComponent<LocalizeStringEvent>();
+                    if (localizeEvent == null)
+                    {
+                        localizeEvent = pageText.gameObject.AddComponent<LocalizeStringEvent>();
+                    }
+
+                    localizeEvent.StringReference = new LocalizedString(localizationTableName, pageKey);
+                    EnsureUpdateStringListener(localizeEvent, pageText);
+                    localizeEvent.enabled = true;
+                    localizeEvent.RefreshString();
+                }
+            }
+            else
+            {
+                if (dynamicLocalizer != null)
+                {
+                    dynamicLocalizer.ClearField(fieldName);
+                }
+                else
+                {
+                    var localizeEvent = pageText.GetComponent<LocalizeStringEvent>();
+                    if (localizeEvent != null)
+                    {
+                        localizeEvent.StringReference.Clear();
+                        localizeEvent.RefreshString();
+                    }
+
+                    pageText.text = string.Empty;
+                }
+            }
         }
 
         bool hasPages = pages != null && pages.Count > 0;
@@ -308,5 +351,16 @@ public class SceneOnceSlidePanelController : MonoBehaviour
         {
             nextButton.interactable = hasPages && currentPageIndex < pages.Count - 1;
         }
+    }
+
+    private void EnsureUpdateStringListener(LocalizeStringEvent localizeEvent, TMP_Text targetText)
+    {
+        if (localizeEvent == null || targetText == null)
+        {
+            return;
+        }
+
+        localizeEvent.OnUpdateString.RemoveListener(targetText.SetText);
+        localizeEvent.OnUpdateString.AddListener(targetText.SetText);
     }
 }
