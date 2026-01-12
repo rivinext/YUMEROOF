@@ -65,6 +65,7 @@ public class SleepTransitionUIManager : MonoBehaviour
 
     [Header("Image Panel Fade")]
     [SerializeField] private RectTransform imagePanel;
+    [SerializeField] private CanvasGroup imagePanelGroup;
     [SerializeField] private float imagePanelFadeDuration = 0.5f;
     [SerializeField] private AnimationCurve imagePanelFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
@@ -81,8 +82,7 @@ public class SleepTransitionUIManager : MonoBehaviour
             unlockPanel.gameObject.SetActive(false);
         if (cardContainer != null)
             cardContainer.gameObject.SetActive(false);
-        if (imagePanel != null)
-            imagePanel.gameObject.SetActive(false);
+        PrepareImagePanel();
         if (inventoryUI == null)
             inventoryUI = FindFirstObjectByType<InventoryUI>();
 
@@ -110,11 +110,14 @@ public class SleepTransitionUIManager : MonoBehaviour
         if (imagePanel == null)
             return;
 
-        CanvasGroup imageGroup = imagePanel.GetComponent<CanvasGroup>();
-        if (imageGroup == null)
-            imageGroup = imagePanel.gameObject.AddComponent<CanvasGroup>();
+        if (imagePanelGroup == null)
+        {
+            imagePanelGroup = imagePanel.GetComponent<CanvasGroup>();
+            if (imagePanelGroup == null)
+                imagePanelGroup = imagePanel.gameObject.AddComponent<CanvasGroup>();
+        }
 
-        imageGroup.alpha = 0f;
+        imagePanelGroup.alpha = 0f;
         imagePanel.gameObject.SetActive(false);
     }
 
@@ -334,18 +337,17 @@ public class SleepTransitionUIManager : MonoBehaviour
 
         if (imagePanel != null)
         {
-            CanvasGroup imageGroup = imagePanel.GetComponent<CanvasGroup>();
-            if (imageGroup == null)
-                imageGroup = imagePanel.gameObject.AddComponent<CanvasGroup>();
+            if (imagePanelGroup == null)
+                PrepareImagePanel();
 
             imagePanel.gameObject.SetActive(true);
-            imageGroup.alpha = 0f;
+            imagePanelGroup.alpha = 0f;
 
             float fadeTime = 0f;
             float duration = Mathf.Max(0f, imagePanelFadeDuration);
             if (duration <= 0f)
             {
-                imageGroup.alpha = 1f;
+                imagePanelGroup.alpha = 1f;
             }
             else
             {
@@ -354,9 +356,10 @@ public class SleepTransitionUIManager : MonoBehaviour
                     fadeTime += Time.deltaTime;
                     float progress = Mathf.Clamp01(fadeTime / duration);
                     float eased = imagePanelFadeCurve.Evaluate(progress);
-                    imageGroup.alpha = Mathf.Lerp(0f, 1f, eased);
+                    imagePanelGroup.alpha = Mathf.Lerp(0f, 1f, eased);
                     yield return null;
                 }
+                imagePanelGroup.alpha = 1f;
             }
         }
 
@@ -544,8 +547,29 @@ public class SleepTransitionUIManager : MonoBehaviour
         SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.openPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.openPositionY);
 
-        if (imagePanel != null)
+        if (imagePanel != null && imagePanelGroup != null)
+        {
+            float fadeTime = 0f;
+            float duration = Mathf.Max(0f, imagePanelFadeDuration);
+            if (duration <= 0f)
+            {
+                imagePanelGroup.alpha = 0f;
+            }
+            else
+            {
+                while (fadeTime < duration)
+                {
+                    fadeTime += Time.deltaTime;
+                    float progress = Mathf.Clamp01(fadeTime / duration);
+                    float eased = imagePanelFadeCurve.Evaluate(progress);
+                    imagePanelGroup.alpha = Mathf.Lerp(1f, 0f, eased);
+                    yield return null;
+                }
+                imagePanelGroup.alpha = 0f;
+            }
+
             imagePanel.gameObject.SetActive(false);
+        }
 
         if (canvas != null)
             canvas.enabled = false;
