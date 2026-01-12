@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization.Components;
+using UnityEngine.Events;
 using TMPro;
 
 /// <summary>
@@ -43,6 +45,8 @@ public class DynamicLocalizer : MonoBehaviour
             {
                 localizeEvent = textComponent.gameObject.AddComponent<LocalizeStringEvent>();
             }
+
+            EnsureUpdateStringListener(localizeEvent, textComponent);
         }
 
         /// <summary>
@@ -78,6 +82,7 @@ public class DynamicLocalizer : MonoBehaviour
                 localizeEvent.StringReference = localizedString;
 
                 // OnEnableイベントを強制的に呼び出して更新
+                EnsureUpdateStringListener(localizeEvent, textComponent);
                 localizeEvent.enabled = false;
                 localizeEvent.enabled = true;
             }
@@ -115,6 +120,7 @@ public class DynamicLocalizer : MonoBehaviour
                 localizeEvent.StringReference = new LocalizedString(localizationTableName, key);
 
                 // 強制的に更新
+                EnsureUpdateStringListener(localizeEvent, textComponent);
                 localizeEvent.enabled = false;
                 localizeEvent.enabled = true;
             }
@@ -160,6 +166,97 @@ public class DynamicLocalizer : MonoBehaviour
         public string GetCurrentKey()
         {
             return currentKey;
+        }
+
+        private void EnsureUpdateStringListener(LocalizeStringEvent localizeEvent, TMP_Text targetText)
+        {
+            if (localizeEvent == null || targetText == null)
+            {
+                return;
+            }
+
+            if (!IsUpdateStringListenerRegistered(localizeEvent, targetText))
+            {
+                localizeEvent.OnUpdateString.AddListener(targetText.SetText);
+            }
+        }
+
+        private bool IsUpdateStringListenerRegistered(LocalizeStringEvent localizeEvent, TMP_Text targetText)
+        {
+            var updateString = localizeEvent.OnUpdateString;
+            if (updateString == null)
+            {
+                return false;
+            }
+
+            var methodName = nameof(TMP_Text.SetText);
+            var persistentCount = updateString.GetPersistentEventCount();
+            for (var i = 0; i < persistentCount; i++)
+            {
+                if (updateString.GetPersistentTarget(i) == targetText
+                    && updateString.GetPersistentMethodName(i) == methodName)
+                {
+                    return true;
+                }
+            }
+
+            return HasRuntimeUpdateStringListener(updateString, targetText, methodName);
+        }
+
+        private bool HasRuntimeUpdateStringListener(UnityEventBase unityEvent, TMP_Text targetText, string methodName)
+        {
+            var callsField = typeof(UnityEventBase).GetField("m_Calls", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (callsField == null)
+            {
+                return false;
+            }
+
+            var calls = callsField.GetValue(unityEvent);
+            if (calls == null)
+            {
+                return false;
+            }
+
+            var runtimeCallsField = calls.GetType().GetField("m_RuntimeCalls", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (runtimeCallsField == null)
+            {
+                return false;
+            }
+
+            var runtimeCalls = runtimeCallsField.GetValue(calls) as IList;
+            if (runtimeCalls == null)
+            {
+                return false;
+            }
+
+            foreach (var runtimeCall in runtimeCalls)
+            {
+                if (runtimeCall == null)
+                {
+                    continue;
+                }
+
+                var delegateField = runtimeCall.GetType().GetField("Delegate", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (delegateField == null)
+                {
+                    continue;
+                }
+
+                if (delegateField.GetValue(runtimeCall) is not Delegate callback)
+                {
+                    continue;
+                }
+
+                foreach (var handler in callback.GetInvocationList())
+                {
+                    if (handler.Target == targetText && handler.Method.Name == methodName)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 
