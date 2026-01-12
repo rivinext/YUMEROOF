@@ -63,6 +63,11 @@ public class SleepTransitionUIManager : MonoBehaviour
     [SerializeField] private float cardContainerFadeDuration = 0.5f;
     [SerializeField] private AnimationCurve cardContainerFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
+    [Header("Image Panel Fade")]
+    [SerializeField] private RectTransform imagePanel;
+    [SerializeField] private float imagePanelFadeDuration = 0.5f;
+    [SerializeField] private AnimationCurve imagePanelFadeCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+
     private Coroutine transitionCoroutine;
     public bool IsTransitionRunning => transitionCoroutine != null;
 
@@ -76,6 +81,8 @@ public class SleepTransitionUIManager : MonoBehaviour
             unlockPanel.gameObject.SetActive(false);
         if (cardContainer != null)
             cardContainer.gameObject.SetActive(false);
+        if (imagePanel != null)
+            imagePanel.gameObject.SetActive(false);
         if (inventoryUI == null)
             inventoryUI = FindFirstObjectByType<InventoryUI>();
 
@@ -96,6 +103,19 @@ public class SleepTransitionUIManager : MonoBehaviour
         SetPanelAnchoredPosition(topSlide, topSlide.openPositionY);
         SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.openPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.openPositionY);
+    }
+
+    private void PrepareImagePanel()
+    {
+        if (imagePanel == null)
+            return;
+
+        CanvasGroup imageGroup = imagePanel.GetComponent<CanvasGroup>();
+        if (imageGroup == null)
+            imageGroup = imagePanel.gameObject.AddComponent<CanvasGroup>();
+
+        imageGroup.alpha = 0f;
+        imagePanel.gameObject.SetActive(false);
     }
 
     private void SetPanelAnchoredPosition(SlidePanelAnimation slide, float positionY)
@@ -267,6 +287,7 @@ public class SleepTransitionUIManager : MonoBehaviour
         SetPanelAnchoredPosition(topSlide, topSlide.openPositionY);
         SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.openPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.openPositionY);
+        PrepareImagePanel();
         if (dayText != null)
         {
             Color textColor = dayText.color;
@@ -307,6 +328,34 @@ public class SleepTransitionUIManager : MonoBehaviour
                     card.transform.localScale = Vector3.one;
                     card.SetActive(true);
                     spawnedCards.Add(card);
+                }
+            }
+        }
+
+        if (imagePanel != null)
+        {
+            CanvasGroup imageGroup = imagePanel.GetComponent<CanvasGroup>();
+            if (imageGroup == null)
+                imageGroup = imagePanel.gameObject.AddComponent<CanvasGroup>();
+
+            imagePanel.gameObject.SetActive(true);
+            imageGroup.alpha = 0f;
+
+            float fadeTime = 0f;
+            float duration = Mathf.Max(0f, imagePanelFadeDuration);
+            if (duration <= 0f)
+            {
+                imageGroup.alpha = 1f;
+            }
+            else
+            {
+                while (fadeTime < duration)
+                {
+                    fadeTime += Time.deltaTime;
+                    float progress = Mathf.Clamp01(fadeTime / duration);
+                    float eased = imagePanelFadeCurve.Evaluate(progress);
+                    imageGroup.alpha = Mathf.Lerp(0f, 1f, eased);
+                    yield return null;
                 }
             }
         }
@@ -494,6 +543,9 @@ public class SleepTransitionUIManager : MonoBehaviour
         SetPanelAnchoredPosition(topSlide, topSlide.openPositionY);
         SetPanelAnchoredPosition(topSlideSecondary, topSlideSecondary.openPositionY);
         SetPanelAnchoredPosition(bottomSlide, bottomSlide.openPositionY);
+
+        if (imagePanel != null)
+            imagePanel.gameObject.SetActive(false);
 
         if (canvas != null)
             canvas.enabled = false;
