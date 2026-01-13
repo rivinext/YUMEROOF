@@ -13,8 +13,6 @@ public class DayNightLighting : MonoBehaviour
     [SerializeField] private AnimationCurve xAxisRotationOverDay;
     [FormerlySerializedAs("azimuthOverDay")]
     [SerializeField] private AnimationCurve yAxisRotationOverDay;
-    [SerializeField] public bool allowXAxisOverride;
-    [SerializeField] public bool allowYAxisOverride;
 
     private Light targetLight;
     private GameClock clock;
@@ -85,17 +83,8 @@ public class DayNightLighting : MonoBehaviour
 
         targetLight.color = colorOverDay.Evaluate(t);
         targetLight.intensity = intensityOverDay.Evaluate(t);
-        Vector3 currentEuler = transform.rotation.eulerAngles;
-        float xRotation = currentEuler.x;
-        float yRotation = currentEuler.y;
-        if (!allowXAxisOverride)
-        {
-            xRotation = xAxisRotationOverDay.Evaluate(t);
-        }
-        if (!allowYAxisOverride)
-        {
-            yRotation = yAxisRotationOverDay.Evaluate(t);
-        }
+        float xRotation = xAxisRotationOverDay.Evaluate(t);
+        float yRotation = yAxisRotationOverDay.Evaluate(t);
         transform.rotation = Quaternion.Euler(xRotation, yRotation, 0f);
     }
 }
