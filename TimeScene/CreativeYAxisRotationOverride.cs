@@ -39,7 +39,7 @@ public class CreativeYAxisRotationOverride : MonoBehaviour
         if (onlyCreativeMode && !IsCreativeMode())
             return;
 
-        var current = transform.rotation.eulerAngles;
+        Vector3 current = transform.eulerAngles;
         transform.rotation = Quaternion.Euler(current.x, yDegrees, current.z);
     }
 
