@@ -10,6 +10,12 @@ public class CreativeYAxisRotationOverride : MonoBehaviour
 
     private float yDegrees;
 
+    private void Reset()
+    {
+        if (yRotationSlider == null)
+            yRotationSlider = GetComponentInChildren<Slider>();
+    }
+
     private void OnEnable()
     {
         if (yRotationSlider != null)
