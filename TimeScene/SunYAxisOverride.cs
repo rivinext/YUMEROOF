@@ -8,6 +8,12 @@ public class SunYAxisOverride : MonoBehaviour
 {
     [SerializeField] private float yAxisRotation;
 
+    public float YAxisRotation
+    {
+        get => yAxisRotation;
+        set => yAxisRotation = value;
+    }
+
     void LateUpdate()
     {
         float currentX = transform.rotation.eulerAngles.x;
