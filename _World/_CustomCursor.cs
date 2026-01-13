@@ -8,6 +8,8 @@ public class CustomCursor : MonoBehaviour
     // クリック位置（画像のどのピクセルが“先端”か）
     // 原点は画像の左上。中央にしたいなら (width/2, height/2)
     [SerializeField] Vector2 hotspot = Vector2.zero;
+    [SerializeField] Texture2D clickCursorTex;
+    [SerializeField] Vector2 clickHotspot = Vector2.zero;
 
     void Awake()
     {
@@ -27,6 +29,23 @@ public class CustomCursor : MonoBehaviour
         // シーンロード時に Awake でカーソルを設定済みだが、
         // 既存シーンで追加された場合にも確実に適用する。
         ApplyCursor();
+    }
+
+    void Update()
+    {
+        if (clickCursorTex == null)
+        {
+            return;
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            Cursor.SetCursor(clickCursorTex, clickHotspot, CursorMode.Auto);
+        }
+        else if (Input.GetMouseButtonUp(0))
+        {
+            Cursor.SetCursor(cursorTex, hotspot, CursorMode.Auto);
+        }
     }
 
     void ApplyCursor()
