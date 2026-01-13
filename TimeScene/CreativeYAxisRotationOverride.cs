@@ -6,9 +6,11 @@ public class CreativeYAxisRotationOverride : MonoBehaviour
     [SerializeField] private Slider yRotationSlider;
     [SerializeField] private float minDegrees = 0f;
     [SerializeField] private float maxDegrees = 360f;
-    [SerializeField] private bool onlyCreativeMode = true;
+    [SerializeField, Tooltip("Disable this to allow testing outside creative mode.")] private bool onlyCreativeMode = true;
 
     private float yDegrees;
+    private bool isCreativeSlot;
+    private bool isSubscribedToSlotKey;
 
     private void Reset()
     {
@@ -25,6 +27,9 @@ public class CreativeYAxisRotationOverride : MonoBehaviour
             yRotationSlider.onValueChanged.AddListener(HandleSliderChanged);
             yDegrees = yRotationSlider.value;
         }
+
+        RefreshCreativeSlotState();
+        SubscribeToSlotKeyChanged();
     }
 
     private void OnDisable()
@@ -33,6 +38,8 @@ public class CreativeYAxisRotationOverride : MonoBehaviour
         {
             yRotationSlider.onValueChanged.RemoveListener(HandleSliderChanged);
         }
+
+        UnsubscribeFromSlotKeyChanged();
     }
 
     private void HandleSliderChanged(float value)
@@ -51,10 +58,61 @@ public class CreativeYAxisRotationOverride : MonoBehaviour
 
     private bool IsCreativeMode()
     {
-        var save = SaveGameManager.Instance;
-        if (save == null || string.IsNullOrEmpty(save.CurrentSlotKey))
-            return false;
+        return isCreativeSlot;
+    }
 
-        return save.CurrentSlotKey.StartsWith("Creative", System.StringComparison.OrdinalIgnoreCase);
+    private void SubscribeToSlotKeyChanged()
+    {
+        if (isSubscribedToSlotKey)
+        {
+            return;
+        }
+
+        var save = SaveGameManager.Instance;
+        if (save == null)
+        {
+            return;
+        }
+
+        save.OnSlotKeyChanged -= HandleSlotKeyChanged;
+        save.OnSlotKeyChanged += HandleSlotKeyChanged;
+        isSubscribedToSlotKey = true;
+    }
+
+    private void UnsubscribeFromSlotKeyChanged()
+    {
+        if (!isSubscribedToSlotKey)
+        {
+            return;
+        }
+
+        var save = SaveGameManager.Instance;
+        if (save != null)
+        {
+            save.OnSlotKeyChanged -= HandleSlotKeyChanged;
+        }
+
+        isSubscribedToSlotKey = false;
+    }
+
+    private void HandleSlotKeyChanged(string slotKey)
+    {
+        UpdateCreativeSlotState(slotKey);
+    }
+
+    private void RefreshCreativeSlotState()
+    {
+        UpdateCreativeSlotState(SaveGameManager.Instance?.CurrentSlotKey);
+    }
+
+    private void UpdateCreativeSlotState(string slotKey)
+    {
+        if (string.IsNullOrEmpty(slotKey))
+        {
+            isCreativeSlot = false;
+            return;
+        }
+
+        isCreativeSlot = slotKey.StartsWith("Creative", System.StringComparison.OrdinalIgnoreCase);
     }
 }
