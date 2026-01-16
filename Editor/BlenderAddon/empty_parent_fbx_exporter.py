@@ -52,6 +52,17 @@ def _sync_file_name_from_csv(settings):
     return True
 
 
+def _sync_index_from_file_name(settings, names):
+    current_name = settings.file_name.strip()
+    if not current_name:
+        return False
+    try:
+        settings.csv_index = names.index(current_name)
+    except ValueError:
+        return False
+    return True
+
+
 def _on_csv_path_updated(self, context):
     settings = context.scene.empty_parent_export_settings
     settings.csv_index = 0
@@ -112,7 +123,7 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
         previous_selection = [obj for obj in context.selected_objects]
 
         empty = bpy.data.objects.new(
-            name=f"{settings.file_name}_empty",
+            name=settings.file_name,
             object_data=None,
         )
         # 1. Empty生成直後に回転を設定
@@ -162,6 +173,11 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
         if previous_active and previous_active.name in context.view_layer.objects:
             context.view_layer.objects.active = previous_active
 
+        names = _load_csv_names(settings.csv_path)
+        if names and _sync_index_from_file_name(settings, names):
+            settings.csv_index = min(len(names) - 1, settings.csv_index + 1)
+            settings.file_name = names[settings.csv_index]
+
         self.report({'INFO'}, f"FBXを出力しました: {filepath}")
         return {'FINISHED'}
 
@@ -176,6 +192,7 @@ class OBJECT_OT_empty_parent_csv_prev(Operator):
         if not names:
             self.report({'WARNING'}, "CSVからファイル名を読み込めませんでした。")
             return {'CANCELLED'}
+        _sync_index_from_file_name(settings, names)
         settings.csv_index = max(0, settings.csv_index - 1)
         settings.file_name = names[settings.csv_index]
         return {'FINISHED'}
@@ -191,6 +208,7 @@ class OBJECT_OT_empty_parent_csv_next(Operator):
         if not names:
             self.report({'WARNING'}, "CSVからファイル名を読み込めませんでした。")
             return {'CANCELLED'}
+        _sync_index_from_file_name(settings, names)
         settings.csv_index = min(len(names) - 1, settings.csv_index + 1)
         settings.file_name = names[settings.csv_index]
         return {'FINISHED'}
