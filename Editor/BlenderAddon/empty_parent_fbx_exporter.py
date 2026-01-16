@@ -67,12 +67,20 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             name=f"{settings.file_name}_empty",
             object_data=None,
         )
+        # 1. Empty生成直後に回転を設定
         empty.rotation_euler = (math.radians(90.0), 0.0, 0.0)
+        # 2. Emptyをシーンに追加
         context.collection.objects.link(empty)
 
+        # 3. 必要ならビューを更新して依存関係を反映
+        context.view_layer.update()
+
+        # 4. 親子付けとトランスフォーム維持
         for obj in selected:
             obj.parent = empty
+            obj.matrix_parent_inverse = empty.matrix_world.inverted()
 
+        # 5. 選択状態とアクティブをEmpty+子に揃える
         for obj in context.selected_objects:
             obj.select_set(False)
 
