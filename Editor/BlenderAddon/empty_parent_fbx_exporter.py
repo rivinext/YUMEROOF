@@ -89,13 +89,22 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             obj.select_set(True)
         context.view_layer.objects.active = empty
 
-        bpy.ops.export_scene.fbx(
-            filepath=filepath,
-            use_selection=True,
-            apply_unit_scale=True,
-            apply_scale_options='FBX_SCALE_ALL',
-            object_types={'EMPTY', 'MESH', 'ARMATURE', 'OTHER'},
-        )
+        original_locations = {obj: obj.location.copy() for obj in selected}
+        for obj in selected:
+            obj.location = (0.0, 0.0, 0.0)
+
+        try:
+            bpy.ops.export_scene.fbx(
+                filepath=filepath,
+                use_selection=True,
+                apply_unit_scale=True,
+                apply_scale_options='FBX_SCALE_ALL',
+                object_types={'EMPTY', 'MESH', 'ARMATURE', 'OTHER'},
+            )
+        finally:
+            for obj, location in original_locations.items():
+                if obj and obj.name in context.view_layer.objects:
+                    obj.location = location
 
         for obj in context.selected_objects:
             obj.select_set(False)
