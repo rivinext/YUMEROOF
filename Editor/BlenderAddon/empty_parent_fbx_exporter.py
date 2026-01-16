@@ -123,7 +123,7 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
         previous_selection = [obj for obj in context.selected_objects]
 
         empty = bpy.data.objects.new(
-            name=f"{settings.file_name}_empty",
+            name=settings.file_name,
             object_data=None,
         )
         # 1. Empty生成直後に回転を設定
@@ -172,6 +172,11 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
                 obj.select_set(True)
         if previous_active and previous_active.name in context.view_layer.objects:
             context.view_layer.objects.active = previous_active
+
+        names = _load_csv_names(settings.csv_path)
+        if names and _sync_index_from_file_name(settings, names):
+            settings.csv_index = min(len(names) - 1, settings.csv_index + 1)
+            settings.file_name = names[settings.csv_index]
 
         self.report({'INFO'}, f"FBXを出力しました: {filepath}")
         return {'FINISHED'}
