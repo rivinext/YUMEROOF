@@ -9,6 +9,7 @@ bl_info = {
 }
 
 import math
+import os
 import bpy
 from bpy.props import StringProperty, PointerProperty
 from bpy.types import Operator, Panel, PropertyGroup
@@ -53,11 +54,10 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             self.report({'WARNING'}, "ファイル名を入力してください。")
             return {'CANCELLED'}
 
-        filepath = bpy.path.abspath(
-            bpy.path.ensure_ext(
-                bpy.path.join(settings.export_dir, settings.file_name),
-                ".fbx",
-            )
+        export_dir = bpy.path.abspath(settings.export_dir)
+        filepath = bpy.path.ensure_ext(
+            os.path.join(export_dir, settings.file_name),
+            ".fbx",
         )
 
         previous_active = context.view_layer.objects.active
@@ -67,8 +67,8 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             name=f"{settings.file_name}_empty",
             object_data=None,
         )
-        context.collection.objects.link(empty)
         empty.rotation_euler = (math.radians(90.0), 0.0, 0.0)
+        context.collection.objects.link(empty)
 
         for obj in selected:
             obj.parent = empty
