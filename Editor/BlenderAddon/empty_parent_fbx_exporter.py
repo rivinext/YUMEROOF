@@ -8,6 +8,7 @@ bl_info = {
     "category": "Import-Export",
 }
 
+import csv
 import math
 import os
 import bpy
@@ -22,11 +23,58 @@ def _ensure_selection(context):
     return selected, None
 
 
+def _load_csv_names(csv_path):
+    if not csv_path:
+        return []
+    filepath = bpy.path.abspath(csv_path)
+    if not os.path.exists(filepath):
+        return []
+    names = []
+    try:
+        with open(filepath, newline="", encoding="utf-8") as csv_file:
+            reader = csv.reader(csv_file)
+            rows = list(reader)
+    except (OSError, UnicodeDecodeError):
+        return []
+    for row in rows[1:]:
+        if len(row) > 5 and row[5].strip():
+            names.append(row[5].strip())
+    return names
+
+
+def _sync_file_name_from_csv(settings):
+    names = _load_csv_names(settings.csv_path)
+    if not names:
+        return False
+    if settings.csv_index < 0 or settings.csv_index >= len(names):
+        settings.csv_index = 0
+    settings.file_name = names[settings.csv_index]
+    return True
+
+
+def _on_csv_path_updated(self, context):
+    settings = context.scene.empty_parent_export_settings
+    settings.csv_index = 0
+    _sync_file_name_from_csv(settings)
+
+
 class EmptyParentExportSettings(PropertyGroup):
     export_dir: StringProperty(
         name="出力フォルダ",
         description="FBXを書き出すフォルダを指定します",
         subtype='DIR_PATH',
+    )
+    csv_path: StringProperty(
+        name="CSVファイル",
+        description="F列の2行目以降をファイル名候補として読み込みます",
+        subtype='FILE_PATH',
+        update=_on_csv_path_updated,
+    )
+    csv_index: bpy.props.IntProperty(
+        name="CSVインデックス",
+        default=0,
+        min=0,
+        options={'HIDDEN'},
     )
     file_name: StringProperty(
         name="ファイル名",
@@ -118,6 +166,36 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
         return {'FINISHED'}
 
 
+class OBJECT_OT_empty_parent_csv_prev(Operator):
+    bl_idname = "object.empty_parent_csv_prev"
+    bl_label = "前へ"
+
+    def execute(self, context):
+        settings = context.scene.empty_parent_export_settings
+        names = _load_csv_names(settings.csv_path)
+        if not names:
+            self.report({'WARNING'}, "CSVからファイル名を読み込めませんでした。")
+            return {'CANCELLED'}
+        settings.csv_index = max(0, settings.csv_index - 1)
+        settings.file_name = names[settings.csv_index]
+        return {'FINISHED'}
+
+
+class OBJECT_OT_empty_parent_csv_next(Operator):
+    bl_idname = "object.empty_parent_csv_next"
+    bl_label = "次へ"
+
+    def execute(self, context):
+        settings = context.scene.empty_parent_export_settings
+        names = _load_csv_names(settings.csv_path)
+        if not names:
+            self.report({'WARNING'}, "CSVからファイル名を読み込めませんでした。")
+            return {'CANCELLED'}
+        settings.csv_index = min(len(names) - 1, settings.csv_index + 1)
+        settings.file_name = names[settings.csv_index]
+        return {'FINISHED'}
+
+
 class VIEW3D_PT_empty_parent_fbx_export(Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -129,6 +207,10 @@ class VIEW3D_PT_empty_parent_fbx_export(Panel):
         settings = context.scene.empty_parent_export_settings
 
         layout.prop(settings, "export_dir")
+        layout.prop(settings, "csv_path")
+        row = layout.row(align=True)
+        row.operator(OBJECT_OT_empty_parent_csv_prev.bl_idname, text="Prev")
+        row.operator(OBJECT_OT_empty_parent_csv_next.bl_idname, text="Next")
         layout.prop(settings, "file_name")
         layout.operator(OBJECT_OT_empty_parent_fbx_export.bl_idname)
 
@@ -136,6 +218,8 @@ class VIEW3D_PT_empty_parent_fbx_export(Panel):
 classes = (
     EmptyParentExportSettings,
     OBJECT_OT_empty_parent_fbx_export,
+    OBJECT_OT_empty_parent_csv_prev,
+    OBJECT_OT_empty_parent_csv_next,
     VIEW3D_PT_empty_parent_fbx_export,
 )
 
