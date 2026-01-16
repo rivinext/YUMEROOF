@@ -67,8 +67,8 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             name=f"{settings.file_name}_empty",
             object_data=None,
         )
-        context.collection.objects.link(empty)
         empty.rotation_euler = (math.radians(90.0), 0.0, 0.0)
+        context.collection.objects.link(empty)
 
         for obj in selected:
             obj.parent = empty
