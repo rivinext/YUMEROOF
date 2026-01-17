@@ -58,6 +58,7 @@ public class WardrobeUIController : MonoBehaviour
         public WardrobeTabType category;
         public Toggle toggle;
         public GameObject content;
+        public GameObject scrollbar;
     }
 
     [Serializable]
@@ -77,6 +78,7 @@ public class WardrobeUIController : MonoBehaviour
     {
         public WardrobeTabType category;
         public GameObject content;
+        public GameObject scrollbar;
     }
 
     [Serializable]
@@ -959,7 +961,7 @@ public class WardrobeUIController : MonoBehaviour
                 continue;
             }
 
-            CreateCategoryTabToggle(binding.category, binding.content);
+            CreateCategoryTabToggle(binding.category, binding.content, binding.scrollbar);
         }
     }
 
@@ -983,7 +985,7 @@ public class WardrobeUIController : MonoBehaviour
         runtimeCategoryToggles.Clear();
     }
 
-    private void CreateCategoryTabToggle(WardrobeTabType category, GameObject content)
+    private void CreateCategoryTabToggle(WardrobeTabType category, GameObject content, GameObject scrollbar)
     {
         var toggleObj = Instantiate(categoryTabTogglePrefab, categoryTabContainer);
         var categoryToggle = toggleObj.GetComponent<FurnitureCategoryToggle>();
@@ -1012,6 +1014,7 @@ public class WardrobeUIController : MonoBehaviour
             category = category,
             toggle = toggle,
             content = content,
+            scrollbar = scrollbar,
         });
     }
 
@@ -1116,6 +1119,11 @@ public class WardrobeUIController : MonoBehaviour
                 tab.content.SetActive(isActive);
             }
 
+            if (tab != null && tab.scrollbar != null)
+            {
+                tab.scrollbar.SetActive(isActive);
+            }
+
             toggleHandlers.Add(handler);
         }
     }
@@ -1136,6 +1144,11 @@ public class WardrobeUIController : MonoBehaviour
         if (tab.content != null)
         {
             tab.content.SetActive(isOn);
+        }
+
+        if (tab.scrollbar != null)
+        {
+            tab.scrollbar.SetActive(isOn);
         }
 
         if (isOn)
