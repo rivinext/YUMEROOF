@@ -114,6 +114,21 @@ public static class WardrobeCatalogImporter
                 }
 
                 List<string> columns = SplitCsvLine(line);
+                bool hasNonEmptyColumn = false;
+                for (int i = 0; i < columns.Count; i++)
+                {
+                    if (!string.IsNullOrWhiteSpace(columns[i]))
+                    {
+                        hasNonEmptyColumn = true;
+                        break;
+                    }
+                }
+
+                if (!hasNonEmptyColumn)
+                {
+                    continue;
+                }
+
                 if (columns.Count < 7)
                 {
                     Debug.LogWarning($"Skipping wardrobe row because it does not contain enough columns: '{line}'.");
