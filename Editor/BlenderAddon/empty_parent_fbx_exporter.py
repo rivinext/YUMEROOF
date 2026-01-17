@@ -23,15 +23,6 @@ def _ensure_selection(context):
     return selected, None
 
 
-def _resolve_export_targets(selected):
-    if len(selected) == 1:
-        parent = selected[0]
-        children = [obj for obj in parent.children_recursive if obj.type != 'CAMERA']
-        if children:
-            return children
-    return selected
-
-
 def _load_csv_names(csv_path):
     if not csv_path:
         return []
@@ -114,8 +105,6 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             self.report({'WARNING'}, error)
             return {'CANCELLED'}
 
-        export_targets = _resolve_export_targets(selected)
-
         settings = context.scene.empty_parent_export_settings
         if not settings.export_dir:
             self.report({'WARNING'}, "出力フォルダを指定してください。")
@@ -146,7 +135,7 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
         context.view_layer.update()
 
         # 4. 親子付けとトランスフォーム維持
-        for obj in export_targets:
+        for obj in selected:
             obj.parent = empty
             obj.matrix_parent_inverse = empty.matrix_world.inverted()
 
@@ -155,12 +144,12 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             obj.select_set(False)
 
         empty.select_set(True)
-        for obj in export_targets:
+        for obj in selected:
             obj.select_set(True)
         context.view_layer.objects.active = empty
 
-        original_locations = {obj: obj.location.copy() for obj in export_targets}
-        for obj in export_targets:
+        original_locations = {obj: obj.location.copy() for obj in selected}
+        for obj in selected:
             obj.location = (0.0, 0.0, 0.0)
 
         try:
