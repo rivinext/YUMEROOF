@@ -8,7 +8,7 @@ using UnityEngine;
 public static class WardrobeCatalogImporter
 {
     private const string CsvAssetPath = "Assets/Resources/Data/YUME_ROOF - Wardrobe.csv";
-    internal const string CatalogAssetPath = "Assets/Data/ScriptableObjects/Wardrobe/WardrobeCatalog.asset";
+    internal const string CatalogAssetPath = "Assets/Resources/Data/ScriptableObjects/Wardrobe/WardrobeCatalog.asset";
 
     [MenuItem("Tools/Wardrobe/Import Catalog")]
     public static void ImportCatalog()
@@ -114,21 +114,6 @@ public static class WardrobeCatalogImporter
                 }
 
                 List<string> columns = SplitCsvLine(line);
-                bool hasNonEmptyColumn = false;
-                for (int i = 0; i < columns.Count; i++)
-                {
-                    if (!string.IsNullOrWhiteSpace(columns[i]))
-                    {
-                        hasNonEmptyColumn = true;
-                        break;
-                    }
-                }
-
-                if (!hasNonEmptyColumn)
-                {
-                    continue;
-                }
-
                 if (columns.Count < 7)
                 {
                     Debug.LogWarning($"Skipping wardrobe row because it does not contain enough columns: '{line}'.");
