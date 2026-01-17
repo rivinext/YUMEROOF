@@ -119,6 +119,10 @@ public static class WardrobeCatalogImporter
                     Debug.LogWarning($"Skipping wardrobe row because it does not contain enough columns: '{line}'.");
                     continue;
                 }
+                if (string.IsNullOrWhiteSpace(columns[0]))
+                {
+                    continue;
+                }
 
                 WardrobeCatalogEntry entry = new WardrobeCatalogEntry
                 {
