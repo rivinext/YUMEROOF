@@ -23,6 +23,17 @@ def _ensure_selection(context):
     return selected, None
 
 
+def _collect_descendants(objects):
+    descendants = []
+    seen = set()
+    for obj in objects:
+        for child in obj.children_recursive:
+            if child not in seen:
+                seen.add(child)
+                descendants.append(child)
+    return descendants
+
+
 def _load_csv_names(csv_path):
     if not csv_path:
         return []
@@ -121,6 +132,8 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
 
         previous_active = context.view_layer.objects.active
         previous_selection = [obj for obj in context.selected_objects]
+        descendants = _collect_descendants(selected)
+        export_objects = list(dict.fromkeys(selected + descendants))
 
         empty = bpy.data.objects.new(
             name=settings.file_name,
@@ -144,12 +157,12 @@ class OBJECT_OT_empty_parent_fbx_export(Operator):
             obj.select_set(False)
 
         empty.select_set(True)
-        for obj in selected:
+        for obj in export_objects:
             obj.select_set(True)
         context.view_layer.objects.active = empty
 
-        original_locations = {obj: obj.location.copy() for obj in selected}
-        for obj in selected:
+        original_locations = {obj: obj.location.copy() for obj in export_objects}
+        for obj in export_objects:
             obj.location = (0.0, 0.0, 0.0)
 
         try:
