@@ -454,10 +454,33 @@ public class InventoryUI : MonoBehaviour
             CreateFurnitureCategoryToggle(category, ResolveCategoryDisplayName(category), ResolveCategoryIcon(category));
         }
 
-        SelectFurnitureCategory(allCategoryKey, false);
-        if (categoryToggles.Count > 0)
+        string previousCategory = selectedFurnitureCategory;
+        string targetCategory = allCategoryKey;
+        FurnitureCategoryToggle targetToggle = null;
+
+        if (!string.IsNullOrEmpty(previousCategory))
         {
-            categoryToggles[0].SetIsOn(true, false);
+            targetToggle = categoryToggles
+                .FirstOrDefault(toggle => string.Equals(toggle.CategoryId, previousCategory, StringComparison.OrdinalIgnoreCase));
+            if (targetToggle != null)
+            {
+                targetCategory = targetToggle.CategoryId;
+            }
+        }
+
+        SelectFurnitureCategory(targetCategory, false);
+        if (targetToggle == null)
+        {
+            targetToggle = categoryToggles
+                .FirstOrDefault(toggle => string.Equals(toggle.CategoryId, targetCategory, StringComparison.OrdinalIgnoreCase))
+                ?? categoryToggles.FirstOrDefault();
+        }
+
+        targetToggle?.SetIsOn(true, false);
+
+        if (!string.IsNullOrEmpty(previousCategory))
+        {
+            RefreshFurnitureDisplay();
         }
     }
 
@@ -1124,7 +1147,10 @@ public class InventoryUI : MonoBehaviour
 
         if (!isMaterialTab)
         {
-            ResetFurnitureCategorySelection();
+            if (string.IsNullOrEmpty(selectedFurnitureCategory))
+            {
+                ResetFurnitureCategorySelection();
+            }
         }
 
         UpdateTabToggleVisuals(targetType);
