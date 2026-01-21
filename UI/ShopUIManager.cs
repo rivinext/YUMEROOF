@@ -699,7 +699,8 @@ public class ShopUIManager : MonoBehaviour
             return false;
         }
 
-        return string.Equals(data.category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase);
+        return FurnitureDataManager.SplitCategories(data.category)
+            .Any(category => string.Equals(category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase));
     }
 
     bool MatchesSellSearch(InventoryItem item)
