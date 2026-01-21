@@ -1235,7 +1235,8 @@ public class InventoryUI : MonoBehaviour
             return false;
         }
 
-        return string.Equals(data.category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase);
+        return FurnitureDataManager.SplitCategories(data.category)
+            .Any(category => string.Equals(category, selectedFurnitureCategory, StringComparison.OrdinalIgnoreCase));
     }
 
     // Material用の説明エリア更新（新規追加）

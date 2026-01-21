@@ -8,6 +8,7 @@ using UnityEditor;
 
 public class FurnitureDataManager : MonoBehaviour
 {
+    private static readonly char[] CategorySeparators = { ',' };
     private static FurnitureDataManager instance;
     public static FurnitureDataManager Instance
     {
@@ -200,11 +201,27 @@ public class FurnitureDataManager : MonoBehaviour
     public IReadOnlyList<string> GetFurnitureCategories()
     {
         return GetAllFurnitureDataSO()
-            .Select(data => data.category)
-            .Where(category => !string.IsNullOrEmpty(category))
+            .SelectMany(data => SplitCategories(data.category))
             .Distinct()
             .OrderBy(category => category)
             .ToList();
+    }
+
+    public static IEnumerable<string> SplitCategories(string categoryValue)
+    {
+        if (string.IsNullOrWhiteSpace(categoryValue))
+        {
+            yield break;
+        }
+
+        foreach (string part in categoryValue.Split(CategorySeparators))
+        {
+            string trimmed = part.Trim();
+            if (!string.IsNullOrEmpty(trimmed))
+            {
+                yield return trimmed;
+            }
+        }
     }
 
     // 旧FurnitureData形式への変換（互換性維持）
