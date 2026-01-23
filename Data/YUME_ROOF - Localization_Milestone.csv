@@ -1,11 +1,11 @@
 Key,Id,English(en),Japanese(ja),Chinese (Simplified)(zh-Hans),Chinese (Traditional)(zh-TW),French(fr),German(de),Italian(it),Portuguese(pt),Spanish(es),Korean(ko),Russian(ru)
-milestone_00,,DIY Beginner,DIY初心者,,,,,,,,,
-milestone_01,,Hammer Apprentice,トンカチ見習い,,,,,,,,,
-milestone_02,,Friend of the Flowerpots,植木鉢の友,,,,,,,,,
-milestone_03,,Balcony Caretaker,ベランダ整備係,,,,,,,,,
-milestone_04,,Furniture Collector,家具収集家,,,,,,,,,
-milestone_05,,Professional Resident,プロ住人,,,,,,,,,
-milestone_06,,Balcony Artisan,ベランダ職人,,,,,,,,,
-milestone_07,,Rooftop Decorator,屋上デコレーター,,,,,,,,,
-milestone_08,,Rooftop Harmonizer,屋上の調律師,,,,,,,,,
-milestone_99,,Legendary Rooftop Architect,伝説の屋上建築家,,,,,,,,,
+milestone_00,,DIY Beginner,DIY初心者,DIY初学者,DIY初學者,Débutant en bricolage,DIY-Anfänger,Principiante del fai-da-te,Iniciante no faça-você-mesmo,Principiante del bricolaje,DIY 초보자,Начинающий мастер DIY
+milestone_01,,Hammer Apprentice,トンカチ見習い,锤子学徒,錘子學徒,Apprenti au marteau,Hammer-Lehrling,Apprendista del martello,Aprendiz do martelo,Aprendiz del martillo,망치 견습생,Подмастерье молотка
+milestone_02,,Friend of the Flowerpots,植木鉢の友,花盆之友,花盆之友,Ami des pots de fleurs,Freund der Blumentöpfe,Amico dei vasi da fiori,Amigo dos vasos de flores,Amigo de las macetas,화분의 친구,Друг цветочных горшков
+milestone_03,,Balcony Caretaker,ベランダ整備係,阳台管理员,陽台管理員,Gardien du balcon,Balkonbetreuer,Custode del balcone,Zelador da varanda,Cuidador del balcón,발코니 관리자,Смотритель балкона
+milestone_04,,Furniture Collector,家具収集家,家具收藏家,家具收藏家,Collectionneur de meubles,Möbelsammler,Collezionista di mobili,Colecionador de móveis,Coleccionista de muebles,가구 수집가,Коллекционер мебели
+milestone_05,,Professional Resident,プロ住人,职业住户,職業住戶,Résident professionnel,Professioneller Bewohner,Residente professionista,Morador profissional,Residente profesional,프로 거주자,Профессиональный житель
+milestone_06,,Balcony Artisan,ベランダ職人,阳台匠人,陽台匠人,Artisan du balcon,Balkon-Handwerker,Artigiano del balcone,Artesão da varanda,Artesano del balcón,발코니 장인,Мастер балкона
+milestone_07,,Rooftop Decorator,屋上デコレーター,屋顶装饰师,屋頂裝飾師,Décorateur de toit,Dachdekorateur,Decoratore del tetto,Decorador do terraço,Decorador de azotea,옥상 데코레이터,Декоратор крыши
+milestone_08,,Rooftop Harmonizer,屋上の調律師,屋顶调律师,屋頂調律師,Harmonisateur de toit,Dachharmonisierer,Armonizzatore del tetto,Harmonizador do terraço,Armonizador de azotea,옥상 조율자,Настройщик крыши
+milestone_99,,Legendary Rooftop Architect,伝説の屋上建築家,传奇屋顶建筑师,傳奇屋頂建築師,Architecte légendaire des toits,Legendärer Dacharchitekt,Architetto leggendario del tetto,Arquiteto lendário do terraço,Arquitecto legendario de azoteas,전설의 옥상 건축가,Легендарный архитектор крыши
