@@ -456,7 +456,12 @@ class EMPTY_CAMERA_OT_render_selected(bpy.types.Operator):
                 new_ortho_scale = max_dimension * props.scale_multiplier
                 props.camera_object.data.ortho_scale = new_ortho_scale
 
-                filename = _normalize_render_name(obj.name)
+                base_name = obj.name
+                if "." in base_name:
+                    name_head, name_tail = base_name.rsplit(".", 1)
+                    if name_tail.isdigit() and len(name_tail) == 3:
+                        base_name = name_head
+                filename = base_name.replace("_model", "_image")
                 render_path = os.path.join(output_dir, filename)
                 scene.render.filepath = render_path
 
