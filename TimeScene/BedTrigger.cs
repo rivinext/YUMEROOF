@@ -51,6 +51,16 @@ public class BedTrigger : MonoBehaviour, IInteractable
     [Header("Transition UI")]
     public SleepTransitionUIManager transitionUI;
 
+    void Reset()
+    {
+        AutoAssignReferences();
+    }
+
+    void OnValidate()
+    {
+        AutoAssignReferences();
+    }
+
     void Start()
     {
         clock = GameClock.Instance;
@@ -459,6 +469,21 @@ public class BedTrigger : MonoBehaviour, IInteractable
 #else
         playerEmoteButtonBinder = FindObjectOfType<PlayerEmoteButtonBinder>();
 #endif
+    }
+
+    private void AutoAssignReferences()
+    {
+        if (sleepPrompt == null)
+            sleepPrompt = FindFirstObjectByType<SleepPromptSlidePanel>(FindObjectsInactive.Include);
+
+        if (transitionUI == null)
+            transitionUI = FindFirstObjectByType<SleepTransitionUIManager>(FindObjectsInactive.Include);
+
+        if (playerEmoteButtonBinder == null)
+            playerEmoteButtonBinder = FindFirstObjectByType<PlayerEmoteButtonBinder>(FindObjectsInactive.Include);
+
+        if (clock == null)
+            clock = FindFirstObjectByType<GameClock>(FindObjectsInactive.Include);
     }
 
     private void SetEmoteButtonsTemporarilyDisabled(bool disabled)
