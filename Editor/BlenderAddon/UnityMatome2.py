@@ -381,6 +381,9 @@ class EMPTY_CAMERA_OT_render_selected(bpy.types.Operator):
         if props.camera_object.data.type != 'ORTHO':
             self.report({'ERROR'}, "カメラはOrthographicである必要があります")
             return {'CANCELLED'}
+        if not props.target_collection:
+            self.report({'ERROR'}, "ターゲットコレクションが指定されていません")
+            return {'CANCELLED'}
 
         selected_objects = [
             obj for obj in context.selected_objects if obj.type in {'MESH', 'EMPTY'}
@@ -401,8 +404,11 @@ class EMPTY_CAMERA_OT_render_selected(bpy.types.Operator):
             return {'CANCELLED'}
 
         depsgraph = context.evaluated_depsgraph_get()
-        all_objects = set(context.view_layer.objects)
-        original_hide_render = {obj: obj.hide_render for obj in all_objects}
+        if props.include_children:
+            collection_objects = set(props.target_collection.all_objects)
+        else:
+            collection_objects = set(props.target_collection.objects)
+        original_hide_render = {obj: obj.hide_render for obj in collection_objects}
         original_filepath = scene.render.filepath
         original_selected_names = {obj.name for obj in context.selected_objects}
         original_active = context.view_layer.objects.active
@@ -430,8 +436,8 @@ class EMPTY_CAMERA_OT_render_selected(bpy.types.Operator):
                 if include_children:
                     visible_objects.update(obj.children_recursive)
 
-                for view_obj in all_objects:
-                    view_obj.hide_render = view_obj not in visible_objects
+                for col_obj in collection_objects:
+                    col_obj.hide_render = col_obj not in visible_objects
 
                 props.empty_object.location = center
                 new_ortho_scale = max_dimension * props.scale_multiplier
@@ -462,8 +468,8 @@ class EMPTY_CAMERA_OT_render_selected(bpy.types.Operator):
             else:
                 context.view_layer.objects.active = None
 
-            for view_obj, hide_state in original_hide_render.items():
-                view_obj.hide_render = hide_state
+            for col_obj, hide_state in original_hide_render.items():
+                col_obj.hide_render = hide_state
 
         self.report({'INFO'}, f"レンダリング完了: {processed}件処理, {skipped}件スキップ")
         return {'FINISHED'}
