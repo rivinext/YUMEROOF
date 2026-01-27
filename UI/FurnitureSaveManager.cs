@@ -86,8 +86,6 @@ public class FurnitureSaveManager : MonoBehaviour
     private Dictionary<string, GameObject> loadedFurnitureObjects = new Dictionary<string, GameObject>();
     [Header("Loading Settings")]
     [SerializeField, Min(1)] private int maxFurniturePerFrame = 8;
-    [SerializeField] private bool autoAdjustMaxFurniturePerFrame = true;
-    private int baseMaxFurniturePerFrame;
 
     private bool isLoadingScene = false; // シーンロード中フラグ
     private Coroutine activeLoadRoutine;
@@ -111,7 +109,6 @@ public class FurnitureSaveManager : MonoBehaviour
         {
             instance = this;
             DontDestroyOnLoad(gameObject);
-            baseMaxFurniturePerFrame = maxFurniturePerFrame;
 
             // データは外部から読み込まれる
             if (debugMode)
@@ -849,28 +846,8 @@ public class FurnitureSaveManager : MonoBehaviour
         currentLoadingScene = sceneName;
         totalFurnitureToLoad = totalCount;
         loadedFurnitureCount = 0;
-        maxFurniturePerFrame = baseMaxFurniturePerFrame;
-        if (autoAdjustMaxFurniturePerFrame)
-        {
-            maxFurniturePerFrame = GetAdjustedMaxFurniturePerFrame(totalCount);
-        }
         UpdateLoadProgressInternal(0f);
         OnFurnitureLoadStarted?.Invoke();
-    }
-
-    int GetAdjustedMaxFurniturePerFrame(int totalCount)
-    {
-        if (totalCount >= 400)
-        {
-            return 32;
-        }
-
-        if (totalCount >= 200)
-        {
-            return 16;
-        }
-
-        return baseMaxFurniturePerFrame;
     }
 
     void UpdateLoadProgress()

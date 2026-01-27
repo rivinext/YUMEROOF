@@ -61,7 +61,6 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
     public TMP_InputField furnitureSearchField;
-    [SerializeField] private ScrollRect furnitureScrollRect;
 
     [Header("Furniture Category Tabs")]
     [SerializeField] private Transform furnitureCategoryTabContainer;
@@ -144,10 +143,6 @@ public class InventoryUI : MonoBehaviour
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
     private readonly List<FurnitureCategoryToggle> categoryToggles = new List<FurnitureCategoryToggle>();
-    private bool pendingInventoryRefresh = false;
-    private Coroutine inventoryRefreshCoroutine;
-    private ScrollRectVirtualizer furnitureVirtualizer;
-    private readonly List<InventoryItem> furnitureDisplayItems = new List<InventoryItem>();
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -176,7 +171,6 @@ public class InventoryUI : MonoBehaviour
         SetupSortButtons();
         SetupSearchFields();
         SetupFilters();
-        SetupFurnitureVirtualizedList();
         SetupFurnitureCategoryTabs();
         SetupCraftButton();
         SetupAutoReopenControl();
@@ -372,119 +366,6 @@ public class InventoryUI : MonoBehaviour
     {
         ConfigureSearchField(furnitureSearchField, "Furniture search");
         ConfigureSearchField(materialSearchField, "Material search");
-    }
-
-    void SetupFurnitureVirtualizedList()
-    {
-        if (furnitureScrollRect == null && furnitureScrollView != null)
-        {
-            furnitureScrollRect = furnitureScrollView.GetComponentInChildren<ScrollRect>();
-        }
-
-        if (furnitureScrollRect == null)
-        {
-            if (debugMode) Debug.LogWarning("[InventoryUI] Furniture ScrollRect not found, using fallback list rendering.");
-            return;
-        }
-
-        if (furnitureVirtualizer == null)
-        {
-            furnitureVirtualizer = furnitureScrollRect.GetComponent<ScrollRectVirtualizer>();
-        }
-
-        if (furnitureVirtualizer == null)
-        {
-            furnitureVirtualizer = furnitureScrollRect.gameObject.AddComponent<ScrollRectVirtualizer>();
-        }
-
-        var itemHeight = ResolveFurnitureCardHeight();
-        var spacing = 0f;
-        var paddingTop = 0f;
-        var paddingBottom = 0f;
-
-        if (furnitureContent != null)
-        {
-            var layoutGroup = furnitureContent.GetComponent<VerticalLayoutGroup>();
-            if (layoutGroup != null)
-            {
-                spacing = layoutGroup.spacing;
-                paddingTop = layoutGroup.padding.top;
-                paddingBottom = layoutGroup.padding.bottom;
-            }
-        }
-
-        furnitureVirtualizer.OnCreateItem = CreateVirtualizedFurnitureCard;
-        furnitureVirtualizer.OnBindItem = BindVirtualizedFurnitureCard;
-        furnitureVirtualizer.OnReleaseItem = ReleaseVirtualizedFurnitureCard;
-        furnitureVirtualizer.Initialize(furnitureScrollRect, itemHeight, spacing, paddingTop, paddingBottom);
-    }
-
-    float ResolveFurnitureCardHeight()
-    {
-        if (furnitureCardPrefab != null)
-        {
-            var rect = furnitureCardPrefab.GetComponent<RectTransform>();
-            if (rect != null && rect.rect.height > 0f)
-            {
-                return rect.rect.height;
-            }
-        }
-
-        var fallbackHeight = 120f;
-        if (debugMode) Debug.LogWarning($"[InventoryUI] Furniture card height fallback used: {fallbackHeight}");
-        return fallbackHeight;
-    }
-
-    RectTransform CreateVirtualizedFurnitureCard()
-    {
-        if (cardManager == null)
-        {
-            return null;
-        }
-
-        var card = cardManager.AcquireFurnitureCard();
-        if (card == null)
-        {
-            return null;
-        }
-
-        cardManager.RegisterActiveCard(card);
-        return card.transform as RectTransform;
-    }
-
-    void BindVirtualizedFurnitureCard(int index, RectTransform itemTransform)
-    {
-        if (cardManager == null || itemTransform == null)
-        {
-            return;
-        }
-
-        if (index < 0 || index >= furnitureDisplayItems.Count)
-        {
-            return;
-        }
-
-        var card = itemTransform.GetComponent<InventoryItemCard>();
-        if (card == null)
-        {
-            card = itemTransform.gameObject.AddComponent<InventoryItemCard>();
-        }
-
-        cardManager.BindVirtualizedCard(card, furnitureDisplayItems[index]);
-    }
-
-    void ReleaseVirtualizedFurnitureCard(RectTransform itemTransform)
-    {
-        if (cardManager == null || itemTransform == null)
-        {
-            return;
-        }
-
-        var card = itemTransform.GetComponent<InventoryItemCard>();
-        if (card != null)
-        {
-            cardManager.ReleaseVirtualizedCard(card);
-        }
     }
 
     void HandleSearchFieldSelected(TMP_InputField field)
@@ -891,7 +772,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.OnInventoryChanged += HandleInventoryChanged;
+            InventoryManager.Instance.OnInventoryChanged += RefreshInventoryDisplay;
         }
     }
 
@@ -1324,52 +1205,6 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    void ApplyInventoryChange()
-    {
-        if (isMaterialTab)
-        {
-            UpdateMaterialDisplayDiff();
-        }
-        else
-        {
-            UpdateFurnitureDisplayDiff();
-            UpdateCraftButtonState();
-        }
-    }
-
-    void HandleInventoryChanged()
-    {
-        var inventory = InventoryManager.Instance;
-        if (inventory != null && inventory.IsBulkUpdating)
-        {
-            pendingInventoryRefresh = true;
-            if (inventoryRefreshCoroutine == null)
-            {
-                inventoryRefreshCoroutine = StartCoroutine(WaitForBulkInventoryUpdate());
-            }
-            return;
-        }
-
-        pendingInventoryRefresh = false;
-        ApplyInventoryChange();
-    }
-
-    System.Collections.IEnumerator WaitForBulkInventoryUpdate()
-    {
-        while (InventoryManager.Instance != null && InventoryManager.Instance.IsBulkUpdating)
-        {
-            yield return null;
-        }
-
-        if (pendingInventoryRefresh)
-        {
-            pendingInventoryRefresh = false;
-            RefreshInventoryDisplay();
-        }
-
-        inventoryRefreshCoroutine = null;
-    }
-
     void RefreshMaterialDisplay()
     {
         var items = GetSortedMaterialList();
@@ -1413,78 +1248,7 @@ public class InventoryUI : MonoBehaviour
 
         if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}, Wall filter: {showOnlyWallPlacement}, Ceiling filter: {showOnlyCeilingPlacement}");
 
-        furnitureDisplayItems.Clear();
-        furnitureDisplayItems.AddRange(items);
-
-        if (selectedFurnitureItem != null && !furnitureDisplayItems.Contains(selectedFurnitureItem))
-        {
-            cardManager?.DeselectAll();
-            selectedFurnitureItem = null;
-        }
-
-        if (furnitureVirtualizer != null)
-        {
-            furnitureVirtualizer.SetItemCount(furnitureDisplayItems.Count, true);
-        }
-        else
-        {
-            cardManager?.RefreshFurnitureCards(items);
-        }
-    }
-
-    void UpdateMaterialDisplayDiff()
-    {
-        var items = GetSortedMaterialList();
-
-        if (!string.IsNullOrEmpty(searchQuery))
-        {
-            items = items.Where(item =>
-            {
-                var materialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
-                return materialData != null &&
-                       materialData.materialName.ToLower().Contains(searchQuery.ToLower());
-            }).ToList();
-        }
-
-        materialManager?.SyncMaterialIcons(items);
-        UpdateMaterialDescriptionArea();
-    }
-
-    void UpdateFurnitureDisplayDiff()
-    {
-        var items = GetSortedFurnitureList();
-
-        if (!string.IsNullOrEmpty(selectedFurnitureCategory) &&
-            !string.Equals(selectedFurnitureCategory, allCategoryKey, StringComparison.OrdinalIgnoreCase))
-        {
-            items = items.Where(ItemMatchesSelectedCategory).ToList();
-        }
-
-        if (!string.IsNullOrEmpty(searchQuery))
-        {
-            items = items.Where(item => item.itemID.ToLower().Contains(searchQuery.ToLower())).ToList();
-        }
-
-        if (debugMode) Debug.Log($"UpdateFurnitureDisplayDiff - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}, Wall filter: {showOnlyWallPlacement}, Ceiling filter: {showOnlyCeilingPlacement}");
-
-        furnitureDisplayItems.Clear();
-        furnitureDisplayItems.AddRange(items);
-
-        if (selectedFurnitureItem != null && !furnitureDisplayItems.Contains(selectedFurnitureItem))
-        {
-            cardManager?.DeselectAll();
-            selectedFurnitureItem = null;
-        }
-
-        if (furnitureVirtualizer != null)
-        {
-            furnitureVirtualizer.SetItemCount(furnitureDisplayItems.Count, false);
-            furnitureVirtualizer.RefreshVisibleItems();
-        }
-        else
-        {
-            cardManager?.SyncFurnitureCards(items);
-        }
+        cardManager?.RefreshFurnitureCards(items);
     }
 
     bool ItemMatchesSelectedCategory(InventoryItem item)
@@ -1568,7 +1332,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.OnInventoryChanged -= HandleInventoryChanged;
+            InventoryManager.Instance.OnInventoryChanged -= RefreshInventoryDisplay;
         }
 
         cardManager?.Cleanup();
