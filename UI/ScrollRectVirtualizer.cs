@@ -225,11 +225,12 @@ public class ScrollRectVirtualizer : MonoBehaviour
 
     private void SetupItemRectTransform(RectTransform item)
     {
+        var calculatedItemWidth = GetItemWidth();
         item.anchorMin = new Vector2(0f, 1f);
         item.anchorMax = new Vector2(0f, 1f);
         item.pivot = new Vector2(0f, 1f);
         item.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, itemHeight);
-        item.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, GetItemWidth());
+        item.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, calculatedItemWidth);
     }
 
     private void SetItemPosition(RectTransform item, int index)
@@ -239,7 +240,8 @@ public class ScrollRectVirtualizer : MonoBehaviour
         var col = index % columns;
         var itemSpan = itemHeight + spacing;
         var y = paddingTop + row * itemSpan;
-        var x = paddingLeft + col * (GetItemWidth() + horizontalSpacing);
+        var calculatedItemWidth = GetItemWidth();
+        var x = paddingLeft + col * (calculatedItemWidth + horizontalSpacing);
         item.anchoredPosition = new Vector2(x, -y);
     }
 
