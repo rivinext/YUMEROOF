@@ -26,23 +26,31 @@ public class DevItemInjector : MonoBehaviour
     {
         if (BuildDisablesInjection || !enableInjection) return;
 
-        if (InventoryManager.Instance == null) return;
+        var inventory = InventoryManager.Instance;
+        if (inventory == null) return;
 
-        if (furnitureItems != null)
+        inventory.BeginBulkUpdate();
+        try
         {
-            foreach (var entry in furnitureItems)
+            if (furnitureItems != null)
             {
-                InventoryManager.Instance.AddFurniture(entry.id, entry.quantity);
+                foreach (var entry in furnitureItems)
+                {
+                    inventory.AddFurniture(entry.id, entry.quantity);
+                }
+            }
+
+            if (materialItems != null)
+            {
+                foreach (var entry in materialItems)
+                {
+                    inventory.AddMaterial(entry.id, entry.quantity);
+                }
             }
         }
-
-        if (materialItems != null)
+        finally
         {
-            foreach (var entry in materialItems)
-            {
-                InventoryManager.Instance.AddMaterial(entry.id, entry.quantity);
-            }
+            inventory.EndBulkUpdate();
         }
-
     }
 }
