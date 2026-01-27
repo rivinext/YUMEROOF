@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.EventSystems;
 using System.Linq;
@@ -143,6 +144,8 @@ public class InventoryUI : MonoBehaviour
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
     private readonly List<FurnitureCategoryToggle> categoryToggles = new List<FurnitureCategoryToggle>();
+    private Coroutine inventoryRefreshCoroutine;
+    private bool inventoryRefreshQueued;
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -772,7 +775,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.OnInventoryChanged += RefreshInventoryDisplay;
+            InventoryManager.Instance.OnInventoryChanged += HandleInventoryChanged;
         }
     }
 
@@ -844,7 +847,7 @@ public class InventoryUI : MonoBehaviour
             if (debugMode) Debug.Log($"[CRAFT] Successfully crafted {currentFurnitureDataSO.nameID}");
 
             InventoryManager.Instance.ForceInventoryUpdate();
-            RefreshInventoryDisplay();
+            RequestInventoryRefresh();
 
             descPanel.ShowFurnitureDetail(currentItem);
             UpdateCraftButtonState();
@@ -1205,6 +1208,36 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    void HandleInventoryChanged()
+    {
+        RequestInventoryRefresh();
+    }
+
+    void RequestInventoryRefresh()
+    {
+        if (inventoryRefreshQueued)
+        {
+            return;
+        }
+
+        inventoryRefreshQueued = true;
+
+        if (inventoryRefreshCoroutine != null)
+        {
+            StopCoroutine(inventoryRefreshCoroutine);
+        }
+
+        inventoryRefreshCoroutine = StartCoroutine(DelayedInventoryRefresh());
+    }
+
+    IEnumerator DelayedInventoryRefresh()
+    {
+        yield return null;
+        inventoryRefreshQueued = false;
+        inventoryRefreshCoroutine = null;
+        RefreshInventoryDisplay();
+    }
+
     void RefreshMaterialDisplay()
     {
         var items = GetSortedMaterialList();
@@ -1332,7 +1365,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.OnInventoryChanged -= RefreshInventoryDisplay;
+            InventoryManager.Instance.OnInventoryChanged -= HandleInventoryChanged;
         }
 
         cardManager?.Cleanup();
