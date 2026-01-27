@@ -20,6 +20,7 @@ public class ScrollRectVirtualizer : MonoBehaviour
     [SerializeField] private int columnCount = 1;
     [FormerlySerializedAs("bufferItems")]
     [SerializeField] private int bufferRows = 2;
+    [SerializeField] private bool disableLayoutComponents = true;
 
     public Func<RectTransform> OnCreateItem;
     public Action<RectTransform> OnReleaseItem;
@@ -46,7 +47,10 @@ public class ScrollRectVirtualizer : MonoBehaviour
 
         EnsureViewportSetup();
         NormalizeRectTransforms();
-        DisableLayoutComponents();
+        if (disableLayoutComponents)
+        {
+            DisableLayoutComponents();
+        }
 
         scrollRect.onValueChanged.RemoveListener(HandleScrollValueChanged);
         scrollRect.onValueChanged.AddListener(HandleScrollValueChanged);
