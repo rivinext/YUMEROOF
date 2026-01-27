@@ -41,11 +41,7 @@ public class InventoryCardManager : MonoBehaviour
     {
         if (debugMode) Debug.Log($"[CardManager] RefreshFurnitureCards: {items.Count} items");
 
-        if (selectedFurnitureItem != null && !items.Contains(selectedFurnitureItem))
-        {
-            selectedFurnitureItem = null;
-            selectedFurnitureCard = null;
-        }
+        ClearSelectionIfMissing(items);
 
         // 既存のカードをプールに戻す
         foreach (var card in activeFurnitureCards)
@@ -82,6 +78,91 @@ public class InventoryCardManager : MonoBehaviour
         RestoreSelection();
 
         if (debugMode) Debug.Log($"[CardManager] Cards created: {activeFurnitureCards.Count}");
+    }
+
+    public void ClearSelectionIfMissing(IReadOnlyList<InventoryItem> items)
+    {
+        if (selectedFurnitureItem != null && !items.Contains(selectedFurnitureItem))
+        {
+            selectedFurnitureItem = null;
+            selectedFurnitureCard = null;
+            NotifyItemSelection(null);
+        }
+    }
+
+    public RectTransform CreateFurnitureCardForVirtualizer()
+    {
+        var card = GetOrCreateFurnitureCard();
+        if (card == null)
+        {
+            return null;
+        }
+
+        card.gameObject.SetActive(true);
+        card.SetSelected(false);
+
+        if (!activeFurnitureCards.Contains(card))
+        {
+            activeFurnitureCards.Add(card);
+        }
+
+        return card.transform as RectTransform;
+    }
+
+    public void ReleaseFurnitureCardFromVirtualizer(RectTransform item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        var card = item.GetComponent<InventoryItemCard>();
+        if (card == null)
+        {
+            return;
+        }
+
+        if (selectedFurnitureCard == card)
+        {
+            selectedFurnitureCard = null;
+        }
+
+        card.SetSelected(false);
+        card.gameObject.SetActive(false);
+
+        activeFurnitureCards.Remove(card);
+        furnitureCardPool.Enqueue(card);
+    }
+
+    public void BindFurnitureCardForVirtualizer(InventoryItem item, RectTransform itemTransform)
+    {
+        if (item == null || itemTransform == null)
+        {
+            return;
+        }
+
+        var card = itemTransform.GetComponent<InventoryItemCard>();
+        if (card == null)
+        {
+            return;
+        }
+
+        card.SetItem(item, false);
+
+        card.OnItemClicked -= OnFurnitureCardClicked;
+        card.OnItemClicked += OnFurnitureCardClicked;
+        card.OnItemDragged -= OnFurnitureCardDragged;
+        card.OnItemDragged += OnFurnitureCardDragged;
+        card.OnFavoriteToggled -= OnFurnitureFavoriteToggled;
+        card.OnFavoriteToggled += OnFurnitureFavoriteToggled;
+
+        bool isSelected = selectedFurnitureItem != null && item == selectedFurnitureItem;
+        card.SetSelected(isSelected);
+
+        if (isSelected)
+        {
+            selectedFurnitureCard = card;
+        }
     }
 
     // カードを取得または作成
