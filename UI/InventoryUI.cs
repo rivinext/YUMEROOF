@@ -63,6 +63,14 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureDescriptionArea;
     public TMP_InputField furnitureSearchField;
 
+    [Header("Furniture Virtualization")]
+    [SerializeField] private ScrollRect furnitureScrollRect;
+    [SerializeField] private ScrollRectVirtualizer furnitureVirtualizer;
+    [SerializeField] private float furnitureItemHeight = 120f;
+    [SerializeField] private float furnitureItemSpacing = 0f;
+    [SerializeField] private float furniturePaddingTop = 0f;
+    [SerializeField] private float furniturePaddingBottom = 0f;
+
     [Header("Furniture Category Tabs")]
     [SerializeField] private Transform furnitureCategoryTabContainer;
     [SerializeField] private ToggleGroup furnitureCategoryToggleGroup;
@@ -146,6 +154,7 @@ public class InventoryUI : MonoBehaviour
     private readonly List<FurnitureCategoryToggle> categoryToggles = new List<FurnitureCategoryToggle>();
     private Coroutine inventoryRefreshCoroutine;
     private bool inventoryRefreshQueued;
+    private readonly List<InventoryItem> filteredFurnitureItems = new List<InventoryItem>();
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -175,6 +184,7 @@ public class InventoryUI : MonoBehaviour
         SetupSearchFields();
         SetupFilters();
         SetupFurnitureCategoryTabs();
+        SetupFurnitureVirtualization();
         SetupCraftButton();
         SetupAutoReopenControl();
         RegisterEvents();
@@ -779,6 +789,29 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    void SetupFurnitureVirtualization()
+    {
+        if (furnitureScrollRect == null && furnitureScrollView != null)
+        {
+            furnitureScrollRect = furnitureScrollView.GetComponent<ScrollRect>();
+        }
+
+        if (furnitureVirtualizer == null && furnitureScrollView != null)
+        {
+            furnitureVirtualizer = furnitureScrollView.GetComponent<ScrollRectVirtualizer>();
+        }
+
+        if (furnitureScrollRect == null || furnitureVirtualizer == null)
+        {
+            return;
+        }
+
+        furnitureVirtualizer.OnCreateItem = HandleCreateFurnitureCard;
+        furnitureVirtualizer.OnReleaseItem = HandleReleaseFurnitureCard;
+        furnitureVirtualizer.OnBindItem = HandleBindFurnitureCard;
+        furnitureVirtualizer.Initialize(furnitureScrollRect, furnitureItemHeight, furnitureItemSpacing, furniturePaddingTop, furniturePaddingBottom);
+    }
+
     // 家具カード選択時に呼び出される（InventoryCardManagerから通知）
     public void OnFurnitureItemSelected(InventoryItem item)
     {
@@ -1281,7 +1314,39 @@ public class InventoryUI : MonoBehaviour
 
         if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}, Wall filter: {showOnlyWallPlacement}, Ceiling filter: {showOnlyCeilingPlacement}");
 
-        cardManager?.RefreshFurnitureCards(items);
+        filteredFurnitureItems.Clear();
+        filteredFurnitureItems.AddRange(items);
+
+        if (furnitureVirtualizer != null && furnitureScrollRect != null)
+        {
+            cardManager?.ClearSelectionIfMissing(filteredFurnitureItems);
+            furnitureVirtualizer.SetItemCount(filteredFurnitureItems.Count, true);
+            furnitureVirtualizer.RefreshVisibleItems();
+        }
+        else
+        {
+            cardManager?.RefreshFurnitureCards(items);
+        }
+    }
+
+    RectTransform HandleCreateFurnitureCard()
+    {
+        return cardManager != null ? cardManager.CreateFurnitureCardForVirtualizer() : null;
+    }
+
+    void HandleReleaseFurnitureCard(RectTransform item)
+    {
+        cardManager?.ReleaseFurnitureCardFromVirtualizer(item);
+    }
+
+    void HandleBindFurnitureCard(int index, RectTransform item)
+    {
+        if (index < 0 || index >= filteredFurnitureItems.Count)
+        {
+            return;
+        }
+
+        cardManager?.BindFurnitureCardForVirtualizer(filteredFurnitureItems[index], item);
     }
 
     bool ItemMatchesSelectedCategory(InventoryItem item)
