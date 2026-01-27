@@ -9,9 +9,14 @@ public class ScrollRectVirtualizer : MonoBehaviour
     [SerializeField] private RectTransform content;
     [SerializeField] private RectTransform viewport;
     [SerializeField] private float itemHeight = 100f;
+    [SerializeField] private float itemWidth = 0f;
     [SerializeField] private float spacing = 0f;
+    [SerializeField] private float horizontalSpacing = 0f;
     [SerializeField] private float paddingTop = 0f;
     [SerializeField] private float paddingBottom = 0f;
+    [SerializeField] private float paddingLeft = 0f;
+    [SerializeField] private float paddingRight = 0f;
+    [SerializeField] private int columnCount = 1;
     [SerializeField] private int bufferItems = 2;
 
     public Func<RectTransform> OnCreateItem;
@@ -108,11 +113,13 @@ public class ScrollRectVirtualizer : MonoBehaviour
             return;
         }
 
+        var columns = Mathf.Max(1, columnCount);
+        var rowCount = itemCount > 0 ? Mathf.CeilToInt(itemCount / (float)columns) : 0;
         var totalHeight = paddingTop + paddingBottom;
-        if (itemCount > 0)
+        if (rowCount > 0)
         {
-            totalHeight += itemCount * itemHeight;
-            totalHeight += Mathf.Max(0, itemCount - 1) * spacing;
+            totalHeight += rowCount * itemHeight;
+            totalHeight += Mathf.Max(0, rowCount - 1) * spacing;
         }
 
         content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, totalHeight);
@@ -131,19 +138,36 @@ public class ScrollRectVirtualizer : MonoBehaviour
             return;
         }
 
+        var columns = Mathf.Max(1, columnCount);
         var itemSpan = itemHeight + spacing;
         var scrollY = Mathf.Max(0f, content.anchoredPosition.y - paddingTop);
-        var firstIndex = Mathf.FloorToInt(scrollY / itemSpan);
-        firstIndex = Mathf.Max(0, firstIndex - bufferItems);
+        var firstRow = Mathf.FloorToInt(scrollY / itemSpan);
+        firstRow = Mathf.Max(0, firstRow - bufferItems);
 
         var viewportHeight = viewport.rect.height;
-        var visibleCount = Mathf.CeilToInt(viewportHeight / itemSpan) + bufferItems * 2;
-        var lastIndex = Mathf.Min(itemCount - 1, firstIndex + visibleCount - 1);
+        var visibleRowCount = Mathf.CeilToInt(viewportHeight / itemSpan) + bufferItems * 2;
+        var rowCount = Mathf.CeilToInt(itemCount / (float)columns);
+        var lastRow = Mathf.Min(rowCount - 1, firstRow + visibleRowCount - 1);
+
+        var requiredIndices = new HashSet<int>();
+        for (var row = firstRow; row <= lastRow; row++)
+        {
+            for (var col = 0; col < columns; col++)
+            {
+                var index = row * columns + col;
+                if (index >= itemCount)
+                {
+                    break;
+                }
+
+                requiredIndices.Add(index);
+            }
+        }
 
         var indicesToRelease = new List<int>();
         foreach (var index in activeItems.Keys)
         {
-            if (index < firstIndex || index > lastIndex)
+            if (!requiredIndices.Contains(index))
             {
                 indicesToRelease.Add(index);
             }
@@ -154,7 +178,7 @@ public class ScrollRectVirtualizer : MonoBehaviour
             ReleaseItem(index);
         }
 
-        for (var index = firstIndex; index <= lastIndex; index++)
+        foreach (var index in requiredIndices)
         {
             if (!activeItems.TryGetValue(index, out var item))
             {
@@ -208,16 +232,32 @@ public class ScrollRectVirtualizer : MonoBehaviour
     private void SetupItemRectTransform(RectTransform item)
     {
         item.anchorMin = new Vector2(0f, 1f);
-        item.anchorMax = new Vector2(1f, 1f);
-        item.pivot = new Vector2(0.5f, 1f);
+        item.anchorMax = new Vector2(0f, 1f);
+        item.pivot = new Vector2(0f, 1f);
         item.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, itemHeight);
-        item.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, content.rect.width);
+        item.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, GetItemWidth());
     }
 
     private void SetItemPosition(RectTransform item, int index)
     {
+        var columns = Mathf.Max(1, columnCount);
+        var row = index / columns;
+        var col = index % columns;
         var itemSpan = itemHeight + spacing;
-        var y = paddingTop + index * itemSpan;
-        item.anchoredPosition = new Vector2(item.anchoredPosition.x, -y);
+        var y = paddingTop + row * itemSpan;
+        var x = paddingLeft + col * (GetItemWidth() + horizontalSpacing);
+        item.anchoredPosition = new Vector2(x, -y);
+    }
+
+    private float GetItemWidth()
+    {
+        if (itemWidth > 0f)
+        {
+            return itemWidth;
+        }
+
+        var columns = Mathf.Max(1, columnCount);
+        var availableWidth = Mathf.Max(0f, content.rect.width - paddingLeft - paddingRight - horizontalSpacing * (columns - 1));
+        return columns > 0 ? availableWidth / columns : content.rect.width;
     }
 }
