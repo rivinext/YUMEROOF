@@ -143,6 +143,8 @@ public class InventoryUI : MonoBehaviour
     private const string AutoReopenPrefKey = "InventoryUI.AutoReopenEnabled";
     private readonly Dictionary<Toggle, UnityAction<bool>> tabToggleListeners = new Dictionary<Toggle, UnityAction<bool>>();
     private readonly List<FurnitureCategoryToggle> categoryToggles = new List<FurnitureCategoryToggle>();
+    private bool pendingInventoryRefresh = false;
+    private Coroutine inventoryRefreshCoroutine;
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -1205,7 +1207,7 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
-    void HandleInventoryChanged()
+    void ApplyInventoryChange()
     {
         if (isMaterialTab)
         {
@@ -1216,6 +1218,39 @@ public class InventoryUI : MonoBehaviour
             UpdateFurnitureDisplayDiff();
             UpdateCraftButtonState();
         }
+    }
+
+    void HandleInventoryChanged()
+    {
+        var inventory = InventoryManager.Instance;
+        if (inventory != null && inventory.IsBulkUpdating)
+        {
+            pendingInventoryRefresh = true;
+            if (inventoryRefreshCoroutine == null)
+            {
+                inventoryRefreshCoroutine = StartCoroutine(WaitForBulkInventoryUpdate());
+            }
+            return;
+        }
+
+        pendingInventoryRefresh = false;
+        ApplyInventoryChange();
+    }
+
+    System.Collections.IEnumerator WaitForBulkInventoryUpdate()
+    {
+        while (InventoryManager.Instance != null && InventoryManager.Instance.IsBulkUpdating)
+        {
+            yield return null;
+        }
+
+        if (pendingInventoryRefresh)
+        {
+            pendingInventoryRefresh = false;
+            RefreshInventoryDisplay();
+        }
+
+        inventoryRefreshCoroutine = null;
     }
 
     void RefreshMaterialDisplay()
