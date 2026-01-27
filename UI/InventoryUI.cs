@@ -446,10 +446,34 @@ public class InventoryUI : MonoBehaviour
 
         ClearFurnitureCategoryTabs();
 
-        var categories = GetFurnitureCategories();
-        CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategoryIcon ?? defaultCategoryIcon);
+        var categories = GetFurnitureCategories().ToList();
+        var orderedCategories = new List<string>();
+        var addedCategories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var displaySetting in categoryDisplaySettings)
+        {
+            if (displaySetting == null || string.IsNullOrEmpty(displaySetting.categoryId))
+                continue;
+
+            var matchedCategory = categories.FirstOrDefault(category =>
+                string.Equals(category, displaySetting.categoryId, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrEmpty(matchedCategory) && addedCategories.Add(matchedCategory))
+            {
+                orderedCategories.Add(matchedCategory);
+            }
+        }
 
         foreach (var category in categories)
+        {
+            if (addedCategories.Add(category))
+            {
+                orderedCategories.Add(category);
+            }
+        }
+        CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategoryIcon ?? defaultCategoryIcon);
+
+        foreach (var category in orderedCategories)
         {
             CreateFurnitureCategoryToggle(category, ResolveCategoryDisplayName(category), ResolveCategoryIcon(category));
         }
