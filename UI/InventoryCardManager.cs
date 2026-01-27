@@ -78,6 +78,73 @@ public class InventoryCardManager : MonoBehaviour
         if (debugMode) Debug.Log($"[CardManager] Cards created: {activeFurnitureCards.Count}");
     }
 
+    public InventoryItemCard AcquireFurnitureCard()
+    {
+        var card = GetOrCreateFurnitureCard();
+        if (card == null)
+        {
+            return null;
+        }
+
+        ConfigureFurnitureCard(card);
+        return card;
+    }
+
+    public void RegisterActiveCard(InventoryItemCard card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        if (!activeFurnitureCards.Contains(card))
+        {
+            activeFurnitureCards.Add(card);
+        }
+    }
+
+    public void ReleaseVirtualizedCard(InventoryItemCard card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        activeFurnitureCards.Remove(card);
+
+        if (card == selectedFurnitureCard)
+        {
+            selectedFurnitureCard = null;
+        }
+
+        ReleaseFurnitureCard(card);
+    }
+
+    public void BindVirtualizedCard(InventoryItemCard card, InventoryItem item)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        card.SetItem(item, false);
+        TrackDisplayedItem(item);
+
+        if (selectedFurnitureItem == item)
+        {
+            if (selectedFurnitureCard != null && selectedFurnitureCard != card)
+            {
+                selectedFurnitureCard.SetSelected(false);
+            }
+            selectedFurnitureCard = card;
+            card.SetSelected(true);
+        }
+        else
+        {
+            card.SetSelected(false);
+        }
+    }
+
     public void SyncFurnitureCards(List<InventoryItem> items)
     {
         if (debugMode) Debug.Log($"[CardManager] SyncFurnitureCards: {items.Count} items");
