@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class ScrollRectVirtualizer : MonoBehaviour
@@ -17,7 +18,8 @@ public class ScrollRectVirtualizer : MonoBehaviour
     [SerializeField] private float paddingLeft = 0f;
     [SerializeField] private float paddingRight = 0f;
     [SerializeField] private int columnCount = 1;
-    [SerializeField] private int bufferItems = 2;
+    [FormerlySerializedAs("bufferItems")]
+    [SerializeField] private int bufferRows = 2;
 
     public Func<RectTransform> OnCreateItem;
     public Action<RectTransform> OnReleaseItem;
@@ -139,29 +141,21 @@ public class ScrollRectVirtualizer : MonoBehaviour
         }
 
         var columns = Mathf.Max(1, columnCount);
-        var itemSpan = itemHeight + spacing;
+        var rowHeight = itemHeight + spacing;
         var scrollY = Mathf.Max(0f, content.anchoredPosition.y - paddingTop);
-        var firstRow = Mathf.FloorToInt(scrollY / itemSpan);
-        firstRow = Mathf.Max(0, firstRow - bufferItems);
+        var firstRow = Mathf.FloorToInt(scrollY / rowHeight) - bufferRows;
+        firstRow = Mathf.Max(0, firstRow);
 
         var viewportHeight = viewport.rect.height;
-        var visibleRowCount = Mathf.CeilToInt(viewportHeight / itemSpan) + bufferItems * 2;
-        var rowCount = Mathf.CeilToInt(itemCount / (float)columns);
-        var lastRow = Mathf.Min(rowCount - 1, firstRow + visibleRowCount - 1);
+        var visibleRows = Mathf.CeilToInt(viewportHeight / rowHeight) + bufferRows * 2;
+        var startIndex = Mathf.Max(0, firstRow * columns);
+        var visibleCount = visibleRows * columns;
+        var lastIndex = Mathf.Min(itemCount - 1, startIndex + visibleCount - 1);
 
         var requiredIndices = new HashSet<int>();
-        for (var row = firstRow; row <= lastRow; row++)
+        for (var index = startIndex; index <= lastIndex; index++)
         {
-            for (var col = 0; col < columns; col++)
-            {
-                var index = row * columns + col;
-                if (index >= itemCount)
-                {
-                    break;
-                }
-
-                requiredIndices.Add(index);
-            }
+            requiredIndices.Add(index);
         }
 
         var indicesToRelease = new List<int>();
