@@ -18,6 +18,8 @@ public class InventoryCardManager : MonoBehaviour
     // 選択管理
     private InventoryItem selectedFurnitureItem;
     private InventoryItemCard selectedFurnitureCard;
+    private readonly Dictionary<string, int> displayedQuantities = new Dictionary<string, int>();
+    private readonly Dictionary<string, bool> displayedFavorites = new Dictionary<string, bool>();
 
     // UI参照
     private GameObject furnitureContent;
@@ -50,9 +52,7 @@ public class InventoryCardManager : MonoBehaviour
         // 既存のカードをプールに戻す
         foreach (var card in activeFurnitureCards)
         {
-            card.SetSelected(false);
-            card.gameObject.SetActive(false);
-            furnitureCardPool.Enqueue(card);
+            ReleaseFurnitureCard(card);
         }
         activeFurnitureCards.Clear();
 
@@ -62,18 +62,12 @@ public class InventoryCardManager : MonoBehaviour
             var card = GetOrCreateFurnitureCard();
             if (card == null) continue;
 
-            card.SetSelected(false);
             card.transform.SetParent(furnitureContent.transform, false);
             card.transform.SetAsLastSibling();
             card.SetItem(item, false);
 
-            // イベント設定（重要：毎回設定し直す）
-            card.OnItemClicked -= OnFurnitureCardClicked;
-            card.OnItemClicked += OnFurnitureCardClicked;
-            card.OnItemDragged -= OnFurnitureCardDragged;
-            card.OnItemDragged += OnFurnitureCardDragged;
-            card.OnFavoriteToggled -= OnFurnitureFavoriteToggled;
-            card.OnFavoriteToggled += OnFurnitureFavoriteToggled;
+            ConfigureFurnitureCard(card);
+            TrackDisplayedItem(item);
 
             activeFurnitureCards.Add(card);
         }
@@ -82,6 +76,59 @@ public class InventoryCardManager : MonoBehaviour
         RestoreSelection();
 
         if (debugMode) Debug.Log($"[CardManager] Cards created: {activeFurnitureCards.Count}");
+    }
+
+    public void SyncFurnitureCards(List<InventoryItem> items)
+    {
+        if (debugMode) Debug.Log($"[CardManager] SyncFurnitureCards: {items.Count} items");
+
+        var desiredIds = new HashSet<string>(items.Select(item => item.itemID));
+        var existingCards = activeFurnitureCards
+            .Where(card => card != null && card.currentItem != null)
+            .ToDictionary(card => card.currentItem.itemID, card => card);
+
+        if (selectedFurnitureItem != null && !desiredIds.Contains(selectedFurnitureItem.itemID))
+        {
+            DeselectAll();
+        }
+
+        for (int i = activeFurnitureCards.Count - 1; i >= 0; i--)
+        {
+            var card = activeFurnitureCards[i];
+            if (card == null || card.currentItem == null || !desiredIds.Contains(card.currentItem.itemID))
+            {
+                ReleaseFurnitureCard(card);
+                activeFurnitureCards.RemoveAt(i);
+            }
+        }
+
+        var nextActiveCards = new List<InventoryItemCard>(items.Count);
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (!existingCards.TryGetValue(item.itemID, out var card) || card == null)
+            {
+                card = GetOrCreateFurnitureCard();
+                if (card == null) continue;
+                ConfigureFurnitureCard(card);
+                card.SetItem(item, false);
+            }
+            else
+            {
+                if (ShouldUpdateCard(item))
+                {
+                    card.SetItem(item, false);
+                }
+            }
+
+            card.transform.SetParent(furnitureContent.transform, false);
+            card.transform.SetSiblingIndex(i);
+            nextActiveCards.Add(card);
+            TrackDisplayedItem(item);
+        }
+
+        activeFurnitureCards = nextActiveCards;
+        RestoreSelection();
     }
 
     // カードを取得または作成
@@ -113,6 +160,65 @@ public class InventoryCardManager : MonoBehaviour
         }
 
         return card;
+    }
+
+    void ConfigureFurnitureCard(InventoryItemCard card)
+    {
+        card.SetSelected(false);
+        card.OnItemClicked -= OnFurnitureCardClicked;
+        card.OnItemClicked += OnFurnitureCardClicked;
+        card.OnItemDragged -= OnFurnitureCardDragged;
+        card.OnItemDragged += OnFurnitureCardDragged;
+        card.OnFavoriteToggled -= OnFurnitureFavoriteToggled;
+        card.OnFavoriteToggled += OnFurnitureFavoriteToggled;
+    }
+
+    void ReleaseFurnitureCard(InventoryItemCard card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        card.SetSelected(false);
+        card.gameObject.SetActive(false);
+        furnitureCardPool.Enqueue(card);
+        if (card.currentItem != null)
+        {
+            displayedQuantities.Remove(card.currentItem.itemID);
+            displayedFavorites.Remove(card.currentItem.itemID);
+        }
+    }
+
+    bool ShouldUpdateCard(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return false;
+        }
+
+        if (!displayedQuantities.TryGetValue(item.itemID, out var lastQuantity) || lastQuantity != item.quantity)
+        {
+            return true;
+        }
+
+        if (!displayedFavorites.TryGetValue(item.itemID, out var lastFavorite) || lastFavorite != item.isFavorite)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    void TrackDisplayedItem(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        displayedQuantities[item.itemID] = item.quantity;
+        displayedFavorites[item.itemID] = item.isFavorite;
     }
 
     // 家具クリック時の処理（修正版）
