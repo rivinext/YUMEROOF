@@ -25,6 +25,8 @@ public class SlideTransitionManager : MonoBehaviour
     [SerializeField] private string sceneLoadingMessage = "Loading scene...";
     [SerializeField] private string furnitureLoadingMessage = "Placing furniture...";
     [SerializeField] private string finishingLoadingMessage = "Ready!";
+    [SerializeField, Min(0f)] private float furnitureLoadTimeoutSeconds = 10f;
+    [SerializeField] private string furnitureTimeoutMessage = "ロード継続中...";
 
     private readonly List<UISlidePanel> orderedSlidePanels = new(2);
 
@@ -144,6 +146,10 @@ public class SlideTransitionManager : MonoBehaviour
         float remainingWeight = Mathf.Clamp01(1f - sceneWeight);
         bool started = false;
         bool completed = false;
+        bool timedOut = false;
+        float elapsed = 0f;
+        float maxWaitSeconds = furnitureLoadTimeoutSeconds;
+        bool hasTimeout = maxWaitSeconds > 0f;
 
         void HandleStarted()
         {
@@ -195,6 +201,12 @@ public class SlideTransitionManager : MonoBehaviour
             }
 
             waitTimer += Time.unscaledDeltaTime;
+            elapsed += Time.unscaledDeltaTime;
+            if (hasTimeout && elapsed >= maxWaitSeconds)
+            {
+                timedOut = true;
+                break;
+            }
             yield return null;
         }
 
@@ -206,8 +218,14 @@ public class SlideTransitionManager : MonoBehaviour
 
         try
         {
-            while (!immediateComplete && started && !completed)
+            while (!immediateComplete && started && !completed && !timedOut)
             {
+                elapsed += Time.unscaledDeltaTime;
+                if (hasTimeout && elapsed >= maxWaitSeconds)
+                {
+                    timedOut = true;
+                    break;
+                }
                 yield return null;
             }
         }
@@ -216,6 +234,18 @@ public class SlideTransitionManager : MonoBehaviour
             furnitureMgr.OnFurnitureLoadStarted -= HandleStarted;
             furnitureMgr.OnFurnitureLoadProgress -= HandleProgress;
             furnitureMgr.OnFurnitureLoadCompleted -= HandleCompleted;
+        }
+
+        if (timedOut)
+        {
+            string timeoutMessage = string.IsNullOrEmpty(furnitureTimeoutMessage)
+                ? "ロード継続中..."
+                : furnitureTimeoutMessage;
+            Debug.LogWarning($"[SlideTransitionManager] Furniture load timed out after {maxWaitSeconds:0.0}s. Proceeding with slide out.");
+            UpdateLoadingIndicator(1f, timeoutMessage);
+            SetLoadingMessage(timeoutMessage);
+            HideLoadingIndicator();
+            yield break;
         }
 
         UpdateLoadingIndicator(1f, finishingLoadingMessage);
