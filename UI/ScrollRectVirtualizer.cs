@@ -21,6 +21,7 @@ public class ScrollRectVirtualizer : MonoBehaviour
     [FormerlySerializedAs("bufferItems")]
     [SerializeField] private int bufferRows = 2;
     [SerializeField] private bool disableLayoutComponents = true;
+    [SerializeField] private bool useGridLayoutMode = false;
 
     public Func<RectTransform> OnCreateItem;
     public Action<RectTransform> OnReleaseItem;
@@ -47,7 +48,7 @@ public class ScrollRectVirtualizer : MonoBehaviour
 
         EnsureViewportSetup();
         NormalizeRectTransforms();
-        if (disableLayoutComponents)
+        if (disableLayoutComponents && !useGridLayoutMode)
         {
             DisableLayoutComponents();
         }
@@ -264,6 +265,11 @@ public class ScrollRectVirtualizer : MonoBehaviour
 
     private void SetupItemRectTransform(RectTransform item)
     {
+        if (useGridLayoutMode)
+        {
+            return;
+        }
+
         var calculatedItemWidth = GetItemWidth();
         item.anchorMin = new Vector2(0f, 1f);
         item.anchorMax = new Vector2(0f, 1f);
@@ -274,6 +280,11 @@ public class ScrollRectVirtualizer : MonoBehaviour
 
     private void SetItemPosition(RectTransform item, int index)
     {
+        if (useGridLayoutMode)
+        {
+            return;
+        }
+
         var columns = Mathf.Max(1, columnCount);
         var row = index / columns;
         var col = index % columns;
