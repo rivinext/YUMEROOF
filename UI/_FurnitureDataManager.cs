@@ -29,6 +29,8 @@ public class FurnitureDataManager : MonoBehaviour
     // データ辞書（高速アクセス用）
     private Dictionary<string, FurnitureDataSO> furnitureDict = new Dictionary<string, FurnitureDataSO>();
     private Dictionary<string, MaterialDataSO> materialDict = new Dictionary<string, MaterialDataSO>();
+    private readonly Dictionary<string, FurnitureData> furnitureDataCache = new Dictionary<string, FurnitureData>();
+    private readonly Dictionary<string, GameObject> furniturePrefabCache = new Dictionary<string, GameObject>();
 
     void Awake()
     {
@@ -145,6 +147,8 @@ public class FurnitureDataManager : MonoBehaviour
     {
         // Furniture辞書構築
         furnitureDict.Clear();
+        furnitureDataCache.Clear();
+        furniturePrefabCache.Clear();
         if (furnitureDatabase != null)
         {
             foreach (var data in furnitureDatabase)
@@ -227,10 +231,20 @@ public class FurnitureDataManager : MonoBehaviour
     // 旧FurnitureData形式への変換（互換性維持）
     public FurnitureData GetFurnitureData(string idOrName)
     {
+        if (string.IsNullOrEmpty(idOrName))
+        {
+            return null;
+        }
+
+        if (furnitureDataCache.TryGetValue(idOrName, out var cachedData))
+        {
+            return cachedData;
+        }
+
         var so = GetFurnitureDataSO(idOrName);
         if (so == null) return null;
 
-        return new FurnitureData
+        var furnitureData = new FurnitureData
         {
             itemID = so.itemID,
             nameID = so.nameID,
@@ -258,6 +272,9 @@ public class FurnitureDataManager : MonoBehaviour
             dropMaterialIDs = so.dropMaterialIDs,
             dropRates = so.dropRates
         };
+
+        CacheFurnitureData(so, furnitureData);
+        return furnitureData;
     }
 
     // ScriptableObjectを直接取得
@@ -308,8 +325,24 @@ public class FurnitureDataManager : MonoBehaviour
     // Prefab取得
     public GameObject GetFurniturePrefab(string idOrName)
     {
+        if (string.IsNullOrEmpty(idOrName))
+        {
+            return null;
+        }
+
+        if (furniturePrefabCache.TryGetValue(idOrName, out var cachedPrefab))
+        {
+            return cachedPrefab;
+        }
+
         var so = GetFurnitureDataSO(idOrName);
-        return so != null ? so.prefab : null;
+        if (so == null)
+        {
+            return null;
+        }
+
+        CacheFurniturePrefab(so, so.prefab);
+        return so.prefab;
     }
 
     // アイコン取得
@@ -317,6 +350,42 @@ public class FurnitureDataManager : MonoBehaviour
     {
         var so = GetFurnitureDataSO(idOrName);
         return so != null ? so.icon : null;
+    }
+
+    private void CacheFurnitureData(FurnitureDataSO so, FurnitureData data)
+    {
+        if (so == null || data == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(so.itemID))
+        {
+            furnitureDataCache[so.itemID] = data;
+        }
+
+        if (!string.IsNullOrEmpty(so.nameID))
+        {
+            furnitureDataCache[so.nameID] = data;
+        }
+    }
+
+    private void CacheFurniturePrefab(FurnitureDataSO so, GameObject prefab)
+    {
+        if (so == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(so.itemID))
+        {
+            furniturePrefabCache[so.itemID] = prefab;
+        }
+
+        if (!string.IsNullOrEmpty(so.nameID))
+        {
+            furniturePrefabCache[so.nameID] = prefab;
+        }
     }
 
     // Material関連
