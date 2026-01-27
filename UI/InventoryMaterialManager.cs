@@ -19,6 +19,7 @@ public class InventoryMaterialManager : MonoBehaviour
     // アイコンのキャッシュ
     private Dictionary<Transform, GameObject> materialIcons = new Dictionary<Transform, GameObject>();
     private Queue<GameObject> materialIconPool = new Queue<GameObject>();
+    private readonly List<InventoryItem> activeMaterialItems = new List<InventoryItem>();
 
     // UI参照
     private GameObject materialContent;
@@ -47,18 +48,10 @@ public class InventoryMaterialManager : MonoBehaviour
             }
         }
 
-        if (InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.OnInventoryChanged += HandleInventoryChanged;
-        }
     }
 
     void OnDestroy()
     {
-        if (InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.OnInventoryChanged -= HandleInventoryChanged;
-        }
     }
 
     public void RefreshMaterialIcons(List<InventoryItem> items)
@@ -87,7 +80,9 @@ public class InventoryMaterialManager : MonoBehaviour
             SetupMaterialIcon(icon, items[i]);
             materialIcons[materialSlots[i]] = icon;
             icon.SetActive(true);
+            TrackActiveMaterialItem(i, items[i]);
         }
+        TrimActiveMaterialItems(Mathf.Min(materialSlots.Length, items.Count));
         // 各アイテムの詳細をログ出力
         if (ShouldLogDebug())
         {
@@ -95,6 +90,66 @@ public class InventoryMaterialManager : MonoBehaviour
             {
                 Debug.Log($"Material: {item.itemID}, Quantity: {item.quantity}");
             }
+        }
+    }
+
+    public void SyncMaterialIcons(List<InventoryItem> items)
+    {
+        if (materialSlots == null || materialSlots.Length == 0)
+        {
+            return;
+        }
+
+        int maxCount = Mathf.Min(materialSlots.Length, items.Count);
+        for (int i = 0; i < maxCount; i++)
+        {
+            var item = items[i];
+            var slot = materialSlots[i];
+            if (slot == null || item == null)
+            {
+                continue;
+            }
+
+            if (!materialIcons.TryGetValue(slot, out var icon) || icon == null)
+            {
+                icon = GetOrCreateMaterialIcon();
+                if (icon == null) continue;
+                icon.transform.SetParent(slot, false);
+                icon.transform.localPosition = Vector3.zero;
+                icon.transform.localScale = Vector3.one;
+                materialIcons[slot] = icon;
+            }
+
+            if (ShouldUpdateMaterialItem(i, item))
+            {
+                SetupMaterialIcon(icon, item);
+            }
+            else if (IsMaterialQuantityChanged(i, item))
+            {
+                UpdateMaterialQuantityText(icon, item);
+            }
+
+            icon.SetActive(true);
+            TrackActiveMaterialItem(i, item);
+        }
+
+        for (int i = maxCount; i < materialSlots.Length; i++)
+        {
+            var slot = materialSlots[i];
+            if (slot == null) continue;
+            if (materialIcons.TryGetValue(slot, out var icon) && icon != null)
+            {
+                icon.SetActive(false);
+                materialIconPool.Enqueue(icon);
+            }
+            materialIcons.Remove(slot);
+        }
+
+        TrimActiveMaterialItems(maxCount);
+
+        if (selectedMaterialItem != null && !items.Contains(selectedMaterialItem))
+        {
+            ClearSelection();
         }
     }
 
@@ -152,31 +207,7 @@ public class InventoryMaterialManager : MonoBehaviour
             }
         }
 
-        // 数量設定
-        Transform quantityTransform = null;
-        string[] quantityNames = { "Quantity", "Count", "QuantityText", "CountText" };
-        foreach (var name in quantityNames)
-        {
-            quantityTransform = iconObj.transform.Find(name);
-            if (quantityTransform != null) break;
-        }
-
-        if (quantityTransform != null)
-        {
-            Text quantityText = quantityTransform.GetComponent<Text>();
-            if (quantityText != null)
-            {
-                quantityText.text = item.quantity.ToString();
-            }
-            else
-            {
-                TMP_Text tmpText = quantityTransform.GetComponent<TMP_Text>();
-                if (tmpText != null)
-                {
-                    tmpText.text = item.quantity.ToString();
-                }
-            }
-        }
+        UpdateMaterialQuantityText(iconObj, item);
 
         // ボタン設定
         Button button = iconObj.GetComponent<Button>();
@@ -203,6 +234,91 @@ public class InventoryMaterialManager : MonoBehaviour
         {
             materialDescPanel.ShowMaterialDetail(item);
             materialDescPanel.gameObject.SetActive(true);
+        }
+    }
+
+    bool ShouldUpdateMaterialItem(int index, InventoryItem item)
+    {
+        if (index >= activeMaterialItems.Count)
+        {
+            return true;
+        }
+
+        var activeItem = activeMaterialItems[index];
+        if (activeItem == null)
+        {
+            return true;
+        }
+
+        return activeItem.itemID != item.itemID;
+    }
+
+    bool IsMaterialQuantityChanged(int index, InventoryItem item)
+    {
+        if (index >= activeMaterialItems.Count)
+        {
+            return true;
+        }
+
+        var activeItem = activeMaterialItems[index];
+        if (activeItem == null)
+        {
+            return true;
+        }
+
+        return activeItem.quantity != item.quantity;
+    }
+
+    void TrackActiveMaterialItem(int index, InventoryItem item)
+    {
+        if (index < activeMaterialItems.Count)
+        {
+            activeMaterialItems[index] = item;
+        }
+        else
+        {
+            while (activeMaterialItems.Count < index)
+            {
+                activeMaterialItems.Add(null);
+            }
+
+            activeMaterialItems.Add(item);
+        }
+    }
+
+    void TrimActiveMaterialItems(int count)
+    {
+        if (activeMaterialItems.Count > count)
+        {
+            activeMaterialItems.RemoveRange(count, activeMaterialItems.Count - count);
+        }
+    }
+
+    void UpdateMaterialQuantityText(GameObject iconObj, InventoryItem item)
+    {
+        Transform quantityTransform = null;
+        string[] quantityNames = { "Quantity", "Count", "QuantityText", "CountText" };
+        foreach (var name in quantityNames)
+        {
+            quantityTransform = iconObj.transform.Find(name);
+            if (quantityTransform != null) break;
+        }
+
+        if (quantityTransform != null)
+        {
+            Text quantityText = quantityTransform.GetComponent<Text>();
+            if (quantityText != null)
+            {
+                quantityText.text = item.quantity.ToString();
+            }
+            else
+            {
+                TMP_Text tmpText = quantityTransform.GetComponent<TMP_Text>();
+                if (tmpText != null)
+                {
+                    tmpText.text = item.quantity.ToString();
+                }
+            }
         }
     }
 
@@ -237,12 +353,4 @@ public class InventoryMaterialManager : MonoBehaviour
         materialIconPool.Clear();
     }
 
-    private void HandleInventoryChanged()
-    {
-        var items = InventoryManager.Instance?.GetMaterialList();
-        if (items != null)
-        {
-            RefreshMaterialIcons(items);
-        }
-    }
 }

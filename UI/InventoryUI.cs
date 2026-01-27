@@ -772,7 +772,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.OnInventoryChanged += RefreshInventoryDisplay;
+            InventoryManager.Instance.OnInventoryChanged += HandleInventoryChanged;
         }
     }
 
@@ -1205,6 +1205,19 @@ public class InventoryUI : MonoBehaviour
         }
     }
 
+    void HandleInventoryChanged()
+    {
+        if (isMaterialTab)
+        {
+            UpdateMaterialDisplayDiff();
+        }
+        else
+        {
+            UpdateFurnitureDisplayDiff();
+            UpdateCraftButtonState();
+        }
+    }
+
     void RefreshMaterialDisplay()
     {
         var items = GetSortedMaterialList();
@@ -1249,6 +1262,44 @@ public class InventoryUI : MonoBehaviour
         if (debugMode) Debug.Log($"RefreshFurnitureDisplay - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}, Wall filter: {showOnlyWallPlacement}, Ceiling filter: {showOnlyCeilingPlacement}");
 
         cardManager?.RefreshFurnitureCards(items);
+    }
+
+    void UpdateMaterialDisplayDiff()
+    {
+        var items = GetSortedMaterialList();
+
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            items = items.Where(item =>
+            {
+                var materialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
+                return materialData != null &&
+                       materialData.materialName.ToLower().Contains(searchQuery.ToLower());
+            }).ToList();
+        }
+
+        materialManager?.SyncMaterialIcons(items);
+        UpdateMaterialDescriptionArea();
+    }
+
+    void UpdateFurnitureDisplayDiff()
+    {
+        var items = GetSortedFurnitureList();
+
+        if (!string.IsNullOrEmpty(selectedFurnitureCategory) &&
+            !string.Equals(selectedFurnitureCategory, allCategoryKey, StringComparison.OrdinalIgnoreCase))
+        {
+            items = items.Where(ItemMatchesSelectedCategory).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            items = items.Where(item => item.itemID.ToLower().Contains(searchQuery.ToLower())).ToList();
+        }
+
+        if (debugMode) Debug.Log($"UpdateFurnitureDisplayDiff - Total items: {items.Count}, Craftable filter: {showOnlyCraftable}, Favorite filter: {showOnlyFavorites}, Wall filter: {showOnlyWallPlacement}, Ceiling filter: {showOnlyCeilingPlacement}");
+
+        cardManager?.SyncFurnitureCards(items);
     }
 
     bool ItemMatchesSelectedCategory(InventoryItem item)
@@ -1332,7 +1383,7 @@ public class InventoryUI : MonoBehaviour
     {
         if (InventoryManager.Instance != null)
         {
-            InventoryManager.Instance.OnInventoryChanged -= RefreshInventoryDisplay;
+            InventoryManager.Instance.OnInventoryChanged -= HandleInventoryChanged;
         }
 
         cardManager?.Cleanup();
