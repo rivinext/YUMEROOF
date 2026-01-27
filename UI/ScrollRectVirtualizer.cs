@@ -44,6 +44,7 @@ public class ScrollRectVirtualizer : MonoBehaviour
             return;
         }
 
+        EnsureViewportSetup();
         NormalizeRectTransforms();
         DisableLayoutComponents();
 
@@ -85,6 +86,40 @@ public class ScrollRectVirtualizer : MonoBehaviour
             content.anchorMin = new Vector2(0f, 1f);
             content.anchorMax = new Vector2(1f, 1f);
             content.pivot = new Vector2(0.5f, 1f);
+        }
+    }
+
+    private void EnsureViewportSetup()
+    {
+        if (viewport == null)
+        {
+            return;
+        }
+
+        var existingMask = viewport.GetComponent<Mask>();
+        if (existingMask != null)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(existingMask);
+            }
+            else
+            {
+                DestroyImmediate(existingMask);
+            }
+        }
+
+        var rectMask = viewport.GetComponent<RectMask2D>();
+        if (rectMask == null)
+        {
+            rectMask = viewport.gameObject.AddComponent<RectMask2D>();
+        }
+
+        rectMask.enabled = true;
+
+        if (content != null && content.parent != viewport)
+        {
+            content.SetParent(viewport, false);
         }
     }
 
