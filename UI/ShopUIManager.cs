@@ -40,6 +40,9 @@ public class ShopUIManager : MonoBehaviour
     [SerializeField] private float purchaseItemSpacing = 0f;
     [SerializeField] private float purchasePaddingTop = 0f;
     [SerializeField] private float purchasePaddingBottom = 0f;
+    [SerializeField] private bool purchaseUseGridLayoutMode = false;
+    [SerializeField] private int purchaseColumnCount = 1;
+    [SerializeField] private float purchaseHorizontalSpacing = 0f;
 
     [Header("Sell Virtualization")]
     [SerializeField] private ScrollRect sellScrollRect;
@@ -48,6 +51,9 @@ public class ShopUIManager : MonoBehaviour
     [SerializeField] private float sellItemSpacing = 0f;
     [SerializeField] private float sellPaddingTop = 0f;
     [SerializeField] private float sellPaddingBottom = 0f;
+    [SerializeField] private bool sellUseGridLayoutMode = false;
+    [SerializeField] private int sellColumnCount = 1;
+    [SerializeField] private float sellHorizontalSpacing = 0f;
 
     [Header("Description Panels")]
     public GameObject purchaseDescriptionArea;
@@ -1253,11 +1259,17 @@ public class ShopUIManager : MonoBehaviour
             }
         }
 
+        if (purchaseVirtualizer == null && purchaseScrollRect != null)
+        {
+            purchaseVirtualizer = purchaseScrollRect.gameObject.AddComponent<ScrollRectVirtualizer>();
+        }
+
         if (purchaseScrollRect == null || purchaseVirtualizer == null)
         {
             return;
         }
 
+        purchaseVirtualizer.ConfigureGridLayout(purchaseUseGridLayoutMode, purchaseColumnCount, purchaseHorizontalSpacing);
         purchaseVirtualizer.OnCreateItemWithIndex = HandleCreatePurchaseCard;
         purchaseVirtualizer.OnReleaseItemWithIndex = HandleReleasePurchaseCard;
         purchaseVirtualizer.OnBindItem = HandleBindPurchaseCard;
@@ -1283,11 +1295,17 @@ public class ShopUIManager : MonoBehaviour
             }
         }
 
+        if (sellVirtualizer == null && sellScrollRect != null)
+        {
+            sellVirtualizer = sellScrollRect.gameObject.AddComponent<ScrollRectVirtualizer>();
+        }
+
         if (sellScrollRect == null || sellVirtualizer == null)
         {
             return;
         }
 
+        sellVirtualizer.ConfigureGridLayout(sellUseGridLayoutMode, sellColumnCount, sellHorizontalSpacing);
         sellVirtualizer.OnCreateItemWithIndex = HandleCreateSellCard;
         sellVirtualizer.OnReleaseItemWithIndex = HandleReleaseSellCard;
         sellVirtualizer.OnBindItem = HandleBindSellCard;

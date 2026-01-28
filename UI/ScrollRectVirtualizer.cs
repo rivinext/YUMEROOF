@@ -33,6 +33,13 @@ public class ScrollRectVirtualizer : MonoBehaviour
     private bool isInitialized;
     private int itemCount;
 
+    public void ConfigureGridLayout(bool enableGridLayout, int columns, float columnSpacing)
+    {
+        useGridLayoutMode = enableGridLayout;
+        columnCount = Mathf.Max(1, columns);
+        horizontalSpacing = Mathf.Max(0f, columnSpacing);
+    }
+
     public void Initialize(ScrollRect targetScrollRect, float targetItemHeight, float targetSpacing, float topPadding, float bottomPadding)
     {
         scrollRect = targetScrollRect;
