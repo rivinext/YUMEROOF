@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization.Settings;
-using TMPro;
 
 /// <summary>
 /// Handles displaying purchase and sell tabs for the shop.
@@ -68,7 +67,7 @@ public class ShopUIManager : MonoBehaviour
     public Toggle sellCraftableToggle;
     public Toggle sellWallPlacementToggle;
     public Toggle sellCeilingPlacementToggle;
-    public TMP_InputField sellSearchField;
+    public InputField sellSearchField;
 
     [Header("Furniture Category Tabs")]
     [SerializeField] private Transform furnitureCategoryTabContainer;
@@ -122,8 +121,6 @@ public class ShopUIManager : MonoBehaviour
     private string sellSearchQuery = "";
     private string selectedFurnitureCategory;
     private readonly List<FurnitureCategoryToggle> categoryToggles = new();
-    private TMP_InputField currentSearchField;
-    private bool isSearchEditing;
 
     public bool IsOpen => isOpen;
     private bool IsSellVirtualizationActive => sellVirtualizer != null && sellScrollRect != null;
@@ -1139,34 +1136,15 @@ public class ShopUIManager : MonoBehaviour
             });
         }
 
-        ConfigureSearchField(sellSearchField);
-    }
-
-    void ConfigureSearchField(TMP_InputField field)
-    {
-        if (field == null)
+        if (sellSearchField != null)
         {
-            return;
+            sellSearchField.onValueChanged.RemoveAllListeners();
+            sellSearchField.onValueChanged.AddListener(value =>
+            {
+                sellSearchQuery = value;
+                PopulateSellTab();
+            });
         }
-
-        field.onValueChanged.RemoveAllListeners();
-        field.onValueChanged.AddListener(value =>
-        {
-            sellSearchQuery = value;
-            PopulateSellTab();
-        });
-
-        field.onSelect.RemoveAllListeners();
-        field.onSelect.AddListener(_ => HandleSearchFieldSelected(field));
-
-        field.onDeselect.RemoveAllListeners();
-        field.onDeselect.AddListener(_ => HandleSearchFieldDeselected(field));
-
-        field.onSubmit.RemoveAllListeners();
-        field.onSubmit.AddListener(_ => HandleSearchFieldSubmitted(field));
-
-        field.onEndEdit.RemoveAllListeners();
-        field.onEndEdit.AddListener(_ => HandleSearchFieldEndEdit(field));
     }
 
     void SetupSellVirtualization()
