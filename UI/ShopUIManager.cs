@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization.Settings;
+using TMPro;
 
 /// <summary>
 /// Handles displaying purchase and sell tabs for the shop.
@@ -32,17 +33,6 @@ public class ShopUIManager : MonoBehaviour
     public Toggle purchaseTabToggle;      // Toggle to show purchase tab
     public Toggle sellTabToggle;          // Toggle to show sell tab
     public Button closeButton;            // Button to close the shop UI
-
-    [Header("Purchase Virtualization")]
-    [SerializeField] private ScrollRect purchaseScrollRect;
-    [SerializeField] private ScrollRectVirtualizer purchaseVirtualizer;
-    [SerializeField] private float purchaseItemHeight = 120f;
-    [SerializeField] private float purchaseItemSpacing = 0f;
-    [SerializeField] private float purchasePaddingTop = 0f;
-    [SerializeField] private float purchasePaddingBottom = 0f;
-    [SerializeField] private bool purchaseUseGridLayoutMode = false;
-    [SerializeField] private int purchaseColumnCount = 1;
-    [SerializeField] private float purchaseHorizontalSpacing = 0f;
 
     [Header("Sell Virtualization")]
     [SerializeField] private ScrollRect sellScrollRect;
@@ -78,7 +68,7 @@ public class ShopUIManager : MonoBehaviour
     public Toggle sellCraftableToggle;
     public Toggle sellWallPlacementToggle;
     public Toggle sellCeilingPlacementToggle;
-    public InputField sellSearchField;
+    public TMP_InputField sellSearchField;
 
     [Header("Furniture Category Tabs")]
     [SerializeField] private Transform furnitureCategoryTabContainer;
@@ -132,9 +122,10 @@ public class ShopUIManager : MonoBehaviour
     private string sellSearchQuery = "";
     private string selectedFurnitureCategory;
     private readonly List<FurnitureCategoryToggle> categoryToggles = new();
+    private TMP_InputField currentSearchField;
+    private bool isSearchEditing;
 
     public bool IsOpen => isOpen;
-    private bool IsPurchaseVirtualizationActive => purchaseVirtualizer != null && purchaseScrollRect != null;
     private bool IsSellVirtualizationActive => sellVirtualizer != null && sellScrollRect != null;
     private float currentSfxVolume = 1f;
 
@@ -206,7 +197,6 @@ public class ShopUIManager : MonoBehaviour
 
         SetupSellTabFilters();
         SetupFurnitureCategoryTabs();
-        SetupPurchaseVirtualization();
         SetupSellVirtualization();
     }
 
@@ -594,32 +584,24 @@ public class ShopUIManager : MonoBehaviour
             selectedForPurchase = null;
         }
 
-        if (IsPurchaseVirtualizationActive)
+        var keysToRelease = activePurchaseCards.Keys.Where(id => !requiredIds.Contains(id)).ToList();
+        foreach (var key in keysToRelease)
         {
-            purchaseVirtualizer.SetItemCount(dailyPurchaseItems.Count, true);
-            purchaseVirtualizer.RefreshVisibleItems();
+            ReleasePurchaseCard(key);
         }
-        else
-        {
-            var keysToRelease = activePurchaseCards.Keys.Where(id => !requiredIds.Contains(id)).ToList();
-            foreach (var key in keysToRelease)
-            {
-                ReleasePurchaseCard(key);
-            }
 
-            for (int i = 0; i < dailyPurchaseItems.Count; i++)
-            {
-                var item = dailyPurchaseItems[i];
-                var card = GetOrCreatePurchaseCard(item);
-                BindPurchaseCard(card, item);
-                card.transform.SetSiblingIndex(i);
-            }
+        for (int i = 0; i < dailyPurchaseItems.Count; i++)
+        {
+            var item = dailyPurchaseItems[i];
+            var card = GetOrCreatePurchaseCard(item);
+            BindPurchaseCard(card, item);
+            card.transform.SetSiblingIndex(i);
         }
 
         UpdatePurchaseDescription(selectedForPurchase);
     }
 
-    void PopulateSellTab()
+    void PopulateSellTab(bool resetScrollPosition = true)
     {
         if (sellContent == null || sellItemCardPrefab == null) return;
         SubscribeToInventoryEvents();
@@ -643,7 +625,7 @@ public class ShopUIManager : MonoBehaviour
 
         if (IsSellVirtualizationActive)
         {
-            sellVirtualizer.SetItemCount(cachedSellItems.Count, true);
+            sellVirtualizer.SetItemCount(cachedSellItems.Count, resetScrollPosition);
             sellVirtualizer.RefreshVisibleItems();
         }
         else
@@ -700,16 +682,6 @@ public class ShopUIManager : MonoBehaviour
         return items;
     }
 
-    ShopItem GetPurchaseItemByIndex(int index)
-    {
-        if (index < 0 || index >= dailyPurchaseItems.Count)
-        {
-            return null;
-        }
-
-        return dailyPurchaseItems[index];
-    }
-
     InventoryItem GetSellItemByIndex(int index)
     {
         if (index < 0 || index >= cachedSellItems.Count)
@@ -718,68 +690,6 @@ public class ShopUIManager : MonoBehaviour
         }
 
         return cachedSellItems[index];
-    }
-
-    RectTransform HandleCreatePurchaseCard(int index)
-    {
-        var item = GetPurchaseItemByIndex(index);
-        if (item == null)
-        {
-            return null;
-        }
-
-        var card = GetOrCreatePurchaseCard(item);
-        return card != null ? card.transform as RectTransform : null;
-    }
-
-    void HandleReleasePurchaseCard(int index, RectTransform itemTransform)
-    {
-        string itemId = null;
-        var card = itemTransform != null ? itemTransform.GetComponent<InventoryItemCardPurchase>() : null;
-        if (card != null && card.currentItem != null)
-        {
-            itemId = card.currentItem.itemID;
-        }
-        else
-        {
-            var item = GetPurchaseItemByIndex(index);
-            if (item != null)
-            {
-                itemId = item.itemID;
-            }
-        }
-
-        if (!string.IsNullOrEmpty(itemId))
-        {
-            ReleasePurchaseCard(itemId);
-        }
-    }
-
-    void HandleBindPurchaseCard(int index, RectTransform itemTransform)
-    {
-        var item = GetPurchaseItemByIndex(index);
-        if (item == null || itemTransform == null)
-        {
-            return;
-        }
-
-        var card = itemTransform.GetComponent<InventoryItemCardPurchase>();
-        if (card == null)
-        {
-            return;
-        }
-
-        var previousItemId = card.currentItem != null ? card.currentItem.itemID : null;
-        if (!string.IsNullOrEmpty(previousItemId) &&
-            previousItemId != item.itemID &&
-            activePurchaseCards.TryGetValue(previousItemId, out var existingCard) &&
-            existingCard == card)
-        {
-            activePurchaseCards.Remove(previousItemId);
-        }
-
-        BindPurchaseCard(card, item);
-        activePurchaseCards[item.itemID] = card;
     }
 
     RectTransform HandleCreateSellCard(int index)
@@ -1020,7 +930,7 @@ public class ShopUIManager : MonoBehaviour
 
         if (IsSellVirtualizationActive)
         {
-            PopulateSellTab();
+            PopulateSellTab(false);
             return;
         }
 
@@ -1130,7 +1040,7 @@ public class ShopUIManager : MonoBehaviour
             return;
         }
 
-        PopulateSellTab();
+        PopulateSellTab(false);
     }
 
     void HandleInventoryItemRemoved(InventoryItem item)
@@ -1142,7 +1052,7 @@ public class ShopUIManager : MonoBehaviour
 
         if (IsSellVirtualizationActive)
         {
-            PopulateSellTab();
+            PopulateSellTab(false);
             return;
         }
 
@@ -1229,51 +1139,93 @@ public class ShopUIManager : MonoBehaviour
             });
         }
 
-        if (sellSearchField != null)
-        {
-            sellSearchField.onValueChanged.RemoveAllListeners();
-            sellSearchField.onValueChanged.AddListener(value =>
-            {
-                sellSearchQuery = value;
-                PopulateSellTab();
-            });
-        }
+        ConfigureSearchField(sellSearchField);
     }
 
-    void SetupPurchaseVirtualization()
+    void ConfigureSearchField(TMP_InputField field)
     {
-        if (purchaseScrollRect == null && purchaseContent != null)
-        {
-            purchaseScrollRect = purchaseContent.GetComponentInParent<ScrollRect>();
-        }
-
-        if (purchaseVirtualizer == null)
-        {
-            if (purchaseScrollRect != null)
-            {
-                purchaseVirtualizer = purchaseScrollRect.GetComponent<ScrollRectVirtualizer>();
-            }
-            else if (purchaseContent != null)
-            {
-                purchaseVirtualizer = purchaseContent.GetComponentInParent<ScrollRectVirtualizer>();
-            }
-        }
-
-        if (purchaseVirtualizer == null && purchaseScrollRect != null)
-        {
-            purchaseVirtualizer = purchaseScrollRect.gameObject.AddComponent<ScrollRectVirtualizer>();
-        }
-
-        if (purchaseScrollRect == null || purchaseVirtualizer == null)
+        if (field == null)
         {
             return;
         }
 
-        purchaseVirtualizer.ConfigureGridLayout(purchaseUseGridLayoutMode, purchaseColumnCount, purchaseHorizontalSpacing);
-        purchaseVirtualizer.OnCreateItemWithIndex = HandleCreatePurchaseCard;
-        purchaseVirtualizer.OnReleaseItemWithIndex = HandleReleasePurchaseCard;
-        purchaseVirtualizer.OnBindItem = HandleBindPurchaseCard;
-        purchaseVirtualizer.Initialize(purchaseScrollRect, purchaseItemHeight, purchaseItemSpacing, purchasePaddingTop, purchasePaddingBottom);
+        field.onValueChanged.RemoveAllListeners();
+        field.onValueChanged.AddListener(value =>
+        {
+            sellSearchQuery = value;
+            PopulateSellTab();
+        });
+
+        field.onSelect.RemoveAllListeners();
+        field.onSelect.AddListener(_ => HandleSearchFieldSelected(field));
+
+        field.onDeselect.RemoveAllListeners();
+        field.onDeselect.AddListener(_ => HandleSearchFieldDeselected(field));
+
+        field.onSubmit.RemoveAllListeners();
+        field.onSubmit.AddListener(_ => HandleSearchFieldSubmitted(field));
+
+        field.onEndEdit.RemoveAllListeners();
+        field.onEndEdit.AddListener(_ => HandleSearchFieldEndEdit(field));
+    }
+
+    void HandleSearchFieldSelected(TMP_InputField field)
+    {
+        if (field == null)
+        {
+            return;
+        }
+
+        if (currentSearchField == field && isSearchEditing)
+        {
+            return;
+        }
+
+        currentSearchField = field;
+        isSearchEditing = true;
+        PlayerController.SetGlobalInputEnabled(false);
+    }
+
+    void HandleSearchFieldDeselected(TMP_InputField field)
+    {
+        if (currentSearchField != field)
+        {
+            return;
+        }
+
+        ClearSearchEditingState();
+    }
+
+    void HandleSearchFieldSubmitted(TMP_InputField field)
+    {
+        if (currentSearchField != field)
+        {
+            return;
+        }
+
+        currentSearchField.DeactivateInputField();
+    }
+
+    void HandleSearchFieldEndEdit(TMP_InputField field)
+    {
+        if (currentSearchField != field)
+        {
+            return;
+        }
+
+        ClearSearchEditingState();
+    }
+
+    void ClearSearchEditingState()
+    {
+        if (!isSearchEditing)
+        {
+            return;
+        }
+
+        isSearchEditing = false;
+        currentSearchField = null;
+        PlayerController.SetGlobalInputEnabled(true);
     }
 
     void SetupSellVirtualization()
@@ -1322,10 +1274,39 @@ public class ShopUIManager : MonoBehaviour
 
         ClearFurnitureCategoryTabs();
 
-        var categories = GetFurnitureCategories();
+        var categories = GetFurnitureCategories().ToList();
+        var orderedCategories = new List<string>();
+        if (categoryDisplaySettings != null && categoryDisplaySettings.Count > 0)
+        {
+            var availableCategories = new HashSet<string>(categories, StringComparer.OrdinalIgnoreCase);
+            foreach (var setting in categoryDisplaySettings)
+            {
+                if (string.IsNullOrEmpty(setting.categoryId))
+                {
+                    continue;
+                }
+
+                if (availableCategories.Remove(setting.categoryId))
+                {
+                    orderedCategories.Add(setting.categoryId);
+                }
+            }
+
+            foreach (var category in categories)
+            {
+                if (availableCategories.Contains(category))
+                {
+                    orderedCategories.Add(category);
+                }
+            }
+        }
+        else
+        {
+            orderedCategories = categories;
+        }
         CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategoryIcon ?? defaultCategoryIcon);
 
-        foreach (var category in categories)
+        foreach (var category in orderedCategories)
         {
             CreateFurnitureCategoryToggle(category, ResolveCategoryDisplayName(category), ResolveCategoryIcon(category));
         }
