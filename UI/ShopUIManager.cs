@@ -33,6 +33,22 @@ public class ShopUIManager : MonoBehaviour
     public Toggle sellTabToggle;          // Toggle to show sell tab
     public Button closeButton;            // Button to close the shop UI
 
+    [Header("Purchase Virtualization")]
+    [SerializeField] private ScrollRect purchaseScrollRect;
+    [SerializeField] private ScrollRectVirtualizer purchaseVirtualizer;
+    [SerializeField] private float purchaseItemHeight = 120f;
+    [SerializeField] private float purchaseItemSpacing = 0f;
+    [SerializeField] private float purchasePaddingTop = 0f;
+    [SerializeField] private float purchasePaddingBottom = 0f;
+
+    [Header("Sell Virtualization")]
+    [SerializeField] private ScrollRect sellScrollRect;
+    [SerializeField] private ScrollRectVirtualizer sellVirtualizer;
+    [SerializeField] private float sellItemHeight = 120f;
+    [SerializeField] private float sellItemSpacing = 0f;
+    [SerializeField] private float sellPaddingTop = 0f;
+    [SerializeField] private float sellPaddingBottom = 0f;
+
     [Header("Description Panels")]
     public GameObject purchaseDescriptionArea;
     public GameObject sellDescriptionArea;
@@ -97,6 +113,7 @@ public class ShopUIManager : MonoBehaviour
     private readonly Stack<InventoryItemCardPurchase> purchaseCardPool = new();
     private readonly Dictionary<string, InventoryItemCardSell> activeSellCards = new();
     private readonly Stack<InventoryItemCardSell> sellCardPool = new();
+    private readonly List<InventoryItem> cachedSellItems = new();
     private bool inventoryEventsSubscribed;
 
     // Sell tab filter state
@@ -111,6 +128,8 @@ public class ShopUIManager : MonoBehaviour
     private readonly List<FurnitureCategoryToggle> categoryToggles = new();
 
     public bool IsOpen => isOpen;
+    private bool IsPurchaseVirtualizationActive => purchaseVirtualizer != null && purchaseScrollRect != null;
+    private bool IsSellVirtualizationActive => sellVirtualizer != null && sellScrollRect != null;
     private float currentSfxVolume = 1f;
 
     void Awake()
@@ -181,6 +200,8 @@ public class ShopUIManager : MonoBehaviour
 
         SetupSellTabFilters();
         SetupFurnitureCategoryTabs();
+        SetupPurchaseVirtualization();
+        SetupSellVirtualization();
     }
 
     void OnEnable()
@@ -562,23 +583,31 @@ public class ShopUIManager : MonoBehaviour
         if (purchaseContent == null || purchaseItemCardPrefab == null) return;
 
         var requiredIds = new HashSet<string>(dailyPurchaseItems.Select(i => i.itemID));
-        var keysToRelease = activePurchaseCards.Keys.Where(id => !requiredIds.Contains(id)).ToList();
-        foreach (var key in keysToRelease)
-        {
-            ReleasePurchaseCard(key);
-        }
-
         if (selectedForPurchase != null && !requiredIds.Contains(selectedForPurchase.itemID))
         {
             selectedForPurchase = null;
         }
 
-        for (int i = 0; i < dailyPurchaseItems.Count; i++)
+        if (IsPurchaseVirtualizationActive)
         {
-            var item = dailyPurchaseItems[i];
-            var card = GetOrCreatePurchaseCard(item);
-            BindPurchaseCard(card, item);
-            card.transform.SetSiblingIndex(i);
+            purchaseVirtualizer.SetItemCount(dailyPurchaseItems.Count, true);
+            purchaseVirtualizer.RefreshVisibleItems();
+        }
+        else
+        {
+            var keysToRelease = activePurchaseCards.Keys.Where(id => !requiredIds.Contains(id)).ToList();
+            foreach (var key in keysToRelease)
+            {
+                ReleasePurchaseCard(key);
+            }
+
+            for (int i = 0; i < dailyPurchaseItems.Count; i++)
+            {
+                var item = dailyPurchaseItems[i];
+                var card = GetOrCreatePurchaseCard(item);
+                BindPurchaseCard(card, item);
+                card.transform.SetSiblingIndex(i);
+            }
         }
 
         UpdatePurchaseDescription(selectedForPurchase);
@@ -590,25 +619,9 @@ public class ShopUIManager : MonoBehaviour
         SubscribeToInventoryEvents();
 
         var sellItems = BuildSellItemList();
-        var requiredKeys = new HashSet<string>(sellItems.Select(GetSellCardKey));
-
-        var currentKeys = activeSellCards.Keys.ToList();
-        foreach (var key in currentKeys)
-        {
-            if (!requiredKeys.Contains(key))
-            {
-                ReleaseSellCard(key);
-            }
-        }
-
-        for (int i = 0; i < sellItems.Count; i++)
-        {
-            var item = sellItems[i];
-            var key = GetSellCardKey(item);
-            var card = GetOrCreateSellCard(key);
-            BindSellCard(card, item);
-            card.transform.SetSiblingIndex(i);
-        }
+        cachedSellItems.Clear();
+        cachedSellItems.AddRange(sellItems);
+        var requiredKeys = new HashSet<string>(cachedSellItems.Select(GetSellCardKey));
 
         if (selectedForSale != null && !requiredKeys.Contains(GetSellCardKey(selectedForSale)))
         {
@@ -621,6 +634,32 @@ public class ShopUIManager : MonoBehaviour
         }
 
         UpdateSellButtonState();
+
+        if (IsSellVirtualizationActive)
+        {
+            sellVirtualizer.SetItemCount(cachedSellItems.Count, true);
+            sellVirtualizer.RefreshVisibleItems();
+        }
+        else
+        {
+            var currentKeys = activeSellCards.Keys.ToList();
+            foreach (var key in currentKeys)
+            {
+                if (!requiredKeys.Contains(key))
+                {
+                    ReleaseSellCard(key);
+                }
+            }
+
+            for (int i = 0; i < cachedSellItems.Count; i++)
+            {
+                var item = cachedSellItems[i];
+                var key = GetSellCardKey(item);
+                var card = GetOrCreateSellCard(key);
+                BindSellCard(card, item);
+                card.transform.SetSiblingIndex(i);
+            }
+        }
     }
 
     List<InventoryItem> BuildSellItemList()
@@ -653,6 +692,151 @@ public class ShopUIManager : MonoBehaviour
         }
 
         return items;
+    }
+
+    ShopItem GetPurchaseItemByIndex(int index)
+    {
+        if (index < 0 || index >= dailyPurchaseItems.Count)
+        {
+            return null;
+        }
+
+        return dailyPurchaseItems[index];
+    }
+
+    InventoryItem GetSellItemByIndex(int index)
+    {
+        if (index < 0 || index >= cachedSellItems.Count)
+        {
+            return null;
+        }
+
+        return cachedSellItems[index];
+    }
+
+    RectTransform HandleCreatePurchaseCard(int index)
+    {
+        var item = GetPurchaseItemByIndex(index);
+        if (item == null)
+        {
+            return null;
+        }
+
+        var card = GetOrCreatePurchaseCard(item);
+        return card != null ? card.transform as RectTransform : null;
+    }
+
+    void HandleReleasePurchaseCard(int index, RectTransform itemTransform)
+    {
+        string itemId = null;
+        var card = itemTransform != null ? itemTransform.GetComponent<InventoryItemCardPurchase>() : null;
+        if (card != null && card.currentItem != null)
+        {
+            itemId = card.currentItem.itemID;
+        }
+        else
+        {
+            var item = GetPurchaseItemByIndex(index);
+            if (item != null)
+            {
+                itemId = item.itemID;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(itemId))
+        {
+            ReleasePurchaseCard(itemId);
+        }
+    }
+
+    void HandleBindPurchaseCard(int index, RectTransform itemTransform)
+    {
+        var item = GetPurchaseItemByIndex(index);
+        if (item == null || itemTransform == null)
+        {
+            return;
+        }
+
+        var card = itemTransform.GetComponent<InventoryItemCardPurchase>();
+        if (card == null)
+        {
+            return;
+        }
+
+        var previousItemId = card.currentItem != null ? card.currentItem.itemID : null;
+        if (!string.IsNullOrEmpty(previousItemId) &&
+            previousItemId != item.itemID &&
+            activePurchaseCards.TryGetValue(previousItemId, out var existingCard) &&
+            existingCard == card)
+        {
+            activePurchaseCards.Remove(previousItemId);
+        }
+
+        BindPurchaseCard(card, item);
+        activePurchaseCards[item.itemID] = card;
+    }
+
+    RectTransform HandleCreateSellCard(int index)
+    {
+        var item = GetSellItemByIndex(index);
+        if (item == null)
+        {
+            return null;
+        }
+
+        var key = GetSellCardKey(item);
+        var card = GetOrCreateSellCard(key);
+        return card != null ? card.transform as RectTransform : null;
+    }
+
+    void HandleReleaseSellCard(int index, RectTransform itemTransform)
+    {
+        string key = null;
+        var card = itemTransform != null ? itemTransform.GetComponent<InventoryItemCardSell>() : null;
+        if (card != null && card.currentItem != null)
+        {
+            key = GetSellCardKey(card.currentItem);
+        }
+        else
+        {
+            var item = GetSellItemByIndex(index);
+            if (item != null)
+            {
+                key = GetSellCardKey(item);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(key))
+        {
+            ReleaseSellCard(key);
+        }
+    }
+
+    void HandleBindSellCard(int index, RectTransform itemTransform)
+    {
+        var item = GetSellItemByIndex(index);
+        if (item == null || itemTransform == null)
+        {
+            return;
+        }
+
+        var card = itemTransform.GetComponent<InventoryItemCardSell>();
+        if (card == null)
+        {
+            return;
+        }
+
+        var previousKey = card.currentItem != null ? GetSellCardKey(card.currentItem) : null;
+        var currentKey = GetSellCardKey(item);
+        if (!string.IsNullOrEmpty(previousKey) && previousKey != currentKey &&
+            activeSellCards.TryGetValue(previousKey, out var existingCard) &&
+            existingCard == card)
+        {
+            activeSellCards.Remove(previousKey);
+        }
+
+        BindSellCard(card, item);
+        activeSellCards[currentKey] = card;
     }
 
     bool ShouldDisplayItem(InventoryItem item)
@@ -828,6 +1012,12 @@ public class ShopUIManager : MonoBehaviour
             return;
         }
 
+        if (IsSellVirtualizationActive)
+        {
+            PopulateSellTab();
+            return;
+        }
+
         if (!ShouldDisplayItem(item))
         {
             ReleaseSellCard(GetSellCardKey(item));
@@ -944,6 +1134,12 @@ public class ShopUIManager : MonoBehaviour
             return;
         }
 
+        if (IsSellVirtualizationActive)
+        {
+            PopulateSellTab();
+            return;
+        }
+
         ReleaseSellCard(GetSellCardKey(item));
     }
 
@@ -1036,6 +1232,66 @@ public class ShopUIManager : MonoBehaviour
                 PopulateSellTab();
             });
         }
+    }
+
+    void SetupPurchaseVirtualization()
+    {
+        if (purchaseScrollRect == null && purchaseContent != null)
+        {
+            purchaseScrollRect = purchaseContent.GetComponentInParent<ScrollRect>();
+        }
+
+        if (purchaseVirtualizer == null)
+        {
+            if (purchaseScrollRect != null)
+            {
+                purchaseVirtualizer = purchaseScrollRect.GetComponent<ScrollRectVirtualizer>();
+            }
+            else if (purchaseContent != null)
+            {
+                purchaseVirtualizer = purchaseContent.GetComponentInParent<ScrollRectVirtualizer>();
+            }
+        }
+
+        if (purchaseScrollRect == null || purchaseVirtualizer == null)
+        {
+            return;
+        }
+
+        purchaseVirtualizer.OnCreateItemWithIndex = HandleCreatePurchaseCard;
+        purchaseVirtualizer.OnReleaseItemWithIndex = HandleReleasePurchaseCard;
+        purchaseVirtualizer.OnBindItem = HandleBindPurchaseCard;
+        purchaseVirtualizer.Initialize(purchaseScrollRect, purchaseItemHeight, purchaseItemSpacing, purchasePaddingTop, purchasePaddingBottom);
+    }
+
+    void SetupSellVirtualization()
+    {
+        if (sellScrollRect == null && sellContent != null)
+        {
+            sellScrollRect = sellContent.GetComponentInParent<ScrollRect>();
+        }
+
+        if (sellVirtualizer == null)
+        {
+            if (sellScrollRect != null)
+            {
+                sellVirtualizer = sellScrollRect.GetComponent<ScrollRectVirtualizer>();
+            }
+            else if (sellContent != null)
+            {
+                sellVirtualizer = sellContent.GetComponentInParent<ScrollRectVirtualizer>();
+            }
+        }
+
+        if (sellScrollRect == null || sellVirtualizer == null)
+        {
+            return;
+        }
+
+        sellVirtualizer.OnCreateItemWithIndex = HandleCreateSellCard;
+        sellVirtualizer.OnReleaseItemWithIndex = HandleReleaseSellCard;
+        sellVirtualizer.OnBindItem = HandleBindSellCard;
+        sellVirtualizer.Initialize(sellScrollRect, sellItemHeight, sellItemSpacing, sellPaddingTop, sellPaddingBottom);
     }
 
     void SetupFurnitureCategoryTabs()
