@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization.Settings;
+using TMPro;
 
 /// <summary>
 /// Handles displaying purchase and sell tabs for the shop.
@@ -67,7 +68,7 @@ public class ShopUIManager : MonoBehaviour
     public Toggle sellCraftableToggle;
     public Toggle sellWallPlacementToggle;
     public Toggle sellCeilingPlacementToggle;
-    public InputField sellSearchField;
+    public TMP_InputField sellSearchField;
 
     [Header("Furniture Category Tabs")]
     [SerializeField] private Transform furnitureCategoryTabContainer;
@@ -119,6 +120,9 @@ public class ShopUIManager : MonoBehaviour
     private bool sellShowOnlyWallPlacement = false;
     private bool sellShowOnlyCeilingPlacement = false;
     private string sellSearchQuery = "";
+    private bool isSellSearchEditing = false;
+    private TMP_InputField currentSellSearchField;
+    private bool sellSearchInputWasEnabled = false;
     private string selectedFurnitureCategory;
     private readonly List<FurnitureCategoryToggle> categoryToggles = new();
 
@@ -311,6 +315,16 @@ public class ShopUIManager : MonoBehaviour
     {
         if (!isOpen)
             return;
+
+        if (isSellSearchEditing)
+        {
+            if (currentSellSearchField != null && currentSellSearchField.isFocused)
+            {
+                currentSellSearchField.DeactivateInputField();
+            }
+
+            ClearSellSearchEditingState();
+        }
 
         isOpen = false;
         ClearDescriptionPanels();
@@ -1144,7 +1158,77 @@ public class ShopUIManager : MonoBehaviour
                 sellSearchQuery = value;
                 PopulateSellTab();
             });
+
+            sellSearchField.onSelect.RemoveAllListeners();
+            sellSearchField.onSelect.AddListener(_ => HandleSellSearchFieldSelected(sellSearchField));
+
+            sellSearchField.onDeselect.RemoveAllListeners();
+            sellSearchField.onDeselect.AddListener(_ => HandleSellSearchFieldDeselected(sellSearchField));
+
+            sellSearchField.onSubmit.RemoveAllListeners();
+            sellSearchField.onSubmit.AddListener(_ => HandleSellSearchFieldSubmitted(sellSearchField));
+
+            sellSearchField.onEndEdit.RemoveAllListeners();
+            sellSearchField.onEndEdit.AddListener(_ => HandleSellSearchFieldEndEdit(sellSearchField));
+
+            var placeholder = sellSearchField.placeholder as TMP_Text;
+            if (placeholder != null) placeholder.text = "Search...";
         }
+    }
+
+    void HandleSellSearchFieldSelected(TMP_InputField field)
+    {
+        if (field == null)
+            return;
+
+        if (currentSellSearchField == field && isSellSearchEditing)
+            return;
+
+        currentSellSearchField = field;
+        isSellSearchEditing = true;
+        sellSearchInputWasEnabled = PlayerController.GlobalInputEnabled;
+        if (sellSearchInputWasEnabled)
+        {
+            PlayerController.SetGlobalInputEnabled(false);
+        }
+    }
+
+    void HandleSellSearchFieldDeselected(TMP_InputField field)
+    {
+        if (currentSellSearchField != field)
+            return;
+
+        ClearSellSearchEditingState();
+    }
+
+    void HandleSellSearchFieldSubmitted(TMP_InputField field)
+    {
+        if (currentSellSearchField != field)
+            return;
+
+        currentSellSearchField.DeactivateInputField();
+    }
+
+    void HandleSellSearchFieldEndEdit(TMP_InputField field)
+    {
+        if (currentSellSearchField != field)
+            return;
+
+        ClearSellSearchEditingState();
+    }
+
+    void ClearSellSearchEditingState()
+    {
+        if (!isSellSearchEditing)
+            return;
+
+        isSellSearchEditing = false;
+        currentSellSearchField = null;
+        if (sellSearchInputWasEnabled)
+        {
+            PlayerController.SetGlobalInputEnabled(true);
+        }
+        sellSearchInputWasEnabled = false;
     }
 
     void SetupSellVirtualization()
