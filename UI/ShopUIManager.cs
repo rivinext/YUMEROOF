@@ -1322,10 +1322,39 @@ public class ShopUIManager : MonoBehaviour
 
         ClearFurnitureCategoryTabs();
 
-        var categories = GetFurnitureCategories();
+        var categories = GetFurnitureCategories().ToList();
+        var orderedCategories = new List<string>();
+        if (categoryDisplaySettings != null && categoryDisplaySettings.Count > 0)
+        {
+            var availableCategories = new HashSet<string>(categories, StringComparer.OrdinalIgnoreCase);
+            foreach (var setting in categoryDisplaySettings)
+            {
+                if (string.IsNullOrEmpty(setting.categoryId))
+                {
+                    continue;
+                }
+
+                if (availableCategories.Remove(setting.categoryId))
+                {
+                    orderedCategories.Add(setting.categoryId);
+                }
+            }
+
+            foreach (var category in categories)
+            {
+                if (availableCategories.Contains(category))
+                {
+                    orderedCategories.Add(category);
+                }
+            }
+        }
+        else
+        {
+            orderedCategories = categories;
+        }
         CreateFurnitureCategoryToggle(allCategoryKey, allCategoryLabel, allCategoryIcon ?? defaultCategoryIcon);
 
-        foreach (var category in categories)
+        foreach (var category in orderedCategories)
         {
             CreateFurnitureCategoryToggle(category, ResolveCategoryDisplayName(category), ResolveCategoryIcon(category));
         }
