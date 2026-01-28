@@ -24,7 +24,9 @@ public class ScrollRectVirtualizer : MonoBehaviour
     [SerializeField] private bool useGridLayoutMode = false;
 
     public Func<RectTransform> OnCreateItem;
+    public Func<int, RectTransform> OnCreateItemWithIndex;
     public Action<RectTransform> OnReleaseItem;
+    public Action<int, RectTransform> OnReleaseItemWithIndex;
     public Action<int, RectTransform> OnBindItem;
 
     private readonly Dictionary<int, RectTransform> activeItems = new Dictionary<int, RectTransform>();
@@ -216,7 +218,7 @@ public class ScrollRectVirtualizer : MonoBehaviour
         {
             if (!activeItems.TryGetValue(index, out var item))
             {
-                item = GetItemFromPool();
+                item = GetItemFromPool(index);
                 if (item == null)
                 {
                     continue;
@@ -239,8 +241,13 @@ public class ScrollRectVirtualizer : MonoBehaviour
         }
     }
 
-    private RectTransform GetItemFromPool()
+    private RectTransform GetItemFromPool(int index)
     {
+        if (OnCreateItemWithIndex != null)
+        {
+            return OnCreateItemWithIndex.Invoke(index);
+        }
+
         return OnCreateItem?.Invoke();
     }
 
@@ -252,6 +259,7 @@ public class ScrollRectVirtualizer : MonoBehaviour
         }
 
         activeItems.Remove(index);
+        OnReleaseItemWithIndex?.Invoke(index, item);
         OnReleaseItem?.Invoke(item);
     }
 
