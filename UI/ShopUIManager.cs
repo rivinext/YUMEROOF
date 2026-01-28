@@ -1169,65 +1169,6 @@ public class ShopUIManager : MonoBehaviour
         field.onEndEdit.AddListener(_ => HandleSearchFieldEndEdit(field));
     }
 
-    void HandleSearchFieldSelected(TMP_InputField field)
-    {
-        if (field == null)
-        {
-            return;
-        }
-
-        if (currentSearchField == field && isSearchEditing)
-        {
-            return;
-        }
-
-        currentSearchField = field;
-        isSearchEditing = true;
-        PlayerController.SetGlobalInputEnabled(false);
-    }
-
-    void HandleSearchFieldDeselected(TMP_InputField field)
-    {
-        if (currentSearchField != field)
-        {
-            return;
-        }
-
-        ClearSearchEditingState();
-    }
-
-    void HandleSearchFieldSubmitted(TMP_InputField field)
-    {
-        if (currentSearchField != field)
-        {
-            return;
-        }
-
-        currentSearchField.DeactivateInputField();
-    }
-
-    void HandleSearchFieldEndEdit(TMP_InputField field)
-    {
-        if (currentSearchField != field)
-        {
-            return;
-        }
-
-        ClearSearchEditingState();
-    }
-
-    void ClearSearchEditingState()
-    {
-        if (!isSearchEditing)
-        {
-            return;
-        }
-
-        isSearchEditing = false;
-        currentSearchField = null;
-        PlayerController.SetGlobalInputEnabled(true);
-    }
-
     void SetupSellVirtualization()
     {
         if (sellScrollRect == null && sellContent != null)
