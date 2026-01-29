@@ -12,7 +12,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 {
     private static SaveGameManager instance;
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
-    [SerializeField] private InitialFurniturePlacementConfig initialFurniturePlacementConfig;
     private string currentSlot;
     private bool applied_0_1_6_seed;
     private bool hasSeenOpeningPanel;
@@ -262,7 +261,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             if (creative)
             {
                 var emptyData = new CreativeSaveData();
-                emptyData.furniture = BuildInitialFurniturePlacements();
                 applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
@@ -270,7 +268,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
             else
             {
                 var emptyData = new StorySaveData();
-                emptyData.furniture = BuildInitialFurniturePlacements();
                 applied_0_1_6_seed = emptyData.applied_0_1_6_seed;
                 CacheIndependentMaterialColors(slotKey, emptyData.independentMaterialColors, emptyData.independentMaterialColorSlots);
                 ApplyManagers(emptyData);
@@ -298,79 +295,6 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         IndependentMaterialColorController.SetSaveContextForAllControllers(slotKey, this);
 
         return createdNewSave;
-    }
-
-    List<SaveSystem.PlacedFurniture> BuildInitialFurniturePlacements()
-    {
-        var placements = new List<SaveSystem.PlacedFurniture>();
-        var config = initialFurniturePlacementConfig != null
-            ? initialFurniturePlacementConfig
-            : InitialFurniturePlacementConfig.Load();
-        if (config == null || config.placements == null || config.placements.Count == 0)
-        {
-            AddInitialPlacement(placements, "item_pergola_small", new Vector3(0f, 0f, 2f), Quaternion.Euler(0f, 180f, 0f), "RoofTop");
-            AddInitialPlacement(placements, "item_vendingmachine", new Vector3(2f, 0f, 2f), Quaternion.Euler(0f, -90f, 0f), "RoofTop");
-            AddInitialPlacement(placements, "item_snake_plant", new Vector3(-1.5f, 0f, 1.5f), Quaternion.identity, "RoofTop");
-            AddInitialPlacement(placements, "item_monstera", new Vector3(1.5f, 0f, 1.5f), Quaternion.identity, "RoofTop");
-            AddInitialPlacement(placements, "item_pachira", new Vector3(0f, 0f, 0.5f), Quaternion.identity, "RoofTop");
-            return placements;
-        }
-
-        foreach (var entry in config.placements)
-        {
-            if (entry == null || string.IsNullOrWhiteSpace(entry.furnitureID))
-            {
-                continue;
-            }
-
-            int targetLayer = entry.layer;
-            if (targetLayer < 0)
-            {
-                targetLayer = LayerMask.NameToLayer("Furniture");
-            }
-            if (targetLayer < 0)
-            {
-                targetLayer = 0;
-            }
-
-            placements.Add(new SaveSystem.PlacedFurniture
-            {
-                id = entry.furnitureID.Trim(),
-                position = entry.position,
-                rotation = Quaternion.Euler(entry.rotationEuler),
-                sceneName = string.IsNullOrWhiteSpace(entry.sceneName) ? SceneManager.GetActiveScene().name : entry.sceneName.Trim(),
-                layer = targetLayer,
-                parentUID = entry.parentUID?.Trim() ?? string.Empty,
-                uniqueID = string.IsNullOrWhiteSpace(entry.uniqueID) ? Guid.NewGuid().ToString() : entry.uniqueID.Trim(),
-                wallParentId = entry.wallParentId,
-                wallParentName = entry.wallParentName?.Trim() ?? string.Empty,
-                wallParentPath = entry.wallParentPath?.Trim() ?? string.Empty
-            });
-        }
-
-        return placements;
-    }
-
-    void AddInitialPlacement(List<SaveSystem.PlacedFurniture> placements, string furnitureId, Vector3 position, Quaternion rotation, string sceneName)
-    {
-        if (string.IsNullOrWhiteSpace(furnitureId))
-        {
-            return;
-        }
-
-        placements.Add(new SaveSystem.PlacedFurniture
-        {
-            id = furnitureId.Trim(),
-            position = position,
-            rotation = rotation,
-            sceneName = sceneName,
-            layer = Math.Max(0, LayerMask.NameToLayer("Furniture")),
-            parentUID = string.Empty,
-            uniqueID = Guid.NewGuid().ToString(),
-            wallParentId = 0,
-            wallParentName = string.Empty,
-            wallParentPath = string.Empty
-        });
     }
 
     public void Delete(string slotKey)
