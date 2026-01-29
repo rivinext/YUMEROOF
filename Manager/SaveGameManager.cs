@@ -12,6 +12,7 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 {
     private static SaveGameManager instance;
     [SerializeField] private float autoSaveInterval = 300f; // 5 minutes
+    [SerializeField] private InitialFurniturePlacementConfig initialFurniturePlacementConfig;
     private string currentSlot;
     private bool applied_0_1_6_seed;
     private bool hasSeenOpeningPanel;
@@ -302,7 +303,9 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
     List<SaveSystem.PlacedFurniture> BuildInitialFurniturePlacements()
     {
         var placements = new List<SaveSystem.PlacedFurniture>();
-        var config = InitialFurniturePlacementConfig.Load();
+        var config = initialFurniturePlacementConfig != null
+            ? initialFurniturePlacementConfig
+            : InitialFurniturePlacementConfig.Load();
         if (config == null || config.placements == null || config.placements.Count == 0)
         {
             AddInitialPlacement(placements, "item_pergola_small", new Vector3(0f, 0f, 2f), Quaternion.Euler(0f, 180f, 0f), "RoofTop");
