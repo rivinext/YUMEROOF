@@ -125,9 +125,6 @@ public class ShopUIManager : MonoBehaviour
     private bool sellSearchInputWasEnabled = false;
     private string selectedFurnitureCategory;
     private readonly List<FurnitureCategoryToggle> categoryToggles = new();
-    private float lastSellScrollNormalized = 1f;
-    private bool hasSavedSellScroll;
-    private bool restoreSellScrollOnNextShow;
 
     public bool IsOpen => isOpen;
     private bool IsSellVirtualizationActive => sellVirtualizer != null && sellScrollRect != null;
@@ -222,11 +219,6 @@ public class ShopUIManager : MonoBehaviour
         if (clock != null)
         {
             clock.OnDayChanged -= OnDayChanged;
-        }
-
-        if (sellScrollRect != null)
-        {
-            sellScrollRect.onValueChanged.RemoveListener(HandleSellScrollValueChanged);
         }
 
         // No slide panel event subscriptions to clean up.
@@ -334,8 +326,6 @@ public class ShopUIManager : MonoBehaviour
             ClearSellSearchEditingState();
         }
 
-        SaveSellScrollPosition();
-        restoreSellScrollOnNextShow = true;
         isOpen = false;
         ClearDescriptionPanels();
         bool shouldReleaseInput = !inputOwnedExternally;
@@ -359,8 +349,6 @@ public class ShopUIManager : MonoBehaviour
     public void ShowPurchaseTab()
     {
         SetActiveTabToggle(purchaseTabToggle);
-        SaveSellScrollPosition();
-        restoreSellScrollOnNextShow = true;
         SwitchTab(purchaseTabSlidePanel, sellTabSlidePanel, purchaseTab, sellTab, () =>
         {
             PopulatePurchaseTab();
@@ -375,15 +363,9 @@ public class ShopUIManager : MonoBehaviour
     public void ShowSellTab()
     {
         SetActiveTabToggle(sellTabToggle);
-        bool shouldRestoreScroll = restoreSellScrollOnNextShow;
-        restoreSellScrollOnNextShow = false;
         SwitchTab(sellTabSlidePanel, purchaseTabSlidePanel, sellTab, purchaseTab, () =>
         {
-            PopulateSellTab(!shouldRestoreScroll);
-            if (shouldRestoreScroll)
-            {
-                RestoreSellScrollPosition();
-            }
+            PopulateSellTab();
             UpdateDescriptionPanel(selectedForSale);
         });
     }
@@ -1278,9 +1260,6 @@ public class ShopUIManager : MonoBehaviour
             return;
         }
 
-        sellScrollRect.onValueChanged.RemoveListener(HandleSellScrollValueChanged);
-        sellScrollRect.onValueChanged.AddListener(HandleSellScrollValueChanged);
-
         sellVirtualizer.ConfigureGridLayout(sellUseGridLayoutMode, sellColumnCount, sellHorizontalSpacing);
         sellVirtualizer.OnCreateItemWithIndex = HandleCreateSellCard;
         sellVirtualizer.OnReleaseItemWithIndex = HandleReleaseSellCard;
@@ -1340,39 +1319,6 @@ public class ShopUIManager : MonoBehaviour
         {
             categoryToggles[0].SetIsOn(true, false);
         }
-    }
-
-    void HandleSellScrollValueChanged(Vector2 _)
-    {
-        if (sellScrollRect == null)
-        {
-            return;
-        }
-
-        lastSellScrollNormalized = sellScrollRect.verticalNormalizedPosition;
-        hasSavedSellScroll = true;
-    }
-
-    void SaveSellScrollPosition()
-    {
-        if (sellScrollRect == null)
-        {
-            return;
-        }
-
-        lastSellScrollNormalized = sellScrollRect.verticalNormalizedPosition;
-        hasSavedSellScroll = true;
-    }
-
-    void RestoreSellScrollPosition()
-    {
-        if (!hasSavedSellScroll || sellScrollRect == null)
-        {
-            return;
-        }
-
-        sellScrollRect.verticalNormalizedPosition = lastSellScrollNormalized;
-        sellVirtualizer?.RefreshVisibleItems();
     }
 
     void ClearFurnitureCategoryTabs()
