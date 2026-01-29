@@ -242,6 +242,7 @@ public class ShopUIManager : MonoBehaviour
             var values = ParseCSVLine(lines[i]);
             if (values.Length < 8) continue;
             string id = values[0];
+            if (string.IsNullOrWhiteSpace(id)) continue;
             int sell = ParseInt(values[7]);
             int buy = values.Length > 24 ? ParseInt(values[24]) : sell;
             if (!allItems.ContainsKey(id))
@@ -262,6 +263,7 @@ public class ShopUIManager : MonoBehaviour
             var values = lines[i].Split(',');
             if (values.Length < 2) continue;
             string itemId = values[0];
+            if (string.IsNullOrWhiteSpace(itemId)) continue;
             string milestone = values[1];
             if (allItems.TryGetValue(itemId, out var item))
             {
