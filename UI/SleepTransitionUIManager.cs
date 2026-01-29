@@ -326,11 +326,7 @@ public class SleepTransitionUIManager : MonoBehaviour
                     InventoryManager.Instance.AddFurniture(id, 0);
                     InventoryManager.Instance.ForceInventoryUpdate();
                     var item = InventoryManager.Instance.GetFurnitureItem(id);
-                    if (cardComp != null)
-                    {
-                        cardComp.SetItem(item, false);   // 第2引数は家具なので false
-                        cardComp.SetDragEnabled(false);
-                    }
+                    cardComp.SetItem(item, false);   // 第2引数は家具なので false
 
                     card.transform.localScale = Vector3.one;
                     card.SetActive(true);
