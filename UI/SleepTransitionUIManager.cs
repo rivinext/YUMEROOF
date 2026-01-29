@@ -322,6 +322,10 @@ public class SleepTransitionUIManager : MonoBehaviour
 
                     GameObject card = Instantiate(itemCardPrefab, cardContainer);
                     var cardComp = card.GetComponent<InventoryItemCard>();
+                    if (cardComp != null)
+                    {
+                        cardComp.SetDragEnabled(false);
+                    }
 
                     InventoryManager.Instance.AddFurniture(id, 0);
                     InventoryManager.Instance.ForceInventoryUpdate();
