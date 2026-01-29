@@ -118,11 +118,9 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // 現在のアイテム
     public InventoryItem currentItem;
     private bool isMaterialCard;
-    protected bool isSellCard = false;
     private bool isDragging = false;
     private GameObject dragPreview;
     private bool dragBlocked = false;
-    private bool dragEnabled = true;
 
     // 選択状態
     private bool isSelected = false;
@@ -307,11 +305,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         UpdateVisualState();
     }
 
-    public void SetDragEnabled(bool enabled)
-    {
-        dragEnabled = enabled;
-    }
-
     // カードの視覚状態を更新
     public void UpdateVisualState()
     {
@@ -380,7 +373,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     }
 
     // オーバーレイの順序を調整
-    protected void AdjustOverlayOrder()
+    void AdjustOverlayOrder()
     {
         if (uncraftableOverlay == null || favoriteToggle == null) return;
 
@@ -392,7 +385,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     }
 
     // レシピがあるかチェック
-    protected bool HasRecipe()
+    bool HasRecipe()
     {
         if (currentItem == null || currentItem.itemType != InventoryItem.ItemType.Furniture)
             return false;
@@ -846,7 +839,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // ドラッグ開始
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (!dragEnabled) return;
         if (InventoryPlacementBridge.Instance.IsPlacementDisabledScene())
         {
             dragBlocked = true;
@@ -882,7 +874,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // ドラッグ中
     public void OnDrag(PointerEventData eventData)
     {
-        if (!dragEnabled) return;
         if (dragBlocked) return;
         if (dragPreview != null)
         {
@@ -893,7 +884,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // ドラッグ終了（デバッグ版）
     public void OnEndDrag(PointerEventData eventData)
     {
-        if (!dragEnabled) return;
         if (dragBlocked)
         {
             dragBlocked = false;
