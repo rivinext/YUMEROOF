@@ -19,12 +19,6 @@ public class InventoryItemCardSell : InventoryItemCard
     {
         base.SetItem(item, isMaterial);
 
-        var furnitureData = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
-        if (furnitureData != null && furnitureData.interactionType == InteractionType.Bed && backgroundImage != null)
-        {
-            backgroundImage.sprite = uncraftableBackground;
-        }
-
         UpdateSellPrice();
     }
 
