@@ -49,7 +49,7 @@ public class UIMenuManager : MonoBehaviour
     [SerializeField] private Button creativeCloseButton;
 
     [Header("Save Slots")]
-    [SerializeField] private SaveSlotUI storySlot;
+    [SerializeField] private SaveSlotUI[] storySlots;
     [SerializeField] private SaveSlotUI[] creativeSlots;
 
     [SerializeField] private ConfirmationPopup confirmPopup;
@@ -213,11 +213,15 @@ public class UIMenuManager : MonoBehaviour
     private void InitializeSlots()
     {
 #if !DEMO_VERSION
-        if (storySlot != null)
+        if (storySlots != null)
         {
-            storySlot.Refresh();
-            storySlot.OnSelected += HandleSlotSelected;
-            storySlot.OnDeleteRequested += HandleDeleteRequested;
+            foreach (var slot in storySlots)
+            {
+                if (slot == null) continue;
+                slot.Refresh();
+                slot.OnSelected += HandleSlotSelected;
+                slot.OnDeleteRequested += HandleDeleteRequested;
+            }
         }
 #endif
 
@@ -243,7 +247,7 @@ public class UIMenuManager : MonoBehaviour
 
         if (data != null && !string.IsNullOrEmpty(data.location) && data.location != "MainMenu")
             nextSceneName = data.location;
-        else if (storySlot != null && slotKey == storySlot.SlotKey)
+        else if (IsStorySlotKey(slotKey))
             nextSceneName = storySceneName;
         else
             nextSceneName = creativeSceneName;
@@ -265,7 +269,14 @@ public class UIMenuManager : MonoBehaviour
 
     private void RefreshSlots()
     {
-        if (storySlot != null) storySlot.Refresh();
+        if (storySlots != null)
+        {
+            foreach (var slot in storySlots)
+            {
+                if (slot == null) continue;
+                slot.Refresh();
+            }
+        }
         if (creativeSlots != null)
         {
             foreach (var slot in creativeSlots)
@@ -421,9 +432,23 @@ public class UIMenuManager : MonoBehaviour
     {
 #if DEMO_VERSION
         // DEMO ではストーリースロットを常に無効化して選択できないようにする
-        if (storySlot != null) storySlot.SetInteractable(false);
+        if (storySlots != null)
+        {
+            foreach (var slot in storySlots)
+            {
+                if (slot == null) continue;
+                slot.SetInteractable(false);
+            }
+        }
 #else
-        if (storySlot != null) storySlot.SetInteractable(interactable);
+        if (storySlots != null)
+        {
+            foreach (var slot in storySlots)
+            {
+                if (slot == null) continue;
+                slot.SetInteractable(interactable);
+            }
+        }
 #endif
         if (creativeSlots != null)
         {
@@ -481,6 +506,17 @@ public class UIMenuManager : MonoBehaviour
             default:
                 return false;
         }
+    }
+
+    private bool IsStorySlotKey(string slotKey)
+    {
+        if (storySlots == null) return false;
+        foreach (var slot in storySlots)
+        {
+            if (slot == null) continue;
+            if (slotKey == slot.SlotKey) return true;
+        }
+        return false;
     }
 
     private void OpenWishlistPage()
@@ -545,10 +581,14 @@ public class UIMenuManager : MonoBehaviour
         if (creativeCloseButton != null) creativeCloseButton.onClick.RemoveAllListeners();
         if (creditCloseButton != null) creditCloseButton.onClick.RemoveAllListeners();
 
-        if (storySlot != null)
+        if (storySlots != null)
         {
-            storySlot.OnSelected -= HandleSlotSelected;
-            storySlot.OnDeleteRequested -= HandleDeleteRequested;
+            foreach (var slot in storySlots)
+            {
+                if (slot == null) continue;
+                slot.OnSelected -= HandleSlotSelected;
+                slot.OnDeleteRequested -= HandleDeleteRequested;
+            }
         }
         if (creativeSlots != null)
         {
