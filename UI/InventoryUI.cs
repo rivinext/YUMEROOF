@@ -155,6 +155,9 @@ public class InventoryUI : MonoBehaviour
     private Coroutine inventoryRefreshCoroutine;
     private bool inventoryRefreshQueued;
     private readonly List<InventoryItem> filteredFurnitureItems = new List<InventoryItem>();
+    private float lastFurnitureScrollNormalized = 1f;
+    private bool hasSavedFurnitureScroll;
+    private bool restoreFurnitureScrollOnNextOpen;
 
     // シーン上の操作系（家具の再配置など）を制御するための参照
     private SelectionManager cachedSelectionManager;
@@ -806,6 +809,9 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
+        furnitureScrollRect.onValueChanged.RemoveListener(HandleFurnitureScrollValueChanged);
+        furnitureScrollRect.onValueChanged.AddListener(HandleFurnitureScrollValueChanged);
+
         furnitureVirtualizer.OnCreateItem = HandleCreateFurnitureCard;
         furnitureVirtualizer.OnReleaseItem = HandleReleaseFurnitureCard;
         furnitureVirtualizer.OnBindItem = HandleBindFurnitureCard;
@@ -1080,7 +1086,13 @@ public class InventoryUI : MonoBehaviour
         }
 
         panelScaleAnimator?.Open();
-        RefreshInventoryDisplay();
+        bool shouldRestoreScroll = restoreFurnitureScrollOnNextOpen;
+        restoreFurnitureScrollOnNextOpen = false;
+        RefreshInventoryDisplay(shouldRestoreScroll);
+        if (shouldRestoreScroll)
+        {
+            RestoreFurnitureScrollPosition();
+        }
 
         NotifyCameraController(true);
         SetSceneInteractionActive(false);
@@ -1103,6 +1115,8 @@ public class InventoryUI : MonoBehaviour
         }
 
         isOpen = false;
+        SaveFurnitureScrollPosition();
+        restoreFurnitureScrollOnNextOpen = true;
 
         panelScaleAnimator?.Close();
         NotifyCameraController(false);
@@ -1230,13 +1244,18 @@ public class InventoryUI : MonoBehaviour
 
     public void RefreshInventoryDisplay()
     {
+        RefreshInventoryDisplay(false);
+    }
+
+    void RefreshInventoryDisplay(bool preserveFurnitureScroll)
+    {
         if (isMaterialTab)
         {
             RefreshMaterialDisplay();
         }
         else
         {
-            RefreshFurnitureDisplay();
+            RefreshFurnitureDisplay(preserveFurnitureScroll);
             UpdateCraftButtonState();
         }
     }
@@ -1292,7 +1311,7 @@ public class InventoryUI : MonoBehaviour
         UpdateMaterialDescriptionArea();
     }
 
-    void RefreshFurnitureDisplay()
+    void RefreshFurnitureDisplay(bool preserveScrollPosition = false)
     {
         var items = GetSortedFurnitureList();
 
@@ -1319,13 +1338,22 @@ public class InventoryUI : MonoBehaviour
 
         if (furnitureVirtualizer != null && furnitureScrollRect != null)
         {
+            bool shouldPreserveScroll = preserveScrollPosition && hasSavedFurnitureScroll;
             cardManager?.ClearSelectionIfMissing(filteredFurnitureItems);
-            furnitureVirtualizer.SetItemCount(filteredFurnitureItems.Count, true);
+            furnitureVirtualizer.SetItemCount(filteredFurnitureItems.Count, !shouldPreserveScroll);
+            if (shouldPreserveScroll)
+            {
+                furnitureScrollRect.verticalNormalizedPosition = lastFurnitureScrollNormalized;
+            }
             furnitureVirtualizer.RefreshVisibleItems();
         }
         else
         {
             cardManager?.RefreshFurnitureCards(items);
+            if (preserveScrollPosition && hasSavedFurnitureScroll && furnitureScrollRect != null)
+            {
+                furnitureScrollRect.verticalNormalizedPosition = lastFurnitureScrollNormalized;
+            }
         }
     }
 
@@ -1426,11 +1454,49 @@ public class InventoryUI : MonoBehaviour
         return false;
     }
 
+    void HandleFurnitureScrollValueChanged(Vector2 _)
+    {
+        if (furnitureScrollRect == null)
+        {
+            return;
+        }
+
+        lastFurnitureScrollNormalized = furnitureScrollRect.verticalNormalizedPosition;
+        hasSavedFurnitureScroll = true;
+    }
+
+    void SaveFurnitureScrollPosition()
+    {
+        if (furnitureScrollRect == null)
+        {
+            return;
+        }
+
+        lastFurnitureScrollNormalized = furnitureScrollRect.verticalNormalizedPosition;
+        hasSavedFurnitureScroll = true;
+    }
+
+    void RestoreFurnitureScrollPosition()
+    {
+        if (!hasSavedFurnitureScroll || furnitureScrollRect == null)
+        {
+            return;
+        }
+
+        furnitureScrollRect.verticalNormalizedPosition = lastFurnitureScrollNormalized;
+        furnitureVirtualizer?.RefreshVisibleItems();
+    }
+
     void OnDestroy()
     {
         if (InventoryManager.Instance != null)
         {
             InventoryManager.Instance.OnInventoryChanged -= HandleInventoryChanged;
+        }
+
+        if (furnitureScrollRect != null)
+        {
+            furnitureScrollRect.onValueChanged.RemoveListener(HandleFurnitureScrollValueChanged);
         }
 
         cardManager?.Cleanup();
