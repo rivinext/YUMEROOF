@@ -121,6 +121,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     private bool isDragging = false;
     private GameObject dragPreview;
     private bool dragBlocked = false;
+    [SerializeField] private bool dragEnabled = true;
 
     // 選択状態
     private bool isSelected = false;
@@ -829,6 +830,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // ドラッグ開始
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (!dragEnabled)
+            return;
         if (InventoryPlacementBridge.Instance.IsPlacementDisabledScene())
         {
             dragBlocked = true;
@@ -864,6 +867,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // ドラッグ中
     public void OnDrag(PointerEventData eventData)
     {
+        if (!dragEnabled)
+            return;
         if (dragBlocked) return;
         if (dragPreview != null)
         {
@@ -874,6 +879,8 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // ドラッグ終了（デバッグ版）
     public void OnEndDrag(PointerEventData eventData)
     {
+        if (!dragEnabled)
+            return;
         if (dragBlocked)
         {
             dragBlocked = false;
@@ -943,5 +950,10 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         }
 
         return inventoryUI.IsPointerOverInventoryWindow(eventData.position, eventData.pressEventCamera);
+    }
+
+    public void SetDragEnabled(bool enabled)
+    {
+        dragEnabled = enabled;
     }
 }
