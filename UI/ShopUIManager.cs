@@ -973,18 +973,7 @@ public class ShopUIManager : MonoBehaviour
             return false;
         }
 
-        if (item.itemType != InventoryItem.ItemType.Furniture)
-        {
-            return true;
-        }
-
-        var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
-        if (data == null)
-        {
-            return true;
-        }
-
-        return data.interactionType != InteractionType.Bed;
+        return true;
     }
 
     void HandleSellCardFavoriteToggled(InventoryItem item)
