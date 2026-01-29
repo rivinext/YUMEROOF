@@ -118,6 +118,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // 現在のアイテム
     public InventoryItem currentItem;
     private bool isMaterialCard;
+    protected bool isSellCard = false;
     private bool isDragging = false;
     private GameObject dragPreview;
     private bool dragBlocked = false;
