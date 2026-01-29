@@ -118,6 +118,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // 現在のアイテム
     public InventoryItem currentItem;
     private bool isMaterialCard;
+    protected bool isSellCard = false;
     private bool isDragging = false;
     private GameObject dragPreview;
     private bool dragBlocked = false;
@@ -353,7 +354,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             // レシピあり & クラフト不可（材料不足） & 所有数0 の場合のみ表示
             if (uncraftableOverlay != null)
             {
-                bool showOverlay = !isBed && hasRecipe && !canCraft && ownedQuantity == 0;
+                bool showOverlay = hasRecipe && !canCraft && ownedQuantity == 0 && (!isBed || isSellCard);
                 uncraftableOverlay.SetActive(showOverlay);
 
                 if (showOverlay)
@@ -379,7 +380,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     }
 
     // オーバーレイの順序を調整
-    void AdjustOverlayOrder()
+    protected void AdjustOverlayOrder()
     {
         if (uncraftableOverlay == null || favoriteToggle == null) return;
 
@@ -391,7 +392,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     }
 
     // レシピがあるかチェック
-    bool HasRecipe()
+    protected bool HasRecipe()
     {
         if (currentItem == null || currentItem.itemType != InventoryItem.ItemType.Furniture)
             return false;
