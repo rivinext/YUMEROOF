@@ -319,7 +319,14 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             bool isBed = furnitureData != null && furnitureData.interactionType == InteractionType.Bed;
 
             // 背景画像の設定（常に設定する）
-            if (hasBackground && isSelected)
+            if (hasBackground && isBed)
+            {
+                if (uncraftableBackground != null)
+                {
+                    backgroundImage.sprite = uncraftableBackground;
+                }
+            }
+            else if (hasBackground && isSelected)
             {
                 // 選択状態
                 if (selectedBackground != null)
