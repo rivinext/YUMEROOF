@@ -26,6 +26,29 @@ public class InventoryItemCardSell : InventoryItemCard
         }
 
         UpdateSellPrice();
+        UpdateUncraftableOverlayForSellCard();
+    }
+
+    void UpdateUncraftableOverlayForSellCard()
+    {
+        if (uncraftableOverlay == null || currentItem == null)
+        {
+            return;
+        }
+
+        if (currentItem.itemType != InventoryItem.ItemType.Furniture)
+        {
+            uncraftableOverlay.SetActive(false);
+            return;
+        }
+
+        bool showOverlay = HasRecipe() && !currentItem.canCraft && currentItem.quantity == 0;
+        uncraftableOverlay.SetActive(showOverlay);
+
+        if (showOverlay)
+        {
+            AdjustOverlayOrder();
+        }
     }
 
     void UpdateSellPrice()
