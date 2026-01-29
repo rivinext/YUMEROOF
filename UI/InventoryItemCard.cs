@@ -308,7 +308,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // カードの視覚状態を更新
     public void UpdateVisualState()
     {
-        bool hasBackground = backgroundImage != null;
+        if (backgroundImage == null) return;
 
         if (currentItem != null && currentItem.itemType == InventoryItem.ItemType.Furniture)
         {
@@ -319,14 +319,14 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             bool isBed = furnitureData != null && furnitureData.interactionType == InteractionType.Bed;
 
             // 背景画像の設定（常に設定する）
-            if (hasBackground && isBed)
+            if (isBed)
             {
                 if (uncraftableBackground != null)
                 {
                     backgroundImage.sprite = uncraftableBackground;
                 }
             }
-            else if (hasBackground && isSelected)
+            else if (isSelected)
             {
                 // 選択状態
                 if (selectedBackground != null)
@@ -334,7 +334,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
                     backgroundImage.sprite = selectedBackground;
                 }
             }
-            else if (hasBackground)
+            else
             {
                 // 通常状態（UncraftableOverlayが表示されていても背景は通常のものを使用）
                 if (defaultBackground != null)
@@ -347,7 +347,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             // レシピあり & クラフト不可（材料不足） & 所有数0 の場合のみ表示
             if (uncraftableOverlay != null)
             {
-                bool showOverlay = !isBed && hasRecipe && !canCraft && ownedQuantity == 0;
+                bool showOverlay = hasRecipe && !canCraft && ownedQuantity == 0;
                 uncraftableOverlay.SetActive(showOverlay);
 
                 if (showOverlay)
@@ -365,7 +365,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             }
 
             // 通常の背景を設定
-            if (hasBackground && defaultBackground != null)
+            if (defaultBackground != null)
             {
                 backgroundImage.sprite = defaultBackground;
             }
