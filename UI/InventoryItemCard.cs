@@ -308,7 +308,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     // カードの視覚状態を更新
     public void UpdateVisualState()
     {
-        if (backgroundImage == null) return;
+        bool hasBackground = backgroundImage != null;
 
         if (currentItem != null && currentItem.itemType == InventoryItem.ItemType.Furniture)
         {
@@ -319,14 +319,14 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             bool isBed = furnitureData != null && furnitureData.interactionType == InteractionType.Bed;
 
             // 背景画像の設定（常に設定する）
-            if (isBed)
+            if (hasBackground && isBed)
             {
                 if (uncraftableBackground != null)
                 {
                     backgroundImage.sprite = uncraftableBackground;
                 }
             }
-            else if (isSelected)
+            else if (hasBackground && isSelected)
             {
                 // 選択状態
                 if (selectedBackground != null)
@@ -334,7 +334,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
                     backgroundImage.sprite = selectedBackground;
                 }
             }
-            else
+            else if (hasBackground)
             {
                 // 通常状態（UncraftableOverlayが表示されていても背景は通常のものを使用）
                 if (defaultBackground != null)
@@ -365,7 +365,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             }
 
             // 通常の背景を設定
-            if (defaultBackground != null)
+            if (hasBackground && defaultBackground != null)
             {
                 backgroundImage.sprite = defaultBackground;
             }
