@@ -56,6 +56,11 @@ public class BedTrigger : MonoBehaviour, IInteractable
         AutoAssignReferences();
     }
 
+    void Awake()
+    {
+        AutoAssignReferences();
+    }
+
     void OnValidate()
     {
         AutoAssignReferences();
