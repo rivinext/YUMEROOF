@@ -811,6 +811,9 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
+        furnitureScrollRect.onValueChanged.RemoveListener(HandleFurnitureScrollValueChanged);
+        furnitureScrollRect.onValueChanged.AddListener(HandleFurnitureScrollValueChanged);
+
         furnitureVirtualizer.OnCreateItem = HandleCreateFurnitureCard;
         furnitureVirtualizer.OnReleaseItem = HandleReleaseFurnitureCard;
         furnitureVirtualizer.OnBindItem = HandleBindFurnitureCard;
@@ -1104,6 +1107,12 @@ public class InventoryUI : MonoBehaviour
 
         EnsurePanelScaleAnimator();
 
+    public void CloseInventory()
+    {
+        if (!isOpen) return;
+
+        EnsurePanelScaleAnimator();
+
         if (isSearchEditing)
         {
             if (currentSearchField != null && currentSearchField.isFocused)
@@ -1243,13 +1252,18 @@ public class InventoryUI : MonoBehaviour
 
     public void RefreshInventoryDisplay()
     {
+        RefreshInventoryDisplay(false);
+    }
+
+    void RefreshInventoryDisplay(bool preserveFurnitureScroll)
+    {
         if (isMaterialTab)
         {
             RefreshMaterialDisplay();
         }
         else
         {
-            RefreshFurnitureDisplay();
+            RefreshFurnitureDisplay(preserveFurnitureScroll);
             UpdateCraftButtonState();
         }
     }
@@ -1305,7 +1319,7 @@ public class InventoryUI : MonoBehaviour
         UpdateMaterialDescriptionArea();
     }
 
-    void RefreshFurnitureDisplay()
+    void RefreshFurnitureDisplay(bool preserveScrollPosition = false)
     {
         var items = GetSortedFurnitureList();
 
@@ -1336,6 +1350,7 @@ public class InventoryUI : MonoBehaviour
 
         if (furnitureVirtualizer != null && furnitureScrollRect != null)
         {
+            bool shouldPreserveScroll = preserveScrollPosition && hasSavedFurnitureScroll;
             cardManager?.ClearSelectionIfMissing(filteredFurnitureItems);
             furnitureVirtualizer.SetItemCount(filteredFurnitureItems.Count, resetScrollPosition);
             if (resetScrollPosition)
@@ -1353,6 +1368,10 @@ public class InventoryUI : MonoBehaviour
         else
         {
             cardManager?.RefreshFurnitureCards(items);
+            if (preserveScrollPosition && hasSavedFurnitureScroll && furnitureScrollRect != null)
+            {
+                furnitureScrollRect.verticalNormalizedPosition = lastFurnitureScrollNormalized;
+            }
         }
 
         lastFurnitureSearchQuery = searchQuery;
@@ -1478,11 +1497,49 @@ public class InventoryUI : MonoBehaviour
         return false;
     }
 
+    void HandleFurnitureScrollValueChanged(Vector2 _)
+    {
+        if (furnitureScrollRect == null)
+        {
+            return;
+        }
+
+        lastFurnitureScrollNormalized = furnitureScrollRect.verticalNormalizedPosition;
+        hasSavedFurnitureScroll = true;
+    }
+
+    void SaveFurnitureScrollPosition()
+    {
+        if (furnitureScrollRect == null)
+        {
+            return;
+        }
+
+        lastFurnitureScrollNormalized = furnitureScrollRect.verticalNormalizedPosition;
+        hasSavedFurnitureScroll = true;
+    }
+
+    void RestoreFurnitureScrollPosition()
+    {
+        if (!hasSavedFurnitureScroll || furnitureScrollRect == null)
+        {
+            return;
+        }
+
+        furnitureScrollRect.verticalNormalizedPosition = lastFurnitureScrollNormalized;
+        furnitureVirtualizer?.RefreshVisibleItems();
+    }
+
     void OnDestroy()
     {
         if (InventoryManager.Instance != null)
         {
             InventoryManager.Instance.OnInventoryChanged -= HandleInventoryChanged;
+        }
+
+        if (furnitureScrollRect != null)
+        {
+            furnitureScrollRect.onValueChanged.RemoveListener(HandleFurnitureScrollValueChanged);
         }
 
         cardManager?.Cleanup();
