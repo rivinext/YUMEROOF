@@ -780,6 +780,12 @@ public class ShopUIManager : MonoBehaviour
 
         if (item.itemType == InventoryItem.ItemType.Furniture)
         {
+            var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+            if (data != null && data.interactionType == InteractionType.Bed)
+            {
+                return false;
+            }
+
             if (sellShowOnlyFavorites && !item.isFavorite)
             {
                 return false;
