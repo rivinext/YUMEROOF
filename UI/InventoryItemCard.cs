@@ -353,7 +353,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             // レシピあり & クラフト不可（材料不足） & 所有数0 の場合のみ表示
             if (uncraftableOverlay != null)
             {
-                bool showOverlay = hasRecipe && !canCraft && ownedQuantity == 0;
+                bool showOverlay = !isBed && hasRecipe && !canCraft && ownedQuantity == 0;
                 uncraftableOverlay.SetActive(showOverlay);
 
                 if (showOverlay)
