@@ -10,12 +10,6 @@ public class InventoryItemCardSell : InventoryItemCard
     [Header("Sell Elements")]
     public TMP_Text sellPriceText;
 
-    protected override void Awake()
-    {
-        base.Awake();
-        isSellCard = true;
-    }
-
     /// <summary>
     /// Assign item data and update sell price display.
     /// </summary>
@@ -32,29 +26,6 @@ public class InventoryItemCardSell : InventoryItemCard
         }
 
         UpdateSellPrice();
-        UpdateUncraftableOverlayForSellCard();
-    }
-
-    void UpdateUncraftableOverlayForSellCard()
-    {
-        if (uncraftableOverlay == null || currentItem == null)
-        {
-            return;
-        }
-
-        if (currentItem.itemType != InventoryItem.ItemType.Furniture)
-        {
-            uncraftableOverlay.SetActive(false);
-            return;
-        }
-
-        bool showOverlay = HasRecipe() && !currentItem.canCraft && currentItem.quantity == 0;
-        uncraftableOverlay.SetActive(showOverlay);
-
-        if (showOverlay)
-        {
-            AdjustOverlayOrder();
-        }
     }
 
     void UpdateSellPrice()
