@@ -952,7 +952,7 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         Transform previewTransform = preview.transform;
-        Vector3 localNormal = previewTransform.InverseTransformDirection(normalizedNormal);
+        Vector3 localNormal = Quaternion.Inverse(previewTransform.rotation) * normalizedNormal;
         if (localNormal.sqrMagnitude < Mathf.Epsilon)
         {
             return targetPosition;
@@ -961,6 +961,8 @@ public class FreePlacementSystem : MonoBehaviour
         localNormal.Normalize();
 
         float minDistance = float.PositiveInfinity;
+        Matrix4x4 previewNoScale = Matrix4x4.TRS(previewTransform.position, previewTransform.rotation, Vector3.one);
+        Matrix4x4 worldToPreviewNoScale = previewNoScale.inverse;
 
         foreach (Renderer renderer in renderers)
         {
@@ -968,6 +970,8 @@ public class FreePlacementSystem : MonoBehaviour
             {
                 continue;
             }
+
+            Matrix4x4 rendererToPreviewNoScale = worldToPreviewNoScale * renderer.transform.localToWorldMatrix;
 
             Bounds localBounds = renderer.localBounds;
             Vector3 center = localBounds.center;
@@ -984,8 +988,7 @@ public class FreePlacementSystem : MonoBehaviour
                             center.y + extents.y * y,
                             center.z + extents.z * z);
 
-                        Vector3 worldCorner = renderer.transform.TransformPoint(cornerLocal);
-                        Vector3 previewLocalCorner = previewTransform.InverseTransformPoint(worldCorner);
+                        Vector3 previewLocalCorner = rendererToPreviewNoScale.MultiplyPoint3x4(cornerLocal);
                         float distance = Vector3.Dot(localNormal, previewLocalCorner);
 
                         if (distance < minDistance)
