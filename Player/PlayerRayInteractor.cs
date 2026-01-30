@@ -42,6 +42,7 @@ public class PlayerRayInteractor : MonoBehaviour
             playerController = FindFirstObjectByType<PlayerController>();
 
         SceneManager.sceneLoaded += OnSceneLoaded;
+        SceneManager.sceneUnloaded += OnSceneUnloaded;
         BindInteractionUIController();
     }
 
@@ -137,11 +138,18 @@ public class PlayerRayInteractor : MonoBehaviour
     private void OnDestroy()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneUnloaded -= OnSceneUnloaded;
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         BindInteractionUIController();
+    }
+
+    private void OnSceneUnloaded(Scene scene)
+    {
+        ClearCurrentTarget();
+        highlighter?.Clear();
     }
 
     private IInteractable FindBestTarget()

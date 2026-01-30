@@ -23,6 +23,16 @@ public class RayOutlineHighlighter : MonoBehaviour
         }
     }
 
+    void OnDisable()
+    {
+        Clear();
+    }
+
+    void OnDestroy()
+    {
+        Clear();
+    }
+
     /// <summary>
     /// Highlight the provided object by switching it to the outline layer.
     /// Any previously highlighted object is restored first.
