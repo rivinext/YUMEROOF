@@ -18,6 +18,7 @@ public class WallLayerController : MonoBehaviour
     public string invisibleLayerName = "InvisibleWall";
     [SerializeField]
     private bool visibilityControlEnabled = true;
+    private bool initialized;
 
     public bool VisibilityControlEnabled
     {
@@ -33,17 +34,28 @@ public class WallLayerController : MonoBehaviour
 
             if (!visibilityControlEnabled)
             {
+                EnsureInitialized();
                 RestoreOriginalSettings();
             }
         }
     }
 
-    void Start()
+    private void Awake()
     {
+        CacheOriginalSettings();
+    }
+
+    private void CacheOriginalSettings()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
         // 元レイヤーを保存
         foreach (var wall in walls)
         {
-            if (wall.renderer == null)
+            if (wall?.renderer == null)
             {
                 continue;
             }
@@ -58,20 +70,37 @@ public class WallLayerController : MonoBehaviour
             }
             deactivationHandler.SetWallTransform(wall.renderer.transform);
         }
+
+        initialized = true;
+    }
+
+    private void EnsureInitialized()
+    {
+        if (!initialized)
+        {
+            CacheOriginalSettings();
+        }
     }
 
     void Update()
     {
         if (!visibilityControlEnabled)
         {
+            EnsureInitialized();
             RestoreOriginalSettings();
             return;
         }
 
+        EnsureInitialized();
         float camY = cam.transform.eulerAngles.y;
 
         foreach (var wall in walls)
         {
+            if (wall?.renderer == null)
+            {
+                continue;
+            }
+
             // ID→角度変換 (1=0,2=90,3=180,4=270)
             float wallAngle = (wall.id - 1) * 90f;
             float diff = Mathf.DeltaAngle(camY, wallAngle);
@@ -100,6 +129,11 @@ public class WallLayerController : MonoBehaviour
     {
         foreach (var wall in walls)
         {
+            if (wall?.renderer == null)
+            {
+                continue;
+            }
+
             wall.renderer.gameObject.layer = wall.originalLayer;
             wall.renderer.shadowCastingMode = wall.originalShadowCastingMode;
         }

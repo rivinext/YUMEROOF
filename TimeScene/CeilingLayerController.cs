@@ -18,6 +18,7 @@ public class CeilingLayerController : MonoBehaviour
     public string invisibleLayerName = "InvisibleCeiling";
     [SerializeField]
     private bool visibilityControlEnabled = true;
+    private bool initialized;
 
     public bool VisibilityControlEnabled
     {
@@ -33,13 +34,24 @@ public class CeilingLayerController : MonoBehaviour
 
             if (!visibilityControlEnabled)
             {
+                EnsureInitialized();
                 RestoreOriginalSettings();
             }
         }
     }
 
-    private void Start()
+    private void Awake()
     {
+        CacheOriginalSettings();
+    }
+
+    private void CacheOriginalSettings()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
         foreach (var ceiling in ceilings)
         {
             if (ceiling?.renderer == null)
@@ -50,12 +62,23 @@ public class CeilingLayerController : MonoBehaviour
             ceiling.originalLayer = ceiling.renderer.gameObject.layer;
             ceiling.originalShadowCastingMode = ceiling.renderer.shadowCastingMode;
         }
+
+        initialized = true;
+    }
+
+    private void EnsureInitialized()
+    {
+        if (!initialized)
+        {
+            CacheOriginalSettings();
+        }
     }
 
     private void Update()
     {
         if (!visibilityControlEnabled)
         {
+            EnsureInitialized();
             RestoreOriginalSettings();
             return;
         }
@@ -65,6 +88,7 @@ public class CeilingLayerController : MonoBehaviour
             return;
         }
 
+        EnsureInitialized();
         int invisibleLayer = LayerMask.NameToLayer(invisibleLayerName);
 
         foreach (var ceiling in ceilings)
