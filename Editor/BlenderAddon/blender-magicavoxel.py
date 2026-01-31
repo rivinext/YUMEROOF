@@ -106,23 +106,6 @@ def rgb_to_palette_index(r, g, b, palette):
             closest_idx = idx
     return closest_idx
 
-def get_loop_color(mesh, loop_index, material_index):
-    """ループまたはマテリアルから色を取得"""
-    if len(mesh.vertex_colors) > 0:
-        color_layer = mesh.vertex_colors[0]
-        color = color_layer.data[loop_index].color
-        return int(color[0] * 255), int(color[1] * 255), int(color[2] * 255)
-
-    if len(mesh.materials) > 0 and material_index < len(mesh.materials):
-        mat = mesh.materials[material_index]
-        if mat and mat.use_nodes:
-            bsdf = mat.node_tree.nodes.get("Principled BSDF")
-            if bsdf:
-                base_color = bsdf.inputs['Base Color'].default_value
-                return int(base_color[0] * 255), int(base_color[1] * 255), int(base_color[2] * 255)
-
-    return 255, 255, 255
-
 def analyze_voxel_mesh(obj, voxel_size):
     """メッシュからボクセル情報を抽出"""
     if voxel_size <= 0:
@@ -169,6 +152,16 @@ def analyze_voxel_mesh(obj, voxel_size):
                     if (closest - world_pos).length <= max_distance:
                         voxels[(x, y, z)] = (r, g, b)
 
+        # ボクセル位置を整数座標に丸める
+        inv_size = 1.0 / voxel_size
+        vox_pos = (
+            round(center.x * inv_size),
+            round(center.y * inv_size),
+            round(center.z * inv_size),
+        )
+        voxels[vox_pos] = (r, g, b)
+
+    bm.free()
     eval_obj.to_mesh_clear()
 
     return voxels
