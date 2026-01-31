@@ -9,10 +9,9 @@ bl_info = {
 }
 
 import bpy
-import bmesh
 import struct
 import os
-from mathutils import Vector
+from mathutils import Vector, geometry
 from collections import defaultdict
 
 def write_chunk(f, chunk_id, content):
@@ -118,45 +117,40 @@ def analyze_voxel_mesh(obj, voxel_size):
 
     # ワールド座標に変換
     mesh.transform(obj.matrix_world)
-
-    # 立方体の中心位置を特定
-    bm = bmesh.new()
-    bm.from_mesh(mesh)
-    bm.verts.ensure_lookup_table()
+    mesh.calc_loop_triangles()
 
     voxels = {}
-    palette = {}
+    inv_size = 1.0 / voxel_size
+    max_distance = voxel_size * 0.5
 
-    # 面ごとに処理
-    for face in bm.faces:
-        # 面の中心を計算
-        center = face.calc_center_median()
+    # 三角形ごとに処理
+    for tri in mesh.loop_triangles:
+        verts = [mesh.vertices[i].co for i in tri.vertices]
+        min_x = min(v.x for v in verts)
+        min_y = min(v.y for v in verts)
+        min_z = min(v.z for v in verts)
+        max_x = max(v.x for v in verts)
+        max_y = max(v.y for v in verts)
+        max_z = max(v.z for v in verts)
 
-        # 色情報を取得
-        if len(mesh.vertex_colors) > 0:
-            color_layer = mesh.vertex_colors[0]
-            # 面の最初のループから色を取得
-            loop_idx = face.loops[0].index
-            color = color_layer.data[loop_idx].color
-            r = int(color[0] * 255)
-            g = int(color[1] * 255)
-            b = int(color[2] * 255)
-        elif len(mesh.materials) > 0 and face.material_index < len(mesh.materials):
-            mat = mesh.materials[face.material_index]
-            if mat and mat.use_nodes:
-                # プリンシプルBSDFノードから色を取得
-                bsdf = mat.node_tree.nodes.get("Principled BSDF")
-                if bsdf:
-                    base_color = bsdf.inputs['Base Color'].default_value
-                    r = int(base_color[0] * 255)
-                    g = int(base_color[1] * 255)
-                    b = int(base_color[2] * 255)
-                else:
-                    r, g, b = 255, 255, 255
-            else:
-                r, g, b = 255, 255, 255
-        else:
-            r, g, b = 255, 255, 255
+        grid_min_x = int(min_x * inv_size) - 1
+        grid_min_y = int(min_y * inv_size) - 1
+        grid_min_z = int(min_z * inv_size) - 1
+        grid_max_x = int(max_x * inv_size) + 1
+        grid_max_y = int(max_y * inv_size) + 1
+        grid_max_z = int(max_z * inv_size) + 1
+
+        r, g, b = get_loop_color(mesh, tri.loops[0], tri.material_index)
+
+        for x in range(grid_min_x, grid_max_x + 1):
+            world_x = x * voxel_size
+            for y in range(grid_min_y, grid_max_y + 1):
+                world_y = y * voxel_size
+                for z in range(grid_min_z, grid_max_z + 1):
+                    world_pos = Vector((world_x, world_y, z * voxel_size))
+                    closest = geometry.closest_point_on_tri(world_pos, verts[0], verts[1], verts[2])
+                    if (closest - world_pos).length <= max_distance:
+                        voxels[(x, y, z)] = (r, g, b)
 
         # ボクセル位置を整数座標に丸める
         inv_size = 1.0 / voxel_size
