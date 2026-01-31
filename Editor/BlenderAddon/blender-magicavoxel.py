@@ -22,6 +22,69 @@ def write_chunk(f, chunk_id, content):
     f.write(struct.pack('<I', 0))  # children size (0 for now)
     f.write(content)
 
+def encode_vox_dict(data):
+    """VOXの辞書データをエンコード"""
+    content = struct.pack('<I', len(data))
+    for key, value in data.items():
+        key_bytes = key.encode('utf-8')
+        value_bytes = value.encode('utf-8')
+        content += struct.pack('<I', len(key_bytes))
+        content += key_bytes
+        content += struct.pack('<I', len(value_bytes))
+        content += value_bytes
+    return content
+
+def build_scene_graph_chunks(model_count, model_offsets):
+    """シーングラフ用のチャンクを作成"""
+    chunks = []
+    root_trn_id = 0
+    root_grp_id = 1
+    root_trn_content = struct.pack('<I', root_trn_id)
+    root_trn_content += encode_vox_dict({})
+    root_trn_content += struct.pack('<i', root_grp_id)
+    root_trn_content += struct.pack('<i', -1)
+    root_trn_content += struct.pack('<i', 0)
+    root_trn_content += struct.pack('<I', 1)
+    root_trn_content += encode_vox_dict({})
+    chunks.append(('nTRN', root_trn_content))
+
+    children_ids = []
+    for idx in range(model_count):
+        trn_id = 2 + idx * 2
+        children_ids.append(trn_id)
+
+    root_grp_content = struct.pack('<I', root_grp_id)
+    root_grp_content += encode_vox_dict({})
+    root_grp_content += struct.pack('<I', len(children_ids))
+    for child_id in children_ids:
+        root_grp_content += struct.pack('<I', child_id)
+    chunks.append(('nGRP', root_grp_content))
+
+    for idx in range(model_count):
+        trn_id = 2 + idx * 2
+        shp_id = 3 + idx * 2
+        offset = model_offsets[idx]
+        frame_dict = {}
+        if offset != (0, 0, 0):
+            frame_dict["_t"] = f"{offset[0]} {offset[1]} {offset[2]}"
+        trn_content = struct.pack('<I', trn_id)
+        trn_content += encode_vox_dict({"_name": f"model_{idx}"})
+        trn_content += struct.pack('<i', shp_id)
+        trn_content += struct.pack('<i', -1)
+        trn_content += struct.pack('<i', 0)
+        trn_content += struct.pack('<I', 1)
+        trn_content += encode_vox_dict(frame_dict)
+        chunks.append(('nTRN', trn_content))
+
+        shp_content = struct.pack('<I', shp_id)
+        shp_content += encode_vox_dict({})
+        shp_content += struct.pack('<I', 1)
+        shp_content += struct.pack('<I', idx)
+        shp_content += encode_vox_dict({})
+        chunks.append(('nSHP', shp_content))
+
+    return chunks
+
 def rgb_to_palette_index(r, g, b, palette):
     """RGB値を最も近いパレットインデックスに変換"""
     color = (r, g, b)
@@ -119,29 +182,48 @@ def export_vox(filepath, obj):
     max_y = max(p[1] for p in positions)
     max_z = max(p[2] for p in positions)
 
-    # サイズを計算(1を加える)
-    size_x = max_x - min_x + 1
-    size_y = max_y - min_y + 1
-    size_z = max_z - min_z + 1
-
-    # サイズ制限チェック
-    if size_x > 256 or size_y > 256 or size_z > 256:
-        return {'CANCELLED'}, f"Model too large: {size_x}x{size_y}x{size_z} (max: 256x256x256)"
+    # ボクセルを256ごとに分割
+    chunk_voxels = defaultdict(list)
+    for pos, color in voxels.items():
+        cx = (pos[0] - min_x) // 256
+        cy = (pos[1] - min_y) // 256
+        cz = (pos[2] - min_z) // 256
+        origin_x = min_x + cx * 256
+        origin_y = min_y + cy * 256
+        origin_z = min_z + cz * 256
+        local_x = pos[0] - origin_x
+        local_y = pos[1] - origin_y
+        local_z = pos[2] - origin_z
+        chunk_voxels[(cx, cy, cz)].append((local_x, local_y, local_z, color))
 
     # パレットを構築
     palette = {}
-    voxel_data = []
+    chunk_data = []
+    model_offsets = []
+    chunk_keys = sorted(chunk_voxels.keys())
+    for chunk_key in chunk_keys:
+        vox_list = chunk_voxels[chunk_key]
+        max_local_x = max(v[0] for v in vox_list)
+        max_local_y = max(v[1] for v in vox_list)
+        max_local_z = max(v[2] for v in vox_list)
+        size_chunk_x = max_local_x + 1
+        size_chunk_y = max_local_y + 1
+        size_chunk_z = max_local_z + 1
 
-    for pos, color in voxels.items():
-        # 座標を正規化(0始まり)
-        x = pos[0] - min_x
-        y = pos[1] - min_y
-        z = pos[2] - min_z
+        voxel_data = []
+        for local_x, local_y, local_z, color in vox_list:
+            color_idx = rgb_to_palette_index(color[0], color[1], color[2], palette)
+            voxel_data.append((local_x, local_y, local_z, color_idx))
 
-        # パレットインデックスを取得
-        color_idx = rgb_to_palette_index(color[0], color[1], color[2], palette)
+        chunk_data.append({
+            "size": (size_chunk_x, size_chunk_y, size_chunk_z),
+            "voxels": voxel_data,
+        })
 
-        voxel_data.append((x, y, z, color_idx))
+        origin_x = min_x + chunk_key[0] * 256
+        origin_y = min_y + chunk_key[1] * 256
+        origin_z = min_z + chunk_key[2] * 256
+        model_offsets.append((origin_x - min_x, origin_y - min_y, origin_z - min_z))
 
     # ファイルに書き込み
     with open(filepath, 'wb') as f:
@@ -152,26 +234,22 @@ def export_vox(filepath, obj):
         # MAINチャンク(空)
         f.write(b'MAIN')
 
-        # 子チャンクのサイズを計算
-        size_chunk_size = 12 + 12  # chunk header + content
-        xyzi_chunk_content_size = 4 + len(voxel_data) * 4
-        xyzi_chunk_size = 12 + xyzi_chunk_content_size
-        rgba_chunk_size = 12 + 256 * 4
+        # チャンク一覧を構築
+        chunks = []
+        if len(chunk_data) > 1:
+            pack_content = struct.pack('<I', len(chunk_data))
+            chunks.append(('PACK', pack_content))
 
-        children_size = size_chunk_size + xyzi_chunk_size + rgba_chunk_size
+        for chunk in chunk_data:
+            size_chunk_x, size_chunk_y, size_chunk_z = chunk["size"]
+            size_content = struct.pack('<III', size_chunk_x, size_chunk_y, size_chunk_z)
+            chunks.append(('SIZE', size_content))
 
-        f.write(struct.pack('<I', 0))  # content size
-        f.write(struct.pack('<I', children_size))
-
-        # SIZEチャンク
-        size_content = struct.pack('<III', size_x, size_y, size_z)
-        write_chunk(f, 'SIZE', size_content)
-
-        # XYZIチャンク
-        xyzi_content = struct.pack('<I', len(voxel_data))
-        for x, y, z, color_idx in voxel_data:
-            xyzi_content += struct.pack('BBBB', x, y, z, color_idx)
-        write_chunk(f, 'XYZI', xyzi_content)
+            voxel_data = chunk["voxels"]
+            xyzi_content = struct.pack('<I', len(voxel_data))
+            for x, y, z, color_idx in voxel_data:
+                xyzi_content += struct.pack('BBBB', x, y, z, color_idx)
+            chunks.append(('XYZI', xyzi_content))
 
         # RGBAチャンク(パレット)
         rgba_content = b''
@@ -189,9 +267,21 @@ def export_vox(filepath, obj):
                 # 未使用色はグレー
                 rgba_content += struct.pack('BBBB', 128, 128, 128, 255)
 
-        write_chunk(f, 'RGBA', rgba_content)
+        chunks.append(('RGBA', rgba_content))
 
-    return {'FINISHED'}, f"Exported {len(voxel_data)} voxels"
+        # シーングラフチャンク
+        scene_chunks = build_scene_graph_chunks(len(chunk_data), model_offsets)
+        chunks.extend(scene_chunks)
+
+        children_size = sum(12 + len(content) for _, content in chunks)
+
+        f.write(struct.pack('<I', 0))  # content size
+        f.write(struct.pack('<I', children_size))
+
+        for chunk_id, content in chunks:
+            write_chunk(f, chunk_id, content)
+
+    return {'FINISHED'}, f"Exported {len(voxels)} voxels in {len(chunk_data)} model(s)"
 
 class EXPORT_OT_vox(bpy.types.Operator):
     """Export voxelized mesh to MagicaVoxel .vox format"""
