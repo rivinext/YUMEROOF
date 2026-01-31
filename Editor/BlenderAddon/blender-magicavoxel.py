@@ -107,8 +107,10 @@ def rgb_to_palette_index(r, g, b, palette):
             closest_idx = idx
     return closest_idx
 
-def analyze_voxel_mesh(obj):
+def analyze_voxel_mesh(obj, voxel_size):
     """メッシュからボクセル情報を抽出"""
+    if voxel_size <= 0:
+        return {}
     # メッシュデータを取得
     depsgraph = bpy.context.evaluated_depsgraph_get()
     eval_obj = obj.evaluated_get(depsgraph)
@@ -157,7 +159,12 @@ def analyze_voxel_mesh(obj):
             r, g, b = 255, 255, 255
 
         # ボクセル位置を整数座標に丸める
-        vox_pos = (round(center.x), round(center.y), round(center.z))
+        inv_size = 1.0 / voxel_size
+        vox_pos = (
+            round(center.x * inv_size),
+            round(center.y * inv_size),
+            round(center.z * inv_size),
+        )
         voxels[vox_pos] = (r, g, b)
 
     bm.free()
@@ -165,12 +172,14 @@ def analyze_voxel_mesh(obj):
 
     return voxels
 
-def export_vox(filepath, obj):
+def export_vox(filepath, obj, voxel_size):
     """VOX形式でエクスポート"""
     # ボクセル情報を抽出
-    voxels = analyze_voxel_mesh(obj)
+    voxels = analyze_voxel_mesh(obj, voxel_size)
 
     if not voxels:
+        if voxel_size <= 0:
+            return {'CANCELLED'}, "Voxel size must be greater than 0"
         return {'CANCELLED'}, "No voxels found in mesh"
 
     # 座標の範囲を計算
@@ -290,6 +299,14 @@ class EXPORT_OT_vox(bpy.types.Operator):
     bl_options = {'PRESET'}
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+    voxel_size: bpy.props.FloatProperty(
+        name="Voxel Size (m)",
+        description="1 voxelあたりのサイズ(メートル)",
+        default=1.0,
+        min=0.0001,
+        soft_min=0.01,
+        soft_max=10.0,
+    )
 
     filter_glob: bpy.props.StringProperty(
         default="*.vox",
@@ -304,7 +321,7 @@ class EXPORT_OT_vox(bpy.types.Operator):
             self.report({'ERROR'}, "No active mesh object selected")
             return {'CANCELLED'}
 
-        result, message = export_vox(self.filepath, obj)
+        result, message = export_vox(self.filepath, obj, self.voxel_size)
 
         if result == {'FINISHED'}:
             self.report({'INFO'}, message)
