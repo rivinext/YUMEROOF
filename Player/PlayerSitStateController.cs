@@ -229,6 +229,64 @@ public class PlayerSitStateController : MonoBehaviour
         StartStandUpMove();
     }
 
+    public void ForceStandUpImmediate()
+    {
+        ResetCoroutines();
+
+        if (playerCollider != null && seatCollider != null)
+        {
+            Physics.IgnoreCollision(playerCollider, seatCollider, false);
+        }
+
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        if (animator != null)
+        {
+            animator.applyRootMotion = false;
+            if (!string.IsNullOrEmpty(sitTriggerName))
+            {
+                animator.ResetTrigger(sitTriggerName);
+            }
+
+            if (!string.IsNullOrEmpty(standTriggerName))
+            {
+                animator.ResetTrigger(standTriggerName);
+            }
+
+            SetAnimatorBool(ref animatorSitSleepValue, sitSleepBoolName, false);
+            SetAnimatorBool(ref animatorSitValue, sitBoolName, false);
+        }
+
+        seatAnchor = null;
+        seatCollider = null;
+        isStandingUp = false;
+        isMovingToSeat = false;
+        isSitting = false;
+        hasEnteredSleepState = false;
+        sitTimer = 0f;
+
+        PlayerController.SetGlobalInputEnabled(true);
+
+        if (sleepController != null)
+        {
+            sleepController.ForceState(false);
+            sleepController.NotifySitState(false, false);
+            sleepController.NotifyActive(false);
+        }
+
+        if (blinkController != null)
+        {
+            blinkController.NotifyActive();
+        }
+
+        UpdateBlinkControl(true);
+    }
+
     public void StartSeatMove()
     {
         if (seatAnchor != null && !isMovingToSeat)
