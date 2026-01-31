@@ -199,6 +199,8 @@ public class SceneTransitionManager : MonoBehaviour
             return false;
         }
 
+        ClearPlayerInteractionState(player);
+
         PlayerSpawnPoint[] spawnPoints = FindObjectsByType<PlayerSpawnPoint>(FindObjectsSortMode.None);
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
@@ -241,6 +243,29 @@ public class SceneTransitionManager : MonoBehaviour
         }
 
         return true;
+    }
+
+    private void ClearPlayerInteractionState(GameObject player)
+    {
+        if (player == null)
+        {
+            return;
+        }
+
+        var sitStateController = player.GetComponent<PlayerSitStateController>();
+        if (sitStateController != null)
+        {
+            sitStateController.ForceStandUpImmediate();
+        }
+
+        var bedTriggers = FindObjectsByType<BedTrigger>(FindObjectsSortMode.None);
+        if (bedTriggers != null)
+        {
+            foreach (var bedTrigger in bedTriggers)
+            {
+                bedTrigger?.ForceExitBedImmediate();
+            }
+        }
     }
 
     private PlayerSpawnPoint FindSpawnPoint(PlayerSpawnPoint[] spawnPoints, string spawnPointName)

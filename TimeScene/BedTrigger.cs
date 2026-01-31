@@ -464,6 +464,42 @@ public class BedTrigger : MonoBehaviour, IInteractable
         SetEmoteButtonsTemporarilyDisabled(false);
     }
 
+    public void ForceExitBedImmediate()
+    {
+        if (!isPlayerInBed && !isTransitioning)
+        {
+            return;
+        }
+
+        StopAllCoroutines();
+        ResetBedIdleSleepTimer(true);
+        ClosePanel();
+
+        if (playerAnimator != null)
+        {
+            if (!string.IsNullOrEmpty(bedInTriggerName))
+            {
+                playerAnimator.ResetTrigger(bedInTriggerName);
+            }
+
+            if (!string.IsNullOrEmpty(bedOutTriggerName))
+            {
+                playerAnimator.ResetTrigger(bedOutTriggerName);
+            }
+        }
+
+        isPlayerInBed = false;
+        isTransitioning = false;
+
+        PlayerController.SetGlobalInputEnabled(true);
+        SetEmoteButtonsTemporarilyDisabled(false);
+
+        if (playerBlinkController != null)
+        {
+            playerBlinkController.NotifyActive();
+        }
+    }
+
     private void TryResolveEmoteButtonBinder()
     {
         if (playerEmoteButtonBinder != null)
