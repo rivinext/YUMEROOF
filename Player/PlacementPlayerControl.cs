@@ -50,6 +50,6 @@ public class PlacementPlayerControl : MonoBehaviour
             playerController.enabled = true;
 
         if (playerRigidbody != null)
-            playerRigidbody.isKinematic = false;
+            playerRigidbody.isKinematic = playerController != null && playerController.IsSitting;
     }
 }
