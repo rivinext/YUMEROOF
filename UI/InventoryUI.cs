@@ -7,6 +7,7 @@ using System.Linq;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Localization.Settings;
 
 
 public class InventoryUI : MonoBehaviour
@@ -79,6 +80,8 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Color defaultCategoryColor = Color.white;
     [SerializeField] private Color defaultCategoryCheckmarkColor = Color.white;
     private const string StandardTextTableName = "StandardText";
+    private const string ItemNamesTableName = "ItemNames";
+    private const string MaterialNamesTableName = "MaterialNames";
     private static readonly Dictionary<string, string> CategoryLocalizationKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     [SerializeField] private string allCategoryKey = "ALL";
     [SerializeField] private string allCategoryLabel = "ALL";
@@ -1294,8 +1297,16 @@ public class InventoryUI : MonoBehaviour
             items = items.Where(item =>
             {
                 var materialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
-                return materialData != null &&
-                       materialData.materialName.ToLower().Contains(searchQuery.ToLower());
+                if (materialData == null)
+                {
+                    return false;
+                }
+
+                string localizedName = GetLocalizedMaterialName(materialData);
+                return MatchesSearch(localizedName, searchQuery)
+                       || MatchesSearch(materialData.materialName, searchQuery)
+                       || MatchesSearch(materialData.nameID, searchQuery)
+                       || MatchesSearch(item.itemID, searchQuery);
             }).ToList();
         }
 
@@ -1321,7 +1332,11 @@ public class InventoryUI : MonoBehaviour
         {
             items = items.Where(item =>
             {
-                return item.itemID.ToLower().Contains(searchQuery.ToLower());
+                string localizedName = GetLocalizedFurnitureName(item);
+                string nameId = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID)?.nameID;
+                return MatchesSearch(localizedName, searchQuery)
+                       || MatchesSearch(nameId, searchQuery)
+                       || MatchesSearch(item.itemID, searchQuery);
             }).ToList();
         }
 
@@ -1362,6 +1377,58 @@ public class InventoryUI : MonoBehaviour
     RectTransform HandleCreateFurnitureCard()
     {
         return cardManager != null ? cardManager.CreateFurnitureCardForVirtualizer() : null;
+    }
+
+    string GetLocalizedFurnitureName(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return null;
+        }
+
+        var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+        if (data == null || string.IsNullOrEmpty(data.nameID))
+        {
+            return null;
+        }
+
+        return GetLocalizedString(ItemNamesTableName, data.nameID);
+    }
+
+    string GetLocalizedMaterialName(MaterialData materialData)
+    {
+        if (materialData == null || string.IsNullOrEmpty(materialData.nameID))
+        {
+            return null;
+        }
+
+        string localized = GetLocalizedString(ItemNamesTableName, materialData.nameID);
+        if (!string.IsNullOrEmpty(localized))
+        {
+            return localized;
+        }
+
+        return GetLocalizedString(MaterialNamesTableName, materialData.nameID);
+    }
+
+    string GetLocalizedString(string tableName, string key)
+    {
+        if (string.IsNullOrEmpty(tableName) || string.IsNullOrEmpty(key))
+        {
+            return null;
+        }
+
+        return LocalizationSettings.StringDatabase.GetLocalizedString(tableName, key);
+    }
+
+    static bool MatchesSearch(string target, string query)
+    {
+        if (string.IsNullOrEmpty(target) || string.IsNullOrEmpty(query))
+        {
+            return false;
+        }
+
+        return target.IndexOf(query, StringComparison.CurrentCultureIgnoreCase) >= 0;
     }
 
     void HandleReleaseFurnitureCard(RectTransform item)
