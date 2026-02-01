@@ -63,6 +63,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     private Vector3 baseScale;
     private Vector3 baseEulerAngles;
     private Tween hoverTween;
+    private bool isHovering = false;
     private float lastHoverSfxTime = -10f;
     private float currentSfxVolume = 1f;
     private RectTransform quantityRectTransform;
@@ -204,6 +205,7 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
 
     void OnDisable()
     {
+        isHovering = false;
         KillHoverTween();
         ResetHoverTargetTransform();
         KillQuantityTween();
@@ -228,6 +230,13 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
             return;
         }
 
+        if (isHovering)
+        {
+            return;
+        }
+
+        isHovering = true;
+
         KillHoverTween();
         ResetHoverTargetTransform();
 
@@ -250,6 +259,21 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     {
         if (DisableHoverAnimation || resolvedHoverTarget == null) return;
 
+        if (!isHovering)
+        {
+            return;
+        }
+
+        if (eventData != null
+            && RectTransformUtility.RectangleContainsScreenPoint(
+                resolvedHoverTarget,
+                eventData.position,
+                eventData.pressEventCamera))
+        {
+            return;
+        }
+
+        isHovering = false;
         KillHoverTween();
         resolvedHoverTarget.localEulerAngles = baseEulerAngles;
         hoverTween = resolvedHoverTarget.DOScale(baseScale, SafeHoverDuration)
