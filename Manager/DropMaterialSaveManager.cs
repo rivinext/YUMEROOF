@@ -168,6 +168,11 @@ public class DropMaterialSaveManager : MonoBehaviour
 
     private void SpawnDropsForScene(string sceneName)
     {
+        string registeredScenes = dropsByScene.Count > 0
+            ? string.Join(", ", dropsByScene.Keys)
+            : "(none)";
+        Debug.Log($"[DropMaterialSave] Spawn request for scene '{sceneName}'. Registered scenes: {registeredScenes}");
+
         if (dropPrefab == null) return;
         if (!dropsByScene.TryGetValue(sceneName, out var list)) return;
 
