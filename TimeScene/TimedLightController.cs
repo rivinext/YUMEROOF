@@ -158,6 +158,18 @@ public class TimedLightController : MonoBehaviour
         set => turnOffTimeMinutes = ParseTimeString(value);
     }
 
+    public void SetManualOverride(bool on)
+    {
+        manualOverrideActive = true;
+        manualOverrideOn = on;
+    }
+
+    public void ToggleManualOverride()
+    {
+        manualOverrideActive = true;
+        manualOverrideOn = !manualOverrideOn;
+    }
+
     private int ParseTimeString(string time)
     {
         if (string.IsNullOrEmpty(time)) return 0;
