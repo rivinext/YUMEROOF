@@ -41,6 +41,9 @@ public class TimedLightController : MonoBehaviour
         bool crossedTurnOffTime = (lastMinutes < turnOffTimeMinutes && currentMinutes >= turnOffTimeMinutes)
             || (lastMinutes > currentMinutes
                 && (turnOffTimeMinutes >= lastMinutes || turnOffTimeMinutes <= currentMinutes));
+        bool crossedTurnOnTime = (lastMinutes < turnOnTimeMinutes && currentMinutes >= turnOnTimeMinutes)
+            || (lastMinutes > currentMinutes
+                && (turnOnTimeMinutes >= lastMinutes || turnOnTimeMinutes <= currentMinutes));
 
         if (crossedTurnOffTime)
         {
@@ -48,24 +51,16 @@ public class TimedLightController : MonoBehaviour
             manualOverrideOn = false;
         }
 
-        bool shouldEnable;
-
-        if (turnOnTimeMinutes < turnOffTimeMinutes)
+        if (crossedTurnOnTime && manualOverrideActive && !manualOverrideOn)
         {
-            shouldEnable = currentMinutes >= turnOnTimeMinutes && currentMinutes < turnOffTimeMinutes;
-        }
-        else if (turnOnTimeMinutes > turnOffTimeMinutes)
-        {
-            shouldEnable = currentMinutes >= turnOnTimeMinutes || currentMinutes < turnOffTimeMinutes;
-        }
-        else
-        {
-            shouldEnable = false;
+            manualOverrideActive = false;
         }
 
-        if (manualOverrideOn)
+        bool shouldEnable = ShouldEnableForTime(currentMinutes);
+
+        if (manualOverrideActive)
         {
-            shouldEnable = true;
+            shouldEnable = manualOverrideOn;
         }
 
         targetLight.enabled = shouldEnable;
@@ -99,6 +94,31 @@ public class TimedLightController : MonoBehaviour
     {
         manualOverrideActive = true;
         manualOverrideOn = !manualOverrideOn;
+    }
+
+    public void ToggleManualOverrideFromInteract()
+    {
+        if (clock != null && !manualOverrideActive && ShouldEnableForTime(clock.currentMinutes))
+        {
+            manualOverrideActive = true;
+            manualOverrideOn = false;
+            return;
+        }
+
+        ToggleManualOverride();
+    }
+
+    private bool ShouldEnableForTime(float currentMinutes)
+    {
+        if (turnOnTimeMinutes < turnOffTimeMinutes)
+        {
+            return currentMinutes >= turnOnTimeMinutes && currentMinutes < turnOffTimeMinutes;
+        }
+        if (turnOnTimeMinutes > turnOffTimeMinutes)
+        {
+            return currentMinutes >= turnOnTimeMinutes || currentMinutes < turnOffTimeMinutes;
+        }
+        return false;
     }
 
     private int ParseTimeString(string time)

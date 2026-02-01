@@ -23,6 +23,6 @@ public class TimedLightInteractable : MonoBehaviour, IInteractable
             return;
         }
 
-        targetController.ToggleManualOverride();
+        targetController.ToggleManualOverrideFromInteract();
     }
 }
