@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -72,8 +73,16 @@ public class FurnitureDropManager : MonoBehaviour
         }
 
         var allFurniture = FurnitureSaveManager.Instance.GetAllFurniture();
-        string currentScene = SceneManager.GetActiveScene().name;
         FurnitureDataManager dataManager = FurnitureDataManager.Instance;
+        HashSet<string> loadedSceneNames = new HashSet<string>();
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            Scene loadedScene = SceneManager.GetSceneAt(i);
+            if (loadedScene.isLoaded)
+            {
+                loadedSceneNames.Add(loadedScene.name);
+            }
+        }
 
         foreach (var saveData in allFurniture)
         {
@@ -92,13 +101,14 @@ public class FurnitureDropManager : MonoBehaviour
 
                 if (randomValue <= rate)
                 {
-                    Vector3 spawnPos = (saveData.sceneName == currentScene)
-                        ? GetSpawnPositionCurrentScene(saveData)
+                    bool isSceneLoaded = loadedSceneNames.Contains(saveData.sceneName);
+                    Vector3 spawnPos = isSceneLoaded
+                        ? GetSpawnPositionCurrentScene(saveData.sceneName, saveData)
                         : GetSpawnPositionFromSave(saveData);
 
-                    if (saveData.sceneName == currentScene)
+                    if (isSceneLoaded)
                     {
-                        SpawnDropImmediate(materialID, spawnPos);
+                        SpawnDropImmediate(materialID, spawnPos, saveData.sceneName);
                     }
                     else
                     {
@@ -110,9 +120,10 @@ public class FurnitureDropManager : MonoBehaviour
         }
     }
 
-    private Vector3 GetSpawnPositionCurrentScene(FurnitureSaveManager.FurnitureSaveData data)
+    private Vector3 GetSpawnPositionCurrentScene(string sceneName, FurnitureSaveManager.FurnitureSaveData data)
     {
-        GameObject obj = GameObject.Find($"{data.furnitureID}_UID_{data.uniqueID}");
+        Scene scene = SceneManager.GetSceneByName(sceneName);
+        GameObject obj = FindFurnitureObjectInScene(scene, $"{data.furnitureID}_UID_{data.uniqueID}");
         float baseY = data.posY;
         Vector3 basePos = data.GetPosition();
         if (obj != null)
@@ -137,6 +148,29 @@ public class FurnitureDropManager : MonoBehaviour
         }
         Vector2 circle = Random.insideUnitCircle * spawnRadius;
         return new Vector3(basePos.x + circle.x, baseY + spawnYOffset, basePos.z + circle.y);
+    }
+
+    private GameObject FindFurnitureObjectInScene(Scene scene, string objectName)
+    {
+        if (!scene.IsValid() || !scene.isLoaded)
+        {
+            return null;
+        }
+
+        GameObject[] roots = scene.GetRootGameObjects();
+        for (int i = 0; i < roots.Length; i++)
+        {
+            Transform[] transforms = roots[i].GetComponentsInChildren<Transform>(true);
+            for (int j = 0; j < transforms.Length; j++)
+            {
+                if (transforms[j].name == objectName)
+                {
+                    return transforms[j].gameObject;
+                }
+            }
+        }
+
+        return null;
     }
 
     private Vector3 GetSpawnPositionFromSave(FurnitureSaveManager.FurnitureSaveData data)
@@ -182,7 +216,7 @@ public class FurnitureDropManager : MonoBehaviour
         return new Vector3(x, y, z);
     }
 
-    private void SpawnDropImmediate(string materialID, Vector3 position)
+    private void SpawnDropImmediate(string materialID, Vector3 position, string sceneName)
     {
         GameObject dropObj = Instantiate(dropPrefab, position, Quaternion.identity);
         var dropComp = dropObj.GetComponent<DropMaterial>();
@@ -190,8 +224,13 @@ public class FurnitureDropManager : MonoBehaviour
         {
             dropComp.MaterialID = materialID;
         }
+        Scene targetScene = SceneManager.GetSceneByName(sceneName);
+        if (targetScene.IsValid() && targetScene.isLoaded)
+        {
+            SceneManager.MoveGameObjectToScene(dropObj, targetScene);
+        }
         DropMaterialSaveManager.Instance?.RegisterDrop(
-            SceneManager.GetActiveScene().name,
+            sceneName,
             materialID,
             position,
             null);
