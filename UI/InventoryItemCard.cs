@@ -70,7 +70,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     private Tween quantityScaleTween;
     private string lastQuantityItemKey = string.Empty;
     private int lastDisplayedQuantity = -1;
-    private bool isHovering = false;
 
     private float SafeHoverScale => Mathf.Max(hoverScale, MinHoverScaleValue);
     private float SafeHoverDuration => Mathf.Max(hoverDuration, MinHoverDurationValue);
@@ -211,7 +210,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         ResetQuantityTextTransform();
         lastQuantityItemKey = string.Empty;
         lastDisplayedQuantity = -1;
-        isHovering = false;
         AudioManager.OnSfxVolumeChanged -= HandleSfxVolumeChanged;
     }
 
@@ -229,13 +227,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         {
             return;
         }
-
-        if (isHovering)
-        {
-            return;
-        }
-
-        isHovering = true;
 
         KillHoverTween();
         ResetHoverTargetTransform();
@@ -258,13 +249,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
     public void OnPointerExit(PointerEventData eventData)
     {
         if (DisableHoverAnimation || resolvedHoverTarget == null) return;
-
-        if (!IsPointerExitEventValid(eventData))
-        {
-            return;
-        }
-
-        isHovering = false;
 
         KillHoverTween();
         resolvedHoverTarget.localEulerAngles = baseEulerAngles;
@@ -293,26 +277,6 @@ public class InventoryItemCard : MonoBehaviour, IPointerClickHandler, IBeginDrag
         // Allow hover events triggered by any child of this card so that overlays
         // (e.g. the quantity text) do not block the hover animation.
         return eventData.pointerEnter.transform.IsChildOf(transform);
-    }
-
-    private bool IsPointerExitEventValid(PointerEventData eventData)
-    {
-        if (eventData == null)
-        {
-            return true;
-        }
-
-        if (eventData.pointerEnter == null)
-        {
-            return true;
-        }
-
-        if (eventData.pointerEnter == gameObject)
-        {
-            return false;
-        }
-
-        return !eventData.pointerEnter.transform.IsChildOf(transform);
     }
 
     // アイテムを設定
