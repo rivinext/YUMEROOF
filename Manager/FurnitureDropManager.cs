@@ -65,47 +65,18 @@ public class FurnitureDropManager : MonoBehaviour
 
         lastProcessedDay = day;
         Debug.Log($"[FurnitureDropManager] Sleep advanced day event received: {day}");
-        GenerateDropsForActiveScene();
-    }
-
-    public void GenerateDropsForAllScenes()
-    {
-        string activeScene = SceneManager.GetActiveScene().name;
-        GenerateDropsForScenes(activeScene, includeAllScenes: true);
-        MarkProcessedDay();
-    }
-
-    public void GenerateDropsForActiveScene()
-    {
-        string activeScene = SceneManager.GetActiveScene().name;
-        GenerateDropsForScenes(activeScene, includeAllScenes: false);
-        MarkProcessedDay();
-    }
-
-    /// <summary>
-    /// Registers furniture-based drops for every scene so they can respawn
-    /// when those scenes load. The active scene is handled by sleep event
-    /// listeners to avoid duplicate spawns.
-    /// </summary>
-    public void SpawnDropsForAllFurnitureScenes()
-    {
         if (dropPrefab == null)
         {
             Debug.LogWarning("[FurnitureDropManager] Drop prefab is null. Aborting spawn.");
             return;
         }
 
-        string activeScene = SceneManager.GetActiveScene().name;
         var allFurniture = FurnitureSaveManager.Instance.GetAllFurniture();
+        string currentScene = SceneManager.GetActiveScene().name;
         FurnitureDataManager dataManager = FurnitureDataManager.Instance;
 
         foreach (var saveData in allFurniture)
         {
-            if (saveData.sceneName == activeScene)
-            {
-                continue;
-            }
-
             var fData = dataManager.GetFurnitureData(saveData.furnitureID);
             if (fData == null || fData.dropMaterialIDs == null || fData.dropRates == null) continue;
 
@@ -121,63 +92,11 @@ public class FurnitureDropManager : MonoBehaviour
 
                 if (randomValue <= rate)
                 {
-                    Vector3 spawnPos = GetSpawnPositionFromSave(saveData);
-                    DropMaterialSaveManager.Instance?.RegisterDrop(saveData.sceneName, materialID, spawnPos, null);
-                    Debug.Log($"[FurnitureDropManager] Registered spawn of {materialID} at {spawnPos} for scene {saveData.sceneName}");
-                }
-            }
-        }
-
-        DropMaterialSaveManager.Instance?.SaveToPrefs();
-        MarkProcessedDay();
-    }
-
-    private void MarkProcessedDay()
-    {
-        if (clock != null)
-        {
-            lastProcessedDay = Mathf.Max(lastProcessedDay, clock.currentDay);
-        }
-    }
-
-    private void GenerateDropsForScenes(string activeScene, bool includeAllScenes)
-    {
-        if (dropPrefab == null)
-        {
-            Debug.LogWarning("[FurnitureDropManager] Drop prefab is null. Aborting spawn.");
-            return;
-        }
-
-        var allFurniture = FurnitureSaveManager.Instance.GetAllFurniture();
-        FurnitureDataManager dataManager = FurnitureDataManager.Instance;
-
-        foreach (var saveData in allFurniture)
-        {
-            if (!includeAllScenes && saveData.sceneName != activeScene)
-            {
-                continue;
-            }
-
-            var fData = dataManager.GetFurnitureData(saveData.furnitureID);
-            if (fData == null || fData.dropMaterialIDs == null || fData.dropRates == null) continue;
-
-            int len = Mathf.Min(fData.dropMaterialIDs.Length, fData.dropRates.Length);
-            for (int i = 0; i < len; i++)
-            {
-                string materialID = fData.dropMaterialIDs[i];
-                float rate = fData.dropRates[i];
-                if (string.IsNullOrEmpty(materialID) || materialID == "None" || rate <= 0f) continue;
-
-                float randomValue = Random.value;
-                Debug.Log($"[FurnitureDropManager] Random value {randomValue}, rate {rate} for material {materialID}");
-
-                if (randomValue <= rate)
-                {
-                    Vector3 spawnPos = (saveData.sceneName == activeScene)
+                    Vector3 spawnPos = (saveData.sceneName == currentScene)
                         ? GetSpawnPositionCurrentScene(saveData)
                         : GetSpawnPositionFromSave(saveData);
 
-                    if (saveData.sceneName == activeScene)
+                    if (saveData.sceneName == currentScene)
                     {
                         SpawnDropImmediate(materialID, spawnPos);
                     }
@@ -189,8 +108,6 @@ public class FurnitureDropManager : MonoBehaviour
                 }
             }
         }
-
-        DropMaterialSaveManager.Instance?.SaveToPrefs();
     }
 
     private Vector3 GetSpawnPositionCurrentScene(FurnitureSaveManager.FurnitureSaveData data)
