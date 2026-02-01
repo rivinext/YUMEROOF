@@ -415,12 +415,18 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
+        if (!string.IsNullOrEmpty(Input.compositionString))
+            return;
+
         currentSearchField.DeactivateInputField();
     }
 
     void HandleSearchFieldEndEdit(TMP_InputField field)
     {
         if (currentSearchField != field)
+            return;
+
+        if (!string.IsNullOrEmpty(Input.compositionString))
             return;
 
         ClearSearchEditingState();
