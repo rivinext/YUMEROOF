@@ -193,7 +193,16 @@ public class FurnitureSaveManager : MonoBehaviour
     {
         if (furniture == null || isLoadingScene) return;
 
-        SaveFurnitureRecursive(furniture, sceneName);
+        string activeSceneName = SceneManager.GetActiveScene().name;
+        string sceneToSave = sceneName;
+
+        if (sceneName != activeSceneName)
+        {
+            Debug.LogWarning($"[FurnitureSave] Scene mismatch on save. Provided={sceneName}, Active={activeSceneName}. Using active scene name.");
+            sceneToSave = activeSceneName;
+        }
+
+        SaveFurnitureRecursive(furniture, sceneToSave);
         OnFurnitureChanged?.Invoke();
     }
 
@@ -214,18 +223,6 @@ public class FurnitureSaveManager : MonoBehaviour
         int wallParentId = 0;
         string wallParentName = string.Empty;
         string wallParentPath = string.Empty;
-        string activeSceneName = SceneManager.GetActiveScene().name;
-        string sceneToSave = scene;
-
-        if (scene != activeSceneName)
-        {
-            Debug.LogWarning($"[FurnitureSave] Scene mismatch on save. Provided={scene}, Active={activeSceneName}. Using active scene name.");
-            sceneToSave = activeSceneName;
-        }
-        else
-        {
-            Debug.Log($"[FurnitureSave] Scene match on save. Scene={scene}, Active={activeSceneName}.");
-        }
 
         // 親家具がある場合はそのIDを取得
         if (furniture.parentFurniture != null)
@@ -254,7 +251,7 @@ public class FurnitureSaveManager : MonoBehaviour
         if (existingData != null)
         {
             // 更新
-            existingData.sceneName = sceneToSave;
+            existingData.sceneName = scene;
             existingData.posX = furniture.transform.position.x;
             existingData.posY = furniture.transform.position.y;
             existingData.posZ = furniture.transform.position.z;
@@ -273,7 +270,7 @@ public class FurnitureSaveManager : MonoBehaviour
             // 新規追加
             FurnitureSaveData newData = new FurnitureSaveData(
                 furniture.furnitureData.nameID,
-                sceneToSave,
+                scene,
                 furniture.transform.position,
                 furniture.transform.rotation,
                 furniture.gameObject.layer,
@@ -287,7 +284,7 @@ public class FurnitureSaveManager : MonoBehaviour
         }
 
         if (debugMode)
-            Debug.Log($"[FurnitureSave] Saved: {furniture.furnitureData.nameID} at {furniture.transform.position} in {sceneToSave}");
+            Debug.Log($"[FurnitureSave] Saved: {furniture.furnitureData.nameID} at {furniture.transform.position} in {scene}");
     }
 
     // 家具を削除（インベントリに戻す時）
