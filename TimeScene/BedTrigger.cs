@@ -377,33 +377,17 @@ public class BedTrigger : MonoBehaviour, IInteractable
         // Pause the game clock while the player sleeps
         clock.SetTimeScale(0f);
 
-        // Remove any dropped materials that were not collected.
-        // MaterialSpawnManager listens for sleep-based day advancement to spawn
-        // new drops after this cleanup.
-        if (sleepDropCleanupMode == SleepDropCleanupMode.AllScenes)
-        {
-            DropMaterialSaveManager.Instance?.ClearAllDrops();
-        }
-        else
-        {
-            DropMaterialSaveManager.Instance?.ClearDropsForScene(SceneManager.GetActiveScene().name);
-        }
-
         ClosePanel();
         if (transitionUI != null)
         {
             void OnDayShownHandler()
             {
+                // Clear all registered drops right before advancing the day.
+                DropMaterialSaveManager.Instance?.ClearAllDrops();
+
                 // Advance the day, regenerate drops, then notify sleep-specific listeners.
                 clock.SetTimeAndAdvanceDay(sleepEndMinutes);
-                if (sleepDropCleanupMode == SleepDropCleanupMode.AllScenes)
-                {
-                    FurnitureDropManager.Instance?.GenerateDropsForAllScenes();
-                }
-                else
-                {
-                    FurnitureDropManager.Instance?.GenerateDropsForActiveScene();
-                }
+                FurnitureDropManager.Instance?.SpawnDropsForAllFurnitureScenes();
                 clock.TriggerSleepAdvancedDay();
                 AcquireRecipes();
                 transitionUI.OnDayShown -= OnDayShownHandler;
@@ -414,16 +398,12 @@ public class BedTrigger : MonoBehaviour, IInteractable
         }
         else
         {
+            // Clear all registered drops right before advancing the day.
+            DropMaterialSaveManager.Instance?.ClearAllDrops();
+
             // Advance the day, regenerate drops, then notify sleep-specific listeners.
             clock.SetTimeAndAdvanceDay(sleepEndMinutes);
-            if (sleepDropCleanupMode == SleepDropCleanupMode.AllScenes)
-            {
-                FurnitureDropManager.Instance?.GenerateDropsForAllScenes();
-            }
-            else
-            {
-                FurnitureDropManager.Instance?.GenerateDropsForActiveScene();
-            }
+            FurnitureDropManager.Instance?.SpawnDropsForAllFurnitureScenes();
             clock.TriggerSleepAdvancedDay();
             AcquireRecipes();
         }
