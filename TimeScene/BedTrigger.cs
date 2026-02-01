@@ -394,8 +394,16 @@ public class BedTrigger : MonoBehaviour, IInteractable
         {
             void OnDayShownHandler()
             {
-                // Advance the day and notify sleep-specific listeners.
+                // Advance the day, regenerate drops, then notify sleep-specific listeners.
                 clock.SetTimeAndAdvanceDay(sleepEndMinutes);
+                if (sleepDropCleanupMode == SleepDropCleanupMode.AllScenes)
+                {
+                    FurnitureDropManager.Instance?.GenerateDropsForAllScenes();
+                }
+                else
+                {
+                    FurnitureDropManager.Instance?.GenerateDropsForActiveScene();
+                }
                 clock.TriggerSleepAdvancedDay();
                 AcquireRecipes();
                 transitionUI.OnDayShown -= OnDayShownHandler;
@@ -406,8 +414,16 @@ public class BedTrigger : MonoBehaviour, IInteractable
         }
         else
         {
-            // Advance the day and notify sleep-specific listeners.
+            // Advance the day, regenerate drops, then notify sleep-specific listeners.
             clock.SetTimeAndAdvanceDay(sleepEndMinutes);
+            if (sleepDropCleanupMode == SleepDropCleanupMode.AllScenes)
+            {
+                FurnitureDropManager.Instance?.GenerateDropsForAllScenes();
+            }
+            else
+            {
+                FurnitureDropManager.Instance?.GenerateDropsForActiveScene();
+            }
             clock.TriggerSleepAdvancedDay();
             AcquireRecipes();
         }
