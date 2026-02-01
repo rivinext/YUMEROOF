@@ -26,6 +26,7 @@ public class PlayerRayInteractor : MonoBehaviour
     private RayOutlineHighlighter highlighter;
     private bool skipHideOnce;
     private PlayerController playerController;
+    private FreePlacementSystem placementSystem;
     [Header("UI Hooks")]
     [SerializeField] private InteractionUIController interactionUIController;
 
@@ -44,6 +45,7 @@ public class PlayerRayInteractor : MonoBehaviour
         SceneManager.sceneLoaded += OnSceneLoaded;
         SceneManager.sceneUnloaded += OnSceneUnloaded;
         BindInteractionUIController();
+        BindPlacementSystem();
     }
 
 #if UNITY_EDITOR
@@ -58,6 +60,14 @@ public class PlayerRayInteractor : MonoBehaviour
         if (interactionUIController == null)
         {
             interactionUIController = FindFirstObjectByType<InteractionUIController>();
+        }
+    }
+
+    private void BindPlacementSystem()
+    {
+        if (placementSystem == null)
+        {
+            placementSystem = FindFirstObjectByType<FreePlacementSystem>();
         }
     }
 
@@ -80,6 +90,12 @@ public class PlayerRayInteractor : MonoBehaviour
         }
 
         if (playerController != null && playerController.IsSitting)
+        {
+            ClearCurrentTarget();
+            return;
+        }
+
+        if (placementSystem != null && placementSystem.IsPlacing())
         {
             ClearCurrentTarget();
             return;
@@ -144,6 +160,7 @@ public class PlayerRayInteractor : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         BindInteractionUIController();
+        BindPlacementSystem();
     }
 
     private void OnSceneUnloaded(Scene scene)
