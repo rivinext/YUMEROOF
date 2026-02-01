@@ -16,6 +16,9 @@ public class FurnitureDropManager : MonoBehaviour
     private GameClock clock;
     private Coroutine clockRetryCoroutine;
     private int lastProcessedDay = -1;
+    private bool isWaitingForFurnitureLoad = false;
+    private int pendingSleepDay = -1;
+    private FurnitureSaveManager furnitureSaveManager;
 
     void Awake()
     {
@@ -54,6 +57,7 @@ public class FurnitureDropManager : MonoBehaviour
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         StopClockRetryCoroutine();
         UnsubscribeFromClock();
+        UnsubscribeFromFurnitureLoad();
     }
 
     private void HandleSleepAdvancedDay(int day)
@@ -63,7 +67,75 @@ public class FurnitureDropManager : MonoBehaviour
             return;
         }
 
+        var saveManager = FurnitureSaveManager.Instance;
+        if (saveManager == null)
+        {
+            Debug.LogWarning("[FurnitureDropManager] FurnitureSaveManager.Instance is null. Skipping drop processing.");
+            return;
+        }
+
+        if (saveManager.IsFurnitureLoading)
+        {
+            ScheduleSleepAdvancedDayAfterFurnitureLoad(day, saveManager);
+            return;
+        }
+
+        ExecuteSleepAdvancedDay(day, saveManager);
+    }
+
+    private void ScheduleSleepAdvancedDayAfterFurnitureLoad(int day, FurnitureSaveManager saveManager)
+    {
+        if (isWaitingForFurnitureLoad)
+        {
+            if (pendingSleepDay < day)
+            {
+                pendingSleepDay = day;
+            }
+            return;
+        }
+
+        isWaitingForFurnitureLoad = true;
+        pendingSleepDay = day;
+        furnitureSaveManager = saveManager;
+        furnitureSaveManager.OnFurnitureLoadCompleted += HandleFurnitureLoadCompleted;
+        Debug.Log($"[FurnitureDropManager] Furniture load in progress. Waiting to process day {day}.");
+    }
+
+    private void HandleFurnitureLoadCompleted()
+    {
+        if (furnitureSaveManager != null)
+        {
+            furnitureSaveManager.OnFurnitureLoadCompleted -= HandleFurnitureLoadCompleted;
+        }
+
+        if (!isWaitingForFurnitureLoad)
+        {
+            return;
+        }
+
+        isWaitingForFurnitureLoad = false;
+        int dayToProcess = pendingSleepDay;
+        pendingSleepDay = -1;
+
+        var saveManager = FurnitureSaveManager.Instance;
+        if (saveManager == null)
+        {
+            Debug.LogWarning("[FurnitureDropManager] FurnitureSaveManager.Instance is null after load completion. Skipping drop processing.");
+            return;
+        }
+
+        if (dayToProcess > lastProcessedDay)
+        {
+            ExecuteSleepAdvancedDay(dayToProcess, saveManager);
+        }
+    }
+
+    private void ExecuteSleepAdvancedDay(int day, FurnitureSaveManager saveManager)
+    {
         lastProcessedDay = day;
+        var allFurniture = saveManager.GetAllFurniture();
+        string currentScene = SceneManager.GetActiveScene().name;
+        Debug.Log($"[FurnitureDropManager] HandleSleepAdvancedDay start. Furniture count: {allFurniture.Count}, Scene: {currentScene}");
         Debug.Log($"[FurnitureDropManager] Sleep advanced day event received: {day}");
         if (dropPrefab == null)
         {
@@ -71,8 +143,6 @@ public class FurnitureDropManager : MonoBehaviour
             return;
         }
 
-        var allFurniture = FurnitureSaveManager.Instance.GetAllFurniture();
-        string currentScene = SceneManager.GetActiveScene().name;
         FurnitureDataManager dataManager = FurnitureDataManager.Instance;
 
         foreach (var saveData in allFurniture)
@@ -214,8 +284,20 @@ public class FurnitureDropManager : MonoBehaviour
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             StopClockRetryCoroutine();
             UnsubscribeFromClock();
+            UnsubscribeFromFurnitureLoad();
             Instance = null;
         }
+    }
+
+    private void UnsubscribeFromFurnitureLoad()
+    {
+        if (furnitureSaveManager != null)
+        {
+            furnitureSaveManager.OnFurnitureLoadCompleted -= HandleFurnitureLoadCompleted;
+            furnitureSaveManager = null;
+        }
+        isWaitingForFurnitureLoad = false;
+        pendingSleepDay = -1;
     }
 
     private void FindClockAndSubscribe()
