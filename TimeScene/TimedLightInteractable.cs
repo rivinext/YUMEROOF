@@ -5,24 +5,32 @@ using UnityEngine;
 /// </summary>
 public class TimedLightInteractable : MonoBehaviour, IInteractable
 {
-    [SerializeField] private TimedLightController targetController;
+    [SerializeField] private TimedLightController[] targetControllers;
 
     void Awake()
     {
-        if (targetController == null)
+        if (targetControllers == null || targetControllers.Length == 0)
         {
-            targetController = GetComponentInChildren<TimedLightController>(true);
+            targetControllers = GetComponentsInChildren<TimedLightController>(true);
         }
     }
 
     public void Interact()
     {
-        if (targetController == null)
+        if (targetControllers == null || targetControllers.Length == 0)
         {
             Debug.LogWarning("[TimedLightInteractable] TimedLightController が見つかりません。", this);
             return;
         }
 
-        targetController.ToggleManualOverrideFromInteract();
+        foreach (var controller in targetControllers)
+        {
+            if (controller == null)
+            {
+                continue;
+            }
+
+            controller.ToggleManualOverrideFromInteract();
+        }
     }
 }
