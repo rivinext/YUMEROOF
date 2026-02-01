@@ -36,6 +36,29 @@ public class DropMaterialSaveManager : MonoBehaviour
     private const string PREF_KEY = "DropMaterialSave";
     [SerializeField] private string dropPrefabPath = "Materials/DropMaterial";
 
+    public static DropMaterialSaveManager CreateIfNeeded()
+    {
+        if (Instance != null)
+        {
+            return Instance;
+        }
+
+        if (SceneManager.GetActiveScene().name == "MainMenu")
+        {
+            return null;
+        }
+
+        var existing = FindFirstObjectByType<DropMaterialSaveManager>();
+        if (existing != null)
+        {
+            Instance = existing;
+            return existing;
+        }
+
+        var go = new GameObject("DropMaterialSaveManager");
+        return go.AddComponent<DropMaterialSaveManager>();
+    }
+
     void Awake()
     {
         if (Instance != null && Instance != this)
