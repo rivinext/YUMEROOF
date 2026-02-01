@@ -41,11 +41,18 @@ public class TimedLightController : MonoBehaviour
         bool crossedTurnOffTime = (lastMinutes < turnOffTimeMinutes && currentMinutes >= turnOffTimeMinutes)
             || (lastMinutes > currentMinutes
                 && (turnOffTimeMinutes >= lastMinutes || turnOffTimeMinutes <= currentMinutes));
+        bool crossedTurnOnTime = (lastMinutes < turnOnTimeMinutes && currentMinutes >= turnOnTimeMinutes)
+            || (lastMinutes > currentMinutes
+                && (turnOnTimeMinutes >= lastMinutes || turnOnTimeMinutes <= currentMinutes));
 
         if (crossedTurnOffTime)
         {
             manualOverrideActive = false;
             manualOverrideOn = false;
+        }
+        else if (crossedTurnOnTime && manualOverrideActive && !manualOverrideOn)
+        {
+            manualOverrideActive = false;
         }
 
         bool shouldEnable = ShouldEnableForTime(currentMinutes);
