@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Trigger for sleeping in the bed. Allows sleeping only during specified hours
@@ -45,16 +44,6 @@ public class BedTrigger : MonoBehaviour, IInteractable
     public int sleepStartMinutes = 20 * 60; // 8:00 PM
     public int sleepEndMinutes = 6 * 60;   // 6:00 AM
     public GameClock clock;
-
-    public enum SleepDropCleanupMode
-    {
-        ActiveSceneOnly,
-        AllScenes
-    }
-
-    [Header("Drop Cleanup")]
-    [SerializeField, Tooltip("Controls whether sleep clears drops only in the active scene or across all scenes.")]
-    private SleepDropCleanupMode sleepDropCleanupMode = SleepDropCleanupMode.ActiveSceneOnly;
 
     [Header("Emote Controls")]
     [SerializeField] private PlayerEmoteButtonBinder playerEmoteButtonBinder;
@@ -377,17 +366,18 @@ public class BedTrigger : MonoBehaviour, IInteractable
         // Pause the game clock while the player sleeps
         clock.SetTimeScale(0f);
 
+        // Remove any dropped materials that were not collected.
+        // MaterialSpawnManager listens for sleep-based day advancement to spawn
+        // new drops after this cleanup.
+        DropMaterialSaveManager.Instance?.ClearAllDrops();
+
         ClosePanel();
         if (transitionUI != null)
         {
             void OnDayShownHandler()
             {
-                // Clear all registered drops right before advancing the day.
-                DropMaterialSaveManager.Instance?.ClearAllDrops();
-
-                // Advance the day, regenerate drops, then notify sleep-specific listeners.
+                // Advance the day and notify sleep-specific listeners.
                 clock.SetTimeAndAdvanceDay(sleepEndMinutes);
-                FurnitureDropManager.Instance?.SpawnDropsForAllFurnitureScenes();
                 clock.TriggerSleepAdvancedDay();
                 AcquireRecipes();
                 transitionUI.OnDayShown -= OnDayShownHandler;
@@ -398,12 +388,8 @@ public class BedTrigger : MonoBehaviour, IInteractable
         }
         else
         {
-            // Clear all registered drops right before advancing the day.
-            DropMaterialSaveManager.Instance?.ClearAllDrops();
-
-            // Advance the day, regenerate drops, then notify sleep-specific listeners.
+            // Advance the day and notify sleep-specific listeners.
             clock.SetTimeAndAdvanceDay(sleepEndMinutes);
-            FurnitureDropManager.Instance?.SpawnDropsForAllFurnitureScenes();
             clock.TriggerSleepAdvancedDay();
             AcquireRecipes();
         }
