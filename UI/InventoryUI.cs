@@ -7,6 +7,7 @@ using System.Linq;
 using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Localization.Settings;
 
 
 public class InventoryUI : MonoBehaviour
@@ -1289,13 +1290,11 @@ public class InventoryUI : MonoBehaviour
         var items = GetSortedMaterialList();
 
         // 検索フィルター適用
-        if (!string.IsNullOrEmpty(searchQuery))
+        if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             items = items.Where(item =>
             {
-                var materialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
-                return materialData != null &&
-                       materialData.materialName.ToLower().Contains(searchQuery.ToLower());
+                return MatchesSearchQuery(searchQuery, GetLocalizedMaterialName(item), item.itemID);
             }).ToList();
         }
 
@@ -1317,11 +1316,11 @@ public class InventoryUI : MonoBehaviour
         }
 
         // 検索フィルター適用
-        if (!string.IsNullOrEmpty(searchQuery))
+        if (!string.IsNullOrWhiteSpace(searchQuery))
         {
             items = items.Where(item =>
             {
-                return item.itemID.ToLower().Contains(searchQuery.ToLower());
+                return MatchesSearchQuery(searchQuery, GetLocalizedFurnitureName(item), item.itemID);
             }).ToList();
         }
 
@@ -1362,6 +1361,62 @@ public class InventoryUI : MonoBehaviour
     RectTransform HandleCreateFurnitureCard()
     {
         return cardManager != null ? cardManager.CreateFurnitureCardForVirtualizer() : null;
+    }
+
+    string GetLocalizedFurnitureName(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return string.Empty;
+        }
+
+        var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+        if (data == null || string.IsNullOrEmpty(data.nameID))
+        {
+            return string.Empty;
+        }
+
+        return LocalizationSettings.StringDatabase.GetLocalizedString("ItemNames", data.nameID);
+    }
+
+    string GetLocalizedMaterialName(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return string.Empty;
+        }
+
+        var materialDataSO = FurnitureDataManager.Instance?.GetMaterialDataSO(item.itemID);
+        if (materialDataSO == null || string.IsNullOrEmpty(materialDataSO.nameID))
+        {
+            var materialData = InventoryManager.Instance?.GetMaterialData(item.itemID);
+            return materialData != null ? materialData.materialName : string.Empty;
+        }
+
+        return LocalizationSettings.StringDatabase.GetLocalizedString("MaterialNames", materialDataSO.nameID);
+    }
+
+    static bool MatchesSearchQuery(string query, params string[] candidates)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        foreach (var candidate in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                continue;
+            }
+
+            if (candidate.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void HandleReleaseFurnitureCard(RectTransform item)
