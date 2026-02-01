@@ -14,15 +14,9 @@ public class TimedLightController : MonoBehaviour
     private float defaultIntensity;
     private DayNightLighting dayNightLighting;
     private bool controlsIntensity = true;
-    private float lastMinutes = -1f;
-    private ManualOverrideState manualOverride = ManualOverrideState.None;
-
-    private enum ManualOverrideState
-    {
-        None,
-        ForceOn,
-        ForceOff
-    }
+    private bool manualOverrideActive;
+    private bool manualOverrideOn;
+    private float lastMinutes;
 
     void Awake()
     {
@@ -44,7 +38,16 @@ public class TimedLightController : MonoBehaviour
         if (clock == null || targetLight == null) return;
 
         float currentMinutes = clock.currentMinutes;
-        HandleManualOverrideWindows(currentMinutes);
+        bool crossedTurnOffTime = (lastMinutes < turnOffTimeMinutes && currentMinutes >= turnOffTimeMinutes)
+            || (lastMinutes > currentMinutes
+                && (turnOffTimeMinutes >= lastMinutes || turnOffTimeMinutes <= currentMinutes));
+
+        if (crossedTurnOffTime)
+        {
+            manualOverrideActive = false;
+            manualOverrideOn = false;
+        }
+
         bool shouldEnable;
 
         if (turnOnTimeMinutes < turnOffTimeMinutes)
@@ -60,13 +63,9 @@ public class TimedLightController : MonoBehaviour
             shouldEnable = false;
         }
 
-        if (manualOverride == ManualOverrideState.ForceOn)
+        if (manualOverrideOn)
         {
             shouldEnable = true;
-        }
-        else if (manualOverride == ManualOverrideState.ForceOff)
-        {
-            shouldEnable = false;
         }
 
         targetLight.enabled = shouldEnable;
@@ -76,74 +75,6 @@ public class TimedLightController : MonoBehaviour
         }
 
         lastMinutes = currentMinutes;
-    }
-
-    public void ToggleManualOverride()
-    {
-        if (clock == null) return;
-
-        bool autoShouldEnable = IsAutoOn(clock.currentMinutes);
-        manualOverride = autoShouldEnable ? ManualOverrideState.ForceOff : ManualOverrideState.ForceOn;
-    }
-
-    public void SetManualOverride(bool forceOn)
-    {
-        manualOverride = forceOn ? ManualOverrideState.ForceOn : ManualOverrideState.ForceOff;
-    }
-
-    public void ClearManualOverride()
-    {
-        manualOverride = ManualOverrideState.None;
-    }
-
-    private bool IsAutoOn(float currentMinutes)
-    {
-        if (turnOnTimeMinutes < turnOffTimeMinutes)
-        {
-            return currentMinutes >= turnOnTimeMinutes && currentMinutes < turnOffTimeMinutes;
-        }
-
-        if (turnOnTimeMinutes > turnOffTimeMinutes)
-        {
-            return currentMinutes >= turnOnTimeMinutes || currentMinutes < turnOffTimeMinutes;
-        }
-
-        return false;
-    }
-
-    private void HandleManualOverrideWindows(float currentMinutes)
-    {
-        if (lastMinutes < 0f)
-        {
-            lastMinutes = currentMinutes;
-            return;
-        }
-
-        bool wrappedDay = lastMinutes > currentMinutes;
-        if (manualOverride == ManualOverrideState.ForceOn)
-        {
-            if (HasCrossedTime(lastMinutes, currentMinutes, turnOffTimeMinutes, wrappedDay))
-            {
-                manualOverride = ManualOverrideState.None;
-            }
-        }
-        else if (manualOverride == ManualOverrideState.ForceOff)
-        {
-            if (HasCrossedTime(lastMinutes, currentMinutes, turnOnTimeMinutes, wrappedDay))
-            {
-                manualOverride = ManualOverrideState.None;
-            }
-        }
-    }
-
-    private static bool HasCrossedTime(float previousMinutes, float currentMinutes, int targetMinutes, bool wrappedDay)
-    {
-        if (!wrappedDay)
-        {
-            return previousMinutes < targetMinutes && currentMinutes >= targetMinutes;
-        }
-
-        return previousMinutes < targetMinutes || currentMinutes >= targetMinutes;
     }
 
     public string TurnOnTime
