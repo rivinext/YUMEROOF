@@ -150,6 +150,12 @@ public class FurnitureDropManager : MonoBehaviour
             return;
         }
 
+        var dropSaveManager = DropMaterialSaveManager.Instance;
+        if (dropSaveManager == null)
+        {
+            Debug.LogWarning("[FurnitureDropManager] DropMaterialSaveManager is missing. Drops outside the current scene will not persist.");
+        }
+
         int masterFoundCount = 0;
 
         foreach (var saveData in allFurniture)
@@ -185,7 +191,7 @@ public class FurnitureDropManager : MonoBehaviour
                     }
                     else
                     {
-                        DropMaterialSaveManager.Instance?.RegisterDrop(saveData.sceneName, materialID, spawnPos, null);
+                        dropSaveManager?.RegisterDrop(saveData.sceneName, materialID, spawnPos, null);
                     }
                     Debug.Log($"[FurnitureDropManager] Queued spawn of {materialID} at {spawnPos} for scene {saveData.sceneName}");
                 }

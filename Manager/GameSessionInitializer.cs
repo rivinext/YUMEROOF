@@ -80,6 +80,7 @@ public class GameSessionInitializer : MonoBehaviour
         }
 
         MilestoneManager.CreateIfNeeded(milestoneManagerPrefab);
+        DropMaterialSaveManager.CreateIfNeeded();
         ApplyAudioSettingsToScene();
 
         if (!initialized && !string.IsNullOrEmpty(slotKey))
