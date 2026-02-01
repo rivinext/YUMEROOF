@@ -1,19 +1,28 @@
 using UnityEngine;
 
 /// <summary>
-/// インタラクト時に子オブジェクトの TimedLightController を手動切り替えします。
+/// Allows manual interaction with a child TimedLightController.
 /// </summary>
 public class TimedLightInteractable : MonoBehaviour, IInteractable
 {
+    [SerializeField] private TimedLightController targetController;
+
+    void Awake()
+    {
+        if (targetController == null)
+        {
+            targetController = GetComponentInChildren<TimedLightController>(true);
+        }
+    }
+
     public void Interact()
     {
-        TimedLightController controller = GetComponentInChildren<TimedLightController>(true);
-        if (controller == null)
+        if (targetController == null)
         {
-            Debug.LogWarning($"{nameof(TimedLightInteractable)}: TimedLightController が見つかりません。", this);
+            Debug.LogWarning("[TimedLightInteractable] TimedLightController が見つかりません。", this);
             return;
         }
 
-        controller.ToggleManualOverride();
+        targetController.ToggleManualOverride();
     }
 }
