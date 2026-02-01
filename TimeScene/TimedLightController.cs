@@ -14,6 +14,9 @@ public class TimedLightController : MonoBehaviour
     private float defaultIntensity;
     private DayNightLighting dayNightLighting;
     private bool controlsIntensity = true;
+    private bool manualOverrideActive;
+    private bool manualOverrideOn;
+    private float lastMinutes;
 
     void Awake()
     {
@@ -35,6 +38,16 @@ public class TimedLightController : MonoBehaviour
         if (clock == null || targetLight == null) return;
 
         float currentMinutes = clock.currentMinutes;
+        bool crossedTurnOffTime = (lastMinutes < turnOffTimeMinutes && currentMinutes >= turnOffTimeMinutes)
+            || (lastMinutes > currentMinutes
+                && (turnOffTimeMinutes >= lastMinutes || turnOffTimeMinutes <= currentMinutes));
+
+        if (crossedTurnOffTime)
+        {
+            manualOverrideActive = false;
+            manualOverrideOn = false;
+        }
+
         bool shouldEnable;
 
         if (turnOnTimeMinutes < turnOffTimeMinutes)
@@ -50,11 +63,18 @@ public class TimedLightController : MonoBehaviour
             shouldEnable = false;
         }
 
+        if (manualOverrideOn)
+        {
+            shouldEnable = true;
+        }
+
         targetLight.enabled = shouldEnable;
         if (controlsIntensity)
         {
             targetLight.intensity = shouldEnable ? defaultIntensity : 0f;
         }
+
+        lastMinutes = currentMinutes;
     }
 
     public string TurnOnTime
@@ -67,6 +87,18 @@ public class TimedLightController : MonoBehaviour
     {
         get => MinutesToTimeString(turnOffTimeMinutes);
         set => turnOffTimeMinutes = ParseTimeString(value);
+    }
+
+    public void SetManualOverride(bool on)
+    {
+        manualOverrideActive = true;
+        manualOverrideOn = on;
+    }
+
+    public void ToggleManualOverride()
+    {
+        manualOverrideActive = true;
+        manualOverrideOn = !manualOverrideOn;
     }
 
     private int ParseTimeString(string time)
