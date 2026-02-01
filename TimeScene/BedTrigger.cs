@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Trigger for sleeping in the bed. Allows sleeping only during specified hours
@@ -369,7 +370,7 @@ public class BedTrigger : MonoBehaviour, IInteractable
         // Remove any dropped materials that were not collected.
         // MaterialSpawnManager listens for sleep-based day advancement to spawn
         // new drops after this cleanup.
-        DropMaterialSaveManager.Instance?.ClearAllDrops();
+        DropMaterialSaveManager.Instance?.ClearDropsForScene(SceneManager.GetActiveScene().name);
 
         ClosePanel();
         if (transitionUI != null)
