@@ -46,6 +46,16 @@ public class BedTrigger : MonoBehaviour, IInteractable
     public int sleepEndMinutes = 6 * 60;   // 6:00 AM
     public GameClock clock;
 
+    public enum SleepDropCleanupMode
+    {
+        ActiveSceneOnly,
+        AllScenes
+    }
+
+    [Header("Drop Cleanup")]
+    [SerializeField, Tooltip("Controls whether sleep clears drops only in the active scene or across all scenes.")]
+    private SleepDropCleanupMode sleepDropCleanupMode = SleepDropCleanupMode.ActiveSceneOnly;
+
     [Header("Emote Controls")]
     [SerializeField] private PlayerEmoteButtonBinder playerEmoteButtonBinder;
 
@@ -370,7 +380,14 @@ public class BedTrigger : MonoBehaviour, IInteractable
         // Remove any dropped materials that were not collected.
         // MaterialSpawnManager listens for sleep-based day advancement to spawn
         // new drops after this cleanup.
-        DropMaterialSaveManager.Instance?.ClearDropsForScene(SceneManager.GetActiveScene().name);
+        if (sleepDropCleanupMode == SleepDropCleanupMode.AllScenes)
+        {
+            DropMaterialSaveManager.Instance?.ClearAllDrops();
+        }
+        else
+        {
+            DropMaterialSaveManager.Instance?.ClearDropsForScene(SceneManager.GetActiveScene().name);
+        }
 
         ClosePanel();
         if (transitionUI != null)
