@@ -143,30 +143,6 @@ public class DropMaterialSaveManager : MonoBehaviour
         SaveToPrefs();
     }
 
-    /// <summary>
-    /// Clears all registered drops for the specified scene and destroys any
-    /// existing drop objects in that scene.
-    /// </summary>
-    public void ClearDropsForScene(string sceneName)
-    {
-        if (string.IsNullOrEmpty(sceneName))
-        {
-            return;
-        }
-
-        foreach (var drop in FindObjectsByType<DropMaterial>(FindObjectsSortMode.None))
-        {
-            if (drop.gameObject.scene.name == sceneName)
-            {
-                Destroy(drop.gameObject);
-            }
-        }
-
-        dropsByScene.Remove(sceneName);
-
-        SaveToPrefs();
-    }
-
     private void SpawnDropsForScene(string sceneName)
     {
         if (dropPrefab == null) return;
