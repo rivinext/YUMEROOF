@@ -68,19 +68,20 @@ public class FurnitureDropManager : MonoBehaviour
         }
 
         var saveManager = FurnitureSaveManager.Instance;
-        if (saveManager == null)
+        var dataManager = FurnitureDataManager.Instance;
+        bool isReady = saveManager != null && dataManager != null && !saveManager.IsFurnitureLoading;
+
+        if (!isReady)
         {
-            Debug.LogWarning("[FurnitureDropManager] FurnitureSaveManager.Instance is null. Skipping drop processing.");
+            Debug.LogWarning($"[FurnitureDropManager] Furniture systems not ready. SaveManager: {(saveManager != null ? "Ready" : "Missing")}, DataManager: {(dataManager != null ? "Ready" : "Missing")}, IsLoading: {(saveManager != null && saveManager.IsFurnitureLoading ? "Yes" : "No")}, TargetDay: {day}");
+            if (saveManager != null)
+            {
+                ScheduleSleepAdvancedDayAfterFurnitureLoad(day, saveManager);
+            }
             return;
         }
 
-        if (saveManager.IsFurnitureLoading)
-        {
-            ScheduleSleepAdvancedDayAfterFurnitureLoad(day, saveManager);
-            return;
-        }
-
-        ExecuteSleepAdvancedDay(day, saveManager);
+        ExecuteSleepAdvancedDay(day, saveManager, dataManager);
     }
 
     private void ScheduleSleepAdvancedDayAfterFurnitureLoad(int day, FurnitureSaveManager saveManager)
@@ -118,36 +119,48 @@ public class FurnitureDropManager : MonoBehaviour
         pendingSleepDay = -1;
 
         var saveManager = FurnitureSaveManager.Instance;
-        if (saveManager == null)
+        var dataManager = FurnitureDataManager.Instance;
+        if (saveManager == null || dataManager == null)
         {
-            Debug.LogWarning("[FurnitureDropManager] FurnitureSaveManager.Instance is null after load completion. Skipping drop processing.");
+            Debug.LogWarning($"[FurnitureDropManager] Furniture systems not ready after load completion. SaveManager: {(saveManager != null ? "Ready" : "Missing")}, DataManager: {(dataManager != null ? "Ready" : "Missing")}, TargetDay: {dayToProcess}");
+            return;
+        }
+
+        if (saveManager.IsFurnitureLoading)
+        {
+            Debug.LogWarning($"[FurnitureDropManager] FurnitureSaveManager still loading after completion callback. TargetDay: {dayToProcess}");
             return;
         }
 
         if (dayToProcess > lastProcessedDay)
         {
-            ExecuteSleepAdvancedDay(dayToProcess, saveManager);
+            ExecuteSleepAdvancedDay(dayToProcess, saveManager, dataManager);
         }
     }
 
-    private void ExecuteSleepAdvancedDay(int day, FurnitureSaveManager saveManager)
+    private void ExecuteSleepAdvancedDay(int day, FurnitureSaveManager saveManager, FurnitureDataManager dataManager)
     {
         lastProcessedDay = day;
         var allFurniture = saveManager.GetAllFurniture();
         string currentScene = SceneManager.GetActiveScene().name;
-        Debug.Log($"[FurnitureDropManager] HandleSleepAdvancedDay start. Furniture count: {allFurniture.Count}, Scene: {currentScene}");
-        Debug.Log($"[FurnitureDropManager] Sleep advanced day event received: {day}");
+        Debug.Log($"[FurnitureDropManager] HandleSleepAdvancedDay start. Furniture count: {allFurniture.Count}, Scene: {currentScene}, TargetDay: {day}");
         if (dropPrefab == null)
         {
             Debug.LogWarning("[FurnitureDropManager] Drop prefab is null. Aborting spawn.");
             return;
         }
 
-        FurnitureDataManager dataManager = FurnitureDataManager.Instance;
+        int masterFoundCount = 0;
 
         foreach (var saveData in allFurniture)
         {
             var fData = dataManager.GetFurnitureData(saveData.furnitureID);
+            bool hasMaster = fData != null;
+            if (hasMaster)
+            {
+                masterFoundCount++;
+            }
+
             if (fData == null || fData.dropMaterialIDs == null || fData.dropRates == null) continue;
 
             int len = Mathf.Min(fData.dropMaterialIDs.Length, fData.dropRates.Length);
@@ -178,6 +191,8 @@ public class FurnitureDropManager : MonoBehaviour
                 }
             }
         }
+
+        Debug.Log($"[FurnitureDropManager] HandleSleepAdvancedDay summary. Furniture count: {allFurniture.Count}, Master data found: {masterFoundCount}, TargetDay: {day}");
     }
 
     private Vector3 GetSpawnPositionCurrentScene(FurnitureSaveManager.FurnitureSaveData data)
