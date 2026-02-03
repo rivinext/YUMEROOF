@@ -129,6 +129,8 @@ public class PlayerEmoteController : MonoBehaviour
             mouthBlendShapeController = GetComponent<PlayerMouthBlendShapeController>();
         }
 
+        ResolveSliderPanels();
+
         CacheBaselineStateHashes();
         RebuildLookup();
     }
@@ -136,6 +138,7 @@ public class PlayerEmoteController : MonoBehaviour
 #if UNITY_EDITOR
     private void OnValidate()
     {
+        ResolveSliderPanels();
         CacheBaselineStateHashes();
         RebuildLookup();
     }
@@ -412,6 +415,37 @@ public class PlayerEmoteController : MonoBehaviour
     {
         standIdleStateHash = !string.IsNullOrEmpty(standIdleStateName) ? Animator.StringToHash(standIdleStateName) : 0;
         sitIdleStateHash = !string.IsNullOrEmpty(sitIdleStateName) ? Animator.StringToHash(sitIdleStateName) : 0;
+    }
+
+    private void ResolveSliderPanels()
+    {
+        if (eyeSliderPanel == null)
+        {
+            eyeSliderPanel = GetComponentInChildren<PlayerEmoteEyeSliderPanel>(true);
+
+            if (eyeSliderPanel == null)
+            {
+#if UNITY_2023_1_OR_NEWER
+                eyeSliderPanel = FindFirstObjectByType<PlayerEmoteEyeSliderPanel>();
+#else
+                eyeSliderPanel = FindObjectOfType<PlayerEmoteEyeSliderPanel>();
+#endif
+            }
+        }
+
+        if (mouthSliderPanel == null)
+        {
+            mouthSliderPanel = GetComponentInChildren<PlayerEmoteMouthSliderPanel>(true);
+
+            if (mouthSliderPanel == null)
+            {
+#if UNITY_2023_1_OR_NEWER
+                mouthSliderPanel = FindFirstObjectByType<PlayerEmoteMouthSliderPanel>();
+#else
+                mouthSliderPanel = FindObjectOfType<PlayerEmoteMouthSliderPanel>();
+#endif
+            }
+        }
     }
 
     private void RebuildLookup()
