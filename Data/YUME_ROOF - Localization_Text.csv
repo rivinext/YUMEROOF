@@ -33,16 +33,16 @@ Item,,Item,アイテム,物品,物品,Objet,Gegenstand,Oggetto,Item,Objeto,아�
 Common,,Common,ふつう,普通,普通,Commun,Gewöhnlich,Comune,Comum,Común,일반,Обычный
 Uncommon,,Uncommon,いいかんじ,罕见,罕見,Inhabituel,Ungewöhnlich,Non comune,Incomum,Poco común,고급,Необычный
 Rare,,Rare,レア,稀有,稀有,Rare,Selten,Raro,Raro,Raro,희귀,Редкий
-milestone_00,,DIY Beginner,DIY初心者,欢迎,歡迎,Bienvenue,Willkommen,Benvenuto,Bem-vindo,Bienvenido,환영합니다,Добро пожаловать
-milestone_01,,Hammer Apprentice,トンカチ見習い,欢迎1,歡迎1,Bienvenue 1,Willkommen 1,Benvenuto 1,Bem-vindo 1,Bienvenido 1,환영합니다 1,Добро пожаловать 1
-milestone_02,,Friend of the Flowerpots,植木鉢の友,欢迎2,歡迎2,Bienvenue 2,Willkommen 2,Benvenuto 2,Bem-vindo 2,Bienvenido 2,환영합니다 2,Добро пожаловать 2
-milestone_03,,Balcony Caretaker,ベランダ整備係,欢迎3,歡迎3,Bienvenue 3,Willkommen 3,Benvenuto 3,Bem-vindo 3,Bienvenido 3,환영합니다 3,Добро пожаловать 3
-milestone_04,,Furniture Collector,家具収集家,欢迎4,歡迎4,Bienvenue 4,Willkommen 4,Benvenuto 4,Bem-vindo 4,Bienvenido 4,환영합니다 4,Добро пожаловать 4
-milestone_05,,Professional Resident,プロ住人,欢迎5,歡迎5,Bienvenue 5,Willkommen 5,Benvenuto 5,Bem-vindo 5,Bienvenido 5,환영합니다 5,Добро пожаловать 5
-milestone_06,,Balcony Artisan,ベランダ職人,欢迎6,歡迎6,Bienvenue 6,Willkommen 6,Benvenuto 6,Bem-vindo 6,Bienvenido 6,환영합니다 6,Добро пожаловать 6
-milestone_07,,Rooftop Decorator,屋上デコレーター,欢迎7,歡迎7,Bienvenue 7,Willkommen 7,Benvenuto 7,Bem-vindo 7,Bienvenido 7,환영합니다 7,Добро пожаловать 7
-milestone_08,,Rooftop Harmonizer,屋上の調律師,欢迎8,歡迎8,Bienvenue 8,Willkommen 8,Benvenuto 8,Bem-vindo 8,Bienvenido 8,환영합니다 8,Добро пожаловать 8
-milestone_99,,Legendary Rooftop Architect,伝説の屋上建築家,欢迎9,歡迎9,Bienvenue 9,Willkommen 9,Benvenuto 9,Bem-vindo 9,Bienvenido 9,환영합니다 9,Добро пожаловать 9
+milestone_00,,DIY Beginner,DIY初心者,DIY初学者,DIY初學者,Débutant en bricolage,DIY-Anfänger,Principiante del fai-da-te,Iniciante no faça-você-mesmo,Principiante de bricolaje,DIY 초보자,Новичок в DIY
+milestone_01,,Hammer Apprentice,トンカチ見習い,木槌学徒,木槌學徒,Apprenti au marteau,Hammer-Lehrling,Apprendista del martello,Aprendiz do martelo,Aprendiz de martillo,망치 견습생,Подмастерье молотка
+milestone_02,,Friend of the Flowerpots,植木鉢の友,花盆之友,花盆之友,Ami des pots de fleurs,Freund der Blumentöpfe,Amico dei vasi di fiori,Amigo dos vasos de flores,Amigo de las macetas,화분의 친구,Друг цветочных горшков
+milestone_03,,Balcony Caretaker,ベランダ整備係,阳台管理员,陽台管理員,Gardien du balcon,Balkonpfleger,Custode del balcone,Cuidador da varanda,Cuidador del balcón,발코니 관리인,Смотритель балкона
+milestone_04,,Furniture Collector,家具収集家,家具收藏家,家具收藏家,Collectionneur de meubles,Möbelsammler,Collezionista di mobili,Colecionador de móveis,Coleccionista de muebles,가구 수집가,Коллекционер мебели
+milestone_05,,Professional Resident,プロ住人,专业住户,專業住戶,Résident confirmé,Profi-Bewohner,Residente esperto,Morador experiente,Residente experto,프로 주민,Опытный жилец
+milestone_06,,Balcony Artisan,ベランダ職人,阳台工匠,陽台工匠,Artisan du balcon,Balkon-Handwerker,Artigiano del balcone,Artesão da varanda,Artesano del balcón,발코니 장인,Балконный мастер
+milestone_07,,Rooftop Decorator,屋上デコレーター,屋顶装饰师,屋頂裝飾師,Décorateur de toit,Dachdekorateur,Decoratore del tetto,Decorador do terraço,Decorador de la azotea,옥상 데코레이터,Декоратор крыши
+milestone_08,,Rooftop Harmonizer,屋上の調律師,屋顶调律师,屋頂調律師,Harmonisateur du toit,Dachharmonist,Armonizzatore del tetto,Harmonizador do terraço,Armonizador de la azotea,옥상 조율사,Настройщик крыши
+milestone_99,,Legendary Rooftop Architect,伝説の屋上建築家,传奇屋顶建筑师,傳奇屋頂建築師,Architecte légendaire du toit,Legendärer Dacharchitekt,Architetto leggendario del tetto,Arquiteto lendário do terraço,Arquitecto legendario de la azotea,전설의 옥상 건축가,Легендарный архитектор крыши
 Reward,,Reward,報酬,奖励,獎勵,Récompense,Belohnung,Ricompensa,Recompensa,Recompensa,보상,Награда
 ,,,,,,,,,,,,
 Orthographic,,Orthographic,正投影,正交投影,正交投影,Orthographique,Orthografisch,Ortogonale,Ortográfica,Ortográfica,정사영,Ортографическая
