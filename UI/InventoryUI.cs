@@ -360,8 +360,12 @@ public class InventoryUI : MonoBehaviour
         field.onValueChanged.AddListener(value =>
         {
             if (debugMode) Debug.Log($"{debugLabel}: {value}");
-            searchQuery = value;
-            RefreshInventoryDisplay();
+            if (IsSearchComposing(field))
+            {
+                return;
+            }
+
+            ApplySearchQuery(value, false);
         });
 
         field.onSelect.RemoveAllListeners();
@@ -404,6 +408,7 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
+        ApplySearchQuery(field?.text, true);
         ClearSearchEditingState();
     }
 
@@ -412,6 +417,7 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
+        ApplySearchQuery(field?.text, true);
         currentSearchField.DeactivateInputField();
     }
 
@@ -420,6 +426,7 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
+        ApplySearchQuery(field?.text, true);
         ClearSearchEditingState();
     }
 
@@ -431,6 +438,28 @@ public class InventoryUI : MonoBehaviour
         isSearchEditing = false;
         currentSearchField = null;
         PlayerController.SetGlobalInputEnabled(true);
+    }
+
+    bool IsSearchComposing(TMP_InputField field)
+    {
+        if (field != null && !string.IsNullOrEmpty(field.compositionString))
+        {
+            return true;
+        }
+
+        return !string.IsNullOrEmpty(Input.compositionString);
+    }
+
+    void ApplySearchQuery(string value, bool forceRefresh)
+    {
+        string nextQuery = value ?? string.Empty;
+        if (!forceRefresh && string.Equals(searchQuery, nextQuery, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        searchQuery = nextQuery;
+        RefreshInventoryDisplay();
     }
 
     void SetupFilters()
