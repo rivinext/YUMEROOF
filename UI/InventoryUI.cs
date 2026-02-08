@@ -362,7 +362,8 @@ public class InventoryUI : MonoBehaviour
         {
             if (debugMode) Debug.Log($"{debugLabel}: {value}");
             bool composing = IsSearchComposing(field);
-            if (!composing && wasComposing)
+            bool wasComposingBefore = wasComposing;
+            if (!composing && wasComposingBefore)
             {
                 ApplySearchQuery(field.text, true);
                 wasComposing = composing;
@@ -428,7 +429,10 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
-        ApplySearchQuery(field?.text, true);
+        if (string.IsNullOrEmpty(Input.compositionString))
+        {
+            ApplySearchQuery(field?.text, true);
+        }
         currentSearchField.DeactivateInputField();
     }
 
@@ -437,7 +441,10 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
-        ApplySearchQuery(field?.text, true);
+        if (string.IsNullOrEmpty(Input.compositionString))
+        {
+            ApplySearchQuery(field?.text, true);
+        }
         ClearSearchEditingState();
     }
 
