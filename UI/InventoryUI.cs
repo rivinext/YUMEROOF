@@ -1319,9 +1319,12 @@ public class InventoryUI : MonoBehaviour
         // 検索フィルター適用
         if (!string.IsNullOrEmpty(searchQuery))
         {
+            string queryLower = searchQuery.ToLower();
+            var inventoryManager = InventoryManager.Instance;
             items = items.Where(item =>
             {
-                return item.itemID.ToLower().Contains(searchQuery.ToLower());
+                string displayName = inventoryManager?.GetItemDisplayName(item) ?? item.itemID;
+                return displayName.ToLower().Contains(queryLower);
             }).ToList();
         }
 
