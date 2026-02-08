@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using UnityEngine.SceneManagement;
+using UnityEngine.Localization.Settings;
 
 public class InventoryManager : MonoBehaviour
 {
@@ -487,6 +488,34 @@ public class InventoryManager : MonoBehaviour
             return materialDatabase.ContainsKey(item.itemID) ?
                    materialDatabase[item.itemID].materialName : item.itemID;
         }
+    }
+
+    public string GetItemDisplayName(InventoryItem item)
+    {
+        if (item == null)
+        {
+            return string.Empty;
+        }
+
+        string nameKey = null;
+        if (item.itemType == InventoryItem.ItemType.Furniture)
+        {
+            var data = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+            nameKey = data?.nameID;
+        }
+        else
+        {
+            var materialData = GetMaterialData(item.itemID);
+            nameKey = materialData?.nameID;
+        }
+
+        if (string.IsNullOrEmpty(nameKey))
+        {
+            return item.itemID;
+        }
+
+        string localizedName = LocalizationSettings.StringDatabase.GetLocalizedString("ItemNames", nameKey);
+        return string.IsNullOrEmpty(localizedName) ? item.itemID : localizedName;
     }
 
     // ã‚¢ã‚¤ãƒ†ãƒ ã®ãƒ¬ã‚¢ãƒªãƒ†ã‚£ã‚’å–å¾—
