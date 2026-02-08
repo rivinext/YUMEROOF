@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Components;
 
 /// <summary>
 /// Manages scene transitions using a sliding panel animation.
@@ -20,13 +22,14 @@ public class SlideTransitionManager : MonoBehaviour
     [Header("Loading Indicator")]
     [SerializeField] private GameObject loadingIndicatorRoot;
     [SerializeField] private TMP_Text loadingStatusText;
+    [SerializeField] private LocalizeStringEvent loadingStatusLocalizeEvent;
     [SerializeField] private Slider loadingProgressSlider;
     [SerializeField, Range(0f, 1f)] private float sceneProgressWeight = 0.5f;
-    [SerializeField] private string sceneLoadingMessage = "Loading scene...";
-    [SerializeField] private string furnitureLoadingMessage = "Placing furniture...";
-    [SerializeField] private string finishingLoadingMessage = "Ready!";
+    [SerializeField] private LocalizedString sceneLoadingMessage = new();
+    [SerializeField] private LocalizedString furnitureLoadingMessage = new();
+    [SerializeField] private LocalizedString finishingLoadingMessage = new();
     [SerializeField, Min(0f)] private float furnitureLoadTimeoutSeconds = 10f;
-    [SerializeField] private string furnitureTimeoutMessage = "ロード継続中...";
+    [SerializeField] private LocalizedString furnitureTimeoutMessage = new();
 
     private readonly List<UISlidePanel> orderedSlidePanels = new(2);
 
@@ -111,7 +114,7 @@ public class SlideTransitionManager : MonoBehaviour
         }
     }
 
-    void ShowLoadingIndicator(string message)
+    void ShowLoadingIndicator(LocalizedString message)
     {
         if (loadingIndicatorRoot != null)
             loadingIndicatorRoot.SetActive(true);
@@ -119,13 +122,13 @@ public class SlideTransitionManager : MonoBehaviour
         UpdateLoadingIndicator(0f, message);
     }
 
-    void UpdateLoadingIndicator(float progress, string message = null)
+    void UpdateLoadingIndicator(float progress, LocalizedString message = null)
     {
         if (loadingProgressSlider != null)
             loadingProgressSlider.value = Mathf.Clamp01(progress);
 
-        if (!string.IsNullOrEmpty(message) && loadingStatusText != null)
-            loadingStatusText.text = message;
+        if (message != null && !message.IsEmpty)
+            SetLoadingMessage(message);
     }
 
     void HideLoadingIndicator()
@@ -156,7 +159,6 @@ public class SlideTransitionManager : MonoBehaviour
             started = true;
             completed = false;
             UpdateLoadingIndicator(sceneWeight, furnitureLoadingMessage);
-            SetLoadingMessage(furnitureLoadingMessage);
         }
 
         void HandleProgress(float progress)
@@ -238,26 +240,31 @@ public class SlideTransitionManager : MonoBehaviour
 
         if (timedOut)
         {
-            string timeoutMessage = string.IsNullOrEmpty(furnitureTimeoutMessage)
-                ? "ロード継続中..."
-                : furnitureTimeoutMessage;
             Debug.LogWarning($"[SlideTransitionManager] Furniture load timed out after {maxWaitSeconds:0.0}s. Proceeding with slide out.");
-            UpdateLoadingIndicator(1f, timeoutMessage);
-            SetLoadingMessage(timeoutMessage);
+            UpdateLoadingIndicator(1f, furnitureTimeoutMessage);
             HideLoadingIndicator();
             yield break;
         }
 
         UpdateLoadingIndicator(1f, finishingLoadingMessage);
-        SetLoadingMessage(finishingLoadingMessage);
     }
 
-    void SetLoadingMessage(string message)
+    void SetLoadingMessage(LocalizedString message)
     {
-        if (loadingStatusText != null && !string.IsNullOrEmpty(message))
+        if (message == null || message.IsEmpty)
+            return;
+
+        var localizeEvent = loadingStatusLocalizeEvent;
+        if (localizeEvent == null && loadingStatusText != null)
         {
-            loadingStatusText.text = message;
+            localizeEvent = loadingStatusText.GetComponent<LocalizeStringEvent>();
         }
+
+        if (localizeEvent == null)
+            return;
+
+        localizeEvent.StringReference = message;
+        localizeEvent.RefreshString();
     }
 
     private IEnumerator RunSlideSequence(bool slideIn)
