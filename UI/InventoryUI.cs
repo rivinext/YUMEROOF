@@ -145,6 +145,7 @@ public class InventoryUI : MonoBehaviour
     private string searchQuery = "";
     private bool isSearchEditing = false;
     private TMP_InputField currentSearchField;
+    private bool wasComposing;
     private InventoryItem selectedFurnitureItem;
     private string selectedFurnitureCategory;
     private bool autoReopenEnabled = false;
@@ -360,7 +361,16 @@ public class InventoryUI : MonoBehaviour
         field.onValueChanged.AddListener(value =>
         {
             if (debugMode) Debug.Log($"{debugLabel}: {value}");
-            if (IsSearchComposing(field))
+            bool composing = IsSearchComposing(field);
+            if (!composing && wasComposing)
+            {
+                ApplySearchQuery(field.text, true);
+                wasComposing = composing;
+                return;
+            }
+
+            wasComposing = composing;
+            if (composing)
             {
                 return;
             }
@@ -400,6 +410,7 @@ public class InventoryUI : MonoBehaviour
 
         currentSearchField = field;
         isSearchEditing = true;
+        wasComposing = IsSearchComposing(field);
         PlayerController.SetGlobalInputEnabled(false);
     }
 
@@ -437,6 +448,7 @@ public class InventoryUI : MonoBehaviour
 
         isSearchEditing = false;
         currentSearchField = null;
+        wasComposing = false;
         PlayerController.SetGlobalInputEnabled(true);
     }
 
@@ -1027,6 +1039,17 @@ public class InventoryUI : MonoBehaviour
 
         if (isSearchEditing)
         {
+            if (currentSearchField != null)
+            {
+                bool composing = IsSearchComposing(currentSearchField);
+                if (!composing && wasComposing)
+                {
+                    ApplySearchQuery(currentSearchField.text, true);
+                }
+
+                wasComposing = composing;
+            }
+
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
                 currentSearchField?.DeactivateInputField();
