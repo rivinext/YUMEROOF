@@ -145,7 +145,6 @@ public class InventoryUI : MonoBehaviour
     private string searchQuery = "";
     private bool isSearchEditing = false;
     private TMP_InputField currentSearchField;
-    private bool wasComposing;
     private InventoryItem selectedFurnitureItem;
     private string selectedFurnitureCategory;
     private bool autoReopenEnabled = false;
@@ -361,22 +360,8 @@ public class InventoryUI : MonoBehaviour
         field.onValueChanged.AddListener(value =>
         {
             if (debugMode) Debug.Log($"{debugLabel}: {value}");
-            bool composing = IsSearchComposing(field);
-            bool wasComposingBefore = wasComposing;
-            if (!composing && wasComposingBefore)
-            {
-                ApplySearchQuery(field.text, true);
-                wasComposing = composing;
-                return;
-            }
-
-            wasComposing = composing;
-            if (composing)
-            {
-                return;
-            }
-
-            ApplySearchQuery(value, false);
+            searchQuery = value;
+            RefreshInventoryDisplay();
         });
 
         field.onSelect.RemoveAllListeners();
@@ -411,7 +396,6 @@ public class InventoryUI : MonoBehaviour
 
         currentSearchField = field;
         isSearchEditing = true;
-        wasComposing = IsSearchComposing(field);
         PlayerController.SetGlobalInputEnabled(false);
     }
 
@@ -420,7 +404,6 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
-        ApplySearchQuery(field?.text, true);
         ClearSearchEditingState();
     }
 
@@ -429,10 +412,6 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
-        if (string.IsNullOrEmpty(Input.compositionString))
-        {
-            ApplySearchQuery(field?.text, true);
-        }
         currentSearchField.DeactivateInputField();
     }
 
@@ -441,10 +420,6 @@ public class InventoryUI : MonoBehaviour
         if (currentSearchField != field)
             return;
 
-        if (string.IsNullOrEmpty(Input.compositionString))
-        {
-            ApplySearchQuery(field?.text, true);
-        }
         ClearSearchEditingState();
     }
 
@@ -455,30 +430,7 @@ public class InventoryUI : MonoBehaviour
 
         isSearchEditing = false;
         currentSearchField = null;
-        wasComposing = false;
         PlayerController.SetGlobalInputEnabled(true);
-    }
-
-    bool IsSearchComposing(TMP_InputField field)
-    {
-        if (string.IsNullOrEmpty(Input.compositionString))
-        {
-            return false;
-        }
-
-        return field == null || field.isFocused;
-    }
-
-    void ApplySearchQuery(string value, bool forceRefresh)
-    {
-        string nextQuery = value ?? string.Empty;
-        if (!forceRefresh && string.Equals(searchQuery, nextQuery, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        searchQuery = nextQuery;
-        RefreshInventoryDisplay();
     }
 
     void SetupFilters()
@@ -1046,17 +998,6 @@ public class InventoryUI : MonoBehaviour
 
         if (isSearchEditing)
         {
-            if (currentSearchField != null)
-            {
-                bool composing = IsSearchComposing(currentSearchField);
-                if (!composing && wasComposing)
-                {
-                    ApplySearchQuery(currentSearchField.text, true);
-                }
-
-                wasComposing = composing;
-            }
-
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
                 currentSearchField?.DeactivateInputField();
