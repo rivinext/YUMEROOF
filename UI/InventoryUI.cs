@@ -359,9 +359,13 @@ public class InventoryUI : MonoBehaviour
         field.onValueChanged.RemoveAllListeners();
         field.onValueChanged.AddListener(value =>
         {
-            if (debugMode) Debug.Log($"{debugLabel}: {value}");
-            searchQuery = value;
-            RefreshInventoryDisplay();
+            if (IsImeComposing(field))
+            {
+                if (debugMode) Debug.Log($"{debugLabel}: composition in progress");
+                return;
+            }
+
+            ApplySearchQuery(value, debugLabel);
         });
 
         field.onSelect.RemoveAllListeners();
@@ -371,10 +375,10 @@ public class InventoryUI : MonoBehaviour
         field.onDeselect.AddListener(_ => HandleSearchFieldDeselected(field));
 
         field.onSubmit.RemoveAllListeners();
-        field.onSubmit.AddListener(_ => HandleSearchFieldSubmitted(field));
+        field.onSubmit.AddListener(_ => HandleSearchFieldSubmitted(field, debugLabel));
 
         field.onEndEdit.RemoveAllListeners();
-        field.onEndEdit.AddListener(_ => HandleSearchFieldEndEdit(field));
+        field.onEndEdit.AddListener(_ => HandleSearchFieldEndEdit(field, debugLabel));
 
         var placeholder = field.placeholder as TMP_Text;
         if (placeholder != null) placeholder.text = "Search...";
@@ -407,20 +411,46 @@ public class InventoryUI : MonoBehaviour
         ClearSearchEditingState();
     }
 
-    void HandleSearchFieldSubmitted(TMP_InputField field)
+    void HandleSearchFieldSubmitted(TMP_InputField field, string debugLabel)
     {
         if (currentSearchField != field)
             return;
+
+        if (!IsImeComposing(field))
+        {
+            ApplySearchQuery(field.text, debugLabel);
+        }
 
         currentSearchField.DeactivateInputField();
     }
 
-    void HandleSearchFieldEndEdit(TMP_InputField field)
+    void HandleSearchFieldEndEdit(TMP_InputField field, string debugLabel)
     {
         if (currentSearchField != field)
             return;
 
+        if (!IsImeComposing(field))
+        {
+            ApplySearchQuery(field.text, debugLabel);
+        }
+
         ClearSearchEditingState();
+    }
+
+    void ApplySearchQuery(string value, string debugLabel)
+    {
+        if (debugMode) Debug.Log($"{debugLabel}: {value}");
+        searchQuery = value;
+        RefreshInventoryDisplay();
+    }
+
+    bool IsImeComposing(TMP_InputField field)
+    {
+        if (field == null)
+            return false;
+
+        return !string.IsNullOrEmpty(field.compositionString) ||
+               !string.IsNullOrEmpty(Input.compositionString);
     }
 
     void ClearSearchEditingState()
