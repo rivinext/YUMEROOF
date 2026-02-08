@@ -442,12 +442,12 @@ public class InventoryUI : MonoBehaviour
 
     bool IsSearchComposing(TMP_InputField field)
     {
-        if (field != null && !string.IsNullOrEmpty(field.compositionString))
+        if (string.IsNullOrEmpty(Input.compositionString))
         {
-            return true;
+            return false;
         }
 
-        return !string.IsNullOrEmpty(Input.compositionString);
+        return field == null || field.isFocused;
     }
 
     void ApplySearchQuery(string value, bool forceRefresh)
