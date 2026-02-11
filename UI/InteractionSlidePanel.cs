@@ -9,15 +9,8 @@ using UnityEngine;
 [RequireComponent(typeof(RectTransform))]
 public class InteractionSlidePanel : MonoBehaviour
 {
-    private enum TransitionMode
-    {
-        Slide,
-        Fade
-    }
-
     [Header("Panel")]
     [SerializeField] private RectTransform target;
-    [SerializeField] private CanvasGroup targetCanvasGroup;
 
     [Header("Position Settings")]
     [SerializeField] private float openAnchoredX = 0f;
@@ -25,7 +18,6 @@ public class InteractionSlidePanel : MonoBehaviour
     [SerializeField] private float anchoredY = 0f;
 
     [Header("Animation Settings")]
-    [SerializeField] private TransitionMode transitionMode = TransitionMode.Slide;
     [SerializeField] private float animationDuration = 0.35f;
     [SerializeField] private AnimationCurve slideInCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
     [SerializeField] private AnimationCurve slideOutCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
@@ -38,8 +30,7 @@ public class InteractionSlidePanel : MonoBehaviour
     private void Awake()
     {
         EnsureTarget();
-        ApplyAnchoredPosition(GetClosedX(), anchoredY, true);
-        ApplyAlpha(isOpen ? 1f : 0f);
+        ApplyAnchoredPosition(closedAnchoredX, anchoredY, true);
         if (Application.isPlaying && target != null)
         {
             target.gameObject.SetActive(false);
@@ -55,8 +46,7 @@ public class InteractionSlidePanel : MonoBehaviour
 
         if (!Application.isPlaying)
         {
-            ApplyAnchoredPosition(isOpen ? openAnchoredX : GetClosedX(), anchoredY, false);
-            ApplyAlpha(isOpen ? 1f : 0f);
+            ApplyAnchoredPosition(isOpen ? openAnchoredX : closedAnchoredX, anchoredY, false);
         }
     }
 #endif
@@ -68,7 +58,7 @@ public class InteractionSlidePanel : MonoBehaviour
     public void SetAnchorY(float y)
     {
         anchoredY = y;
-        ApplyAnchoredPosition(isOpen ? openAnchoredX : GetClosedX(), anchoredY, true);
+        ApplyAnchoredPosition(isOpen ? openAnchoredX : closedAnchoredX, anchoredY, true);
     }
 
     /// <summary>
@@ -83,28 +73,17 @@ public class InteractionSlidePanel : MonoBehaviour
         target.gameObject.SetActive(true);
         isOpen = true;
         Vector2 endPos = new(openAnchoredX, anchoredY);
-        target.anchoredPosition = new Vector2(GetClosedX(), anchoredY);
-
-        if (transitionMode == TransitionMode.Fade)
-        {
-            target.anchoredPosition = endPos;
-            ApplyAlpha(0f);
-        }
+        target.anchoredPosition = new Vector2(closedAnchoredX, anchoredY);
 
         if (animationDuration <= 0f)
         {
             target.anchoredPosition = endPos;
-            ApplyAlpha(1f);
             return;
         }
 
-        activeTween = transitionMode == TransitionMode.Fade
-            ? targetCanvasGroup.DOFade(1f, animationDuration)
-                .SetEase(slideInCurve)
-                .OnKill(() => activeTween = null)
-            : target.DOAnchorPos(endPos, animationDuration)
-                .SetEase(slideInCurve)
-                .OnKill(() => activeTween = null);
+        activeTween = target.DOAnchorPos(endPos, animationDuration)
+            .SetEase(slideInCurve)
+            .OnKill(() => activeTween = null);
     }
 
     /// <summary>
@@ -117,31 +96,22 @@ public class InteractionSlidePanel : MonoBehaviour
 
         activeTween?.Kill();
         isOpen = false;
-        Vector2 endPos = new(GetClosedX(), anchoredY);
+        Vector2 endPos = new(closedAnchoredX, anchoredY);
 
         if (animationDuration <= 0f)
         {
             target.anchoredPosition = endPos;
-            ApplyAlpha(0f);
             target.gameObject.SetActive(false);
             return;
         }
 
-        activeTween = transitionMode == TransitionMode.Fade
-            ? targetCanvasGroup.DOFade(0f, animationDuration)
-                .SetEase(slideOutCurve)
-                .OnComplete(() =>
-                {
-                    target.gameObject.SetActive(false);
-                    activeTween = null;
-                })
-            : target.DOAnchorPos(endPos, animationDuration)
-                .SetEase(slideOutCurve)
-                .OnComplete(() =>
-                {
-                    target.gameObject.SetActive(false);
-                    activeTween = null;
-                });
+        activeTween = target.DOAnchorPos(endPos, animationDuration)
+            .SetEase(slideOutCurve)
+            .OnComplete(() =>
+            {
+                target.gameObject.SetActive(false);
+                activeTween = null;
+            });
     }
 
     /// <summary>
@@ -154,22 +124,8 @@ public class InteractionSlidePanel : MonoBehaviour
 
         activeTween?.Kill();
         isOpen = false;
-        ApplyAnchoredPosition(GetClosedX(), anchoredY, true);
-        ApplyAlpha(0f);
+        ApplyAnchoredPosition(closedAnchoredX, anchoredY, true);
         target.gameObject.SetActive(false);
-    }
-
-    private void ApplyAlpha(float alpha)
-    {
-        if (targetCanvasGroup == null)
-            return;
-
-        targetCanvasGroup.alpha = alpha;
-    }
-
-    private float GetClosedX()
-    {
-        return transitionMode == TransitionMode.Fade ? openAnchoredX : closedAnchoredX;
     }
 
     private void ApplyAnchoredPosition(float x, float y, bool respectGameObjectState)
@@ -200,15 +156,6 @@ public class InteractionSlidePanel : MonoBehaviour
         if (target == null)
         {
             target = GetComponent<RectTransform>();
-        }
-
-        if (targetCanvasGroup == null && target != null)
-        {
-            targetCanvasGroup = target.GetComponent<CanvasGroup>();
-            if (targetCanvasGroup == null)
-            {
-                targetCanvasGroup = target.gameObject.AddComponent<CanvasGroup>();
-            }
         }
     }
 }
