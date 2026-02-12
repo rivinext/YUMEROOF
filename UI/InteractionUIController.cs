@@ -8,12 +8,13 @@ using UnityEngine.UI;
 /// <summary>
 /// インタラクション用の会話 UI を管理します。
 /// 対象と CSV から構築されたテキストキューを受け取り、
-/// スライドイン/アウトやクリック進行、WASD入力での自動クローズを制御します。
+/// スライドまたはフェード演出、クリック進行、WASD入力での自動クローズを制御します。
 /// </summary>
 public class InteractionUIController : MonoBehaviour
 {
     [Header("Panel")]
     [SerializeField] private InteractionSlidePanel slidePanel;
+    [SerializeField] private InteractionFadePanel fadePanel;
 
     [Header("Text Elements")]
     [SerializeField] private TextMeshProUGUI speakerLabel;
@@ -36,7 +37,16 @@ public class InteractionUIController : MonoBehaviour
     /// <summary>
     /// 現在パネルが開いているかどうか。
     /// </summary>
-    public bool IsPanelOpen => slidePanel != null && slidePanel.IsOpen;
+    public bool IsPanelOpen
+    {
+        get
+        {
+            if (fadePanel != null)
+                return fadePanel.IsOpen;
+
+            return slidePanel != null && slidePanel.IsOpen;
+        }
+    }
 
     public IInteractable CurrentTarget => currentTarget;
 
@@ -45,6 +55,7 @@ public class InteractionUIController : MonoBehaviour
     private void Reset()
     {
         slidePanel = GetComponentInChildren<InteractionSlidePanel>();
+        fadePanel = GetComponentInChildren<InteractionFadePanel>();
     }
 
     private void Update()
@@ -92,7 +103,7 @@ public class InteractionUIController : MonoBehaviour
         currentLine = null;
         waitForMovementClose = false;
 
-        slidePanel?.SlideIn();
+        OpenPanel();
         SetBackgroundDimmer(true);
         DisplayNextLine();
     }
@@ -152,7 +163,7 @@ public class InteractionUIController : MonoBehaviour
         if (lineLabel != null)
             lineLabel.text = string.Empty;
 
-        slidePanel?.SlideOut();
+        ClosePanel();
         SetBackgroundDimmer(false);
 
         if (closedTarget != null)
@@ -230,6 +241,28 @@ public class InteractionUIController : MonoBehaviour
 
         bool active = shouldEnable && enableBackgroundDimmer;
         backgroundDimmer.gameObject.SetActive(active);
+    }
+
+    private void OpenPanel()
+    {
+        if (fadePanel != null)
+        {
+            fadePanel.FadeIn();
+            return;
+        }
+
+        slidePanel?.SlideIn();
+    }
+
+    private void ClosePanel()
+    {
+        if (fadePanel != null)
+        {
+            fadePanel.FadeOut();
+            return;
+        }
+
+        slidePanel?.SlideOut();
     }
 
     private string[] ParseCsvLine(string line)
