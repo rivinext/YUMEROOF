@@ -61,8 +61,7 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureContent;
     public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
-    public TMP_InputField furnitureSearchField;
-    public InputField furnitureLegacySearchField;
+    public InputField furnitureSearchField;
 
     [Header("Furniture Virtualization")]
     [SerializeField] private ScrollRect furnitureScrollRect;
@@ -405,7 +404,6 @@ public class InventoryUI : MonoBehaviour
     void SetupSearchFields()
     {
         ConfigureSearchField(furnitureSearchField, "Furniture search");
-        ConfigureSearchField(furnitureLegacySearchField, "Furniture legacy search");
         ConfigureSearchField(materialSearchField, "Material search");
     }
 
@@ -1061,9 +1059,9 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        if (furnitureLegacySearchField != null && furnitureLegacySearchField.isFocused)
+        if (furnitureSearchField != null && furnitureSearchField.isFocused)
         {
-            HandleSearchFieldSelected(furnitureLegacySearchField);
+            HandleSearchFieldSelected(furnitureSearchField);
             return;
         }
 
