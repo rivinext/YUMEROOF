@@ -118,6 +118,31 @@ public class InteractionUIController : MonoBehaviour
     }
 
     /// <summary>
+    /// 会話状態を変更せずにパネルのみ表示します。
+    /// </summary>
+    public void ShowPanelOnly()
+    {
+        OpenPanel();
+        SetBackgroundDimmer(true);
+    }
+
+    /// <summary>
+    /// 会話中でなければパネルのみ非表示にします。
+    /// 会話中の場合は通常クローズ処理を優先します。
+    /// </summary>
+    public void HidePanelOnly()
+    {
+        if (currentTarget != null)
+        {
+            CloseInteraction();
+            return;
+        }
+
+        ClosePanel();
+        SetBackgroundDimmer(false);
+    }
+
+    /// <summary>
     /// PlayerRayInteractor 等から呼び出し、対象が切り替わった際に同期を取ります。
     /// </summary>
     public void HandleTargetChanged(IInteractable focusedTarget)
