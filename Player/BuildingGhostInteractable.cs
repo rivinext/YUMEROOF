@@ -18,6 +18,7 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
     [SerializeField] private string defaultTextID = "hint_default_greeting";
 
     [Header("フォーカス設定")]
+    [SerializeField] private bool autoFadePanelOnFocus = true;
     [SerializeField] private bool autoStartDialogueOnFocus = true;
     [SerializeField] private bool requireMovementInputToClose = true;
     [SerializeField] private string fallbackSpeakerName = "Building Ghost";
@@ -79,6 +80,11 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
         isFocused = true;
         onFocused?.Invoke();
 
+        if (autoFadePanelOnFocus && cachedInteractionUI != null && !cachedInteractionUI.IsPanelOpen)
+        {
+            cachedInteractionUI.ShowPanelOnly();
+        }
+
         if (autoStartDialogueOnFocus)
         {
             TryStartDialogue();
@@ -98,6 +104,10 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
         if (dialogueActive && cachedInteractionUI != null && cachedInteractionUI.CurrentTarget == this)
         {
             cachedInteractionUI.CloseInteraction();
+        }
+        else
+        {
+            cachedInteractionUI?.HidePanelOnly();
         }
 
         dialogueActive = false;
