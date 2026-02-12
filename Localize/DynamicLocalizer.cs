@@ -6,6 +6,7 @@ using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization.Components;
 using TMPro;
+using UnityEngine.UI;
 
 /// <summary>
 /// 汎用的な動的ローカライズコンポーネント
@@ -20,6 +21,8 @@ public class DynamicLocalizer : MonoBehaviour
         [Header("設定")]
         public string fieldName = "Name";  // 識別用の名前（例：Name, Description）
         public TextMeshProUGUI textComponent;
+        public Text legacyTextComponent;
+        public InputField legacyInputField;
         public string localizationTableName = "ItemNames";  // 使用するテーブル名
 
         [Header("デバッグ")]
@@ -34,25 +37,44 @@ public class DynamicLocalizer : MonoBehaviour
         /// </summary>
         public void Initialize(bool debugModeEnabled)
         {
-            if (textComponent == null) return;
+            if (legacyInputField != null && legacyTextComponent == null)
+            {
+                legacyTextComponent = legacyInputField.textComponent;
+            }
+
+            if (textComponent == null && legacyTextComponent == null) return;
 
             debugMode = debugModeEnabled;
 
+            GameObject targetObject = textComponent != null
+                ? textComponent.gameObject
+                : legacyTextComponent.gameObject;
+
             // LocalizeStringEventコンポーネントを取得または追加
-            localizeEvent = textComponent.GetComponent<LocalizeStringEvent>();
+            localizeEvent = targetObject.GetComponent<LocalizeStringEvent>();
             if (localizeEvent == null)
             {
-                localizeEvent = textComponent.gameObject.AddComponent<LocalizeStringEvent>();
+                localizeEvent = targetObject.AddComponent<LocalizeStringEvent>();
             }
 
-            if (localizeEvent != null && localizeEvent.OnUpdateString != null)
+            if (localizeEvent != null && localizeEvent.OnUpdateString != null && !isUpdateStringListenerRegistered)
             {
-                if (localizeEvent.OnUpdateString.GetPersistentEventCount() == 0 && !isUpdateStringListenerRegistered)
-                {
-                    localizeEvent.OnUpdateString.RemoveListener(textComponent.SetText);
-                    localizeEvent.OnUpdateString.AddListener(textComponent.SetText);
-                    isUpdateStringListenerRegistered = true;
-                }
+                localizeEvent.OnUpdateString.RemoveListener(ApplyLocalizedString);
+                localizeEvent.OnUpdateString.AddListener(ApplyLocalizedString);
+                isUpdateStringListenerRegistered = true;
+            }
+        }
+
+        private void ApplyLocalizedString(string value)
+        {
+            if (textComponent != null)
+            {
+                textComponent.SetText(value);
+            }
+
+            if (legacyTextComponent != null)
+            {
+                legacyTextComponent.text = value;
             }
         }
 
@@ -61,10 +83,12 @@ public class DynamicLocalizer : MonoBehaviour
         /// </summary>
         public IEnumerator SetLocalizedKeyAsync(string key)
         {
-            if (textComponent == null || string.IsNullOrEmpty(key))
+            if ((textComponent == null && legacyTextComponent == null) || string.IsNullOrEmpty(key))
             {
                 if (textComponent != null)
                     textComponent.text = "";
+                if (legacyTextComponent != null)
+                    legacyTextComponent.text = "";
                 yield break;
             }
 
@@ -99,7 +123,7 @@ public class DynamicLocalizer : MonoBehaviour
                 {
                     Debug.LogWarning($"LocalizeStringEvent not found for {fieldName}. Showing key: {key}");
                 }
-                textComponent.text = key;
+                ApplyLocalizedString(key);
             }
         }
 
@@ -108,10 +132,12 @@ public class DynamicLocalizer : MonoBehaviour
         /// </summary>
         public void SetLocalizedKeyImmediate(string key)
         {
-            if (textComponent == null || string.IsNullOrEmpty(key))
+            if ((textComponent == null && legacyTextComponent == null) || string.IsNullOrEmpty(key))
             {
                 if (textComponent != null)
                     textComponent.text = "";
+                if (legacyTextComponent != null)
+                    legacyTextComponent.text = "";
                 return;
             }
 
@@ -135,7 +161,7 @@ public class DynamicLocalizer : MonoBehaviour
                 {
                     Debug.LogWarning($"LocalizeStringEvent not found for {fieldName}");
                 }
-                textComponent.text = key;
+                ApplyLocalizedString(key);
             }
         }
 
@@ -150,6 +176,24 @@ public class DynamicLocalizer : MonoBehaviour
             }
         }
 
+        public void SetLegacyFont(Font font)
+        {
+            if (font == null) return;
+
+            if (legacyInputField != null)
+            {
+                if (legacyInputField.textComponent != null)
+                {
+                    legacyInputField.textComponent.font = font;
+                }
+            }
+
+            if (legacyTextComponent != null)
+            {
+                legacyTextComponent.font = font;
+            }
+        }
+
         /// <summary>
         /// フィールドをクリア
         /// </summary>
@@ -157,6 +201,8 @@ public class DynamicLocalizer : MonoBehaviour
         {
             if (textComponent != null)
                 textComponent.text = "";
+            if (legacyTextComponent != null)
+                legacyTextComponent.text = "";
             currentKey = "";
 
             if (localizeEvent != null)
@@ -178,7 +224,8 @@ public class DynamicLocalizer : MonoBehaviour
     public class FontSettings
     {
         public string localeCode = "en";  // 言語コード（en, ja, zh-CN, ko など）
-        public TMP_FontAsset font;        // 対応するフォント
+        public TMP_FontAsset font;        // TextMeshPro用フォント
+        public Font legacyFont;           // Legacy UI.Text / InputField用フォント
     }
 
     [Header("ローカライズ設定")]
@@ -200,7 +247,8 @@ public class DynamicLocalizer : MonoBehaviour
         new FontSettings { localeCode = "pt", font = null },      // ポルトガル語
         new FontSettings { localeCode = "ru", font = null },      // ロシア語
     };
-    [SerializeField] private TMP_FontAsset defaultFont;  // デフォルトフォント（該当なしの場合）
+    [SerializeField] private TMP_FontAsset defaultFont;  // TMPのデフォルトフォント（該当なしの場合）
+    [SerializeField] private Font defaultLegacyFont;   // Legacy UI.Textのデフォルトフォント（該当なしの場合）
 
     [Header("オプション")]
     [SerializeField] private bool waitForLocalizationInit = true;  // 初期化を待つかどうか
@@ -277,13 +325,15 @@ public class DynamicLocalizer : MonoBehaviour
 
         // 言語コードに対応するフォントを探す
         TMP_FontAsset targetFont = null;
+        Font targetLegacyFont = null;
         string localeCode = locale.Identifier.Code;
 
         foreach (var fontSetting in fontSettings)
         {
-            if (fontSetting.localeCode == localeCode && fontSetting.font != null)
+            if (fontSetting.localeCode == localeCode)
             {
                 targetFont = fontSetting.font;
+                targetLegacyFont = fontSetting.legacyFont;
                 break;
             }
         }
@@ -292,24 +342,30 @@ public class DynamicLocalizer : MonoBehaviour
         if (targetFont == null)
         {
             targetFont = defaultFont;
-            if (IsDebugEnabled && defaultFont != null)
-            {
-                Debug.Log($"[DynamicLocalizer] Using default font for locale: {localeCode}");
-            }
+        }
+
+        if (targetLegacyFont == null)
+        {
+            targetLegacyFont = defaultLegacyFont;
+        }
+
+        if (IsDebugEnabled && (targetFont == defaultFont || targetLegacyFont == defaultLegacyFont))
+        {
+            Debug.Log($"[DynamicLocalizer] Using default font for locale: {localeCode}");
         }
 
         // 全フィールドのフォントを更新
-        if (targetFont != null)
+        foreach (var field in localizedFields)
         {
-            foreach (var field in localizedFields)
-            {
-                field.SetFont(targetFont);
-            }
+            field.SetFont(targetFont);
+            field.SetLegacyFont(targetLegacyFont);
+        }
 
-            if (IsDebugEnabled)
-            {
-                Debug.Log($"[DynamicLocalizer] Updated font to: {targetFont.name}");
-            }
+        if (IsDebugEnabled)
+        {
+            string tmpFontName = targetFont != null ? targetFont.name : "None";
+            string legacyFontName = targetLegacyFont != null ? targetLegacyFont.name : "None";
+            Debug.Log($"[DynamicLocalizer] Updated fonts TMP={tmpFontName}, Legacy={legacyFontName}");
         }
     }
 
@@ -638,21 +694,31 @@ public class DynamicLocalizer : MonoBehaviour
         {
             if (fontSetting.font != null)
             {
-                Debug.Log($"✓ {fontSetting.localeCode}: {fontSetting.font.name}");
+                Debug.Log($"✓ {fontSetting.localeCode}: TMP={fontSetting.font.name}, Legacy={(fontSetting.legacyFont != null ? fontSetting.legacyFont.name : "None")}");
             }
             else
             {
-                Debug.LogWarning($"✗ {fontSetting.localeCode}: No font assigned");
+                Debug.LogWarning($"✗ {fontSetting.localeCode}: No TMP font assigned");
             }
         }
 
         if (defaultFont != null)
         {
-            Debug.Log($"Default font: {defaultFont.name}");
+            Debug.Log($"Default TMP font: {defaultFont.name}");
         }
         else
         {
-            Debug.LogWarning("No default font assigned");
+            Debug.LogWarning("No default TMP font assigned");
+        }
+
+
+        if (defaultLegacyFont != null)
+        {
+            Debug.Log($"Default Legacy font: {defaultLegacyFont.name}");
+        }
+        else
+        {
+            Debug.LogWarning("No default Legacy font assigned");
         }
     }
 
