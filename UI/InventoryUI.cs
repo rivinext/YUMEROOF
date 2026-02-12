@@ -61,7 +61,7 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureContent;
     public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
-    public TMP_InputField furnitureSearchField;
+    public InputField furnitureSearchField;
 
     [Header("Furniture Virtualization")]
     [SerializeField] private ScrollRect furnitureScrollRect;
@@ -144,7 +144,7 @@ public class InventoryUI : MonoBehaviour
     private bool isPlacingItem = false;
     private string searchQuery = "";
     private bool isSearchEditing = false;
-    private TMP_InputField currentSearchField;
+    private Component currentSearchField;
     private InventoryItem selectedFurnitureItem;
     private string selectedFurnitureCategory;
     private bool autoReopenEnabled = false;
@@ -380,13 +380,34 @@ public class InventoryUI : MonoBehaviour
         if (placeholder != null) placeholder.text = "Search...";
     }
 
+    void ConfigureSearchField(InputField field, string debugLabel)
+    {
+        if (field == null) return;
+
+        field.onValueChanged.RemoveAllListeners();
+        field.onValueChanged.AddListener(value =>
+        {
+            if (debugMode) Debug.Log($"{debugLabel}: {value}");
+            searchQuery = value;
+            RefreshInventoryDisplay();
+        });
+
+        field.onEndEdit.RemoveAllListeners();
+        field.onEndEdit.AddListener(_ => HandleSearchFieldEndEdit(field));
+
+        if (field.placeholder is Text placeholder)
+        {
+            placeholder.text = "Search...";
+        }
+    }
+
     void SetupSearchFields()
     {
         ConfigureSearchField(furnitureSearchField, "Furniture search");
         ConfigureSearchField(materialSearchField, "Material search");
     }
 
-    void HandleSearchFieldSelected(TMP_InputField field)
+    void HandleSearchFieldSelected(Component field)
     {
         if (field == null)
             return;
@@ -399,7 +420,7 @@ public class InventoryUI : MonoBehaviour
         PlayerController.SetGlobalInputEnabled(false);
     }
 
-    void HandleSearchFieldDeselected(TMP_InputField field)
+    void HandleSearchFieldDeselected(Component field)
     {
         if (currentSearchField != field)
             return;
@@ -407,20 +428,49 @@ public class InventoryUI : MonoBehaviour
         ClearSearchEditingState();
     }
 
-    void HandleSearchFieldSubmitted(TMP_InputField field)
+    void HandleSearchFieldSubmitted(Component field)
     {
         if (currentSearchField != field)
             return;
 
-        currentSearchField.DeactivateInputField();
+        DeactivateSearchField(field);
     }
 
-    void HandleSearchFieldEndEdit(TMP_InputField field)
+    void HandleSearchFieldEndEdit(Component field)
     {
         if (currentSearchField != field)
             return;
 
         ClearSearchEditingState();
+    }
+
+    bool IsSearchFieldFocused(Component field)
+    {
+        if (field is TMP_InputField tmpField)
+        {
+            return tmpField.isFocused;
+        }
+
+        if (field is InputField legacyField)
+        {
+            return legacyField.isFocused;
+        }
+
+        return false;
+    }
+
+    void DeactivateSearchField(Component field)
+    {
+        if (field is TMP_InputField tmpField)
+        {
+            tmpField.DeactivateInputField();
+            return;
+        }
+
+        if (field is InputField legacyField)
+        {
+            legacyField.DeactivateInputField();
+        }
     }
 
     void ClearSearchEditingState()
@@ -1000,9 +1050,18 @@ public class InventoryUI : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
             {
-                currentSearchField?.DeactivateInputField();
+                if (currentSearchField != null)
+                {
+                    DeactivateSearchField(currentSearchField);
+                }
             }
 
+            return;
+        }
+
+        if (furnitureSearchField != null && furnitureSearchField.isFocused)
+        {
+            HandleSearchFieldSelected(furnitureSearchField);
             return;
         }
 
@@ -1106,9 +1165,9 @@ public class InventoryUI : MonoBehaviour
 
         if (isSearchEditing)
         {
-            if (currentSearchField != null && currentSearchField.isFocused)
+            if (currentSearchField != null && IsSearchFieldFocused(currentSearchField))
             {
-                currentSearchField.DeactivateInputField();
+                DeactivateSearchField(currentSearchField);
             }
 
             ClearSearchEditingState();
