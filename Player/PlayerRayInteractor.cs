@@ -57,10 +57,49 @@ public class PlayerRayInteractor : MonoBehaviour
 
     private void BindInteractionUIController()
     {
-        if (interactionUIController == null)
+        // 1) Inspector で明示的に割り当てられている場合はそれを最優先で使う
+        if (interactionUIController != null)
+            return;
+
+        interactionUIController = FindInteractionUIController();
+    }
+
+    private static InteractionUIController FindInteractionUIController()
+    {
+#if UNITY_2022_2_OR_NEWER
+        // 2) まずはシーン内探索（非アクティブ含む）
+        InteractionUIController found = FindFirstObjectByType<InteractionUIController>(FindObjectsInactive.Include);
+        if (found != null)
+            return found;
+
+        // 3) 次にシーン内アクティブ探索
+        found = FindFirstObjectByType<InteractionUIController>();
+        if (found != null)
+            return found;
+#else
+        // 2) 互換 API がない場合はシーン内アクティブ探索
+        InteractionUIController found = FindObjectOfType<InteractionUIController>();
+        if (found != null)
+            return found;
+#endif
+
+        // 4) 最後に Resources から検索（hideFlags / prefab asset を除外）
+        InteractionUIController[] all = Resources.FindObjectsOfTypeAll<InteractionUIController>();
+        foreach (InteractionUIController candidate in all)
         {
-            interactionUIController = FindFirstObjectByType<InteractionUIController>();
+            if (candidate == null)
+                continue;
+
+            if (candidate.hideFlags != HideFlags.None)
+                continue;
+
+            if (!candidate.gameObject.scene.IsValid())
+                continue;
+
+            return candidate;
         }
+
+        return null;
     }
 
     private void BindPlacementSystem()
