@@ -5,7 +5,6 @@ using UnityEngine;
 /// フェードイン/アウトで表示するインタラクション用パネルを制御します。
 /// </summary>
 [ExecuteAlways]
-[RequireComponent(typeof(CanvasGroup))]
 public class InteractionFadePanel : MonoBehaviour
 {
     [Header("Panel")]
@@ -118,7 +117,37 @@ public class InteractionFadePanel : MonoBehaviour
     {
         if (target == null)
         {
-            target = GetComponent<CanvasGroup>();
+            target = FindPanelCanvasGroup();
+            return;
         }
+
+        if (target.transform == transform)
+        {
+            CanvasGroup childPanel = FindPanelCanvasGroup();
+            if (childPanel != null && childPanel.transform != transform)
+            {
+                target = childPanel;
+            }
+        }
+    }
+
+    private CanvasGroup FindPanelCanvasGroup()
+    {
+        Transform panelRoot = transform.Find("PanelRoot");
+        if (panelRoot != null)
+        {
+            CanvasGroup panelRootGroup = panelRoot.GetComponent<CanvasGroup>();
+            if (panelRootGroup != null)
+                return panelRootGroup;
+        }
+
+        CanvasGroup[] canvasGroups = GetComponentsInChildren<CanvasGroup>(true);
+        foreach (CanvasGroup canvasGroup in canvasGroups)
+        {
+            if (canvasGroup.transform != transform)
+                return canvasGroup;
+        }
+
+        return GetComponent<CanvasGroup>();
     }
 }
