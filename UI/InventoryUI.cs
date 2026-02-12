@@ -61,7 +61,6 @@ public class InventoryUI : MonoBehaviour
     public GameObject furnitureContent;
     public GameObject furnitureScrollView;
     public GameObject furnitureDescriptionArea;
-    public TMP_InputField furnitureSearchField;
     public InputField furnitureLegacySearchField;
 
     [Header("Furniture Virtualization")]
@@ -404,7 +403,6 @@ public class InventoryUI : MonoBehaviour
 
     void SetupSearchFields()
     {
-        ConfigureSearchField(furnitureSearchField, "Furniture search");
         ConfigureSearchField(furnitureLegacySearchField, "Furniture legacy search");
         ConfigureSearchField(materialSearchField, "Material search");
     }
