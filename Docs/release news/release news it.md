@@ -2,7 +2,7 @@
     Data di uscita confermata — 18 febbraio 2026
 
 - Subtitle  
-    In uscita il 18 febbraio 2026. Prezzo: $7.99 USD con sconto di lancio del 40%.
+    In uscita il 18 febbraio 2026. Prezzo: €7.79 con sconto di lancio del 40%.
 
 - Summary  
     YUME ROOF arriva su Steam il 18 febbraio 2026: un sandbox rooftop rilassante, senza combattimento né pressione, con supporto a 11 lingue.
@@ -13,7 +13,7 @@
 La data di uscita è finalmente ufficiale.
 YUME ROOF arriverà su Steam il 18 febbraio 2026.
 
-Il prezzo base è di $7.99 USD.
+Il prezzo base è di €7.79.
 Al lancio sarà disponibile uno sconto del 40%.
 
 Grazie di cuore a tutte le persone che ci hanno supportato fino a qui.
