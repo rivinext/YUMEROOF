@@ -75,25 +75,21 @@ public class BuildingGhostDialogueManager : MonoBehaviour
     private DialogueDefinition SelectDefinition()
     {
         var snapshot = StatusSnapshot.Create();
-        DialogueDefinition best = null;
-        DialogueDefinition fallback = null;
+        List<DialogueDefinition> matches = new List<DialogueDefinition>();
+
         foreach (var def in definitions)
         {
-            if (string.IsNullOrWhiteSpace(def.condition) && fallback == null)
+            if (def.Matches(snapshot))
             {
-                fallback = def;
-            }
-
-            if (!def.Matches(snapshot))
-                continue;
-
-            if (best == null || def.priority > best.priority)
-            {
-                best = def;
+                matches.Add(def);
             }
         }
 
-        return best ?? fallback;
+        if (matches.Count == 0)
+            return null;
+
+        int index = UnityEngine.Random.Range(0, matches.Count);
+        return matches[index];
     }
 
     private void LoadDefinitions()
