@@ -31,6 +31,9 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
     [SerializeField] private string currentTextID = "";
     [SerializeField] private string localizedText = "";
 
+    [Header("会話ローカライズ設定")]
+    [SerializeField] private string ghostDialogueTableName = "GhostDialogues";
+
     private HintSystem.HintData cachedHint;
     private string cachedLocalizedText;
     private bool hintInitialized = false;
@@ -241,11 +244,27 @@ public class BuildingGhostInteractable : MonoBehaviour, IFocusableInteractable
     {
         Queue<InteractionUIController.InteractionLine> queue = new Queue<InteractionUIController.InteractionLine>();
         var dialogueManager = BuildingGhostDialogueManager.CreateIfNeeded();
+        bool localizationReady = LocalizationSettings.InitializationOperation.IsDone;
         if (dialogueManager != null && dialogueManager.TrySelectDialogue(out var lines))
         {
             foreach (var line in lines)
             {
-                queue.Enqueue(new InteractionUIController.InteractionLine(line.Speaker, line.Message));
+                string resolvedMessage = line.Message;
+
+                if (localizationReady)
+                {
+                    string localizedMessage = LocalizationSettings.StringDatabase.GetLocalizedString(ghostDialogueTableName, line.Message);
+                    if (!string.IsNullOrEmpty(localizedMessage))
+                    {
+                        resolvedMessage = localizedMessage;
+                    }
+                    else if (debugMode)
+                    {
+                        Debug.LogWarning($"[BuildingGhostInteractable] Ghost dialogue localization missing. table={ghostDialogueTableName}, key={line.Message}");
+                    }
+                }
+
+                queue.Enqueue(new InteractionUIController.InteractionLine(line.Speaker, resolvedMessage));
             }
         }
 
