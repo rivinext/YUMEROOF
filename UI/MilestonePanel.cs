@@ -7,7 +7,7 @@ using UnityEngine.Localization.Settings;
 
 public class MilestonePanel : MonoBehaviour
 {
-    private const string RewardAreaLocalizationTable = "Text";
+    private const string RewardAreaLocalizationTable = "StandardText";
 
     [Header("UI References")]
     public GameObject panel;
