@@ -3,9 +3,12 @@ using UnityEngine.UI;
 using UnityEngine.Serialization;
 using TMPro;
 using System.Collections;
+using UnityEngine.Localization.Settings;
 
 public class MilestonePanel : MonoBehaviour
 {
+    private const string RewardAreaLocalizationTable = "Text";
+
     [Header("UI References")]
     public GameObject panel;
     public Button toggleButton;
@@ -78,6 +81,7 @@ public class MilestonePanel : MonoBehaviour
     private Coroutine tooltipFadeCoroutine;
     private int currentProgressIndex = 0;
     private bool tooltipActive;
+    private int activeTooltipMilestoneIndex = -1;
 
     void Awake()
     {
@@ -140,6 +144,8 @@ public class MilestonePanel : MonoBehaviour
             MilestoneManager.Instance.OnMilestoneProgress += HandleMilestoneProgress;
         }
 
+        LocalizationSettings.SelectedLocaleChanged += HandleLocaleChanged;
+
         int initialMilestoneIndex = MilestoneManager.Instance?.CurrentMilestoneIndex ?? 0;
         currentProgressIndex = initialMilestoneIndex;
         lastKnownMilestoneIndex = initialMilestoneIndex;
@@ -157,6 +163,8 @@ public class MilestonePanel : MonoBehaviour
         {
             MilestoneManager.Instance.OnMilestoneProgress -= HandleMilestoneProgress;
         }
+
+        LocalizationSettings.SelectedLocaleChanged -= HandleLocaleChanged;
     }
 
     public bool IsOpen => isOpen;
@@ -325,6 +333,26 @@ public class MilestonePanel : MonoBehaviour
         }
 
         lastKnownMilestoneIndex = currentMilestoneIndex;
+    }
+
+    private void HandleLocaleChanged(UnityEngine.Localization.Locale _)
+    {
+        RefreshRewardAreaTexts();
+    }
+
+    private void RefreshRewardAreaTexts()
+    {
+        var manager = MilestoneManager.Instance;
+        if (manager != null && manager.TryGetMilestone(manager.CurrentMilestoneIndex, out var currentMilestone))
+        {
+            UpdateRewardAreaText(rewardAreaText, currentMilestone.rewardArea);
+        }
+
+        if (tooltipActive && activeTooltipMilestoneIndex >= 0 &&
+            manager != null && manager.TryGetMilestone(activeTooltipMilestoneIndex, out var tooltipMilestone))
+        {
+            UpdateRewardAreaText(tooltipRewardAreaText, tooltipMilestone.rewardArea);
+        }
     }
 
     void UpdateDisplay(MilestoneManager.Milestone milestone, int cozy, int nature, int itemCount)
@@ -500,6 +528,7 @@ public class MilestonePanel : MonoBehaviour
         }
 
         tooltipActive = true;
+        activeTooltipMilestoneIndex = index;
 
         CacheTooltipReferences();
 
@@ -633,12 +662,31 @@ public class MilestonePanel : MonoBehaviour
         }
 
         bool hasRewardArea = !string.IsNullOrWhiteSpace(rewardArea);
-        targetText.text = hasRewardArea ? rewardArea : string.Empty;
+        targetText.text = hasRewardArea ? GetLocalizedRewardAreaText(rewardArea) : string.Empty;
 
         if (targetText.gameObject.activeSelf != hasRewardArea)
         {
             targetText.gameObject.SetActive(hasRewardArea);
         }
+    }
+
+    private string GetLocalizedRewardAreaText(string rewardAreaKey)
+    {
+        if (string.IsNullOrWhiteSpace(rewardAreaKey))
+        {
+            return string.Empty;
+        }
+
+        if (LocalizationSettings.StringDatabase == null)
+        {
+            return rewardAreaKey;
+        }
+
+        string localized = LocalizationSettings.StringDatabase.GetLocalizedString(
+            RewardAreaLocalizationTable,
+            rewardAreaKey);
+
+        return string.IsNullOrEmpty(localized) ? rewardAreaKey : localized;
     }
 
     private string GetRarityDisplayName(Rarity rarity)
@@ -649,6 +697,7 @@ public class MilestonePanel : MonoBehaviour
     public void HideMilestoneTooltip()
     {
         tooltipActive = false;
+        activeTooltipMilestoneIndex = -1;
         if (milestoneStatusTooltipLocalizer != null)
         {
             milestoneStatusTooltipLocalizer.ClearField("MilestoneStatusTooltip");
