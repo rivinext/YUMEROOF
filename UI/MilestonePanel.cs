@@ -7,7 +7,7 @@ using UnityEngine.Localization.Settings;
 
 public class MilestonePanel : MonoBehaviour
 {
-    private const string RewardAreaLocalizationTable = "StandardText";
+    private const string TextLocalizationTable = "StandardText";
 
     [Header("UI References")]
     public GameObject panel;
@@ -338,6 +338,7 @@ public class MilestonePanel : MonoBehaviour
     private void HandleLocaleChanged(UnityEngine.Localization.Locale _)
     {
         RefreshRewardAreaTexts();
+        RefreshRarityTexts();
     }
 
     private void RefreshRewardAreaTexts()
@@ -352,6 +353,21 @@ public class MilestonePanel : MonoBehaviour
             manager != null && manager.TryGetMilestone(activeTooltipMilestoneIndex, out var tooltipMilestone))
         {
             UpdateRewardAreaText(tooltipRewardAreaText, tooltipMilestone.rewardArea);
+        }
+    }
+
+    private void RefreshRarityTexts()
+    {
+        var manager = MilestoneManager.Instance;
+        if (manager != null && manager.TryGetMilestone(manager.CurrentMilestoneIndex, out var currentMilestone))
+        {
+            UpdateRarityRequirementText(rarityLabelText, rarityValueText, currentMilestone);
+        }
+
+        if (tooltipActive && activeTooltipMilestoneIndex >= 0 &&
+            manager != null && manager.TryGetMilestone(activeTooltipMilestoneIndex, out var tooltipMilestone))
+        {
+            UpdateRarityRequirementText(tooltipRarityLabelText, tooltipRarityValueText, tooltipMilestone);
         }
     }
 
@@ -683,7 +699,7 @@ public class MilestonePanel : MonoBehaviour
         }
 
         string localized = LocalizationSettings.StringDatabase.GetLocalizedString(
-            RewardAreaLocalizationTable,
+            TextLocalizationTable,
             rewardAreaKey);
 
         return string.IsNullOrEmpty(localized) ? rewardAreaKey : localized;
@@ -691,7 +707,18 @@ public class MilestonePanel : MonoBehaviour
 
     private string GetRarityDisplayName(Rarity rarity)
     {
-        return rarity.ToString();
+        string rarityKey = rarity.ToString();
+
+        if (LocalizationSettings.StringDatabase == null)
+        {
+            return rarityKey;
+        }
+
+        string localized = LocalizationSettings.StringDatabase.GetLocalizedString(
+            TextLocalizationTable,
+            rarityKey);
+
+        return string.IsNullOrEmpty(localized) ? rarityKey : localized;
     }
 
     public void HideMilestoneTooltip()
