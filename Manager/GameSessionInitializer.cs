@@ -17,6 +17,8 @@ public class GameSessionInitializer : MonoBehaviour
     [SerializeField] private GameObject furnitureSaveManagerPrefab;
     [SerializeField] private GameObject milestoneManagerPrefab;
     [SerializeField] private DevItemInjector devItemInjectorPrefab;
+    [SerializeField] private int targetFps = 60;
+    [SerializeField] private int vSyncCount = 1;
 
     void Awake()
     {
@@ -81,6 +83,7 @@ public class GameSessionInitializer : MonoBehaviour
 
         MilestoneManager.CreateIfNeeded(milestoneManagerPrefab);
         DropMaterialSaveManager.CreateIfNeeded();
+        ApplyGraphicsFrameSettings();
         ApplyAudioSettingsToScene();
 
         if (!initialized && !string.IsNullOrEmpty(slotKey))
@@ -181,5 +184,12 @@ public class GameSessionInitializer : MonoBehaviour
         }
 
         AudioManager.Instance.ApplyVolumesToListeners();
+    }
+
+    private void ApplyGraphicsFrameSettings()
+    {
+        Application.targetFrameRate = targetFps;
+        QualitySettings.vSyncCount = vSyncCount;
+        // PCではVSync有効時にtargetFrameRate設定が実質無効になる場合がある。
     }
 }
