@@ -2,7 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Steamworks;
 
 namespace Yume
@@ -11,6 +13,7 @@ namespace Yume
     {
         [SerializeField] private Camera captureCamera;
         [SerializeField] private List<Canvas> hiddenCanvases = new List<Canvas>();
+        [SerializeField] private bool autoPopulateHiddenCanvases = true;
         [SerializeField] private int superSize = 1;
         [SerializeField] private string fileNamePrefix = "screenshot";
         [SerializeField] private LayerMask additionalExcludedLayers;
@@ -22,12 +25,44 @@ namespace Yume
             {
                 captureCamera = Camera.main;
             }
+
+            RefreshHiddenCanvases();
+        }
+
+        private void OnEnable()
+        {
+            SceneManager.activeSceneChanged += HandleActiveSceneChanged;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
+        }
+
+        private void HandleActiveSceneChanged(Scene previousScene, Scene nextScene)
+        {
+            RefreshHiddenCanvases();
+        }
+
+        private void RefreshHiddenCanvases()
+        {
+            if (!autoPopulateHiddenCanvases)
+            {
+                return;
+            }
+
+            hiddenCanvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Where(canvas => canvas.gameObject.scene.IsValid())
+                .Distinct()
+                .ToList();
         }
 
         [SerializeField] private bool preferSteamOverlayScreenshot;
 
         public void Capture()
         {
+            RefreshHiddenCanvases();
+
             if (preferSteamOverlayScreenshot && SteamManager.Initialized)
             {
                 Debug.Log("Triggering Steam overlay screenshot capture.");
