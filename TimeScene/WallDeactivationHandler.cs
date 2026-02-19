@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class WallDeactivationHandler : MonoBehaviour
 {
@@ -19,6 +20,14 @@ public class WallDeactivationHandler : MonoBehaviour
 
     private void OnDisable()
     {
+        // シーン遷移/終了時にも OnDisable が呼ばれるため、
+        // そのタイミングでは壁家具を「回収」しない。
+        // （回収すると Cozy/Nature が減算され、次シーン読み込み後に値が欠落する）
+        if (!gameObject.scene.IsValid() || !gameObject.scene.isLoaded)
+        {
+            return;
+        }
+
         if (wallTransform == null)
         {
             wallTransform = transform;
