@@ -51,7 +51,7 @@ namespace Yume
                 return;
             }
 
-            hiddenCanvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            hiddenCanvases = UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Where(canvas => canvas.gameObject.scene.IsValid())
                 .Distinct()
                 .ToList();
