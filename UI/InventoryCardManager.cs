@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 /// <summary>
 /// インベントリカードの管理を担当（修正版）
@@ -41,7 +42,12 @@ public class InventoryCardManager : MonoBehaviour
     {
         if (debugMode) Debug.Log($"[CardManager] RefreshFurnitureCards: {items.Count} items");
 
-        ClearSelectionIfMissing(items);
+        bool hideCeilingInCreative = IsCreativeSlotActive();
+        List<InventoryItem> displayItems = hideCeilingInCreative
+            ? items.Where(item => !IsCeilingPlacementItem(item)).ToList()
+            : items;
+
+        ClearSelectionIfMissing(displayItems);
 
         // 既存のカードをプールに戻す
         foreach (var card in activeFurnitureCards)
@@ -53,7 +59,7 @@ public class InventoryCardManager : MonoBehaviour
         activeFurnitureCards.Clear();
 
         // アイテムごとにカードを生成
-        foreach (var item in items)
+        foreach (var item in displayItems)
         {
             var card = GetOrCreateFurnitureCard();
             if (card == null) continue;
@@ -78,6 +84,30 @@ public class InventoryCardManager : MonoBehaviour
         RestoreSelection();
 
         if (debugMode) Debug.Log($"[CardManager] Cards created: {activeFurnitureCards.Count}");
+    }
+
+    private bool IsCreativeSlotActive()
+    {
+        string slotKey = SaveGameManager.Instance?.CurrentSlotKey;
+        return !string.IsNullOrEmpty(slotKey)
+            && slotKey.StartsWith("Creative", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsCeilingPlacementItem(InventoryItem item)
+    {
+        if (item == null || string.IsNullOrEmpty(item.itemID))
+        {
+            return false;
+        }
+
+        FurnitureData furnitureData = FurnitureDataManager.Instance?.GetFurnitureData(item.itemID);
+        if (furnitureData == null)
+        {
+            FurnitureDataSO furnitureDataSO = FurnitureDataManager.Instance?.GetFurnitureDataSO(item.itemID);
+            return furnitureDataSO != null && furnitureDataSO.placementRules == PlacementRule.Ceiling;
+        }
+
+        return furnitureData.placementRules == PlacementRule.Ceiling;
     }
 
     public void ClearSelectionIfMissing(IReadOnlyList<InventoryItem> items)
