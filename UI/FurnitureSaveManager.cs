@@ -294,8 +294,7 @@ public class FurnitureSaveManager : MonoBehaviour
 
         string uniqueID = GetOrCreateUniqueID(furniture);
 
-        // このオブジェクトと子オブジェクトを削除
-        allFurnitureData.furnitureList.RemoveAll(f => f.uniqueID == uniqueID || f.parentFurnitureID == uniqueID);
+        RemoveFurnitureHierarchyByID(uniqueID);
 
         OnFurnitureChanged?.Invoke();
 
@@ -308,12 +307,39 @@ public class FurnitureSaveManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(uniqueID)) return;
 
-        allFurnitureData.furnitureList.RemoveAll(f => f.uniqueID == uniqueID || f.parentFurnitureID == uniqueID);
+        RemoveFurnitureHierarchyByID(uniqueID);
 
         OnFurnitureChanged?.Invoke();
 
         if (debugMode)
             Debug.Log($"[FurnitureSave] Removed UID: {uniqueID}");
+    }
+
+    void RemoveFurnitureHierarchyByID(string rootUniqueID)
+    {
+        if (string.IsNullOrEmpty(rootUniqueID)) return;
+
+        var idsToRemove = new HashSet<string>();
+        var queue = new Queue<string>();
+        queue.Enqueue(rootUniqueID);
+
+        while (queue.Count > 0)
+        {
+            string currentId = queue.Dequeue();
+            if (!idsToRemove.Add(currentId))
+                continue;
+
+            foreach (var child in allFurnitureData.furnitureList)
+            {
+                if (!string.IsNullOrEmpty(child.parentFurnitureID) && child.parentFurnitureID == currentId)
+                {
+                    if (!string.IsNullOrEmpty(child.uniqueID))
+                        queue.Enqueue(child.uniqueID);
+                }
+            }
+        }
+
+        allFurnitureData.furnitureList.RemoveAll(f => idsToRemove.Contains(f.uniqueID));
     }
 
     // シーンの全家具をクリア
