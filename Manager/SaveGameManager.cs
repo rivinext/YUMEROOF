@@ -125,6 +125,12 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
         {
             if (instance == this) instance = null;
             Destroy(gameObject);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(currentSlot))
+        {
+            IndependentMaterialColorController.SetSaveContextForAllControllers(currentSlot, this);
         }
     }
 
