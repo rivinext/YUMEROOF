@@ -706,52 +706,147 @@ public class FurnitureSaveManager : MonoBehaviour
             return null;
         }
 
-        WallLayerController wallController = FindFirstObjectByType<WallLayerController>();
-        if (wallController != null && wallController.walls != null)
+        // 壁IDは拡張前後で重複し得るため、まず保存パスで厳密一致を試す。
+        if (!string.IsNullOrEmpty(data.wallParentPath))
         {
-            if (data.wallParentId > 0)
+            Transform exactTransform = FindTransformByPathIncludingInactive(data.wallParentPath);
+            if (exactTransform != null)
             {
-                foreach (var wall in wallController.walls)
-                {
-                    if (wall?.renderer == null)
-                    {
-                        continue;
-                    }
-
-                    if (wall.id == data.wallParentId)
-                    {
-                        return wall.renderer.transform;
-                    }
-                }
-            }
-
-            if (!string.IsNullOrEmpty(data.wallParentName))
-            {
-                foreach (var wall in wallController.walls)
-                {
-                    if (wall?.renderer == null)
-                    {
-                        continue;
-                    }
-
-                    if (wall.renderer.name == data.wallParentName)
-                    {
-                        return wall.renderer.transform;
-                    }
-                }
+                return exactTransform;
             }
         }
 
-        if (!string.IsNullOrEmpty(data.wallParentPath))
+        WallLayerController wallController = FindFirstObjectByType<WallLayerController>(FindObjectsInactive.Include);
+        if (wallController != null && wallController.walls != null)
         {
-            GameObject wallObject = GameObject.Find(data.wallParentPath);
-            if (wallObject != null)
+            if (!string.IsNullOrEmpty(data.wallParentName))
             {
-                return wallObject.transform;
+                Transform activeByName = FindWallTransformByName(wallController, data.wallParentName, true);
+                if (activeByName != null)
+                {
+                    return activeByName;
+                }
+
+                Transform anyByName = FindWallTransformByName(wallController, data.wallParentName, false);
+                if (anyByName != null)
+                {
+                    return anyByName;
+                }
+            }
+
+            if (data.wallParentId > 0)
+            {
+                Transform activeById = FindWallTransformById(wallController, data.wallParentId, true);
+                if (activeById != null)
+                {
+                    return activeById;
+                }
+
+                Transform anyById = FindWallTransformById(wallController, data.wallParentId, false);
+                if (anyById != null)
+                {
+                    return anyById;
+                }
             }
         }
 
         return null;
+    }
+
+    Transform FindWallTransformById(WallLayerController wallController, int wallId, bool requireActive)
+    {
+        foreach (var wall in wallController.walls)
+        {
+            if (wall?.renderer == null)
+            {
+                continue;
+            }
+
+            Transform wallTransform = wall.renderer.transform;
+            if (requireActive && !wallTransform.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            if (wall.id == wallId)
+            {
+                return wallTransform;
+            }
+        }
+
+        return null;
+    }
+
+    Transform FindWallTransformByName(WallLayerController wallController, string wallName, bool requireActive)
+    {
+        foreach (var wall in wallController.walls)
+        {
+            if (wall?.renderer == null)
+            {
+                continue;
+            }
+
+            Transform wallTransform = wall.renderer.transform;
+            if (requireActive && !wallTransform.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            if (wall.renderer.name == wallName)
+            {
+                return wallTransform;
+            }
+        }
+
+        return null;
+    }
+
+    Transform FindTransformByPathIncludingInactive(string fullPath)
+    {
+        if (string.IsNullOrEmpty(fullPath))
+        {
+            return null;
+        }
+
+        string[] segments = fullPath.Split('/');
+        if (segments.Length == 0)
+        {
+            return null;
+        }
+
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (!activeScene.IsValid())
+        {
+            return null;
+        }
+
+        GameObject[] roots = activeScene.GetRootGameObjects();
+        Transform current = null;
+
+        foreach (var root in roots)
+        {
+            if (root != null && root.name == segments[0])
+            {
+                current = root.transform;
+                break;
+            }
+        }
+
+        if (current == null)
+        {
+            return null;
+        }
+
+        for (int i = 1; i < segments.Length; i++)
+        {
+            current = current.Find(segments[i]);
+            if (current == null)
+            {
+                return null;
+            }
+        }
+
+        return current;
     }
 
     string GetTransformPath(Transform target)
