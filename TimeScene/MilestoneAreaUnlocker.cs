@@ -76,8 +76,9 @@ public class MilestoneAreaUnlocker : MonoBehaviour
         waitCoroutine = null;
     }
 
-    private void HandleMilestoneProgress(MilestoneManager.Milestone milestone, int cozy, int nature, int itemCount)
+    private void HandleMilestoneProgress(MilestoneManager.Milestone milestone, int cozy, int nature, int itemCount, int currentMilestoneIndex, bool isAllMilestonesCleared)
     {
+        // Intentionally ignore the event payload and always re-evaluate from the authoritative manager state.
         RefreshAreas();
     }
 
@@ -88,6 +89,7 @@ public class MilestoneAreaUnlocker : MonoBehaviour
             return;
         }
 
+        // Always derive unlock state from manager.CurrentMilestoneIndex (authoritative), not event args.
         int completed = MilestoneManager.Instance?.CurrentMilestoneIndex ?? 0;
 
         foreach (var stage in areaStages)

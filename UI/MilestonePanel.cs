@@ -298,19 +298,29 @@ public class MilestonePanel : MonoBehaviour
             target.rectTransform.anchoredPosition.x);
     }
 
-    void HandleMilestoneProgress(MilestoneManager.Milestone milestone, int cozy, int nature, int itemCount)
+    void HandleMilestoneProgress(MilestoneManager.Milestone milestone, int cozy, int nature, int itemCount, int currentMilestoneIndex, bool isAllMilestonesCleared)
     {
-        UpdateDisplay(milestone, cozy, nature, itemCount);
+        var manager = MilestoneManager.Instance;
+        MilestoneManager.Milestone displayMilestone = milestone;
+        if (displayMilestone == null && manager != null && manager.MilestoneCount > 0)
+        {
+            manager.TryGetMilestone(manager.MilestoneCount - 1, out displayMilestone);
+        }
+
+        if (displayMilestone != null)
+        {
+            UpdateDisplay(displayMilestone, cozy, nature, itemCount);
+        }
 
         if (tooltipActive)
         {
             HideMilestoneTooltip();
         }
 
-        int targetIndex = GetMilestoneIndex(milestone.id);
+        int targetIndex = manager?.CurrentMilestoneIndex ?? currentMilestoneIndex;
         AnimateProgress(targetIndex, 0.5f);
 
-        int currentMilestoneIndex = MilestoneManager.Instance?.CurrentMilestoneIndex ?? lastKnownMilestoneIndex;
+        currentMilestoneIndex = manager?.CurrentMilestoneIndex ?? lastKnownMilestoneIndex;
         bool isRestoringState = MilestoneManager.Instance?.IsRestoringState ?? false;
 
         if (!hasProcessedInitialProgressUpdate || isRestoringState)
