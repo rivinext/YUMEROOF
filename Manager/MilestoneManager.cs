@@ -27,7 +27,7 @@ public class MilestoneManager : MonoBehaviour
         }
     }
 
-    public event Action<Milestone, int, int, int> OnMilestoneProgress;
+    public event Action<Milestone, int, int, int, int, bool> OnMilestoneProgress;
 
     [SerializeField] private string milestoneCSVPath = "DataResources/Data/YUME_ROOF - Milestone";
 
@@ -291,14 +291,14 @@ public class MilestoneManager : MonoBehaviour
 
     public void RequestProgressUpdate()
     {
-        if (currentMilestoneIndex >= milestones.Count)
+        Milestone milestone = null;
+        bool isAllMilestonesCleared = currentMilestoneIndex >= milestones.Count;
+        if (!isAllMilestonesCleared)
         {
-            isRestoringState = false;
-            return;
+            milestone = milestones[currentMilestoneIndex];
         }
 
-        var m = milestones[currentMilestoneIndex];
-        OnMilestoneProgress?.Invoke(m, currentCozy, currentNature, currentItemCount);
+        OnMilestoneProgress?.Invoke(milestone, currentCozy, currentNature, currentItemCount, currentMilestoneIndex, isAllMilestonesCleared);
         isRestoringState = false;
     }
 
@@ -311,7 +311,11 @@ public class MilestoneManager : MonoBehaviour
             if (currentMilestoneIndex < milestones.Count)
             {
                 var m = milestones[currentMilestoneIndex];
-                OnMilestoneProgress?.Invoke(m, currentCozy, currentNature, currentItemCount);
+                OnMilestoneProgress?.Invoke(m, currentCozy, currentNature, currentItemCount, currentMilestoneIndex, false);
+            }
+            else
+            {
+                OnMilestoneProgress?.Invoke(null, currentCozy, currentNature, currentItemCount, currentMilestoneIndex, true);
             }
         }
     }
@@ -322,7 +326,7 @@ public class MilestoneManager : MonoBehaviour
         if (currentMilestoneIndex >= milestones.Count) return;
 
         var m = milestones[currentMilestoneIndex];
-        OnMilestoneProgress?.Invoke(m, currentCozy, currentNature, currentItemCount);
+        OnMilestoneProgress?.Invoke(m, currentCozy, currentNature, currentItemCount, currentMilestoneIndex, false);
 
         if (currentCozy >= m.cozyRequirement &&
             currentNature >= m.natureRequirement &&
@@ -347,7 +351,11 @@ public class MilestoneManager : MonoBehaviour
             if (currentMilestoneIndex < milestones.Count)
             {
                 m = milestones[currentMilestoneIndex];
-                OnMilestoneProgress?.Invoke(m, currentCozy, currentNature, currentItemCount);
+                OnMilestoneProgress?.Invoke(m, currentCozy, currentNature, currentItemCount, currentMilestoneIndex, false);
+            }
+            else
+            {
+                OnMilestoneProgress?.Invoke(null, currentCozy, currentNature, currentItemCount, currentMilestoneIndex, true);
             }
         }
     }

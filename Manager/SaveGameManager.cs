@@ -508,6 +508,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         if (milestone != null)
         {
+            // Re-broadcast milestone state after stats are restored so listeners (e.g., area unlockers)
+            // re-evaluate once against the final loaded snapshot, including the "all milestones cleared" case.
             milestone.RequestProgressUpdate();
         }
 
@@ -548,6 +550,8 @@ public class SaveGameManager : MonoBehaviour, IIndependentMaterialColorSaveAcces
 
         if (milestone != null)
         {
+            // Re-broadcast milestone state after stats are restored so listeners (e.g., area unlockers)
+            // re-evaluate once against the final loaded snapshot, including the "all milestones cleared" case.
             milestone.RequestProgressUpdate();
         }
 
