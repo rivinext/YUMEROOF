@@ -1,0 +1,16 @@
+field,english,german,french,italian,korean,spanish,schinese,tchinese,russian,japanese,portuguese
+body,"Thank you for playing.
+This update (ver 1.0.1) addresses several issues to improve stability and presentation.
+
+Fixed an issue where area expansion was not functioning properly.
+
+Fixed a bug that caused the UI to appear in screenshots.
+
+Corrected various localization errors.
+
+We appreciate your continued support and hope you enjoy your time on the rooftop.",,,,,,,,,,
+subtitle,Bug Fixes and Localization Improvements,,,,,,,,,,
+summary,"Fixed an issue where area expansion did not execute correctly.
+Resolved a problem where the UI appeared in screenshots.
+Corrected several localization errors.",,,,,,,,,,
+title,ver 1.0.2 Patch,,,,,,,,,,
