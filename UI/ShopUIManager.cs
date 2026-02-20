@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization.Settings;
-using TMPro;
 
 /// <summary>
 /// Handles displaying purchase and sell tabs for the shop.
@@ -68,7 +67,7 @@ public class ShopUIManager : MonoBehaviour
     public Toggle sellCraftableToggle;
     public Toggle sellWallPlacementToggle;
     public Toggle sellCeilingPlacementToggle;
-    public TMP_InputField sellSearchField;
+    public InputField sellSearchField;
 
     [Header("Furniture Category Tabs")]
     [SerializeField] private Transform furnitureCategoryTabContainer;
@@ -121,7 +120,7 @@ public class ShopUIManager : MonoBehaviour
     private bool sellShowOnlyCeilingPlacement = false;
     private string sellSearchQuery = "";
     private bool isSellSearchEditing = false;
-    private TMP_InputField currentSellSearchField;
+    private InputField currentSellSearchField;
     private bool sellSearchInputWasEnabled = false;
     private string selectedFurnitureCategory;
     private readonly List<FurnitureCategoryToggle> categoryToggles = new();
@@ -222,6 +221,25 @@ public class ShopUIManager : MonoBehaviour
         }
 
         // No slide panel event subscriptions to clean up.
+    }
+
+    void Update()
+    {
+        if (sellSearchField == null)
+        {
+            return;
+        }
+
+        if (sellSearchField.isFocused)
+        {
+            HandleSellSearchFieldSelected(sellSearchField);
+            return;
+        }
+
+        if (currentSellSearchField == sellSearchField && isSellSearchEditing)
+        {
+            ClearSellSearchEditingState();
+        }
     }
 
     void OnDayChanged(int day)
@@ -1161,24 +1179,15 @@ public class ShopUIManager : MonoBehaviour
                 PopulateSellTab();
             });
 
-            sellSearchField.onSelect.RemoveAllListeners();
-            sellSearchField.onSelect.AddListener(_ => HandleSellSearchFieldSelected(sellSearchField));
-
-            sellSearchField.onDeselect.RemoveAllListeners();
-            sellSearchField.onDeselect.AddListener(_ => HandleSellSearchFieldDeselected(sellSearchField));
-
-            sellSearchField.onSubmit.RemoveAllListeners();
-            sellSearchField.onSubmit.AddListener(_ => HandleSellSearchFieldSubmitted(sellSearchField));
-
             sellSearchField.onEndEdit.RemoveAllListeners();
             sellSearchField.onEndEdit.AddListener(_ => HandleSellSearchFieldEndEdit(sellSearchField));
 
-            var placeholder = sellSearchField.placeholder as TMP_Text;
+            var placeholder = sellSearchField.placeholder as Text;
             if (placeholder != null) placeholder.text = "Search...";
         }
     }
 
-    void HandleSellSearchFieldSelected(TMP_InputField field)
+    void HandleSellSearchFieldSelected(InputField field)
     {
         if (field == null)
             return;
@@ -1195,23 +1204,7 @@ public class ShopUIManager : MonoBehaviour
         }
     }
 
-    void HandleSellSearchFieldDeselected(TMP_InputField field)
-    {
-        if (currentSellSearchField != field)
-            return;
-
-        ClearSellSearchEditingState();
-    }
-
-    void HandleSellSearchFieldSubmitted(TMP_InputField field)
-    {
-        if (currentSellSearchField != field)
-            return;
-
-        currentSellSearchField.DeactivateInputField();
-    }
-
-    void HandleSellSearchFieldEndEdit(TMP_InputField field)
+    void HandleSellSearchFieldEndEdit(InputField field)
     {
         if (currentSellSearchField != field)
             return;
