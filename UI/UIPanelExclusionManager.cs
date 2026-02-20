@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -7,6 +9,40 @@ using UnityEngine.SceneManagement;
 /// </summary>
 public class UIPanelExclusionManager : MonoBehaviour
 {
+    private interface IUIPanelHandle
+    {
+        UnityEngine.Object Source { get; }
+        string Name { get; }
+        bool IsOpen { get; }
+        void Close();
+    }
+
+    private sealed class UIPanelHandle<TPanel> : IUIPanelHandle where TPanel : UnityEngine.Object
+    {
+        private readonly TPanel panel;
+        private readonly Func<TPanel, bool> isOpen;
+        private readonly Action<TPanel> close;
+
+        public UIPanelHandle(TPanel panel, Func<TPanel, bool> isOpen, Action<TPanel> close)
+        {
+            this.panel = panel;
+            this.isOpen = isOpen;
+            this.close = close;
+        }
+
+        public UnityEngine.Object Source => panel;
+        public string Name => panel.GetType().Name;
+        public bool IsOpen => panel != null && isOpen(panel);
+
+        public void Close()
+        {
+            if (panel != null)
+            {
+                close(panel);
+            }
+        }
+    }
+
     private static UIPanelExclusionManager instance;
 
     public static UIPanelExclusionManager Instance
@@ -22,12 +58,7 @@ public class UIPanelExclusionManager : MonoBehaviour
         }
     }
 
-    [SerializeField] private SettingsPanelAnimator settingsPanel;
-    [SerializeField] private CameraControlPanel cameraControlPanel;
-    [SerializeField] private MilestonePanel milestonePanel;
-    [SerializeField] private InventoryUI inventoryPanel;
-    [SerializeField] private WardrobeUIController wardrobePanel;
-    [SerializeField] private ColorPanelController colorPanel;
+    private readonly List<IUIPanelHandle> panelHandles = new();
 
     private void Awake()
     {
@@ -63,167 +94,158 @@ public class UIPanelExclusionManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        HashSet<string> closedPanelNames = new();
+        CloseAllRegisteredPanels(closedPanelNames);
         RegisterScenePanels();
-        CloseAllRegisteredPanels();
+        CloseAllRegisteredPanels(closedPanelNames);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[UIPanelExclusionManager] Closed panels on scene load: {(closedPanelNames.Count == 0 ? "none" : string.Join(", ", closedPanelNames))}");
+#endif
     }
 
     public void Register(SettingsPanelAnimator panel)
     {
-        if (panel != null)
-        {
-            settingsPanel = panel;
-        }
+        RegisterSingle(panel, value => value.IsOpen, value => value.ClosePanel());
     }
 
     public void Register(CameraControlPanel panel)
     {
-        if (panel != null)
-        {
-            cameraControlPanel = panel;
-        }
+        RegisterSingle(panel, value => value.IsOpen, value => value.ClosePanel());
     }
 
     public void Register(MilestonePanel panel)
     {
-        if (panel != null)
-        {
-            milestonePanel = panel;
-        }
+        RegisterSingle(panel, value => value.IsOpen, value => value.ClosePanel());
     }
 
     public void Register(InventoryUI panel)
     {
-        if (panel != null)
-        {
-            inventoryPanel = panel;
-        }
+        RegisterSingle(panel, value => value.IsOpen, value => value.CloseInventory());
     }
 
     public void Register(WardrobeUIController panel)
     {
-        if (panel != null)
-        {
-            wardrobePanel = panel;
-        }
+        RegisterSingle(panel, value => value.IsShown, value => value.HidePanel());
     }
 
     public void Register(ColorPanelController panel)
     {
-        if (panel != null)
-        {
-            colorPanel = panel;
-        }
+        RegisterSingle(panel, value => value.IsOpen, value => value.ClosePanel());
     }
 
     private void RegisterScenePanels()
     {
-        settingsPanel = FindAnyObjectByType<SettingsPanelAnimator>(FindObjectsInactive.Include);
-        cameraControlPanel = FindAnyObjectByType<CameraControlPanel>(FindObjectsInactive.Include);
-        milestonePanel = FindAnyObjectByType<MilestonePanel>(FindObjectsInactive.Include);
-        inventoryPanel = FindAnyObjectByType<InventoryUI>(FindObjectsInactive.Include);
-        wardrobePanel = FindAnyObjectByType<WardrobeUIController>(FindObjectsInactive.Include);
-        colorPanel = FindAnyObjectByType<ColorPanelController>(FindObjectsInactive.Include);
+        panelHandles.Clear();
+        RegisterAll(FindObjectsByType<SettingsPanelAnimator>(FindObjectsInactive.Include, FindObjectsSortMode.None), value => value.IsOpen, value => value.ClosePanel());
+        RegisterAll(FindObjectsByType<CameraControlPanel>(FindObjectsInactive.Include, FindObjectsSortMode.None), value => value.IsOpen, value => value.ClosePanel());
+        RegisterAll(FindObjectsByType<MilestonePanel>(FindObjectsInactive.Include, FindObjectsSortMode.None), value => value.IsOpen, value => value.ClosePanel());
+        RegisterAll(FindObjectsByType<InventoryUI>(FindObjectsInactive.Include, FindObjectsSortMode.None), value => value.IsOpen, value => value.CloseInventory());
+        RegisterAll(FindObjectsByType<WardrobeUIController>(FindObjectsInactive.Include, FindObjectsSortMode.None), value => value.IsShown, value => value.HidePanel());
+        RegisterAll(FindObjectsByType<ColorPanelController>(FindObjectsInactive.Include, FindObjectsSortMode.None), value => value.IsOpen, value => value.ClosePanel());
+    }
+
+    private void RegisterAll<TPanel>(IEnumerable<TPanel> panels, Func<TPanel, bool> isOpen, Action<TPanel> close) where TPanel : UnityEngine.Object
+    {
+        foreach (TPanel panel in panels)
+        {
+            RegisterSingle(panel, isOpen, close);
+        }
+    }
+
+    private void RegisterSingle<TPanel>(TPanel panel, Func<TPanel, bool> isOpen, Action<TPanel> close) where TPanel : UnityEngine.Object
+    {
+        if (panel == null)
+        {
+            return;
+        }
+
+        for (int i = panelHandles.Count - 1; i >= 0; i--)
+        {
+            if (panelHandles[i].Source == null)
+            {
+                panelHandles.RemoveAt(i);
+            }
+            else if (panelHandles[i].Source == panel)
+            {
+                return;
+            }
+        }
+
+        panelHandles.Add(new UIPanelHandle<TPanel>(panel, isOpen, close));
     }
 
     public void NotifyOpened(SettingsPanelAnimator panel)
     {
-        Register(panel);
+        RegisterScenePanels();
         CloseOtherPanels(panel);
     }
 
     public void NotifyOpened(CameraControlPanel panel)
     {
-        Register(panel);
+        RegisterScenePanels();
         CloseOtherPanels(panel);
     }
 
     public void NotifyOpened(MilestonePanel panel)
     {
-        Register(panel);
+        RegisterScenePanels();
         CloseOtherPanels(panel);
     }
 
     public void NotifyOpened(InventoryUI panel)
     {
-        Register(panel);
+        RegisterScenePanels();
         CloseOtherPanels(panel);
     }
 
     public void NotifyOpened(WardrobeUIController panel)
     {
-        Register(panel);
+        RegisterScenePanels();
         CloseOtherPanels(panel);
     }
 
     public void NotifyOpened(ColorPanelController panel)
     {
-        Register(panel);
+        RegisterScenePanels();
         CloseOtherPanels(panel);
     }
 
     private void CloseOtherPanels(UnityEngine.Object openedPanel)
     {
-        if (settingsPanel != null && openedPanel != settingsPanel && settingsPanel.IsOpen)
+        for (int i = panelHandles.Count - 1; i >= 0; i--)
         {
-            settingsPanel.ClosePanel();
-        }
+            IUIPanelHandle panelHandle = panelHandles[i];
+            if (panelHandle.Source == null)
+            {
+                panelHandles.RemoveAt(i);
+                continue;
+            }
 
-        if (cameraControlPanel != null && openedPanel != cameraControlPanel && cameraControlPanel.IsOpen)
-        {
-            cameraControlPanel.ClosePanel();
-        }
-
-        if (milestonePanel != null && openedPanel != milestonePanel && milestonePanel.IsOpen)
-        {
-            milestonePanel.ClosePanel();
-        }
-
-        if (inventoryPanel != null && openedPanel != inventoryPanel && inventoryPanel.IsOpen)
-        {
-            inventoryPanel.CloseInventory();
-        }
-
-        if (wardrobePanel != null && openedPanel != wardrobePanel && wardrobePanel.IsShown)
-        {
-            wardrobePanel.HidePanel();
-        }
-
-        if (colorPanel != null && openedPanel != colorPanel && colorPanel.IsOpen)
-        {
-            colorPanel.ClosePanel();
+            if (panelHandle.Source != openedPanel && panelHandle.IsOpen)
+            {
+                panelHandle.Close();
+            }
         }
     }
 
-    private void CloseAllRegisteredPanels()
+    private void CloseAllRegisteredPanels(ISet<string> closedPanelNames = null)
     {
-        if (settingsPanel != null)
+        for (int i = panelHandles.Count - 1; i >= 0; i--)
         {
-            settingsPanel.ClosePanel();
-        }
+            IUIPanelHandle panelHandle = panelHandles[i];
+            if (panelHandle.Source == null)
+            {
+                panelHandles.RemoveAt(i);
+                continue;
+            }
 
-        if (cameraControlPanel != null)
-        {
-            cameraControlPanel.ClosePanel();
-        }
+            if (panelHandle.IsOpen)
+            {
+                closedPanelNames?.Add(panelHandle.Name);
+            }
 
-        if (milestonePanel != null)
-        {
-            milestonePanel.ClosePanel();
-        }
-
-        if (inventoryPanel != null)
-        {
-            inventoryPanel.CloseInventory();
-        }
-
-        if (wardrobePanel != null)
-        {
-            wardrobePanel.HidePanel();
-        }
-
-        if (colorPanel != null)
-        {
-            colorPanel.ClosePanel();
+            panelHandle.Close();
         }
     }
 }
