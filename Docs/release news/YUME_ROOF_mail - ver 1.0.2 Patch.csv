@@ -6,7 +6,77 @@ body,"Thank you for your continued support. In this update, we’ve focused on f
 ・Fixed a problem where certain panels remained open after switching scenes.
 ・Made minor localization corrections for improved clarity.
 
-We appreciate your feedback and will continue polishing the experience.",,,,,,,,,,
-subtitle,Bug Fixes and Localization Improvements,,,,,,,,,,
-summary,This update resolves several UI-related issues and improves overall stability and localization accuracy.,,,,,,,,,,
-title,ver 1.0.2 Patch,,,,,,,,,,
+We appreciate your feedback and will continue polishing the experience.","Vielen Dank für eure anhaltende Unterstützung. In diesem Update haben wir uns darauf konzentriert, einige Probleme zu beheben, die das gesamte Spielerlebnis beeinträchtigt haben.
+
+・Ein Fehler wurde behoben, durch den die Bereichserweiterung nicht korrekt funktionierte.
+・Ein Problem wurde behoben, durch das UI-Elemente in Screenshots angezeigt wurden.
+・Ein Problem wurde behoben, bei dem bestimmte Panels nach einem Szenenwechsel geöffnet blieben.
+・Zur besseren Verständlichkeit wurden kleinere Lokalisierungskorrekturen vorgenommen.
+
+Wir schätzen euer Feedback und werden das Spielerlebnis weiterhin verbessern.","Merci pour votre soutien continu. Dans cette mise à jour, nous nous sommes concentrés sur la correction de quelques problèmes qui affectaient l’expérience globale.
+
+・Correction d’un bug empêchant l’extension de zone de fonctionner correctement.
+・Correction d’un problème qui faisait apparaître des éléments d’interface dans les captures d’écran.
+・Correction d’un problème où certains panneaux restaient ouverts après un changement de scène.
+・Ajustements mineurs de localisation pour une meilleure clarté.
+
+Nous apprécions vos retours et continuerons d’améliorer l’expérience.","Grazie per il vostro continuo supporto. In questo aggiornamento ci siamo concentrati sulla risoluzione di alcuni problemi che influivano sull’esperienza complessiva.
+
+・Risolto un bug per cui l’espansione dell’area non funzionava correttamente.
+・Risolto un problema che causava la comparsa di elementi UI negli screenshot.
+・Risolto un problema per cui alcuni pannelli rimanevano aperti dopo il cambio scena.
+・Apportate piccole correzioni alla localizzazione per maggiore chiarezza.
+
+Apprezziamo il vostro feedback e continueremo a migliorare l’esperienza.","지속적인 성원에 감사드립니다. 이번 업데이트에서는 전체적인 플레이 경험에 영향을 주던 몇 가지 문제를 수정하는 데 중점을 두었습니다.
+
+・영역 확장이 정상적으로 동작하지 않던 버그를 수정했습니다.
+・스크린샷에 UI 요소가 표시되던 문제를 수정했습니다.
+・씬 전환 후 일부 패널이 닫히지 않고 열린 상태로 남던 문제를 수정했습니다.
+・가독성 향상을 위해 현지화 문구를 소폭 수정했습니다.
+
+소중한 피드백에 감사드리며, 앞으로도 더 나은 경험을 위해 계속 다듬어 나가겠습니다.","Gracias por su apoyo continuo. En esta actualización nos hemos centrado en corregir algunos problemas que afectaban a la experiencia general.
+
+・Se corrigió un error por el que la expansión de área no funcionaba correctamente.
+・Se corrigió un problema que hacía que aparecieran elementos de la interfaz en las capturas de pantalla.
+・Se corrigió un problema por el que ciertos paneles permanecían abiertos tras cambiar de escena.
+・Se realizaron pequeñas correcciones de localización para mejorar la claridad.
+
+Agradecemos sus comentarios y seguiremos puliendo la experiencia.","感谢大家一直以来的支持。本次更新重点修复了几个影响整体体验的问题。
+
+・修复了区域扩展无法正常生效的错误。
+・修复了截图中会显示 UI 元素的问题。
+・修复了切换场景后部分面板仍保持打开状态的问题。
+・为提升表述清晰度，进行了少量本地化文本修正。
+
+感谢大家的反馈，我们会继续打磨游戏体验。","感謝大家一直以來的支持。本次更新重點修正了幾項影響整體體驗的問題。
+
+・修正了區域擴展無法正常運作的錯誤。
+・修正了截圖中會顯示 UI 元素的問題。
+・修正了切換場景後部分面板仍維持開啟狀態的問題。
+・為提升表述清晰度，進行了少量在地化文字修正。
+
+感謝大家的回饋，我們會持續打磨遊戲體驗。","Спасибо за вашу постоянную поддержку. В этом обновлении мы сосредоточились на исправлении нескольких проблем, которые влияли на общее впечатление от игры.
+
+・Исправлена ошибка, из-за которой расширение области работало некорректно.
+・Исправлена проблема, из-за которой элементы интерфейса отображались на скриншотах.
+・Исправлена проблема, при которой некоторые панели оставались открытыми после смены сцены.
+・Внесены небольшие правки локализации для лучшей ясности.
+
+Мы ценим ваши отзывы и продолжим улучшать игровой опыт.","継続的なご支援をありがとうございます。今回のアップデートでは、全体的な体験に影響していたいくつかの問題の修正に注力しました。
+
+・エリア拡張が正しく機能しない不具合を修正しました。
+・スクリーンショットにUI要素が表示されてしまう問題を修正しました。
+・シーン切り替え後に一部のパネルが開いたままになる問題を修正しました。
+・分かりやすさ向上のため、ローカライズ文言を軽微に修正しました。
+
+今後もフィードバックをもとに、体験の改善を続けてまいります。","Obrigado pelo apoio contínuo. Nesta atualização, focamos em corrigir alguns problemas que afetavam a experiência geral.
+
+・Corrigido um erro em que a expansão de área não funcionava corretamente.
+・Corrigido um problema que fazia elementos da interface aparecerem nas capturas de tela.
+・Corrigido um problema em que certos painéis permaneciam abertos após trocar de cena.
+・Feitas pequenas correções de localização para melhorar a clareza.
+
+Agradecemos seu feedback e continuaremos aprimorando a experiência."
+subtitle,Bug Fixes and Localization Improvements,Fehlerbehebungen und Lokalisierungsverbesserungen,Correctifs de bugs et améliorations de la localisation,Correzioni di bug e miglioramenti della localizzazione,버그 수정 및 현지화 개선,Correcciones de errores y mejoras de localización,漏洞修复与本地化改进,錯誤修正與在地化改善,Исправления ошибок и улучшения локализации,不具合修正とローカライズ改善,Correções de bugs e melhorias de localização
+summary,This update resolves several UI-related issues and improves overall stability and localization accuracy.,Dieses Update behebt mehrere UI-bezogene Probleme und verbessert die allgemeine Stabilität sowie die Genauigkeit der Lokalisierung.,Cette mise à jour corrige plusieurs problèmes liés à l’interface et améliore la stabilité globale ainsi que la précision de la localisation.,Questo aggiornamento risolve diversi problemi relativi all’interfaccia e migliora la stabilità generale e la precisione della localizzazione.,이번 업데이트는 여러 UI 관련 문제를 해결하고 전반적인 안정성과 현지화 정확도를 개선합니다.,Esta actualización corrige varios problemas relacionados con la interfaz y mejora la estabilidad general y la precisión de la localización.,本次更新修复了多个与 UI 相关的问题，并提升了整体稳定性与本地化准确性。,本次更新修正了多項與 UI 相關的問題，並提升了整體穩定性與在地化準確性。,"Это обновление устраняет несколько проблем, связанных с интерфейсом, и улучшает общую стабильность и точность локализации.",今回のアップデートでは、UIに関する複数の問題を修正し、全体的な安定性とローカライズ精度を向上させました。,Esta atualização resolve vários problemas relacionados à interface e melhora a estabilidade geral e a precisão da localização.
+title,ver 1.0.2 Patch,Patch 1.0.2,Patch 1.0.2,Patch 1.0.2,1.0.2 패치,Parche 1.0.2,1.0.2 版本补丁,1.0.2 版本更新,Патч 1.0.2,ver 1.0.2 パッチ,Patch 1.0.2
