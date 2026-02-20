@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Steamworks;
 
 namespace Yume
@@ -18,10 +19,17 @@ namespace Yume
 
         private void Awake()
         {
-            if (captureCamera == null)
-            {
-                captureCamera = Camera.main;
-            }
+            ResolveCaptureCamera("Awake");
+        }
+
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
         }
 
         [SerializeField] private bool preferSteamOverlayScreenshot;
@@ -40,6 +48,8 @@ namespace Yume
                 Debug.LogWarning("Steam overlay screenshot requested, but Steam API is not initialized. Falling back to custom capture.");
             }
 
+            ResolveCaptureCamera("Capture");
+
             StartCoroutine(CaptureRoutine());
         }
 
@@ -55,9 +65,12 @@ namespace Yume
 
             yield return new WaitForEndOfFrame();
 
+            ResolveCaptureCamera("CaptureRoutine");
+
             Texture2D texture;
             if (captureCamera != null)
             {
+                Debug.Log($"Using captureCamera.Render() path. camera={captureCamera.name}");
                 var width = Screen.width * superSize;
                 var height = Screen.height * superSize;
                 var renderTexture = new RenderTexture(width, height, 24);
@@ -95,6 +108,7 @@ namespace Yume
             }
             else
             {
+                Debug.LogWarning("captureCamera was null or destroyed right before capture. Falling back to ScreenCapture.CaptureScreenshotAsTexture().");
                 texture = ScreenCapture.CaptureScreenshotAsTexture(superSize);
             }
 
@@ -188,6 +202,40 @@ namespace Yume
             }
 
             return Application.persistentDataPath;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            ResolveCaptureCamera($"SceneLoaded({scene.name}, {mode})");
+        }
+
+        private void ResolveCaptureCamera(string context)
+        {
+            if (captureCamera != null)
+            {
+                return;
+            }
+
+            captureCamera = Camera.main;
+
+            if (captureCamera == null)
+            {
+                var cameras = FindObjectsByType<Camera>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+                if (cameras.Length > 0)
+                {
+                    Array.Sort(cameras, (left, right) => right.depth.CompareTo(left.depth));
+                    captureCamera = cameras[0];
+                }
+            }
+
+            if (captureCamera != null)
+            {
+                Debug.Log($"Resolved captureCamera in {context}: {captureCamera.name}");
+            }
+            else
+            {
+                Debug.LogWarning($"Failed to resolve captureCamera in {context}. Will fall back to ScreenCapture if capture proceeds.");
+            }
         }
     }
 }
