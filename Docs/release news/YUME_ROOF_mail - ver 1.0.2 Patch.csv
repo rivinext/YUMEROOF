@@ -8,9 +8,119 @@ Fixed a bug that caused the UI to appear in screenshots.
 
 Corrected various localization errors.
 
-We appreciate your continued support and hope you enjoy your time on the rooftop.",,,,,,,,,,
-subtitle,Bug Fixes and Localization Improvements,,,,,,,,,,
+We appreciate your continued support and hope you enjoy your time on the rooftop.","Danke, dass Sie spielen.
+Dieses Update (Ver. 1.0.1) behebt mehrere Probleme, um Stabilität und Darstellung zu verbessern.
+
+Ein Problem wurde behoben, bei dem die Bereichserweiterung nicht korrekt funktionierte.
+
+Ein Fehler wurde behoben, durch den die Benutzeroberfläche in Screenshots angezeigt wurde.
+
+Verschiedene Lokalisierungsfehler wurden korrigiert.
+
+Wir danken Ihnen für Ihre fortlaufende Unterstützung und hoffen, dass Sie Ihre Zeit auf dem Dach genießen.","Merci de jouer.
+Cette mise à jour (ver. 1.0.1) corrige plusieurs problèmes afin d'améliorer la stabilité et la présentation.
+
+Correction d'un problème empêchant l'extension de zone de fonctionner correctement.
+
+Correction d'un bug qui faisait apparaître l'interface utilisateur dans les captures d'écran.
+
+Correction de diverses erreurs de localisation.
+
+Nous vous remercions pour votre soutien continu et espérons que vous apprécierez votre temps sur le toit.","Grazie per aver giocato.
+Questo aggiornamento (ver. 1.0.1) risolve diversi problemi per migliorare stabilità e presentazione.
+
+Risolto un problema per cui l'espansione dell'area non funzionava correttamente.
+
+Risolto un bug che causava la comparsa dell'interfaccia utente negli screenshot.
+
+Corretti vari errori di localizzazione.
+
+Apprezziamo il vostro continuo supporto e speriamo che vi godiate il vostro tempo sul tetto.","플레이해 주셔서 감사합니다.
+이번 업데이트(버전 1.0.1)는 안정성과 표현을 개선하기 위해 여러 문제를 수정했습니다.
+
+구역 확장이 정상적으로 작동하지 않던 문제를 수정했습니다.
+
+스크린샷에 UI가 표시되던 버그를 수정했습니다.
+
+여러 현지화 오류를 수정했습니다.
+
+계속해서 보내 주시는 성원에 감사드리며, 옥상에서의 시간을 즐겨 주시길 바랍니다.","Gracias por jugar.
+Esta actualización (ver. 1.0.1) soluciona varios problemas para mejorar la estabilidad y la presentación.
+
+Se solucionó un problema por el que la expansión del área no funcionaba correctamente.
+
+Se corrigió un error que hacía que la interfaz apareciera en las capturas de pantalla.
+
+Se corrigieron varios errores de localización.
+
+Agradecemos su apoyo continuo y esperamos que disfrute su tiempo en la azotea.","感谢游玩。
+本次更新（ver 1.0.1）修复了多个问题，以提升稳定性和表现效果。
+
+修复了区域扩展无法正常运行的问题。
+
+修复了截图中会显示 UI 的错误。
+
+修正了多个本地化错误。
+
+感谢您一直以来的支持，祝您在屋顶度过愉快时光。","感謝遊玩。
+本次更新（ver 1.0.1）修復了多個問題，以提升穩定性與呈現效果。
+
+修復了區域擴展無法正常運作的問題。
+
+修復了截圖中會顯示 UI 的錯誤。
+
+修正了多項在地化錯誤。
+
+感謝您一直以來的支持，祝您在屋頂度過愉快時光。","Спасибо за игру.
+Это обновление (версия 1.0.1) устраняет несколько проблем для улучшения стабильности и отображения.
+
+Исправлена проблема, из-за которой расширение области работало некорректно.
+
+Исправлена ошибка, из-за которой интерфейс отображался на скриншотах.
+
+Исправлены различные ошибки локализации.
+
+Благодарим за вашу постоянную поддержку и надеемся, что вам понравится проводить время на крыше.","プレイしていただきありがとうございます。
+このアップデート（ver 1.0.1）では、安定性と表示品質を向上させるため、いくつかの問題を修正しました。
+
+エリア拡張が正しく機能しない問題を修正しました。
+
+スクリーンショットにUIが表示されてしまう不具合を修正しました。
+
+各種ローカライズの誤りを修正しました。
+
+今後ともご支援のほどよろしくお願いいたします。屋上での時間をお楽しみください。","Obrigado por jogar.
+Esta atualização (ver. 1.0.1) corrige vários problemas para melhorar a estabilidade e a apresentação.
+
+Corrigido um problema em que a expansão da área não funcionava corretamente.
+
+Corrigido um erro que fazia a interface aparecer nas capturas de tela.
+
+Corrigidos vários erros de localização.
+
+Agradecemos seu apoio contínuo e esperamos que você aproveite seu tempo no telhado."
+subtitle,Bug Fixes and Localization Improvements,Fehlerbehebungen und Verbesserungen der Lokalisierung,Corrections de bugs et améliorations de la localisation,Correzioni di bug e miglioramenti della localizzazione,버그 수정 및 현지화 개선,Corrección de errores y mejoras de localización,错误修复与本地化改进,錯誤修復與在地化改進,Исправления ошибок и улучшения локализации,不具合修正とローカライズ改善,Correções de bugs e melhorias de localização
 summary,"Fixed an issue where area expansion did not execute correctly.
 Resolved a problem where the UI appeared in screenshots.
-Corrected several localization errors.",,,,,,,,,,
-title,ver 1.0.2 Patch,,,,,,,,,,
+Corrected several localization errors.","Ein Problem wurde behoben, bei dem die Bereichserweiterung nicht korrekt ausgeführt wurde.
+Ein Problem wurde behoben, bei dem die Benutzeroberfläche in Screenshots angezeigt wurde.
+Mehrere Lokalisierungsfehler wurden korrigiert.","Correction d'un problème empêchant l'extension de zone de s'exécuter correctement.
+Résolution d'un problème où l'interface apparaissait dans les captures d'écran.
+Correction de plusieurs erreurs de localisation.","Risolto un problema per cui l'espansione dell'area non veniva eseguita correttamente.
+Risolto un problema per cui l'interfaccia appariva negli screenshot.
+Corretti diversi errori di localizzazione.","구역 확장이 올바르게 실행되지 않던 문제를 수정했습니다.
+스크린샷에 UI가 표시되던 문제를 해결했습니다.
+여러 현지화 오류를 수정했습니다.","Se solucionó un problema por el que la expansión del área no se ejecutaba correctamente.
+Se resolvió un problema por el que la interfaz aparecía en las capturas de pantalla.
+Se corrigieron varios errores de localización.","修复了区域扩展未能正确执行的问题。
+解决了截图中出现 UI 的问题。
+修正了多处本地化错误。","修復了區域擴展未能正確執行的問題。
+解決了截圖中出現 UI 的問題。
+修正了多項在地化錯誤。","Исправлена проблема, из-за которой расширение области выполнялось некорректно.
+Устранена проблема, при которой интерфейс появлялся на скриншотах.
+Исправлено несколько ошибок локализации.","エリア拡張が正しく実行されない問題を修正しました。
+スクリーンショットにUIが表示される問題を解消しました。
+複数のローカライズエラーを修正しました。","Corrigido um problema em que a expansão da área não era executada corretamente.
+Resolvido um problema em que a interface aparecia nas capturas de tela.
+Corrigidos vários erros de localização."
+title,ver 1.0.2 Patch,Patch ver. 1.0.2,Correctif ver. 1.0.2,Patch ver. 1.0.2,ver 1.0.2 패치,Parche ver. 1.0.2,ver 1.0.2 补丁,ver 1.0.2 修補程式,Патч версии 1.0.2,ver 1.0.2 パッチ,Patch ver. 1.0.2
