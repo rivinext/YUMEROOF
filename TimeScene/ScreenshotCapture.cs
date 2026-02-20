@@ -12,6 +12,10 @@ namespace Yume
     {
         [SerializeField] private Camera captureCamera;
         [SerializeField] private List<Canvas> hiddenCanvases = new List<Canvas>();
+        [SerializeField] private List<string> excludedCanvasTags = new List<string>();
+        [SerializeField] private LayerMask excludedCanvasLayers;
+        [SerializeField] private List<string> excludedCanvasNamePrefixes = new List<string> { "FadeCanvas" };
+        [SerializeField] private bool excludeCanvasesWithMarker = true;
         [SerializeField] private int superSize = 1;
         [SerializeField] private string fileNamePrefix = "screenshot";
         [SerializeField] private LayerMask additionalExcludedLayers;
@@ -55,13 +59,21 @@ namespace Yume
 
         private IEnumerator CaptureRoutine()
         {
-            foreach (var canvas in hiddenCanvases)
+            var hiddenCanvasStates = new Dictionary<Canvas, bool>();
+            var canvasesToHide = CollectCanvasesToHide();
+
+            foreach (var canvas in canvasesToHide)
             {
-                if (canvas != null)
+                if (canvas == null)
                 {
-                    canvas.enabled = false;
+                    continue;
                 }
+
+                hiddenCanvasStates[canvas] = canvas.enabled;
+                canvas.enabled = false;
             }
+
+            Debug.Log(BuildHiddenCanvasSummary(canvasesToHide));
 
             yield return new WaitForEndOfFrame();
 
@@ -147,16 +159,100 @@ namespace Yume
             }
             finally
             {
-                foreach (var canvas in hiddenCanvases)
+                foreach (var hiddenCanvasState in hiddenCanvasStates)
                 {
-                    if (canvas != null)
+                    if (hiddenCanvasState.Key != null)
                     {
-                        canvas.enabled = true;
+                        hiddenCanvasState.Key.enabled = hiddenCanvasState.Value;
                     }
                 }
 
                 Destroy(texture);
             }
+        }
+
+        private List<Canvas> CollectCanvasesToHide()
+        {
+            var canvasesToHide = new HashSet<Canvas>();
+
+            foreach (var canvas in hiddenCanvases)
+            {
+                if (canvas != null)
+                {
+                    canvasesToHide.Add(canvas);
+                }
+            }
+
+            var sceneCanvases = FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (var canvas in sceneCanvases)
+            {
+                if (canvas == null || !canvas.enabled)
+                {
+                    continue;
+                }
+
+                if (ShouldExcludeCanvas(canvas))
+                {
+                    canvasesToHide.Add(canvas);
+                }
+            }
+
+            return new List<Canvas>(canvasesToHide);
+        }
+
+        private bool ShouldExcludeCanvas(Canvas canvas)
+        {
+            if (canvas == null)
+            {
+                return false;
+            }
+
+            if ((excludedCanvasLayers.value & (1 << canvas.gameObject.layer)) != 0)
+            {
+                return true;
+            }
+
+            foreach (var excludedTag in excludedCanvasTags)
+            {
+                if (!string.IsNullOrWhiteSpace(excludedTag) && canvas.CompareTag(excludedTag))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var namePrefix in excludedCanvasNamePrefixes)
+            {
+                if (!string.IsNullOrWhiteSpace(namePrefix) && canvas.name.StartsWith(namePrefix, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            if (excludeCanvasesWithMarker && canvas.TryGetComponent<ScreenshotExcludeCanvasMarker>(out _))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static string BuildHiddenCanvasSummary(List<Canvas> canvasesToHide)
+        {
+            if (canvasesToHide == null || canvasesToHide.Count == 0)
+            {
+                return "ScreenshotCapture: hid 0 canvases before capture.";
+            }
+
+            var names = new List<string>();
+            foreach (var canvas in canvasesToHide)
+            {
+                if (canvas != null)
+                {
+                    names.Add(canvas.name);
+                }
+            }
+
+            return $"ScreenshotCapture: hid {names.Count} canvas(es) before capture [{string.Join(", ", names)}]";
         }
 
         private string ResolveBasePath()
@@ -237,5 +333,9 @@ namespace Yume
                 Debug.LogWarning($"Failed to resolve captureCamera in {context}. Will fall back to ScreenCapture if capture proceeds.");
             }
         }
+    }
+
+    public class ScreenshotExcludeCanvasMarker : MonoBehaviour
+    {
     }
 }

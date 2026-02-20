@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.Collections;
+using Yume;
 
 public class SceneTransitionManager : MonoBehaviour
 {
@@ -61,6 +62,7 @@ public class SceneTransitionManager : MonoBehaviour
         fadeCanvas = canvasGO.AddComponent<Canvas>();
         fadeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         fadeCanvas.sortingOrder = 9999; // 最前面
+        canvasGO.AddComponent<ScreenshotExcludeCanvasMarker>();
 
         canvasGO.AddComponent<CanvasScaler>();
         // canvasGO.AddComponent<GraphicRaycaster>();
