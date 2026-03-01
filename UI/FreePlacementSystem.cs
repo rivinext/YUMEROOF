@@ -50,6 +50,10 @@ public class FreePlacementSystem : MonoBehaviour
     public PlacementPlayerControl playerControl;
     public ParticleSystem placementEffect;
 
+    [Header("UI Visibility During Placement")]
+    [Tooltip("新規設置/再設置中に一時的に非表示にするUIボタン(または任意UIオブジェクト)")]
+    [SerializeField] private List<GameObject> temporaryHiddenUiObjects = new List<GameObject>();
+
     [Header("Audio Settings")]
     [SerializeField] private AudioClip placementSound;
     [SerializeField, Range(0f, 1f)] private float placementSoundVolume = 1f;
@@ -75,6 +79,9 @@ public class FreePlacementSystem : MonoBehaviour
     private PlacedFurniture originalParentFurniture;
     private Vector3 originalScale = Vector3.one;
     private AnchorPoint originalAttachedAnchor;
+
+    private readonly Dictionary<GameObject, bool> hiddenUiOriginalStates = new Dictionary<GameObject, bool>();
+    private bool arePlacementUiObjectsHidden;
 
     public System.Action OnPlacementCompleted;
     public System.Action OnPlacementCancelled;
@@ -396,6 +403,7 @@ public class FreePlacementSystem : MonoBehaviour
         currentFurnitureData = null;
 
         SetUiSoundMuted(false);
+        SetPlacementUiHidden(false);
 
         if (EnsurePlayerControl())
         {
@@ -456,6 +464,7 @@ public class FreePlacementSystem : MonoBehaviour
         currentFurnitureData = null;
 
         SetUiSoundMuted(false);
+        SetPlacementUiHidden(false);
 
         if (EnsurePlayerControl())
         {
@@ -510,6 +519,7 @@ public class FreePlacementSystem : MonoBehaviour
         currentFurnitureData = null;
 
         SetUiSoundMuted(false);
+        SetPlacementUiHidden(false);
 
         if (EnsurePlayerControl())
         {
@@ -609,6 +619,7 @@ public class FreePlacementSystem : MonoBehaviour
         isMovingFurniture = true;
 
         SetUiSoundMuted(true);
+        SetPlacementUiHidden(true);
 
         previewObject = furniture.gameObject;
         currentFurnitureData = furniture.furnitureData;
@@ -639,6 +650,7 @@ public class FreePlacementSystem : MonoBehaviour
         currentFurnitureData = data;
 
         SetUiSoundMuted(true);
+        SetPlacementUiHidden(true);
 
         previewObject = Instantiate(furniturePrefab);
         previewObject.name = "Preview_" + data.nameID;
@@ -1281,6 +1293,7 @@ public class FreePlacementSystem : MonoBehaviour
             currentFurnitureData = null;
 
             SetUiSoundMuted(false);
+            SetPlacementUiHidden(false);
 
             if (EnsurePlayerControl())
             {
@@ -1382,6 +1395,44 @@ public class FreePlacementSystem : MonoBehaviour
         currentSfxVolume = Mathf.Clamp01(value);
     }
 
+    private void SetPlacementUiHidden(bool hidden)
+    {
+        if (arePlacementUiObjectsHidden == hidden)
+        {
+            return;
+        }
+
+        arePlacementUiObjectsHidden = hidden;
+
+        if (hidden)
+        {
+            hiddenUiOriginalStates.Clear();
+
+            foreach (GameObject uiObject in temporaryHiddenUiObjects)
+            {
+                if (uiObject == null || hiddenUiOriginalStates.ContainsKey(uiObject))
+                {
+                    continue;
+                }
+
+                hiddenUiOriginalStates[uiObject] = uiObject.activeSelf;
+                uiObject.SetActive(false);
+            }
+
+            return;
+        }
+
+        foreach (var state in hiddenUiOriginalStates)
+        {
+            if (state.Key != null)
+            {
+                state.Key.SetActive(state.Value);
+            }
+        }
+
+        hiddenUiOriginalStates.Clear();
+    }
+
     private void SetUiSoundMuted(bool muted)
     {
         if (uiSoundsMuted == muted)
@@ -1425,6 +1476,7 @@ public class FreePlacementSystem : MonoBehaviour
         originalScale = Vector3.one;
 
         SetUiSoundMuted(false);
+        SetPlacementUiHidden(false);
 
         if (EnsurePlayerControl())
         {
@@ -1452,6 +1504,7 @@ public class FreePlacementSystem : MonoBehaviour
         }
 
         SetUiSoundMuted(false);
+        SetPlacementUiHidden(false);
     }
 
     public void CreateCornerMarkers(PlacedFurniture furniture)
